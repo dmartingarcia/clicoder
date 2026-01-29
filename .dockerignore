@@ -1,0 +1,23 @@
+# Docker
+*.log
+.docker/
+docker-compose.override.yml
+
+# Backups
+backup_*.sql
+
+# Secrets
+.env.local
+.env.production
+secrets/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
