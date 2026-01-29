@@ -1,0 +1,55 @@
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+
+# Training artifacts
+training/bert-classifier/aclImdb*
+training/bert-classifier/data
+training/bert-classifier/.ipynb_checkpoints
+training/bert-classifier/results
+training/bert-classifier/snapshots
+training/bert-classifier/*.pt
+training/bert-classifier/*.pth
+training/bert-classifier/checkpoints
+training/.venv
+/**ignore/*
+
+# Datasets
+training/csv_import_scripts/**/*.csv
+training/csv_import_scripts/codiesp_csvs
+training/csv_import_scripts/cie10-csvs
+
+# Model artifacts
+**/.transformers_cache
+**/transformers_cache
+ai_engine/model
+ai_engine/snapshots
+**/cache
+
+# RAG indices
+**/rag_index
+**/*.index
+**/faiss*
+
+# Logs y temporales
+*.log
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IDEs
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+.idea
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
