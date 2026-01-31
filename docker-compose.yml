@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # Base de Datos: PostgreSQL (Doble propósito: App y EventStore)
+  db:
+    image: postgres:15-alpine
+    container_name: cie10_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Microservicio de IA: FastAPI + Transformers
+  ai_engine:
+    build:
+      context: ./ai_engine
+      dockerfile: Dockerfile
+    container_name: ai_engine
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/postgres
+      - MODEL_NAME=PlanTL-GOB-ES/roberta-base-bne-medical
+    volumes:
+      - ./ai_engine:/app
+      - huggingface_cache:/root/.cache/huggingface
+
+  # Backend: Elixir Phoenix + Commanded
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: elixir_backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      ai_engine:
+        condition: service_started
+    ports:
+      - "4000:4000"
+    environment:
+      - MIX_ENV=dev
+      - DB_HOST=db
+      - DATABASE_URL=postgresql://postgres:password@db:5432/cie10_app
+      - EVENTSTORE_URL=postgresql://postgres:password@db:5432/cie10_events
+      - AI_ENGINE_URL=http://ai_engine:8000
+      - SECRET_KEY_BASE=supersecretkeythatisatleast64byteslongforproductionuse
+    volumes:
+      - ./backend:/app
+      - backend_build:/app/_build
+      - backend_deps:/app/deps
+
+  # Frontend: Next.js + Tailwind + shadcn
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: nextjs_frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_WS_URL=ws://localhost:4000/socket
+      - NEXT_PUBLIC_API_URL=http://localhost:4000/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres_data:
+  huggingface_cache:
+  backend_build:
+  backend_deps:
