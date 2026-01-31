@@ -1,0 +1,15 @@
+certifi==2024.8.30
+charset-normalizer==3.4.0
+datasets==2.18.0
+gevent==24.11.1  # Comentado temporalmente (necesario para grequests)
+greenlet==3.1.1  # Comentado temporalmente (necesario para grequests)
+grequests==0.7.0  # Comentado temporalmente
+idna==3.10
+pandas==2.2.1
+progressbar2==4.5.0
+python-utils==3.9.0
+requests==2.32.3
+typing_extensions==4.12.2
+urllib3==2.2.3
+zope.event==5.0  # Comentado temporalmente (necesario para grequests/gevent)
+zope.interface==7.1.1  # Comentado temporalmente (necesario para grequests/gevent)
