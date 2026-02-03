@@ -9,9 +9,8 @@ training/bert-classifier/data
 training/bert-classifier/.ipynb_checkpoints
 training/bert-classifier/results
 training/bert-classifier/snapshots
-training/bert-classifier/*.pt
-training/bert-classifier/*.pth
-training/bert-classifier/checkpoints
+*.pt
+*.pth
 training/.venv
 /**ignore/*
 
