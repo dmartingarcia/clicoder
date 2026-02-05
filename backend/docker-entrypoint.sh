@@ -13,17 +13,9 @@ echo "PostgreSQL is up - setting up databases"
 echo "Creating application database..."
 mix ecto.create || echo "Database already exists"
 
-# Crear base de datos de eventos si no existe
-echo "Creating event store database..."
-mix event_store.create || echo "Event store database already exists"
-
 # Ejecutar migraciones
 echo "Running migrations..."
 mix ecto.migrate || echo "Migrations already up to date"
-
-# Inicializar event store
-echo "Initializing event store..."
-mix event_store.init || echo "Event store already initialized"
 
 echo "Starting Phoenix server..."
 exec "$@"
