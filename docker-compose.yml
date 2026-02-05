@@ -1,17 +1,22 @@
-version: '3.8'
-
 services:
+  # Imagen base compartida para ML (CUDA + PyTorch + Transformers)
+  ml-base:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml-base
+    image: cie10-ml-base:latest
+
   # Base de Datos: PostgreSQL (Doble propósito: App y EventStore)
   db:
     image: postgres:15-alpine
     container_name: cie10_db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,24 +25,63 @@ services:
       timeout: 5s
       retries: 5
 
+  # Entrenamiento: Python + PyTorch + Jupyter
+  training:
+    build:
+      context: .
+      dockerfile: training/Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: cie10_training
+    restart: always
+    ports:
+      - "${JUPYTER_PORT}:8888"
+    volumes:
+      - ./training/bert-classifier:/home/cie10user/bert-classifier
+      - ./training/csv_import_scripts:/home/cie10user/csv_import_scripts
+      - ./training/data_analysis:/home/cie10user/data_analysis
+      - ./ai_engine/model:/home/cie10user/../ai_engine/model
+    stdin_open: true
+    tty: true
+    depends_on:
+      - ml-base
+    env_file:
+      - .env
+    command: bash
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
   # Microservicio de IA: FastAPI + Transformers
   ai_engine:
     build:
-      context: ./ai_engine
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ai_engine/Dockerfile
     container_name: ai_engine
     restart: always
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${AI_ENGINE_PORT}:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/postgres
-      - MODEL_NAME=PlanTL-GOB-ES/roberta-base-bne-medical
+      - DATABASE_URL=${DATABASE_URL}
+      - MODEL_NAME=${MODEL_NAME}
     volumes:
       - ./ai_engine:/app
       - huggingface_cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   # Backend: Elixir Phoenix + Commanded
   backend:
@@ -52,14 +96,13 @@ services:
       ai_engine:
         condition: service_started
     ports:
-      - "4000:4000"
+      - "${BACKEND_PORT}:4000"
     environment:
-      - MIX_ENV=dev
-      - DB_HOST=db
-      - DATABASE_URL=postgresql://postgres:password@db:5432/cie10_app
-      - EVENTSTORE_URL=postgresql://postgres:password@db:5432/cie10_events
-      - AI_ENGINE_URL=http://ai_engine:8000
-      - SECRET_KEY_BASE=supersecretkeythatisatleast64byteslongforproductionuse
+      - MIX_ENV=${MIX_ENV}
+      - DB_HOST=${DB_HOST}
+      - DATABASE_URL=${DATABASE_URL}
+      - AI_ENGINE_URL=${AI_ENGINE_URL}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
     volumes:
       - ./backend:/app
       - backend_build:/app/_build
@@ -76,11 +119,11 @@ services:
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT}:3000"
     environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_WS_URL=ws://localhost:4000/socket
-      - NEXT_PUBLIC_API_URL=http://localhost:4000/api
+      - NODE_ENV=${NODE_ENV}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     volumes:
       - ./frontend:/app
       - /app/node_modules

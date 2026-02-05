@@ -1,0 +1,32 @@
+# Dockerfile base compartido para AI y Training
+# Ubicación: Dockerfile.ml-base
+FROM nvidia/cuda:13.1.1-cudnn-runtime-ubuntu24.04 AS base
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV TRANSFORMERS_CACHE=/root/.cache/huggingface
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
+# Instalar Python y dependencias del sistema
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        python3-venv \
+        python3-dev \
+        build-essential \
+        git \
+        wget \
+        curl \
+        libpq-dev \
+        && rm -rf /var/lib/apt/lists/*
+
+# Copiar requirements y instalar dependencias ML
+COPY requirements-base.txt /tmp/requirements-base.txt
+RUN pip3 install --no-cache-dir -r /tmp/requirements-base.txt && \
+    rm /tmp/requirements-base.txt
+
+WORKDIR /app
+
+CMD ["/bin/bash"]
