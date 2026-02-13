@@ -219,7 +219,7 @@ training-jupyter: ## Abrir Jupyter para entrenar manualmente
 	@echo "$(YELLOW)  Abriendo navegador en 3 segundos...$(NC)"
 	@echo "$(YELLOW)  CTRL+C para detener$(NC)"
 	@(sleep 3 && xdg-open http://localhost:8888 2>/dev/null || true) & \
-	$(COMPOSE) run --rm --service-ports training bash -c 'cd bert-classifier && jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token="" --NotebookApp.password="" --NotebookApp.disable_check_xsrf=True --NotebookApp.trust_xheaders=True clasificador_jerarquico_2niveles.ipynb'
+	$(COMPOSE) run --rm --service-ports training bash -c 'cd bert-classifier && jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token="" --NotebookApp.password="" --NotebookApp.disable_check_xsrf=True --NotebookApp.trust_xheaders=True'
 
 training-train: ## Entrenar modelo CIE-10 completo
 	@echo "$(YELLOW)→ Entrenando modelo (Docker, esto puede tardar varias horas)...$(NC)"

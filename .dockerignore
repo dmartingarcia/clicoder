@@ -63,3 +63,8 @@ coverage/
 .env.example
 Makefile
 notebook*.ipynb
+
+# Training artifacts
+**/*.pt
+**/*.png
+.huggingface_cache/

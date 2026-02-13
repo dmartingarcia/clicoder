@@ -41,7 +41,8 @@ services:
       - ./training/bert-classifier:/home/cie10user/bert-classifier
       - ./training/csv_import_scripts:/home/cie10user/csv_import_scripts
       - ./training/data_analysis:/home/cie10user/data_analysis
-      - ./ai_engine/model:/home/cie10user/../ai_engine/model
+      - ./ai_engine/model:/home/cie10user/projects/ai_engine/model
+      - ./.huggingface_cache:/home/cie10user/.cache/huggingface
     stdin_open: true
     tty: true
     depends_on:

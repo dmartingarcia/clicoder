@@ -1,6 +1,6 @@
 # Dockerfile base compartido para AI y Training
 # Ubicación: Dockerfile.ml-base
-FROM nvidia/cuda:13.1.1-cudnn-runtime-ubuntu24.04 AS base
+FROM nvidia/cuda:13.1.1-cudnn-devel-ubuntu24.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -26,6 +26,11 @@ RUN apt-get update && \
 COPY requirements-base.txt /tmp/requirements-base.txt
 RUN pip3 install --no-cache-dir -r /tmp/requirements-base.txt && \
     rm /tmp/requirements-base.txt
+RUN pip3 install packaging ninja
+
+# We're using 1 job, if not, it will take >32GB of RAM on compilation -> It can take 2 hours!
+# citar flash-attn en el doc
+RUN MAX_JOBS=1 pip3 install flash-attn --no-build-isolation
 
 WORKDIR /app
 
