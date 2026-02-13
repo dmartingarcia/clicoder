@@ -10,14 +10,6 @@ config :app, App.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
-# Configure EventStore
-config :app, App.EventStore,
-  username: System.get_env("DB_USER") || "postgres",
-  password: System.get_env("DB_PASSWORD") || "password",
-  hostname: System.get_env("DB_HOST") || "db",
-  database: System.get_env("EVENTSTORE_DB_NAME") || "cie10_events_dev",
-  pool_size: 10
-
 # URL del microservicio de IA
 config :app, :ai_engine_url, System.get_env("AI_ENGINE_URL") || "http://localhost:8000"
 

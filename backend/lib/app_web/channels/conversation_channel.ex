@@ -10,7 +10,6 @@ defmodule AppWeb.ConversationChannel do
   alias App.Projections.{ConversationProjection, MessageProjection, PredictedCodeProjection}
 
   require Logger
-  import Ecto.Query
 
   @impl true
   def join("conversation:" <> conversation_id, _payload, socket) do
