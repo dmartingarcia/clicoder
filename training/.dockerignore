@@ -3,6 +3,14 @@
 .docker/
 docker-compose.override.yml
 Dockerfile*
+.huggingface_cache/
+snapshots/*
+bert-classifier/*
+training/*
+
+# Training artifacts
+*.pt
+*.png
 
 # Backups
 backup_*.sql

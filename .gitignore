@@ -14,6 +14,7 @@ training/bert-classifier/snapshots
 *.pth
 training/.venv
 /**ignore/*
+.huggingface_cache
 
 # Datasets
 training/csv_import_scripts/**/*.csv

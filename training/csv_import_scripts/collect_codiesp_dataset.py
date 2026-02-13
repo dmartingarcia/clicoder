@@ -14,20 +14,12 @@ configs = [
     "codiesp_extra_mesh_source",
 ]
 
-# Dictionary to store all datasets
-datasets = {}
+os.makedirs("codiesp_csvs", exist_ok=True)
 
 # Load each configuration
 for config in configs:
-    datasets[config] = load_dataset("bigbio/codiesp", name=config)
-
-# Process each split in the dataset
-# Process each configuration and its splits
-
-os.makedirs("codiesp_csvs", exist_ok=True)
-
-for config in datasets:
-    dataset = datasets[config]
+    dataset = load_dataset("bigbio/codiesp", name=config, trust_remote_code=True)
+    print(f"Loaded configuration: {config}")
     for split in dataset.keys():
         # Definir el nombre del archivo CSV
         csv_filename = f"codiesp_csvs/{config}_{split}.csv"
