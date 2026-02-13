@@ -56,8 +56,6 @@ defmodule App.MixProject do
       # Event Sourcing + CQRS
       {:commanded, "~> 1.4"},
       {:commanded_ecto_projections, "~> 1.3"},
-      {:commanded_eventstore_adapter, "~> 1.4"},
-      {:eventstore, "~> 1.4"},
 
       # Utilities
       {:uuid, "~> 1.1"},
@@ -73,11 +71,9 @@ defmodule App.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "ecto.setup", "event_store.setup"],
+      setup: ["deps.get", "ecto.setup"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      "event_store.setup": ["event_store.create", "event_store.init"],
-      "event_store.reset": ["event_store.drop", "event_store.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       precommit: ["compile --warning-as-errors", "deps.unlock --unused", "format", "test"]
     ]

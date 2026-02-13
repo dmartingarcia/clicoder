@@ -9,20 +9,10 @@ import Config
 
 config :app,
   ecto_repos: [App.Repo],
-  event_stores: [App.EventStore],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
 
-# Configuración de EventStore
-config :app, App.EventStore,
-  serializer: Commanded.Serialization.JsonSerializer,
-  column_data_type: "jsonb"
-
-# Configuración de Commanded
+# Configuración de Commanded con RabbitMQ
 config :app, App.CommandedApplication,
-  event_store: [
-    adapter: Commanded.EventStore.Adapters.EventStore,
-    event_store: App.EventStore
-  ],
   pubsub: :local,
   registry: :local
 
