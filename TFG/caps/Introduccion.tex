@@ -1,0 +1,75 @@
+\chapter{Introducción}
+\label{cap:Introduccion}
+
+La codificación clínica representa un proceso crítico en la gestión sanitaria moderna, actuando como interfaz entre la práctica clínica, la administración hospitalaria y la investigación médica mediante el análisis estadístico. 
+
+Este trabajo se centra en el desarrollo de soluciones de codificación automática mediante modelos BERT multilabel, para CIE-10, abordando tres aspectos fundamentales:
+\begin{itemize}
+\item La creciente complejidad de los sistemas de clasificación médica.
+\item Los desafíos operativos en entornos clínicos reales.
+\item Las oportunidades tecnológicas emergentes en Procesamiento del Lenguaje Natural (PLN).
+\end{itemize}
+
+\section{Motivación}
+
+La motivación de este trabajo surge de varios factores clave identificados:
+\begin{itemize}
+\item Es necesario disponer de conocimientos medicos para la correcta clasificación, haciendo necesario tener personal especializado.
+\item La normativa CIE-10 contiene 68,069 códigos posibles, haciendo que la tarea de clasificar tenga mucha complejidad, y aumentando el número de errores en el proceso de clasificación manual.
+\item Desde el 1 de enero de 2016 la CIE-10-ES ha sido implantada en España como clasificación de referencia para la codificación clínica, como indica el Real Decreto 69/2015, y su obligatoriedad se esta implantando de manera gradual
+\item El tiempo medio de codificación de un alta hospitalaria es de 14 minutos, 10 minutos más en comparación con la CIE9, tal y como se indica en el informe de implantación de la CIE 10\cite{sanidad2016cie10}
+\end{itemize}
+
+La solución propuesta combina técnicas de Deep Learning con conocimiento clínico estructurado, permitiendo:
+\begin{itemize}
+\item La reducción del tiempos de codificación, asi como la automatización del proceso, requiriendo unicamente la posterior revisión humana en el caso de que la certeza sea baja
+\item La consistencia en la aplicación de normas CIE-10 mediante aprendizaje automático
+\item La detección automática de inconsistencias en narrativas clínicas
+\end{itemize}
+
+
+\section{Contexto disciplinar y tecnológico}
+
+El análisis de trabajos previos revela tres generaciones tecnológicas:
+
+\textbf{Sistemas basados en reglas} (1990-2010): Utilizan ontologías médicas como SNOMED-CT con lógica booleana. Estos están muy limitados por su alta rigidez ante la variabilidad lingüística~\cite{aronson2011}.
+
+\textbf{Modelos estadísticos} (2010-2018): Aplicación de SVM y Random Forests sobre características léxico-sintácticas. Logran un F1=0.79 en CIE-9 pero no consiguen escalar su poder de clasificación a la CIE-10~\cite{liu2018}.
+
+\textbf{Deep Learning} (2018-actual): Modelos secuencia-a-secuencia con atención contextual. El sistema CodiEsp~\cite{miranda2020} alcanza un F1=0.85 en español usando el modelo neuronal BiLSTM.
+
+\subsection{Avances en transformers médicos}
+Los modelos BERT adaptados al dominio clínico, como ClinicalBERT~\cite{alsentzer2019} y BioBERT~\cite{lee2020}, demuestran una gran superioridad en:
+
+\begin{itemize}
+\item Capturar relaciones contextuales en narrativas médicas.
+\item Manejar ambigüedades terminológicas (ej; 'EPOC' como entidad vs. comorbilidad \\TODO explicar\\).
+\item Transfer-learning entre especialidades médicas.
+\end{itemize}
+
+Nuestro trabajo extiende estos enfoques mediante:
+\begin{enumerate}
+\item Adaptación multilingüe para textos clínicos en español
+\item Mecanismo de atención jerárquica para códigos padre/hijo en CIE-10.
+\item Función de perdida (Loss function) adaptativa.
+\item Análisis de pesos en la distribución de los códigos
+\end{enumerate}
+
+\subsection{Retos pendientes}
+La literatura identifica tres desafíos no resueltos:
+\begin{itemize}
+\item \textbf{Multilabel y Multiclass extremo}: La CIE-10 contiene 68,069 códigos posibles, con un promedio de 6,1 códigos de diagnostico y 2,7 de procedimientos, esto hace muy complejo el entrenamiento, requiriendo un conjunto de datos muy amplio para poder clasificar de forma consistente cada diagnostico.
+\item \textbf{Distribución de los códigos en la codificación}: La distribución de los códigos presenta una gran asimetria, tanto en su jerarquia, como la frecuencia en los diagnosticos médicos, habiendo clases y familias de códigos cuya presencia es mayoritaria, y otras cuya presencia es muy baja, como es el caso de enfermedades raras con una incidencia mínima en la población.
+\item \textbf{Evaluación clínica}: Métricas tradicionales (F1, precisión) no capturan las consecuencias clínicas de errores, o el grado de relación entre el código que se obtiene en el clasificador, y el código correcto, por lo que es necesario también tener en cuenta esta limitación e implementar funciones de perdida especificas para este caso. 
+\item \textbf{Explicabilidad}: Todo software ligado a la medicina tiene el requisito legal de seguir el Reglamento UE 2017/745. \\TODO desarrollar\
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
