@@ -9,6 +9,7 @@ import Config
 
 config :app,
   ecto_repos: [App.Repo],
+  event_stores: [App.EventStore],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
 
 # Configuración de Commanded con RabbitMQ
