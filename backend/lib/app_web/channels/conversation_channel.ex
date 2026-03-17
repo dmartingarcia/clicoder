@@ -7,9 +7,10 @@ defmodule AppWeb.ConversationChannel do
   alias App.CommandedApplication
   alias App.Commands.{StartConversation, SendMessage, AnalyzeReport, ValidateCode, RejectCode}
   alias App.Repo
-  alias App.Projections.{ConversationProjection, MessageProjection, PredictedCodeProjection}
+  alias App.Projections.{ConversationProjection, MessageProjection, PredictedCodeProjection, AnalysisCardProjection}
 
   require Logger
+  import Ecto.Query, only: [from: 2]
 
   @impl true
   def join("conversation:" <> conversation_id, _payload, socket) do
@@ -77,16 +78,35 @@ defmodule AppWeb.ConversationChannel do
   @impl true
   def handle_in("analyze_report", %{"report_text" => report_text}, socket) do
     conversation_id = socket.assigns.conversation_id
+    user_id = socket.assigns.user_id
     message_id = UUID.uuid4()
+    timestamp = DateTime.utc_now()
 
-    cmd = %AnalyzeReport{
+    # Save the report as a message so it persists across reloads
+    msg_cmd = %SendMessage{
+      conversation_id: conversation_id,
+      message_id: message_id,
+      user_id: user_id,
+      content: report_text,
+      timestamp: timestamp
+    }
+    CommandedApplication.dispatch(msg_cmd)
+
+    analyze_cmd = %AnalyzeReport{
       conversation_id: conversation_id,
       message_id: message_id,
       report_text: report_text
     }
 
-    case CommandedApplication.dispatch(cmd) do
+    case CommandedApplication.dispatch(analyze_cmd) do
       :ok ->
+        broadcast!(socket, "new_message", %{
+          message_id: message_id,
+          content: report_text,
+          user_id: user_id,
+          timestamp: timestamp
+        })
+
         broadcast!(socket, "analysis_started", %{message_id: message_id})
 
         Task.start(fn ->
@@ -147,12 +167,19 @@ defmodule AppWeb.ConversationChannel do
   end
 
   defp load_conversation_history(conversation_id) do
-    conversation = Repo.get_by!(ConversationProjection, conversation_id: conversation_id)
-    |> Repo.preload([:messages, :predicted_codes])
+    conversation =
+      Repo.get_by!(ConversationProjection, conversation_id: conversation_id)
+      |> Repo.preload([:messages, :predicted_codes, :analysis_cards])
+
+    cards =
+      conversation.analysis_cards
+      |> Enum.sort_by(& &1.position)
+      |> Enum.map(&format_card/1)
 
     %{
       messages: Enum.map(conversation.messages, &format_message/1),
-      predicted_codes: Enum.map(conversation.predicted_codes, &format_code/1)
+      predicted_codes: Enum.map(conversation.predicted_codes, &format_code/1),
+      analysis_cards: cards
     }
   end
 
@@ -176,51 +203,131 @@ defmodule AppWeb.ConversationChannel do
     }
   end
 
+  defp format_card(card) do
+    content =
+      case card.card_type do
+        "codes" ->
+          case Jason.decode(card.content) do
+            {:ok, decoded} -> decoded
+            _ -> card.content
+          end
+        _ ->
+          card.content
+      end
+
+    %{
+      card_id: card.card_id,
+      card_type: card.card_type,
+      content: content,
+      position: card.position,
+      message_id: card.message_id
+    }
+  end
+
+  defp persist_prediction_direct(conversation_id, message_id, cards) do
+    conversation = App.Repo.get_by(App.Projections.ConversationProjection, conversation_id: conversation_id)
+    unless is_nil(conversation) do
+      cards
+      |> Enum.with_index()
+      |> Enum.each(fn {card, idx} ->
+        card_type = card["type"]
+        card_content = card["content"]
+        content = if card_type == "codes", do: Jason.encode!(card_content), else: card_content
+
+        %App.Projections.AnalysisCardProjection{
+          card_id: UUID.uuid4(),
+          card_type: card_type,
+          content: content,
+          position: idx,
+          message_id: message_id,
+          conversation_id: conversation.id
+        }
+        |> App.Repo.insert(on_conflict: :nothing)
+      end)
+
+      codes_content =
+        cards
+        |> Enum.find(%{}, fn c -> c["type"] == "codes" end)
+        |> Map.get("content", [])
+
+      Enum.each(codes_content, fn code ->
+        %App.Projections.PredictedCodeProjection{
+          code_id: UUID.uuid4(),
+          cie10_code: code["code"],
+          reasoning: code["reason"] || code["reasoning"],
+          confidence_score: code["confidence"],
+          status: "pending",
+          conversation_id: conversation.id
+        }
+        |> App.Repo.insert(on_conflict: :nothing)
+      end)
+    end
+  end
+
   defp call_ai_engine(conversation_id, message_id, report_text, socket) do
     ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
 
     case Req.post("#{ai_url}/predict", json: %{text: report_text}) do
       {:ok, %{status: 200, body: body}} ->
-        # Convertir formato de AI Engine al formato esperado por el comando
-        codes = Enum.map(body["codes"], fn code ->
-          %{
-            "code" => code["code"],
-            "reasoning" => code["reason"],
-            "confidence" => 0.85  # Mock confidence por ahora
-          }
-        end)
+        cards = body["cards"] || []
 
         cmd = %App.Commands.ReceiveAIPrediction{
           conversation_id: conversation_id,
           message_id: message_id,
-          predicted_codes: codes,
-          reasoning: "Análisis automático basado en el texto ingresado",
-          confidence_scores: Enum.map(codes, & &1["confidence"])
+          cards: cards,
+          predicted_codes: [],
+          reasoning: "Análisis automático",
+          confidence_scores: []
         }
 
-        case CommandedApplication.dispatch(cmd) do
-          :ok ->
-            broadcast!(socket, "ai_prediction_received", %{
-              message_id: message_id,
-              codes: codes
-            })
+        # Try event store; fall back to direct DB write so cards always persist
+        dispatched =
+          try do
+            CommandedApplication.dispatch(cmd)
+          rescue
+            e ->
+              Logger.error("ReceiveAIPrediction dispatch raised: #{inspect(e)}")
+              {:error, :exception}
+          end
 
-          {:error, reason} ->
-            Logger.error("Failed to register AI prediction: #{inspect(reason)}")
+        if dispatched != :ok do
+          persist_prediction_direct(conversation_id, message_id, cards)
         end
+
+        cards
+        |> Enum.each(fn card ->
+          broadcast!(socket, "analysis_card_received", %{
+            message_id: message_id,
+            card_id: UUID.uuid4(),
+            card_type: card["type"],
+            content: card["content"]
+          })
+        end)
+
+        predicted_codes =
+          App.Repo.all(
+            from p in App.Projections.PredictedCodeProjection,
+              join: c in App.Projections.ConversationProjection,
+              on: p.conversation_id == c.id,
+              where: c.conversation_id == ^conversation_id,
+              select: p
+          )
+          |> Enum.map(&format_code/1)
+
+        broadcast!(socket, "analysis_complete", %{message_id: message_id, predicted_codes: predicted_codes})
 
       {:error, reason} ->
         Logger.error("AI Engine request failed: #{inspect(reason)}")
         broadcast!(socket, "analysis_failed", %{
           message_id: message_id,
-          error: "Failed to contact AI engine"
+          error: "No se pudo contactar con el motor de análisis"
         })
 
       {:ok, %{status: status}} ->
         Logger.error("AI Engine returned status #{status}")
         broadcast!(socket, "analysis_failed", %{
           message_id: message_id,
-          error: "AI engine error: HTTP #{status}"
+          error: "Error del motor de análisis: HTTP #{status}"
         })
     end
   end
