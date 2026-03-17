@@ -6,6 +6,17 @@ services:
       dockerfile: Dockerfile.ml-base
     image: cie10-ml-base:latest
 
+  # Email catcher: Mailpit (SMTP + Web UI)
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: cie10_mailpit
+    restart: always
+    ports:
+      - "8025:8025"   # Web UI
+      - "1025:1025"   # SMTP
+    environment:
+      MP_MAX_MESSAGES: 500
+
   # Base de Datos: PostgreSQL (Doble propósito: App y EventStore)
   db:
     image: postgres:15-alpine
@@ -50,13 +61,6 @@ services:
     env_file:
       - .env
     command: bash
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
 
   # Microservicio de IA: FastAPI + Transformers
   ai_engine:
@@ -76,13 +80,6 @@ services:
     volumes:
       - ./ai_engine:/app
       - huggingface_cache:/root/.cache/huggingface
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
 
   # Backend: Elixir Phoenix + Commanded
   backend:
@@ -99,11 +96,11 @@ services:
     ports:
       - "${BACKEND_PORT}:4000"
     environment:
-      - MIX_ENV=${MIX_ENV}
-      - DB_HOST=${DB_HOST}
-      - DATABASE_URL=${DATABASE_URL}
-      - AI_ENGINE_URL=${AI_ENGINE_URL}
-      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - MIX_ENV=${MIX_ENV:-dev}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:changeme@db:5432/cie10_app}
+      - EVENT_STORE_URL=${EVENT_STORE_URL:-postgresql://postgres:changeme@db:5432/cie10_eventstore}
+      - AI_ENGINE_URL=${AI_ENGINE_URL:-http://ai_engine:8000}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:-supersecretkeythatisatleast64byteslongforproductionuse}
     volumes:
       - ./backend:/app
       - backend_build:/app/_build
