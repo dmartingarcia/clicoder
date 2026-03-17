@@ -117,7 +117,7 @@ defmodule App.Projections.ConversationProjector do
     end)
   end)
 
-  @impl Commanded.Projections.Ecto
+  @impl Commanded.Event.Handler
   def error({:error, reason}, event, _failure_context) do
     require Logger
     Logger.warning("ConversationProjector skipping event #{inspect(event.event_type)} due to: #{inspect(reason)}")

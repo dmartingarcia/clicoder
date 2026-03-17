@@ -15,11 +15,11 @@ defmodule App.JsonSerializerTest do
       assert Jason.decode!(result) == %{"foo" => "bar", "count" => 42}
     end
 
-    test "encodes a struct (e.g. a command) to JSON" do
-      term = %App.Commands.StartConversation{
+    test "encodes an event struct to JSON" do
+      term = %App.Events.ConversationStarted{
         conversation_id: "conv-123",
         user_id: "user-456",
-        started_at: ~U[2024-01-01 10:00:00Z]
+        started_at: nil
       }
 
       result = JsonSerializer.serialize(term)
@@ -59,15 +59,15 @@ defmodule App.JsonSerializerTest do
         started_at: nil
       })
 
-      type = inspect(App.Commands.StartConversation)
+      type = Atom.to_string(App.Events.ConversationStarted)
       result = JsonSerializer.deserialize(json, type: type)
 
-      assert %App.Commands.StartConversation{} = result
+      assert %App.Events.ConversationStarted{} = result
       assert result.conversation_id == "conv-abc"
       assert result.user_id == "user-xyz"
     end
 
-    test "deserializes SendMessage command" do
+    test "deserializes MessageSent event" do
       json = Jason.encode!(%{
         conversation_id: "conv-1",
         message_id: "msg-1",
@@ -76,10 +76,10 @@ defmodule App.JsonSerializerTest do
         timestamp: nil
       })
 
-      type = inspect(App.Commands.SendMessage)
+      type = Atom.to_string(App.Events.MessageSent)
       result = JsonSerializer.deserialize(json, type: type)
 
-      assert %App.Commands.SendMessage{} = result
+      assert %App.Events.MessageSent{} = result
       assert result.content == "Hello"
     end
 
@@ -87,7 +87,7 @@ defmodule App.JsonSerializerTest do
       json = Jason.encode!(["A", "B", "C"])
 
       # Even with a type config, non-map values are returned as-is
-      type = inspect(App.Commands.StartConversation)
+      type = Atom.to_string(App.Events.ConversationStarted)
       result = JsonSerializer.deserialize(json, type: type)
 
       assert result == ["A", "B", "C"]

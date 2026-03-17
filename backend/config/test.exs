@@ -6,12 +6,18 @@ import Config
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
 config :app, App.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "app_test#{System.get_env("MIX_TEST_PARTITION")}",
+  url:
+    System.get_env("TEST_DATABASE_URL", "postgresql://postgres:changeme@db:5432/cie10_app_test"),
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
+
+config :app, App.EventStore,
+  serializer: App.JsonSerializer,
+  url:
+    System.get_env(
+      "TEST_EVENT_STORE_URL",
+      "postgresql://postgres:changeme@db:5432/cie10_eventstore_test"
+    )
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
