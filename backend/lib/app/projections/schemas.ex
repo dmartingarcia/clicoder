@@ -10,9 +10,11 @@ defmodule App.Projections.ConversationProjection do
     field :user_id, :string
     field :started_at, :utc_datetime
     field :status, :string, default: "active"
+    field :deleted_at, :utc_datetime
 
     has_many :messages, App.Projections.MessageProjection, foreign_key: :conversation_id
     has_many :predicted_codes, App.Projections.PredictedCodeProjection, foreign_key: :conversation_id
+    has_many :analysis_cards, App.Projections.AnalysisCardProjection, foreign_key: :conversation_id
 
     timestamps(type: :utc_datetime)
   end
@@ -48,6 +50,32 @@ defmodule App.Projections.MessageProjection do
     projection
     |> cast(attrs, [:message_id, :content, :user_id, :timestamp, :message_type, :conversation_id])
     |> validate_required([:message_id, :content, :timestamp, :conversation_id])
+  end
+end
+
+defmodule App.Projections.AnalysisCardProjection do
+  use Ecto.Schema
+  import Ecto.Changeset
+
+  @primary_key {:id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
+
+  schema "analysis_cards" do
+    field :card_id, :string
+    field :card_type, :string
+    field :content, :string
+    field :position, :integer
+    field :message_id, :string
+
+    belongs_to :conversation, App.Projections.ConversationProjection
+
+    timestamps(type: :utc_datetime)
+  end
+
+  def changeset(card, attrs) do
+    card
+    |> cast(attrs, [:card_id, :card_type, :content, :position, :message_id, :conversation_id])
+    |> validate_required([:card_id, :card_type, :content, :conversation_id])
   end
 end
 

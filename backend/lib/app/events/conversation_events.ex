@@ -15,7 +15,21 @@ end
 
 defmodule App.Events.AIPredictionReceived do
   @derive Jason.Encoder
-  defstruct [:conversation_id, :message_id, :predicted_codes, :reasoning, :confidence_scores, :received_at]
+  defstruct [:conversation_id, :message_id, :cards, :predicted_codes, :reasoning, :confidence_scores, :received_at]
+end
+
+# These structs exist solely to register their field atoms at compile time.
+# EventStore replays events with Jason keys: :atoms! which requires all JSON
+# keys to already be known atoms — including nested keys inside :cards and
+# :predicted_codes lists.
+defmodule App.Events.CardData do
+  @derive Jason.Encoder
+  defstruct [:type, :content, :card_type, :card_id, :position]
+end
+
+defmodule App.Events.CodeData do
+  @derive Jason.Encoder
+  defstruct [:code, :description, :reason, :reasoning, :confidence, :status, :code_id]
 end
 
 defmodule App.Events.CodeValidated do

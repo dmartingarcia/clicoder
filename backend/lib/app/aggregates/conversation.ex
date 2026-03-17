@@ -52,6 +52,7 @@ defmodule App.Aggregates.Conversation do
     %AIPredictionReceived{
       conversation_id: cmd.conversation_id,
       message_id: cmd.message_id,
+      cards: cmd.cards,
       predicted_codes: cmd.predicted_codes,
       reasoning: cmd.reasoning,
       confidence_scores: cmd.confidence_scores,

@@ -5,7 +5,7 @@ defmodule App.Projections.ConversationProjector do
     name: "ConversationProjector"
 
   alias App.Events.{ConversationStarted, MessageSent, AIPredictionReceived, CodeValidated, CodeRejected}
-  alias App.Projections.{ConversationProjection, MessageProjection, PredictedCodeProjection}
+  alias App.Projections.{ConversationProjection, MessageProjection, PredictedCodeProjection, AnalysisCardProjection}
 
   project(%ConversationStarted{} = evt, _metadata, fn multi ->
     {:ok, started_at, _} = DateTime.from_iso8601(evt.started_at)
@@ -42,12 +42,41 @@ defmodule App.Projections.ConversationProjector do
     Ecto.Multi.run(multi, :ai_prediction, fn repo, _changes ->
       conversation = repo.get_by!(ConversationProjection, conversation_id: evt.conversation_id)
 
-      # Guardar códigos predichos
-      Enum.each(evt.predicted_codes, fn code_data ->
+      # Guardar tarjetas de análisis
+      evt.cards
+      |> Enum.with_index()
+      |> Enum.each(fn {card, idx} ->
+        card_type = card[:type] || card["type"]
+        card_content = card[:content] || card["content"]
+
+        content =
+          case card_type do
+            "codes" -> Jason.encode!(card_content)
+            _ -> card_content
+          end
+
+        %AnalysisCardProjection{
+          card_id: UUID.uuid4(),
+          card_type: card_type,
+          content: content,
+          position: idx,
+          message_id: evt.message_id,
+          conversation_id: conversation.id
+        }
+        |> repo.insert()
+      end)
+
+      # Guardar códigos predichos (para validación/rechazo)
+      codes =
+        evt.cards
+        |> Enum.find(%{}, fn c -> (c[:type] || c["type"]) == "codes" end)
+        |> then(fn c -> c[:content] || c["content"] || [] end)
+
+      Enum.each(codes, fn code_data ->
         %PredictedCodeProjection{
           code_id: UUID.uuid4(),
           cie10_code: code_data[:code] || code_data["code"],
-          reasoning: code_data[:reasoning] || code_data["reasoning"],
+          reasoning: code_data[:reason] || code_data["reason"] || code_data[:reasoning] || code_data["reasoning"],
           confidence_score: code_data[:confidence] || code_data["confidence"],
           status: "pending",
           conversation_id: conversation.id
@@ -87,4 +116,11 @@ defmodule App.Projections.ConversationProjector do
       |> repo.update()
     end)
   end)
+
+  @impl Commanded.Projections.Ecto
+  def error({:error, reason}, event, _failure_context) do
+    require Logger
+    Logger.warning("ConversationProjector skipping event #{inspect(event.event_type)} due to: #{inspect(reason)}")
+    :skip
+  end
 end
