@@ -11,7 +11,7 @@ defmodule App.Commands.AnalyzeReport do
 end
 
 defmodule App.Commands.ReceiveAIPrediction do
-  defstruct [:conversation_id, :message_id, :predicted_codes, :reasoning, :confidence_scores]
+  defstruct [:conversation_id, :message_id, :cards, :predicted_codes, :reasoning, :confidence_scores]
 end
 
 defmodule App.Commands.ValidateCode do

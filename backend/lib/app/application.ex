@@ -12,7 +12,8 @@ defmodule App.Application do
       App.Repo,
       {DNSCluster, query: Application.get_env(:app, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: App.PubSub},
-      App.EventBus.Supervisor,
+      {Finch, name: App.Finch},
+      App.Translations,
       App.CommandedApplication,
       App.Projections.ConversationProjector,
       # Start to serve requests, typically the last entry
