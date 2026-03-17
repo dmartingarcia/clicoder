@@ -18,6 +18,6 @@ progressbar2==4.5.0
 python-utils==3.9.0
 requests==2.32.4
 typing_extensions==4.12.2
-urllib3==2.5.0
+urllib3==2.6.3
 zope.event==5.0  # Comentado temporalmente (necesario para grequests/gevent)
 zope.interface==7.1.1  # Comentado temporalmente (necesario para grequests/gevent)
