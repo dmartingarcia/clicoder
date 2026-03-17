@@ -1,11 +1,12 @@
 import { Socket } from 'phoenix';
+import { config } from '@/lib/config';
 
 let socket: Socket | null = null;
 
-export function getSocket(userId: string): Socket {
+export function getSocket(token: string): Socket {
   if (!socket) {
-    socket = new Socket('ws://localhost:4000/socket', {
-      params: { user_id: userId },
+    socket = new Socket(config.wsUrl, {
+      params: { token },
     });
     socket.connect();
   }
