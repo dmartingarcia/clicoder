@@ -25,9 +25,9 @@ jobs:
       - run: npm ci
       - run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
-  # ── Frontend ─────────────────────────────────────────────────────────────────
+  # ── Frontend — lint, build & test with coverage ───────────────────────────
   frontend:
-    name: Frontend — lint & build
+    name: Frontend — lint, build & test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -51,23 +51,74 @@ jobs:
       - name: Build (type-check included)
         run: npm run build
         env:
-          # evitar errores de variables de entorno en build
           NEXT_PUBLIC_API_URL: http://localhost:4000/api
           NEXT_PUBLIC_WS_URL: ws://localhost:4000/socket
 
-  # ── Backend ──────────────────────────────────────────────────────────────────
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          retention-days: 14
+
+      - name: Coverage summary → step summary
+        if: always()
+        run: |
+          echo "## Frontend Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f coverage/coverage-summary.json ]; then
+            node -e "
+              const fs = require('fs');
+              const summary = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              const entries = Object.entries(summary).filter(([k]) => k !== 'total');
+              const total = summary.total;
+              const bar = (pct) => pct >= 80 ? '🟢' : pct >= 50 ? '🟡' : '🔴';
+              const fmt = (x) => (x.pct ?? 0).toFixed(1) + '%';
+
+              console.log('| File | Stmts | Branch | Funcs | Lines |');
+              console.log('|------|------:|-------:|------:|------:|');
+              entries
+                .sort((a, b) => (b[1].lines.pct ?? 0) - (a[1].lines.pct ?? 0))
+                .forEach(([path, s]) => {
+                  const name = path.replace(/.*\/src\//, '');
+                  const p = s.lines.pct ?? 0;
+                  console.log('| \`' + name + '\` | ' + fmt(s.statements) + ' | ' + fmt(s.branches) + ' | ' + fmt(s.functions) + ' | ' + bar(p) + ' ' + fmt(s.lines) + ' |');
+                });
+              console.log('| **Total** | **' + fmt(total.statements) + '** | **' + fmt(total.branches) + '** | **' + fmt(total.functions) + '** | **' + fmt(total.lines) + '** |');
+            " >> $GITHUB_STEP_SUMMARY || true
+          fi
+
+  # ── Backend — format, compile & test with coverage ────────────────────────
   backend:
-    name: Backend — format & compile
+    name: Backend — format, compile & test
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       MIX_ENV: test
-      # El compile no necesita DB; EventStore y Repo solo se conectan en runtime
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cie10_test
-      EVENT_STORE_URL: postgresql://postgres:postgres@localhost:5432/cie10_eventstore_test
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cie10_app_test
+      TEST_EVENT_STORE_URL: postgresql://postgres:postgres@localhost:5432/cie10_eventstore_test
 
     steps:
       - uses: actions/checkout@v4
@@ -94,6 +145,56 @@ jobs:
 
       - name: Compile (warnings as errors)
         run: mix compile --warnings-as-errors
+
+      - name: Set up test databases
+        run: |
+          mix ecto.create
+          mix ecto.migrate
+          mix event_store.create
+          mix event_store.init
+
+      - name: Test with coverage
+        run: mix coveralls.html 2>&1 | tee /tmp/coveralls_output.txt
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/cover/
+          retention-days: 14
+
+      - name: Coverage summary → step summary
+        if: always()
+        run: |
+          echo "## Backend Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f cover/excoveralls.json ]; then
+            node -e "
+              const fs = require('fs');
+              const data = JSON.parse(fs.readFileSync('cover/excoveralls.json', 'utf8'));
+              const files = data.source_files ?? [];
+              const rows = files.map(f => {
+                const cov = f.coverage ?? [];
+                const relevant = cov.filter(x => x !== null);
+                const covered = relevant.filter(x => x > 0);
+                const pct = relevant.length ? (covered.length / relevant.length * 100).toFixed(1) : '0.0';
+                const name = f.name.replace(/^lib\//, '');
+                return { name, pct: parseFloat(pct), relevant: relevant.length, covered: covered.length };
+              }).filter(r => r.relevant > 0).sort((a,b) => b.pct - a.pct);
+
+              const total = rows.reduce((acc, r) => ({ cov: acc.cov + r.covered, rel: acc.rel + r.relevant }), { cov: 0, rel: 0 });
+              const totalPct = total.rel ? (total.cov / total.rel * 100).toFixed(1) : '0.0';
+
+              console.log('| File | Lines | Covered | % |');
+              console.log('|------|------:|--------:|--:|');
+              rows.forEach(r => {
+                const bar = r.pct >= 80 ? '🟢' : r.pct >= 50 ? '🟡' : '🔴';
+                console.log('| \`' + r.name + '\` | ' + r.relevant + ' | ' + r.covered + ' | ' + bar + ' ' + r.pct + '% |');
+              });
+              console.log('| **TOTAL** | **' + total.rel + '** | **' + total.cov + '** | **' + totalPct + '%** |');
+            " >> $GITHUB_STEP_SUMMARY || true
+          fi
 
   # ── AI Engine ────────────────────────────────────────────────────────────────
   ai-engine:
