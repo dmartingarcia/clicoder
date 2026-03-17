@@ -2,13 +2,14 @@ import Config
 
 # Configure your database
 config :app, App.Repo,
-  username: System.get_env("DB_USER") || "postgres",
-  password: System.get_env("DB_PASSWORD") || "password",
-  hostname: System.get_env("DB_HOST") || "db",
-  database: System.get_env("DB_NAME") || "cie10_app_dev",
+  url: System.get_env("DATABASE_URL") || "postgresql://postgres:changeme@db:5432/cie10_app",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
+
+config :app, App.EventStore,
+  serializer: App.JsonSerializer,
+  url: System.get_env("EVENT_STORE_URL") || "postgresql://postgres:changeme@db:5432/cie10_eventstore"
 
 # URL del microservicio de IA
 config :app, :ai_engine_url, System.get_env("AI_ENGINE_URL") || "http://localhost:8000"
@@ -64,5 +65,13 @@ config :phoenix, :stacktrace_depth, 20
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
 
-# Disable swoosh api client as it is only required for production adapters.
-config :swoosh, :api_client, false
+# Use Mailpit SMTP in development (docker-compose service on port 1025)
+config :app, App.Mailer,
+  adapter: Swoosh.Adapters.SMTP,
+  relay: System.get_env("SMTP_HOST") || "localhost",
+  port: String.to_integer(System.get_env("SMTP_PORT") || "1025"),
+  tls: :never,
+  auth: :never
+
+config :swoosh, :api_client, Swoosh.ApiClient.Finch
+config :swoosh, :finch_name, App.Finch
