@@ -3,10 +3,29 @@ defmodule AppWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug AppWeb.Plugs.SetLocale
+  end
+
+  pipeline :require_auth do
+    plug AppWeb.Plugs.RequireAuth
   end
 
   scope "/api", AppWeb do
     pipe_through :api
+
+    post "/auth/register", AuthController, :register
+    post "/auth/login", AuthController, :login
+    get "/auth/confirm/:token", AuthController, :confirm
+
+    get "/translations/:locale", TranslationController, :show
+
+    # Authenticated routes
+    pipe_through [:require_auth]
+    get "/conversations", ConversationController, :index
+    get "/conversations/trash", ConversationController, :trash
+    delete "/conversations/:conversation_id", ConversationController, :delete
+    put "/conversations/:conversation_id/restore", ConversationController, :restore
+    put "/users/locale", AuthController, :update_locale
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
