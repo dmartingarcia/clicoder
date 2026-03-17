@@ -56,10 +56,16 @@ defmodule App.MixProject do
       # Event Sourcing + CQRS
       {:commanded, "~> 1.4"},
       {:commanded_ecto_projections, "~> 1.3"},
+      {:commanded_eventstore_adapter, "~> 1.4"},
+      {:eventstore, "~> 1.4"},
 
       # Utilities
       {:uuid, "~> 1.1"},
-      {:cors_plug, "~> 3.0"}
+      {:cors_plug, "~> 3.0"},
+      {:bcrypt_elixir, "~> 3.0"},
+      {:finch, "~> 0.13"},
+      {:gen_smtp, "~> 1.2"},
+      {:yaml_elixir, "~> 2.9"}
     ]
   end
 
