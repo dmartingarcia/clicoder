@@ -1,7 +1,8 @@
-.PHONY: help build build-base build-backend build-frontend build-ai build-training up down restart logs logs-backend logs-frontend logs-ai logs-db clean clean-all dev setup backend-shell backend-migrate backend-rollback backend-seed backend-reset backend-test backend-install backend-format backend-inspect frontend-shell frontend-test frontend-install frontend-format frontend-lint frontend-inspect ai-shell ai-install db-shell db-backup db-reset ps stats prod-build prod-up training-setup training-dataset training-jupyter training-train training-export training-all training-clean training-docker-cpu training-docker-gpu
+.PHONY: help build build-base build-backend build-frontend build-ai build-training up down restart logs logs-backend logs-frontend logs-ai logs-db logs-mail clean clean-all dev setup backend-shell backend-migrate backend-rollback backend-seed backend-reset backend-test backend-install backend-format backend-inspect frontend-shell frontend-test frontend-install frontend-format frontend-lint frontend-inspect ai-shell ai-install db-shell db-backup db-reset ps stats prod-build prod-up mailpit training-setup training-dataset training-jupyter training-train training-export training-all training-clean training-docker-cpu training-docker-gpu cpu-build cpu-up cpu-down cpu-dev cpu-logs-ai cpu-ai-shell
 
 # Variables
-COMPOSE = docker compose
+COMPOSE     = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
+COMPOSE_CPU = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
 BACKEND = $(COMPOSE) exec backend
 FRONTEND = $(COMPOSE) exec frontend
 AI = $(COMPOSE) exec ai_engine
@@ -48,10 +49,11 @@ up: ## Levantar todos los servicios
 	@echo "$(GREEN)Levantando servicios...$(NC)"
 	$(COMPOSE) up -d
 	@echo "$(GREEN)Servicios levantados:$(NC)"
-	@echo "  - Frontend: http://localhost:3000"
+	@echo "  - Frontend:    http://localhost:3000"
 	@echo "  - Backend API: http://localhost:4000"
-	@echo "  - AI Engine: http://localhost:8000"
-	@echo "  - PostgreSQL: localhost:5432"
+	@echo "  - AI Engine:   http://localhost:8000"
+	@echo "  - Mailpit UI:  http://localhost:8025"
+	@echo "  - PostgreSQL:  localhost:5432"
 
 down: ## Detener todos los servicios
 	@echo "$(YELLOW)Deteniendo servicios...$(NC)"
@@ -75,6 +77,13 @@ logs-ai: ## Ver logs del AI engine
 
 logs-db: ## Ver logs de la base de datos
 	$(COMPOSE) logs -f db
+
+logs-mail: ## Ver logs de Mailpit
+	$(COMPOSE) logs -f mailpit
+
+mailpit: ## Abrir Mailpit en el navegador (fake email inbox)
+	@echo "$(GREEN)Abriendo Mailpit en http://localhost:8025$(NC)"
+	open http://localhost:8025 2>/dev/null || xdg-open http://localhost:8025 2>/dev/null || echo "Abre manualmente: http://localhost:8025"
 
 clean: ## Limpiar contenedores, volúmenes e imágenes
 	@echo "$(YELLOW)Limpiando todo...$(NC)"
@@ -256,6 +265,35 @@ training-docker-cpu: ## Ejecutar entorno Docker training (CPU)
 training-docker-gpu: ## Ejecutar entorno Docker training (GPU)
 	@echo "$(YELLOW)→ Ejecutando entorno Docker training (GPU, si disponible)...$(NC)"
 	docker run --gpus all -it --rm -v $$(pwd):/workspace -w /workspace/training cie10-training
+
+# Modo CPU (desarrollo sin GPU)
+cpu-build: ## Construir AI engine CPU/mock (sin CUDA, imagen ligera)
+	@echo "$(GREEN)Construyendo AI engine CPU...$(NC)"
+	$(COMPOSE_CPU) build ai_engine
+
+cpu-up: ## Levantar servicios en modo CPU (sin GPU)
+	@echo "$(GREEN)Levantando servicios en modo CPU...$(NC)"
+	$(COMPOSE_CPU) up -d db backend frontend ai_engine
+	@echo "$(GREEN)Servicios levantados (modo CPU):$(NC)"
+	@echo "  - Frontend:    http://localhost:3000"
+	@echo "  - Backend API: http://localhost:4000"
+	@echo "  - AI Engine:   http://localhost:8000 (CPU mock)"
+	@echo "  - Mailpit UI:  http://localhost:8025"
+	@echo "  - PostgreSQL:  localhost:5432"
+
+cpu-down: ## Detener servicios del modo CPU
+	@echo "$(YELLOW)Deteniendo servicios CPU...$(NC)"
+	$(COMPOSE_CPU) down
+
+cpu-dev: ## Levantar modo CPU con logs en consola
+	@echo "$(GREEN)Iniciando modo desarrollo CPU...$(NC)"
+	$(COMPOSE_CPU) up db backend frontend ai_engine
+
+cpu-logs-ai: ## Ver logs del AI engine CPU
+	$(COMPOSE_CPU) logs -f ai_engine
+
+cpu-ai-shell: ## Abrir shell en el AI engine CPU
+	$(COMPOSE_CPU) exec ai_engine sh
 
 # Default target
 .DEFAULT_GOAL := help
