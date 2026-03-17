@@ -1,176 +1,383 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useConversation } from '@/contexts/ConversationContext';
+import { useState, useRef, useEffect } from 'react';
+import { useConversation, ChatItem, AnalysisCard, AnalysisCode, PredictedCode } from '@/contexts/ConversationContext';
+import { ConversationSidebar } from '@/components/ConversationSidebar';
+import { useI18n } from '@/contexts/I18nContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import {
+  Loader2, FileText, Stethoscope, CheckCircle2, XCircle,
+  AlertCircle, ClipboardList, Lightbulb, Activity,
+} from 'lucide-react';
 
+// ─── Card: Resumen clínico ────────────────────────────────────────────────────
+function SummaryCard({ content }: { content: string }) {
+  const { t } = useI18n();
+  return (
+    <Card className="p-4 border-l-4 border-l-blue-400 bg-blue-50">
+      <div className="flex items-center gap-2 mb-2 text-blue-700">
+        <ClipboardList className="h-4 w-4 shrink-0" />
+        <span className="text-xs font-semibold uppercase tracking-wide">{t('cards.summary_title')}</span>
+      </div>
+      <p className="text-sm text-gray-700 leading-relaxed">{content}</p>
+    </Card>
+  );
+}
+
+// ─── Card: Códigos CIE-10 ─────────────────────────────────────────────────────
+function CodesCard({
+  codes,
+  predictedCodes,
+  validateCode,
+  rejectCode,
+}: {
+  codes: AnalysisCode[];
+  predictedCodes: PredictedCode[];
+  validateCode: (id: string, code: string) => void;
+  rejectCode: (id: string, code: string, reason: string) => void;
+}) {
+  const { t } = useI18n();
+  const [rejectInputs, setRejectInputs] = useState<Record<string, string>>({});
+  const [showReject, setShowReject] = useState<string | null>(null);
+
+  // Match each code to its DB record for status + code_id
+  const enriched = codes.map((c) => {
+    const db = predictedCodes.find((p) => p.cie10_code === c.code);
+    return { ...c, code_id: db?.code_id, status: db?.status ?? 'pending' };
+  });
+
+  return (
+    <Card className="p-4 border-l-4 border-l-indigo-400 bg-indigo-50">
+      <div className="flex items-center gap-2 mb-3 text-indigo-700">
+        <Activity className="h-4 w-4 shrink-0" />
+        <span className="text-xs font-semibold uppercase tracking-wide">
+          {t('cards.codes_title', { count: codes.length })}
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {enriched.map((c, i) => (
+          <div key={i} className="bg-white rounded-lg p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-indigo-700">{c.code}</span>
+                {c.description && <span className="text-xs text-gray-500">{c.description}</span>}
+                <Badge
+                  variant={c.status === 'validated' ? 'default' : c.status === 'rejected' ? 'destructive' : 'secondary'}
+                  className="text-xs"
+                >
+                  {c.status === 'validated' ? t('cards.status_validated') : c.status === 'rejected' ? t('cards.status_rejected') : t('cards.pending')}
+                </Badge>
+              </div>
+              <span className="text-xs font-semibold text-green-600 shrink-0">
+                {((c.confidence ?? 0) * 100).toFixed(0)}%
+              </span>
+            </div>
+
+            <p className="text-xs text-gray-600 mb-2">{c.reason ?? c.reasoning}</p>
+
+            {c.status === 'pending' && c.code_id && (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-xs h-7"
+                    onClick={() => validateCode(c.code_id!, c.code)}
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-1" /> {t('cards.validate')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 text-xs h-7 border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={() => setShowReject((prev) => (prev === c.code_id ? null : c.code_id!))}
+                  >
+                    <XCircle className="h-3 w-3 mr-1" /> {t('cards.reject')}
+                  </Button>
+                </div>
+
+                {showReject === c.code_id && (
+                  <div className="space-y-1">
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder={t('cards.reject_placeholder')}
+                      value={rejectInputs[c.code_id!] ?? ''}
+                      onChange={(e) => setRejectInputs((prev) => ({ ...prev, [c.code_id!]: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && rejectInputs[c.code_id!]?.trim()) {
+                          rejectCode(c.code_id!, c.code, rejectInputs[c.code_id!]);
+                          setShowReject(null);
+                        }
+                      }}
+                      className="w-full text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-red-400"
+                    />
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="w-full text-xs h-7"
+                      disabled={!rejectInputs[c.code_id!]?.trim()}
+                      onClick={() => {
+                        rejectCode(c.code_id!, c.code, rejectInputs[c.code_id!]);
+                        setShowReject(null);
+                      }}
+                    >
+                      {t('cards.confirm_reject')}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {c.status === 'validated' && (
+              <p className="text-xs text-green-600 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" /> {t('cards.validated')}
+              </p>
+            )}
+            {c.status === 'rejected' && (
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <XCircle className="h-3 w-3" /> {t('cards.rejected')}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ─── Card: Recomendaciones ────────────────────────────────────────────────────
+function RecommendationsCard({ content }: { content: string }) {
+  const { t } = useI18n();
+  return (
+    <Card className="p-4 border-l-4 border-l-amber-400 bg-amber-50">
+      <div className="flex items-center gap-2 mb-2 text-amber-700">
+        <Lightbulb className="h-4 w-4 shrink-0" />
+        <span className="text-xs font-semibold uppercase tracking-wide">{t('cards.recommendations_title')}</span>
+      </div>
+      <p className="text-sm text-gray-700 leading-relaxed">{content}</p>
+    </Card>
+  );
+}
+
+// ─── Card: texto genérico ─────────────────────────────────────────────────────
+function TextCard({ content }: { content: string }) {
+  return (
+    <Card className="p-4 border-l-4 border-l-gray-300 bg-gray-50">
+      <p className="text-sm text-gray-700 leading-relaxed">{content}</p>
+    </Card>
+  );
+}
+
+// ─── Chat item renderer ───────────────────────────────────────────────────────
+function ChatItemView({
+  item,
+  predictedCodes,
+  validateCode,
+  rejectCode,
+}: {
+  item: ChatItem;
+  predictedCodes: PredictedCode[];
+  validateCode: (id: string, code: string) => void;
+  rejectCode: (id: string, code: string, reason: string) => void;
+}) {
+  if (item.kind === 'user') {
+    return (
+      <div className="flex justify-end gap-3">
+        <div className="bg-white border rounded-xl px-4 py-3 text-sm text-gray-800 max-w-2xl shadow-sm">
+          <p className="whitespace-pre-wrap">{item.content}</p>
+          <span className="block text-xs text-gray-400 mt-1 text-right">
+            {new Date(item.timestamp).toLocaleTimeString()}
+          </span>
+        </div>
+        <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-1">
+          <span className="text-xs font-bold text-green-700">MD</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Card item
+  const card = item as AnalysisCard;
+
+  const wrapper = (children: React.ReactNode) => (
+    <div className="flex gap-3">
+      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-1">
+        <Stethoscope className="h-4 w-4 text-blue-600" />
+      </div>
+      <div className="flex-1 max-w-2xl">{children}</div>
+    </div>
+  );
+
+  switch (card.card_type) {
+    case 'summary':
+      return wrapper(<SummaryCard content={card.content as string} />);
+    case 'codes':
+      return wrapper(
+        <CodesCard
+          codes={card.content as AnalysisCode[]}
+          predictedCodes={predictedCodes}
+          validateCode={validateCode}
+          rejectCode={rejectCode}
+        />
+      );
+    case 'recommendations':
+      return wrapper(<RecommendationsCard content={card.content as string} />);
+    default:
+      return wrapper(<TextCard content={card.content as string} />);
+  }
+}
+
+// ─── Main interface ───────────────────────────────────────────────────────────
 export function ChatInterface() {
-  const { messages, predictedCodes, isAnalyzing, sendMessage, analyzeReport, validateCode, rejectCode } = useConversation();
-  const [input, setInput] = useState('');
+  const { activeConversationId, pendingConversation, chatItems, predictedCodes, isAnalyzing, analyzeReport, validateCode, rejectCode, createConversation } = useConversation();
+  const { t } = useI18n();
+  const [reportText, setReportText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [chatItems, isAnalyzing]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-
-    // Detectar si es un informe clínico (más de 50 caracteres) para analizarlo
-    if (input.length > 50) {
-      analyzeReport(input);
-    } else {
-      sendMessage(input);
-    }
-
-    setInput('');
+  const handleAnalyze = () => {
+    const text = reportText.trim();
+    if (!text || text.length < 20) return;
+    analyzeReport(text);
+    setReportText('');
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Panel principal del chat */}
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-4">
-        <Card className="flex-1 flex flex-col shadow-2xl">
+    <div className="flex h-screen bg-gray-100">
+      <ConversationSidebar />
+
+      {!activeConversationId && !pendingConversation ? (
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center p-8">
+          <Stethoscope className="h-16 w-16 text-blue-400" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">{t('chat.welcome_title')}</h1>
+            <p className="text-gray-500 mt-2 max-w-sm">{t('chat.welcome_body')}</p>
+          </div>
+          <Button onClick={createConversation} className="bg-blue-600 hover:bg-blue-700 gap-2">
+            <FileText className="h-4 w-4" />
+            {t('chat.new_analysis')}
+          </Button>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="p-4 border-b bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
-            <h2 className="text-2xl font-bold">Clasificador CIE-10</h2>
-            <p className="text-sm opacity-90">Asistente médico inteligente</p>
+          <div className="bg-white border-b px-6 py-4 flex items-center gap-3">
+            <Stethoscope className="h-5 w-5 text-blue-600" />
+            <div>
+              <h2 className="font-semibold text-gray-800">{t('chat.analysis_header')}</h2>
+              <p className="text-xs text-gray-400">ID: {activeConversationId}</p>
+            </div>
           </div>
 
-          {/* Mensajes */}
-          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-            <div className="space-y-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.message_id}
-                  className={`flex ${msg.user_id === 'system_ai' ? 'justify-start' : 'justify-end'}`}
-                >
-                  <div className={`flex gap-3 max-w-[80%] ${msg.user_id === 'system_ai' ? 'flex-row' : 'flex-row-reverse'}`}>
-                    <Avatar className={msg.user_id === 'system_ai' ? 'bg-blue-500' : 'bg-green-500'}>
-                      <AvatarFallback className="text-white">
-                        {msg.user_id === 'system_ai' ? 'AI' : 'MD'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div
-                      className={`rounded-2xl px-4 py-3 ${
-                        msg.user_id === 'system_ai'
-                          ? 'bg-gray-100 text-gray-900'
-                          : 'bg-blue-600 text-white'
-                      }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                      <span className="text-xs opacity-70 mt-1 block">
-                        {new Date(msg.timestamp).toLocaleTimeString()}
-                      </span>
-                    </div>
-                  </div>
+          {/* Chat stream */}
+          <ScrollArea className="flex-1 px-6 py-4" ref={scrollRef}>
+            <div className="space-y-4 max-w-3xl mx-auto">
+              {chatItems.length === 0 && !isAnalyzing && (
+                <div className="flex flex-col items-center gap-3 py-16 text-gray-400">
+                  <AlertCircle className="h-10 w-10 opacity-40" />
+                  <p className="text-sm">{t('chat.empty_state')}</p>
                 </div>
-              ))}
+              )}
+
+              {(() => {
+                const firstUser = chatItems.find((item) => item.kind === 'user');
+                const rest = firstUser ? chatItems.filter((item) => item !== firstUser) : chatItems;
+                return (
+                  <>
+                    {firstUser && firstUser.kind === 'user' && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                        <div className="flex items-center gap-2 mb-2 text-gray-500">
+                          <FileText className="h-4 w-4 shrink-0" />
+                          <span className="text-xs font-semibold uppercase tracking-wide">{t('chat.report_label')}</span>
+                          <span className="ml-auto text-xs text-gray-400">
+                            {new Date(firstUser.timestamp).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{firstUser.content}</p>
+                      </div>
+                    )}
+                    {rest.map((item, i) => (
+                      <ChatItemView
+                        key={item.kind === 'user' ? item.message_id : item.card_id + i}
+                        item={item}
+                        predictedCodes={predictedCodes}
+                        validateCode={validateCode}
+                        rejectCode={rejectCode}
+                      />
+                    ))}
+                  </>
+                );
+              })()}
 
               {isAnalyzing && (
-                <div className="flex justify-start">
-                  <div className="flex gap-3 items-center bg-gray-100 rounded-2xl px-4 py-3">
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-                    <span className="text-sm text-gray-700">Analizando informe clínico...</span>
+                <div className="flex gap-3">
+                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                    <Stethoscope className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-gray-600">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                    {t('chat.analyzing')}
                   </div>
                 </div>
               )}
             </div>
           </ScrollArea>
 
-          {/* Input */}
-          <div className="p-4 border-t bg-gray-50">
-            <div className="flex gap-2">
+          {/* Report input */}
+          <div className="bg-white border-t px-6 py-4">
+            <div className="max-w-3xl mx-auto">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider block mb-2">
+                {t('chat.report_label')}
+              </label>
               <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
+                value={reportText}
+                onChange={(e) => setReportText(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                  if (e.key === 'Enter' && e.ctrlKey) {
                     e.preventDefault();
-                    handleSend();
+                    handleAnalyze();
                   }
                 }}
-                placeholder="Escribe un informe clínico o mensaje..."
-                className="resize-none"
-                rows={3}
+                placeholder={t('chat.report_placeholder')}
+                className="resize-none text-sm"
+                rows={4}
+                disabled={isAnalyzing}
               />
-              <Button onClick={handleSend} size="icon" className="h-full px-4 bg-blue-600 hover:bg-blue-700">
-                <Send className="h-5 w-5" />
-              </Button>
+              {reportText.length > 0 && reportText.trim().length < 20 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  {t('chat.min_chars', { min: 20, remaining: 20 - reportText.trim().length })}
+                </p>
+              )}
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-xs text-gray-400">
+                  {t('chat.char_count', { count: reportText.length })}
+                </span>
+                <Button
+                  onClick={handleAnalyze}
+                  disabled={isAnalyzing || reportText.trim().length < 20}
+                  className="bg-blue-600 hover:bg-blue-700 gap-2"
+                  size="sm"
+                >
+                  {isAnalyzing
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <FileText className="h-4 w-4" />}
+                  {t('chat.analyze_button')}
+                </Button>
+              </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              💡 Pega un informe clínico (&gt;50 caracteres) para análisis automático
-            </p>
           </div>
-        </Card>
-      </div>
-
-      {/* Panel lateral de códigos CIE-10 */}
-      <div className="w-96 p-4 bg-white border-l overflow-y-auto">
-        <h3 className="text-xl font-bold mb-4 text-gray-800">Códigos CIE-10</h3>
-
-        {predictedCodes.length === 0 ? (
-          <div className="text-center text-gray-500 mt-8">
-            <p>No hay códigos detectados aún</p>
-            <p className="text-sm mt-2">Los códigos aparecerán aquí tras el análisis</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {predictedCodes.map((code) => (
-              <Card key={code.code_id} className="p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h4 className="font-bold text-lg text-blue-700">{code.cie10_code}</h4>
-                    <Badge variant={code.status === 'validated' ? 'default' : code.status === 'rejected' ? 'destructive' : 'secondary'}>
-                      {code.status}
-                    </Badge>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm text-gray-600">Confianza:</span>
-                    <p className="font-bold text-green-600">{(code.confidence * 100).toFixed(1)}%</p>
-                  </div>
-                </div>
-
-                <p className="text-sm text-gray-700 mb-3">{code.reasoning}</p>
-
-                {code.status === 'pending' && (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="default"
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                      onClick={() => validateCode(code.code_id, code.cie10_code)}
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-1" />
-                      Validar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="flex-1"
-                      onClick={() => {
-                        const reason = prompt('Motivo del rechazo:');
-                        if (reason) rejectCode(code.code_id, code.cie10_code, reason);
-                      }}
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Rechazar
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
