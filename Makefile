@@ -1,8 +1,9 @@
 .PHONY: help build build-base build-backend build-frontend build-ai build-training up down restart logs logs-backend logs-frontend logs-ai logs-db logs-mail clean clean-all dev setup backend-shell backend-migrate backend-rollback backend-seed backend-reset backend-test backend-install backend-format backend-inspect frontend-shell frontend-test frontend-install frontend-format frontend-lint frontend-inspect ai-shell ai-install db-shell db-backup db-reset ps stats prod-build prod-up mailpit training-setup training-dataset training-jupyter training-train training-export training-all training-clean training-docker-cpu training-docker-gpu cpu-build cpu-up cpu-down cpu-dev cpu-logs-ai cpu-ai-shell
 
 # Variables
-COMPOSE     = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
-COMPOSE_CPU = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
+COMPOSE      = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
+COMPOSE_CPU  = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
+COMPOSE_MOCK = docker compose -f docker-compose.yml -f docker-compose.mock.yml
 BACKEND = $(COMPOSE) exec backend
 FRONTEND = $(COMPOSE) exec frontend
 AI = $(COMPOSE) exec ai_engine
@@ -266,10 +267,55 @@ training-docker-gpu: ## Ejecutar entorno Docker training (GPU)
 	@echo "$(YELLOW)→ Ejecutando entorno Docker training (GPU, si disponible)...$(NC)"
 	docker run --gpus all -it --rm -v $$(pwd):/workspace -w /workspace/training cie10-training
 
-# Modo CPU (desarrollo sin GPU)
-cpu-build: ## Construir AI engine CPU/mock (sin CUDA, imagen ligera)
-	@echo "$(GREEN)Construyendo AI engine CPU...$(NC)"
-	$(COMPOSE_CPU) build ai_engine
+# Entrenamiento del clasificador (ai_engine/train.py)
+# Los datos y el token HF se inyectan desde docker-compose.yml
+
+ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requiere HF_TOKEN en .env)
+	@echo "$(BLUE)═══════════════════════════════════════════════════════════$(NC)"
+	@echo "$(BLUE)  Entrenando clasificador CIE-10$(NC)"
+	@echo "$(BLUE)═══════════════════════════════════════════════════════════$(NC)"
+	$(COMPOSE_CPU) run --rm ai_engine python train.py \
+		--train_file /data/codiesp_csvs/codiesp_D_source_train.csv \
+		--val_file   /data/codiesp_csvs/codiesp_D_source_validation.csv \
+		--cie10_file /data/cie10-csvs/cie10-es-diagnoses.csv \
+		--output_dir /app/model \
+		--model_name $(or $(MODEL),jhu-clsp/mmBERT-base) \
+		--max_length $(or $(MAX_LENGTH),1024) \
+		--batch_size $(or $(BATCH_SIZE),1) \
+		--grad_accum $(or $(GRAD_ACCUM),16) \
+		--pos_weight_cap $(or $(POS_WEIGHT_CAP),10.0) \
+		--device auto
+	@echo "$(GREEN)✓ Modelo guardado en ai_engine/model/$(NC)"
+
+ai-train-quick: ## Pipeline de prueba (1 época, modelo público, sin token)
+	@echo "$(YELLOW)→ Entrenamiento de prueba (1 época, max_length=256)...$(NC)"
+	$(COMPOSE_CPU) run --rm ai_engine python train.py \
+		--train_file /data/codiesp_csvs/codiesp_D_source_train.csv \
+		--val_file   /data/codiesp_csvs/codiesp_D_source_validation.csv \
+		--cie10_file /data/cie10-csvs/cie10-es-diagnoses.csv \
+		--output_dir /app/model \
+		--model_name PlanTL-GOB-ES/roberta-base-biomedical-clinical-es \
+		--max_length 256 \
+		--epochs 1 \
+		--batch_size 4 \
+		--device auto
+
+ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
+	@echo "$(BLUE)→ Entrenando con GPU...$(NC)"
+	$(COMPOSE) run --rm ai_engine python train.py \
+		--train_file /data/codiesp_csvs/codiesp_D_source_train.csv \
+		--val_file   /data/codiesp_csvs/codiesp_D_source_validation.csv \
+		--cie10_file /data/cie10-csvs/cie10-es-diagnoses.csv \
+		--output_dir /app/model \
+		--model_name $(or $(MODEL),jhu-clsp/mmBERT-base) \
+		--max_length $(or $(MAX_LENGTH),1024) \
+		--device cuda
+	@echo "$(GREEN)✓ Modelo guardado en ai_engine/model/$(NC)"
+
+# Modo mock (desarrollo sin GPU, ai_engine simulado)
+cpu-build: ## Construir AI engine mock (sin CUDA, imagen ligera)
+	@echo "$(GREEN)Construyendo AI engine mock...$(NC)"
+	$(COMPOSE_MOCK) build ai_engine
 
 cpu-up: ## Levantar servicios en modo CPU (sin GPU)
 	@echo "$(GREEN)Levantando servicios en modo CPU...$(NC)"
