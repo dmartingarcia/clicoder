@@ -1,11 +1,7 @@
-# docker-compose.mock.yml
-# Override para desarrollo sin GPU.
-# Uso: docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d
-#
-# Reemplaza:
-#   - ai_engine  → imagen ligera Python sin CUDA, mock inteligente de la API
-#   - ml-base    → no se construye (no necesario sin GPU)
-#   - training   → deshabilitado (no disponible sin GPU)
+# docker-compose.cpu.yml
+# Override para entornos sin GPU (Mac, Linux sin NVIDIA).
+# El ai_engine real se ejecuta en CPU — válido para desarrollo y entrenamiento.
+# Uso: docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
 
 services:
   ml-base:
@@ -15,18 +11,5 @@ services:
     profiles: ["gpu-only"]
 
   ai_engine:
-    build:
-      context: ./ai_engine_mock
-      dockerfile: Dockerfile
-    image: cie10-ai-engine-mock:latest
-    container_name: ai_engine
-    restart: always
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "${AI_ENGINE_PORT:-8000}:8000"
     environment:
-      - MODEL_NAME=MOCK
-    volumes:
-      - ./ai_engine_mock:/app
+      - DEVICE=cpu

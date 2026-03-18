@@ -1,0 +1,27 @@
+# docker-compose.mock.yml
+# Override para desarrollo sin GPU: sustituye ai_engine por un mock ligero.
+# Uso: docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d
+
+services:
+  ml-base:
+    profiles: ["gpu-only"]
+
+  training:
+    profiles: ["gpu-only"]
+
+  ai_engine:
+    build:
+      context: ./ai_engine_mock
+      dockerfile: Dockerfile
+    image: cie10-ai-engine-mock:latest
+    container_name: ai_engine
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${AI_ENGINE_PORT:-8000}:8000"
+    environment:
+      - MODEL_NAME=MOCK
+    volumes:
+      - ./ai_engine_mock:/app
