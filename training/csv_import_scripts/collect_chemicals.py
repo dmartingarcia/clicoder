@@ -85,25 +85,36 @@ def iterate_through_codes():
 
 def get_list_of_codes_from_response(future_requests):
     # Lista para almacenar todas las respuestas
-    responses = list(grequests.imap_enumerated(future_requests, size=10))
-    for idx, (index, response) in enumerate(responses):
-        print(f"Procesando respuesta {idx + 1}/{len(responses)}: {response.url}")
+    pending = future_requests
+    while pending:
+        retry = []
+        responses = list(grequests.imap_enumerated(pending, size=10))
+        for idx, (index, response) in enumerate(responses):
+            print(f"Procesando respuesta {idx + 1}/{len(responses)}: {response.url}")
 
-        child_items = []
-        for code_entry in response.json():
-            description = code_entry.get("description")
-            finalNode = code_entry.get("finalNode")
+            try:
+                data = response.json()
+            except Exception:
+                print(f"  [retry] respuesta vacía: {response.url}")
+                retry.append(grequests.get(response.url, headers=headers))
+                continue
 
-            information = {}
-            for key in fieldnames:
-                information[key] = code_entry.get(key)
+            child_items = []
+            for code_entry in data:
+                description = code_entry.get("description")
+                finalNode = code_entry.get("finalNode")
 
-            codes[description] = information
+                information = {}
+                for key in fieldnames:
+                    information[key] = code_entry.get(key)
 
-            if not finalNode:
-                child_items.append(information)
-                # If not a final node, we need to find its children
-        get_childrens(child_items)
+                codes[description] = information
+
+                if not finalNode:
+                    child_items.append(information)
+                    # If not a final node, we need to find its children
+            get_childrens(child_items)
+        pending = retry
 
 
 def get_childrens(parent_entries):
@@ -117,26 +128,39 @@ def get_childrens(parent_entries):
             )
         )
 
-    responses = list(grequests.imap_enumerated(future_requests, size=10))
-    for idx, (index, response) in enumerate(responses):
-        print(f"    - Procesando hijo {idx + 1}/{len(responses)}: {response.url}")
-        parent_entry = parent_entries[idx]
-        for code_entry in response.json():
-            description = code_entry.get("description")
-            finalNode = code_entry.get("finalNode")
+    pending = future_requests
+    while pending:
+        retry = []
+        responses = list(grequests.imap_enumerated(pending, size=10))
+        for idx, (index, response) in enumerate(responses):
+            print(f"    - Procesando hijo {idx + 1}/{len(responses)}: {response.url}")
 
-            information = {}
-            for key in fieldnames:
-                information[key] = code_entry.get(key)
+            try:
+                data = response.json()
+            except Exception:
+                print(f"  [retry] respuesta vacía: {response.url}")
+                retry.append(grequests.get(response.url, headers=headers))
+                continue
 
-            information["description"] = (
-                parent_entry["description"] + " | " + information["description"]
-            )
+            # Usamos index (índice original de la request) para emparejar con parent_entries
+            parent_entry = parent_entries[index]
+            for code_entry in data:
+                description = code_entry.get("description")
+                finalNode = code_entry.get("finalNode")
 
-            codes[description] = information
+                information = {}
+                for key in fieldnames:
+                    information[key] = code_entry.get(key)
 
-            if not finalNode:
-                get_childrens(information)
+                information["description"] = (
+                    parent_entry["description"] + " | " + information["description"]
+                )
+
+                codes[description] = information
+
+                if not finalNode:
+                    get_childrens([information])
+        pending = retry
 
 
 # Check if output file already exists

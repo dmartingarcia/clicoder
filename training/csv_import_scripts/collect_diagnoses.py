@@ -24,18 +24,19 @@ fieldnames = [
 min = 0
 max = 10  # should be 10
 
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Referer": "https://www.eciemaps.sanidad.gob.es/",
+    "Cache-Control": "max-age=0",
+}
+
 
 def generate_cie_10_code_requests(code):
     url_prefix = "https://www.eciemaps.sanidad.gob.es/cie10mc/2024/lt/sec/"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "Referer": "https://www.eciemaps.sanidad.gob.es/",
-        "Cache-Control": "max-age=0",
-    }
     return [
         grequests.get(f"{url_prefix}{code}{number}", headers=headers, timeout=30.0)
         for number in range(min, max)
@@ -50,29 +51,39 @@ def iterate_through_codes():
 
 
 def get_list_of_codes_from_response(future_requests):
-    for index, response in grequests.imap_enumerated(future_requests, size=10):
-        print(response.url)
-        for code_entry in response.json():
-            id = code_entry.get("code")
-            # excluding excludes1 type
-            if (
-                code_entry.get("type") == "desc"
-                or code_entry.get("type") == "inclusionTerm"
-            ):
-                if codes.get(id) is None:
-                    information = {}
-                    for key in fieldnames:
-                        information[key] = code_entry.get(key)
-                    codes[id] = information
-                else:
-                    updated_code = codes[id]
-                    updated_code["description"] = (
-                        updated_code.get("description")
-                        + " | "
-                        + code_entry.get("description")
-                    )
-                    print(updated_code["description"])
-                    codes[id] = updated_code
+    pending = future_requests
+    while pending:
+        retry = []
+        for index, response in grequests.imap_enumerated(pending, size=10):
+            print(response.url)
+            try:
+                data = response.json()
+            except Exception:
+                print(f"  [retry] respuesta vacía: {response.url}")
+                retry.append(grequests.get(response.url, headers=headers, timeout=30.0))
+                continue
+            for code_entry in data:
+                id = code_entry.get("code")
+                # excluding excludes1 type
+                if (
+                    code_entry.get("type") == "desc"
+                    or code_entry.get("type") == "inclusionTerm"
+                ):
+                    if codes.get(id) is None:
+                        information = {}
+                        for key in fieldnames:
+                            information[key] = code_entry.get(key)
+                        codes[id] = information
+                    else:
+                        updated_code = codes[id]
+                        updated_code["description"] = (
+                            updated_code.get("description")
+                            + " | "
+                            + code_entry.get("description")
+                        )
+                        print(updated_code["description"])
+                        codes[id] = updated_code
+        pending = retry
 
 
 def transform_fields(code):
