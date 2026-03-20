@@ -154,33 +154,62 @@ codes = get_procedure_subclasses(entries)
 
 url_prefix = "https://www.eciemaps.sanidad.gob.es/ref/cie10pcs"
 pb = ProgressBar(max_value=len(codes))
+skipped_codes = []
 # INFO: Prevents ToManyFilesOpen OSError - grequest map doesn't close already processed requests, and there's 75k+
 # I'm processing it in 50 slices, as it will force the old object via dereferencing to be GC and sockets will be clossed.
 number_of_chunks = 100
 print("Getting details of each procedure :::: ~30 min")
 for index in range(number_of_chunks):
-    cie10_code_requests = [
-        grequests.get(f"{url_prefix}/{key}", headers=headers, timeout=30.0)
+    pending_urls = [
+        f"{url_prefix}/{key}"
         for key in list(codes.keys())[index::number_of_chunks]
     ]
-    for request in grequests.imap(cie10_code_requests, size=25):
-        results = request.json()
 
-        code = codes.get(results["code"])
-        code["description"] = results["description"]
-        code["timesSelected"] = results["timesSelected"]
+    attempt = 0
+    while pending_urls:
+        retry_urls = []
+        reqs = [grequests.get(url, headers=headers, timeout=30.0) for url in pending_urls]
+        for request in grequests.imap(reqs, size=25):
+            if request.status_code == 204:
+                skipped_codes.append(request.url.split("/")[-1])
+                pb.increment()
+                continue
+            try:
+                results = request.json()
+            except Exception as e:
+                print(f"\n  [debug] status={request.status_code} body={request.text[:200]!r} url={request.url} err={e}")
+                retry_urls.append(request.url)
+                continue
 
-        if results["femalesOnly"] != None:
-            code["gender"] = "F"
-        elif results["malesOnly"] != None:
-            code["gender"] = "M"
-        else:
-            code["gender"] = ""
+            code = codes.get(results["code"])
+            code["description"] = results["description"]
+            code["timesSelected"] = results["timesSelected"]
 
-        codes[results["code"]] = code
-        pb.increment()
+            if results["femalesOnly"] != None:
+                code["gender"] = "F"
+            elif results["malesOnly"] != None:
+                code["gender"] = "M"
+            else:
+                code["gender"] = ""
+
+            codes[results["code"]] = code
+            pb.increment()
+
+        if retry_urls:
+            attempt += 1
+            import time
+            sleep_s = min(2 ** attempt, 60)
+            print(f"\n  [retry #{attempt}] {len(retry_urls)} URLs — esperando {sleep_s}s antes de reintentar...")
+            time.sleep(sleep_s)
+        pending_urls = retry_urls
 
 pb.finish()
+
+if skipped_codes:
+    skipped_file = "cie10-csvs/cie10-es-procedures-skipped.txt"
+    with open(skipped_file, "w") as f:
+        f.write("\n".join(skipped_codes) + "\n")
+    print(f"[skip] {len(skipped_codes)} códigos sin datos guardados en {skipped_file}")
 
 fieldnames = [
     "code",
