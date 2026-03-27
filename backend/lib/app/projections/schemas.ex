@@ -110,3 +110,29 @@ defmodule App.Projections.PredictedCodeProjection do
     |> validate_required([:cie10_code, :conversation_id])
   end
 end
+
+defmodule App.Projections.CodeSuggestionProjection do
+  use Ecto.Schema
+  import Ecto.Changeset
+
+  @primary_key {:id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
+
+  schema "code_suggestions" do
+    field :suggestion_id, :string
+    field :selected_text, :string
+    field :suggested_code, :string
+    field :suggested_by, :string
+
+    belongs_to :conversation, App.Projections.ConversationProjection
+
+    timestamps(type: :utc_datetime)
+  end
+
+  def changeset(suggestion, attrs) do
+    suggestion
+    |> cast(attrs, [:suggestion_id, :selected_text, :suggested_code, :suggested_by, :conversation_id])
+    |> validate_required([:suggestion_id, :selected_text, :suggested_code, :suggested_by, :conversation_id])
+    |> unique_constraint(:suggestion_id)
+  end
+end

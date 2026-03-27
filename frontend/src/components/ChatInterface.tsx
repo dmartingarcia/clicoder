@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useConversation, ChatItem, AnalysisCard, AnalysisCode, PredictedCode } from '@/contexts/ConversationContext';
 import { ConversationSidebar } from '@/components/ConversationSidebar';
 import { useI18n } from '@/contexts/I18nContext';
@@ -9,9 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { searchCie10, Cie10Result } from '@/lib/cie10';
 import {
   Loader2, FileText, Stethoscope, CheckCircle2, XCircle,
-  AlertCircle, ClipboardList, Lightbulb, Activity,
+  AlertCircle, ClipboardList, Lightbulb, Activity, Tag, ExternalLink,
 } from 'lucide-react';
 
 // ─── Card: Resumen clínico ────────────────────────────────────────────────────
@@ -64,7 +66,13 @@ function CodesCard({
           <div key={i} className="bg-white rounded-lg p-3 shadow-sm">
             <div className="flex items-start justify-between gap-2 mb-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-indigo-700">{c.code}</span>
+                <Link
+                  href={`/codes/${c.code}`}
+                  target="_blank"
+                  className="font-bold text-indigo-700 hover:underline flex items-center gap-0.5"
+                >
+                  {c.code} <ExternalLink className="h-3 w-3 opacity-60" />
+                </Link>
                 {c.description && <span className="text-xs text-gray-500">{c.description}</span>}
                 <Badge
                   variant={c.status === 'validated' ? 'default' : c.status === 'rejected' ? 'destructive' : 'secondary'}
@@ -164,6 +172,173 @@ function RecommendationsCard({ content }: { content: string }) {
   );
 }
 
+// ─── Card: Sugerencia de código ───────────────────────────────────────────────
+function SuggestionCard({ content }: { content: string }) {
+  const { t } = useI18n();
+  const { suggestCode } = useConversation();
+  const [selectedText, setSelectedText] = useState('');
+  const [codeInput, setCodeInput] = useState('');
+  const [suggestions, setSuggestions] = useState<Cie10Result[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<Cie10Result | null>(null);
+  const [submitted, setSubmitted] = useState<{ text: string; code: string; description?: string }[]>([]);
+  const textRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (q.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    const results = await searchCie10(q, 8);
+    setSuggestions(results);
+    setShowSuggestions(results.length > 0);
+  }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(codeInput), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [codeInput, fetchSuggestions]);
+
+  const handleMouseUp = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    const text = sel.toString().trim();
+    if (text.length < 2) return;
+    if (textRef.current && !textRef.current.contains(sel.anchorNode)) return;
+    setSelectedText(text);
+    setCodeInput('');
+    setSelectedSuggestion(null);
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  const pickSuggestion = (s: Cie10Result) => {
+    setCodeInput(s.code);
+    setSelectedSuggestion(s);
+    setShowSuggestions(false);
+  };
+
+  const handleSubmit = () => {
+    if (!selectedText || !codeInput.trim()) return;
+    const code = codeInput.trim().toUpperCase();
+    suggestCode(selectedText, code);
+    setSubmitted((prev) => [...prev, { text: selectedText, code, description: selectedSuggestion?.description }]);
+    setSelectedText('');
+    setCodeInput('');
+    setSelectedSuggestion(null);
+    setSuggestions([]);
+    window.getSelection()?.removeAllRanges();
+  };
+
+  const typeLabel = (type: string) =>
+    type === 'diagnosis' ? t('cie10.type_diagnosis') : type === 'procedure' ? t('cie10.type_procedure') : t('cie10.type_chemical');
+
+  return (
+    <Card className="p-4 border-l-4 border-l-purple-400 bg-purple-50">
+      <div className="flex items-center gap-2 mb-2 text-purple-700">
+        <Tag className="h-4 w-4 shrink-0" />
+        <span className="text-xs font-semibold uppercase tracking-wide">{t('cards.suggest_title')}</span>
+      </div>
+      <p className="text-xs text-purple-600 mb-3">{t('cards.suggest_hint')}</p>
+
+      <div
+        ref={textRef}
+        onMouseUp={handleMouseUp}
+        className="text-sm text-gray-700 bg-white rounded-lg p-3 leading-relaxed select-text cursor-text border border-purple-100"
+      >
+        {content}
+      </div>
+
+      {selectedText && (
+        <div className="mt-3 bg-white border border-purple-200 rounded-lg p-3 space-y-2">
+          <p className="text-xs text-gray-500">
+            <span className="font-medium text-purple-700">{t('cards.suggest_selected')}:</span>{' '}
+            &ldquo;{selectedText}&rdquo;
+          </p>
+          <div className="relative">
+            <div className="flex gap-2">
+              <input
+                autoFocus
+                type="text"
+                placeholder={t('cards.suggest_code_placeholder')}
+                value={codeInput}
+                onChange={(e) => { setCodeInput(e.target.value.toUpperCase()); setSelectedSuggestion(null); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { setShowSuggestions(false); handleSubmit(); }
+                  if (e.key === 'Escape') {
+                    if (showSuggestions) { setShowSuggestions(false); }
+                    else { setSelectedText(''); window.getSelection()?.removeAllRanges(); }
+                  }
+                }}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                className="flex-1 text-sm border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-400"
+              />
+              <Button
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-xs h-8"
+                disabled={!codeInput.trim()}
+                onClick={handleSubmit}
+              >
+                {t('cards.suggest_submit')}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs h-8"
+                onClick={() => { setSelectedText(''); window.getSelection()?.removeAllRanges(); }}
+              >
+                <XCircle className="h-3 w-3" />
+              </Button>
+            </div>
+
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-purple-200 rounded-lg shadow-lg overflow-hidden">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.code}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); pickSuggestion(s); }}
+                    className="w-full text-left px-3 py-2 hover:bg-purple-50 flex items-start gap-2 border-b border-gray-100 last:border-0"
+                  >
+                    <span className="font-bold text-purple-700 text-xs shrink-0 mt-0.5">{s.code}</span>
+                    <span className="text-xs text-gray-600 line-clamp-1 flex-1">{s.description}</span>
+                    <Badge variant="outline" className="text-[10px] shrink-0 px-1">{typeLabel(s.type)}</Badge>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {selectedSuggestion && (
+            <p className="text-xs text-purple-700 bg-purple-50 rounded px-2 py-1">
+              {selectedSuggestion.description}
+            </p>
+          )}
+        </div>
+      )}
+
+      {submitted.length > 0 && (
+        <div className="mt-3 space-y-1">
+          {submitted.map((s, i) => (
+            <div key={i} className="flex items-center gap-2 text-xs bg-purple-100 text-purple-800 rounded px-2 py-1">
+              <CheckCircle2 className="h-3 w-3 shrink-0 text-purple-600" />
+              <span className="truncate">&ldquo;{s.text}&rdquo;</span>
+              <span className="font-bold shrink-0">→</span>
+              <Link
+                href={`/codes/${s.code}`}
+                target="_blank"
+                className="font-bold hover:underline flex items-center gap-0.5 shrink-0"
+              >
+                {s.code} <ExternalLink className="h-2.5 w-2.5" />
+              </Link>
+              {s.description && <span className="text-purple-600 truncate">{s.description}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // ─── Card: texto genérico ─────────────────────────────────────────────────────
 function TextCard({ content }: { content: string }) {
   return (
@@ -227,6 +402,8 @@ function ChatItemView({
       );
     case 'recommendations':
       return wrapper(<RecommendationsCard content={card.content as string} />);
+    case 'suggest':
+      return wrapper(<SuggestionCard content={card.content as string} />);
     default:
       return wrapper(<TextCard content={card.content as string} />);
   }
