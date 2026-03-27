@@ -29,6 +29,7 @@ training/csv_import_scripts/cie10-csvs
 **/.transformers_cache
 **/transformers_cache
 ai_engine/model
+!ai_engine/model/baseline_dict.json
 ai_engine/snapshots
 **/cache
 
