@@ -108,6 +108,7 @@ services:
       - ./backend:/app
       - backend_build:/app/_build
       - backend_deps:/app/deps
+      - ./training/csv_import_scripts/cie10-csvs:/data/cie10-csvs:ro
 
   # Frontend: Next.js + Tailwind + shadcn
   frontend:

@@ -138,6 +138,11 @@ backend-seed: ## Poblar base de datos con datos de prueba
 	@echo "$(GREEN)Poblando base de datos...$(NC)"
 	$(BACKEND) mix run priv/repo/seeds.exs
 
+backend-import-cie10: ## Importar códigos CIE-10 a la base de datos (~185K códigos)
+	@echo "$(GREEN)Importando códigos CIE-10 desde CSV...$(NC)"
+	$(BACKEND) mix cie10.import
+	@echo "$(GREEN)Importación completada$(NC)"
+
 db-reset: ## Resetear base de datos (drop, create, migrate, seed)
 	@echo "$(YELLOW)Reseteando base de datos...$(NC)"
 	$(BACKEND) mix ecto.drop
@@ -270,6 +275,16 @@ training-docker-gpu: ## Ejecutar entorno Docker training (GPU)
 # Entrenamiento del clasificador (ai_engine/train.py)
 # Los datos y el token HF se inyectan desde docker-compose.yml
 
+ai-baseline-dict: ## Baseline de diccionario CIE-10 (diagnoses + procedures + chemicals)
+	@echo "$(BLUE)→ Ejecutando baseline de diccionario...$(NC)"
+	$(COMPOSE_CPU) run --rm ai_engine python baseline_dict.py \
+		--val_file          /data/codiesp_csvs/codiesp_D_source_validation.csv \
+		--diagnoses_file    /data/cie10-csvs/cie10-es-diagnoses.csv \
+		--procedures_file   /data/cie10-csvs/cie10-es-procedures.csv \
+		--chemicals_file    /data/cie10-csvs/cie10-es-chemicals.csv \
+		$(if $(SOURCES),--sources $(SOURCES),) \
+		$(if $(MIN_LEN),--min_phrase_len $(MIN_LEN),)
+
 ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requiere HF_TOKEN en .env)
 	@echo "$(BLUE)═══════════════════════════════════════════════════════════$(NC)"
 	@echo "$(BLUE)  Entrenando clasificador CIE-10$(NC)"
@@ -284,8 +299,12 @@ ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requier
 		--batch_size $(or $(BATCH_SIZE),1) \
 		--grad_accum $(or $(GRAD_ACCUM),16) \
 		--pos_weight_cap $(or $(POS_WEIGHT_CAP),10.0) \
+		--lr $(or $(LR),5e-6) \
 		--device auto
 	@echo "$(GREEN)✓ Modelo guardado en ai_engine/model/$(NC)"
+	@echo "$(BLUE)→ Generando gráfico comparativo de runs...$(NC)"
+	$(COMPOSE_CPU) run --rm ai_engine python plot_runs.py
+	@echo "$(GREEN)✓ Gráfico guardado en ai_engine/model/all_trainings_graph.png$(NC)"
 
 ai-train-quick: ## Pipeline de prueba (1 época, modelo público, sin token)
 	@echo "$(YELLOW)→ Entrenamiento de prueba (1 época, max_length=256)...$(NC)"
@@ -309,8 +328,37 @@ ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
 		--output_dir /app/model \
 		--model_name $(or $(MODEL),jhu-clsp/mmBERT-base) \
 		--max_length $(or $(MAX_LENGTH),1024) \
+		--batch_size $(or $(BATCH_SIZE),4) \
+		--grad_accum $(or $(GRAD_ACCUM),4) \
+		--threshold $(or $(THRESHOLD),0.3) \
+		--pos_weight_cap $(or $(POS_WEIGHT_CAP),10.0) \
+		--lr $(or $(LR),5e-6) \
+		--warmup_ratio $(or $(WARMUP_RATIO),0.1) \
+		--weight_decay $(or $(WEIGHT_DECAY),0.01) \
+		--dropout $(or $(DROPOUT),0.1) \
+		--freeze_layers $(or $(FREEZE_LAYERS),0) \
+		--epochs $(or $(EPOCHS),20) \
+		--patience $(or $(PATIENCE),5) \
+		$(if $(SLIDING_WINDOW),--sliding_window,) \
+		--chunk_overlap $(or $(CHUNK_OVERLAP),64) \
+		$(if $(FULL_CODES),--full_codes,) \
+		$(if $(CHAPTERS),--chapters,) \
+		$(if $(PRETRAIN_EPOCHS),--pretrain_epochs $(PRETRAIN_EPOCHS),) \
+		$(if $(PRETRAIN_TASKX),--pretrain_taskx $(PRETRAIN_TASKX),) \
+		$(if $(ASL_GAMMA_NEG),--asl_gamma_neg $(ASL_GAMMA_NEG),) \
+		$(if $(ASL_GAMMA_POS),--asl_gamma_pos $(ASL_GAMMA_POS),) \
+		$(if $(ASL_CLIP),--asl_clip $(ASL_CLIP),) \
+		$(if $(LABEL_SMOOTHING),--label_smoothing $(LABEL_SMOOTHING),) \
+		$(if $(LR_SCHEDULE),--lr_schedule $(LR_SCHEDULE),) \
+		$(if $(UNFREEZE_EVERY),--unfreeze_every $(UNFREEZE_EVERY),) \
+		$(if $(UNFREEZE_LAYERS),--unfreeze_layers $(UNFREEZE_LAYERS),) \
+		$(if $(UNFREEZE_LR_RATIO),--unfreeze_lr_ratio $(UNFREEZE_LR_RATIO),) \
+		$(if $(LAMBDA_HIER),--lambda_hier $(LAMBDA_HIER),) \
 		--device cuda
 	@echo "$(GREEN)✓ Modelo guardado en ai_engine/model/$(NC)"
+	@echo "$(BLUE)→ Generando gráfico comparativo de runs...$(NC)"
+	$(COMPOSE) run --rm ai_engine python plot_runs.py
+	@echo "$(GREEN)✓ Gráfico guardado en ai_engine/model/all_trainings_graph.png$(NC)"
 
 # Modo mock (desarrollo sin GPU, ai_engine simulado)
 cpu-build: ## Construir AI engine mock (sin CUDA, imagen ligera)
