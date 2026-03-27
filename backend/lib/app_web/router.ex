@@ -19,6 +19,11 @@ defmodule AppWeb.Router do
 
     get "/translations/:locale", TranslationController, :show
 
+    # CIE-10 reference (public — read-only catalogue)
+    get "/cie10/search", Cie10Controller, :search
+    get "/cie10/codes/:code/children", Cie10Controller, :children
+    get "/cie10/codes/:code", Cie10Controller, :show
+
     # Authenticated routes
     pipe_through [:require_auth]
     get "/conversations", ConversationController, :index
