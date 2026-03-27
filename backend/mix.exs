@@ -73,8 +73,10 @@ defmodule App.MixProject do
       {:finch, "~> 0.13"},
       {:gen_smtp, "~> 1.2"},
       {:yaml_elixir, "~> 2.9"},
+      {:nimble_csv, "~> 1.2"},
 
-      # Test / coverage
+      # Dev / test
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test}
     ]
   end

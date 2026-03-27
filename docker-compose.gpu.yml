@@ -1,5 +1,8 @@
 services:
   ai_engine:
+    build:
+      args:
+        BUILD_WITH_CUDA: "1"
     deploy:
       resources:
         reservations:
@@ -9,6 +12,9 @@ services:
               capabilities: [gpu]
 
   training:
+    build:
+      args:
+        BUILD_WITH_CUDA: "1"
     deploy:
       resources:
         reservations:
