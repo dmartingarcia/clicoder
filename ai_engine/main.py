@@ -13,7 +13,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -22,7 +22,8 @@ logger = logging.getLogger("cie10_engine")
 logging.basicConfig(level=logging.INFO)
 
 # Globals poblados en startup
-classifier        = None
+classifier        = None   # CIE10Classifier (BERT)
+dict_classifier   = None   # DictClassifier (diccionario)
 code_descriptions: Dict[str, str] = {}
 
 
@@ -30,7 +31,7 @@ code_descriptions: Dict[str, str] = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global classifier, code_descriptions
+    global classifier, dict_classifier, code_descriptions
 
     model_dir = os.environ.get("MODEL_DIR", "./model")
     device    = os.environ.get("DEVICE", "cpu")
@@ -42,21 +43,36 @@ async def lifespan(app: FastAPI):
             model_dir,
         )
     else:
+        # ── BERT classifier ──────────────────────────────────────────────────
         try:
             from classifier import CIE10Classifier, load_code_descriptions
-            logger.info("Cargando modelo desde '%s' en device='%s' …", model_dir, device)
+            logger.info("Cargando modelo BERT desde '%s' en device='%s' …", model_dir, device)
             classifier        = CIE10Classifier(model_dir=model_dir, device=device)
             code_descriptions = load_code_descriptions(model_dir)
-            logger.info(
-                "Modelo cargado. %d descripciones de códigos disponibles.",
-                len(code_descriptions),
-            )
+            logger.info("Modelo BERT cargado. %d descripciones disponibles.", len(code_descriptions))
         except Exception as exc:
-            logger.warning(
-                "No se pudo cargar el modelo desde '%s': %s",
-                model_dir, exc,
-            )
+            logger.warning("No se pudo cargar el modelo BERT: %s", exc)
             classifier = None
+
+        # ── Diccionario classifier ────────────────────────────────────────────
+        dict_path = os.path.join(model_dir, "baseline_dict.json")
+        if os.path.isfile(dict_path):
+            try:
+                from baseline_dict import DictClassifier
+                logger.info("Cargando clasificador de diccionario desde '%s' …", dict_path)
+                dict_classifier = DictClassifier(dict_path)
+                n_blocks = len(dict_classifier._patterns)
+                n_patterns = sum(len(v) for v in dict_classifier._patterns.values())
+                logger.info("Diccionario cargado: %d bloques, %d patrones.", n_blocks, n_patterns)
+            except Exception as exc:
+                logger.warning("No se pudo cargar el clasificador de diccionario: %s", exc)
+                dict_classifier = None
+        else:
+            logger.info(
+                "baseline_dict.json no encontrado en '%s' — engine=dict no disponible. "
+                "Genera el fichero con: python baseline_dict.py --save_dict %s",
+                model_dir, dict_path,
+            )
 
     yield
 
@@ -75,6 +91,7 @@ app = FastAPI(
 
 class AnalysisRequest(BaseModel):
     text: str
+    engine: Literal["bert", "dict"] = "bert"
 
 
 # ==================== ENDPOINTS ====================
@@ -85,35 +102,37 @@ def health_check():
         "status":       "online",
         "model":        "rigoberta-cie10-flat",
         "model_loaded": classifier is not None,
+        "dict_loaded":  dict_classifier is not None,
     }
 
 
 @app.post("/predict", summary="Predecir códigos CIE-10")
 async def predict_codes(request: AnalysisRequest):
-    if classifier is None:
-        raise HTTPException(
-            status_code=503,
-            detail={"error": "Modelo no cargado. Entrena el modelo con train.py y monta el directorio model/."},
-        )
-
     text = request.text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="El texto no puede estar vacío.")
 
-    # Inferencia fuera del event loop (operación bloqueante)
+    if request.engine == "dict":
+        return await _predict_dict(text)
+    return await _predict_bert(text)
+
+
+async def _predict_bert(text: str):
+    if classifier is None:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Modelo BERT no cargado. Entrena con train.py y monta model/."},
+        )
+
     predictions = await asyncio.to_thread(
-        classifier.predict,
-        text,
-        10,
-        code_descriptions or None,
+        classifier.predict, text, 10, code_descriptions or None,
     )
 
-    # ---- Construir cards ----
     word_count = len(text.split())
     n_codes    = len(predictions)
     codes_str  = ", ".join(p["code"] for p in predictions) if predictions else "ninguno"
 
-    cards = [
+    return {"cards": [
         {
             "type": "summary",
             "content": (
@@ -132,6 +151,7 @@ async def predict_codes(request: AnalysisRequest):
                         f"— confianza {round(p['probability'] * 100, 1)}%"
                     ).strip(" —"),
                     "confidence":  round(p["probability"], 4),
+                    "engine":      "bert",
                 }
                 for p in predictions
             ],
@@ -143,6 +163,54 @@ async def predict_codes(request: AnalysisRequest):
                 "antes de registrar el alta."
             ),
         },
-    ]
+    ]}
 
-    return {"cards": cards}
+
+async def _predict_dict(text: str):
+    if dict_classifier is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "Clasificador de diccionario no disponible. "
+                         "Genera baseline_dict.json con: "
+                         "python baseline_dict.py --sources clinical corpus combined "
+                         "--corpus_selective --only_combined --save_dict model/baseline_dict.json"
+            },
+        )
+
+    predictions = await asyncio.to_thread(dict_classifier.predict, text)
+
+    word_count = len(text.split())
+    n_codes    = len(predictions)
+    codes_str  = ", ".join(p["code"] for p in predictions) if predictions else "ninguno"
+
+    return {"cards": [
+        {
+            "type": "summary",
+            "content": (
+                f"Informe clínico analizado ({word_count} palabras). "
+                f"{n_codes} código(s) CIE-10 identificado(s) por diccionario: {codes_str}."
+            ),
+        },
+        {
+            "type": "codes",
+            "content": [
+                {
+                    "code":          p["code"],
+                    "description":   code_descriptions.get(p["code"], ""),
+                    "reason":        "Términos encontrados: " + ", ".join(p["matched_terms"]),
+                    "confidence":    p["confidence"],
+                    "matched_terms": p["matched_terms"],
+                    "engine":        "dict",
+                }
+                for p in predictions
+            ],
+        },
+        {
+            "type": "recommendations",
+            "content": (
+                "Revisar y confirmar los códigos asignados con el equipo médico "
+                "antes de registrar el alta."
+            ),
+        },
+    ]}

@@ -1,34 +1,48 @@
 # Dockerfile — CIE-10 AI Engine
-# Self-contained: does NOT depend on cie10-ml-base.
+# GPU path usa cie10-ml-base (CUDA 13.1 + flash-attn precompilados).
+# CPU path usa python:3.11-slim (ligero, sin CUDA).
 # Model weights are NOT baked in — mount the model directory at runtime:
 #   docker run -v /path/to/model:/app/model -e MODEL_DIR=/app/model ...
 
+# ARG must be declared before the first FROM to be usable in FROM instructions
 ARG BUILD_WITH_CUDA=0
 
-FROM python:3.11-slim
+# ─── CPU base (lightweight) ──────────────────────────────────────────────────
+FROM python:3.11-slim AS base-0
 
-# ---- System dependencies ----
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl \
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
+
+# ─── GPU base (flash-attn + CUDA 13.1 precompilados) ─────────────────────────
+FROM cie10-ml-base:latest AS base-1
+
+# ─── Select base via BUILD_WITH_CUDA (0=cpu, 1=gpu) ──────────────────────────
+ARG BUILD_WITH_CUDA=0
+FROM base-${BUILD_WITH_CUDA}
+
+# Ubuntu solo tiene python3; asegurar alias python para compatibilidad
+RUN python --version 2>/dev/null || ln -sf "$(which python3)" /usr/local/bin/python
 
 WORKDIR /app
 
 # ---- Python dependencies ----
 COPY ai_engine/requirements.txt .
 
-# Install PyTorch CPU wheel by default; override with CUDA wheel when
-# the BUILD_WITH_CUDA build arg is set to "1".
+# CPU: install torch CPU wheel; GPU base already has torch+CUDA preinstalled
 ARG BUILD_WITH_CUDA=0
-RUN if [ "$BUILD_WITH_CUDA" = "1" ]; then \
-        pip install --no-cache-dir torch>=2.0.0; \
-    else \
+RUN if [ "$BUILD_WITH_CUDA" = "0" ]; then \
         pip install --no-cache-dir \
-            torch>=2.0.0 \
+            torch \
             --index-url https://download.pytorch.org/whl/cpu; \
     fi
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    python -m spacy download es_core_news_lg
+RUN python -m spacy download es_dep_news_trf
+ARG BUILD_WITH_CUDA=0
+RUN if [ "$BUILD_WITH_CUDA" = "1" ]; then \
+        pip install --no-cache-dir cupy-cuda13x; \
+    fi
 
 # ---- Application code ----
 COPY ai_engine/ .
