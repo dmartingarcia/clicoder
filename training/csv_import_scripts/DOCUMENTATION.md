@@ -1,6 +1,43 @@
 # CSV Import Scripts
 
-Lo primero ha sido entender como funciona la pagina con las herramientas de desarrollador, una vez identificado el patron que sigue sus endpoints, se ha procedido a hacer un script para cada tipo de información.
+## Motivación y contexto
+
+Este trabajo forma parte de un Trabajo de Fin de Grado (TFG) cuyo objetivo es desarrollar un sistema de codificación automática de diagnósticos clínicos en español mediante técnicas de procesamiento del lenguaje natural (PLN). El sistema debe, dada una nota clínica en texto libre, predecir los códigos CIE-10 que corresponden a los diagnósticos documentados.
+
+Para abordar este problema se necesitan dos recursos fundamentales:
+
+1. **Corpus etiquetado**: el dataset CodiESP (Clinical Case Reports in Spanish), utilizado como conjunto de entrenamiento y evaluación.
+
+2. **Diccionario CIE-10 en español**: la lista completa de códigos con sus descripciones clínicas oficiales en castellano.
+
+El diccionario oficial en español **no está disponible como descarga pública estructurada**. La única fuente oficial es el portal [eCIE-maps](https://www.eciemaps.sanidad.gob.es/) del Ministerio de Sanidad, que expone los datos a través de una API web no documentada. Por ello se desarrollaron los scripts de scraping recogidos en este directorio, que consultan sistemáticamente dicha API para obtener el diccionario completo.
+
+### Aplicaciones del diccionario en el proyecto
+
+### 1. Entrenamiento del clasificador neuronal (`train.py`)
+
+El fichero `cie10-es-diagnoses.csv` alimenta el pipeline de entrenamiento de dos formas:
+
+- Define el espacio de clases del clasificador (bloques de 3 caracteres, ~809 categorías).
+- Proporciona las descripciones en español asociadas a cada código, que el modelo puede utilizar para enriquecer su representación semántica.
+
+### 2. Sistema de baseline por diccionario (`baseline_dict.py`)
+
+Los tres CSVs generados permiten construir un sistema de referencia no supervisado que detecta menciones directas de términos médicos en el texto:
+
+- `cie10-es-diagnoses.csv` — detecta descripciones de diagnósticos en la nota clínica.
+- `cie10-es-procedures.csv` — detecta menciones de procedimientos.
+- `cie10-es-chemicals.csv` — detecta nombres de fármacos o sustancias, mapeándolos al bloque de intoxicación o efecto adverso correspondiente (T36–T65).
+
+Estos baselines sirven como cota inferior de referencia: cualquier modelo supervisado debe superar sus resultados para justificar la complejidad adicional que introduce.
+
+### 3. Punto de comparación con el estado del arte
+
+En la competición CodiESP 2020, el mejor sistema basado en diccionario obtuvo un F1 de 0.687 sobre códigos completos. Este trabajo opera sobre bloques de 3 caracteres, lo que hace que los números no sean directamente comparables, pero permite situar los resultados en el contexto de la literatura.
+
+---
+
+Lo primero ha sido entender cómo funciona la página con las herramientas de desarrollador del navegador. Una vez identificado el patrón que siguen sus endpoints, se procedió a implementar un script para cada tipo de información.
 
 ## Jerarquía de los Endpoints
 

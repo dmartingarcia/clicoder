@@ -1747,26 +1747,31 @@ make ai-train-gpu \
 
 **Resultado:**
 
-| Run | F1-micro | best época | per-class micro | per-class macro |
-|-----|----------|------------|-----------------|-----------------|
-| 30b (ref) | 0.4842 | 104 | 0.5479 | 0.1494 |
-| **32b** λ=0.5 | **0.4888** | **135** | **0.5509** | **0.1524** |
+| Run | λ | F1-micro | best época | per-class micro | per-class macro |
+|-----|---|----------|------------|-----------------|-----------------|
+| 30b (ref) | — | 0.4842 | 104 | 0.5479 | 0.1494 |
+| **32b** | **0.5** | **0.4888** | **135** | **0.5509** | **0.1524** |
+| 32a | 0.1 | 0.4876 | 66 | 0.5482 | **0.1638** |
+| 32c | 1.0 | 0.4831 | 86 | 0.5371 | 0.1575 |
 
-32b mejora 30b en +0.46pp F1-micro y +0.30pp F1-macro. El último `new best` fue en época
-135 — con patience=20 el early stop habría disparado en época 155, pero el límite de 150
-lo cortó 5 épocas antes. La loss de entrenamiento ya estaba en 0.0066 (prácticamente cero),
-por lo que más epochs no aportarían.
+El regularizador jerárquico funciona. El patrón es claro:
 
-El regularizador jerárquico funciona: forzar coherencia padre→hijo ayuda tanto en F1-micro
-como en F1-macro (códigos raros). **32b es la nueva config ganadora.**
+- **λ=0.1** (suave): F1-micro intermedio (+0.34pp vs ref), pero **mejor F1-macro de todos
+  (0.1638, +1.44pp vs ref)** — la señal suave ayuda especialmente a los códigos raros.
+  Pico muy temprano (época 66): la coherencia jerárquica se integra rápido con poco peso.
+- **λ=0.5** (moderado): **mejor F1-micro (0.4888, +0.46pp vs ref)**, buen equilibrio
+  entre precisión global y códigos raros. Ganador en la métrica principal. Pico en época 135.
+- **λ=1.0** (fuerte): peor que el baseline en F1-micro (0.4831 < 0.4842). El regularizador
+  domina demasiado la loss BCE y distorsiona la señal de clasificación.
 
-**Resultado:** (pendiente — 32a y 32c)
+**Config ganadora: 32b (λ=0.5), F1-micro=0.4888.**
+Si el objetivo prioritario es recall en códigos raros: 32a (λ=0.1) da mejor F1-macro (0.1638).
 
 ---
 
 ## Reflexión sobre el estado actual y próximos pasos
 
-### Dónde estamos (actualizado paso 31)
+### Dónde estamos (actualizado paso 32)
 
 | Paso | Configuración clave | F1-micro | F1-macro |
 |------|---------------------|----------|----------|
@@ -1774,8 +1779,9 @@ como en F1-macro (códigos raros). **32b es la nueva config ganadora.**
 | 21 | Pretrain CIE-10, batch=4 | 0.431 | 0.092 |
 | 23 | + task_X snippets, batch=8 | 0.470 | 0.139 |
 | 28b | + ReduceLROnPlateau | 0.475 | 0.116 |
-| 30b | + Progressive unfreezing (unfreeze_every=30) | **0.4842** | **0.1494** |
+| 30b | + Progressive unfreezing (unfreeze_every=30) | 0.4842 | 0.1494 |
 | 31 | + Sliding window (mean-pool chunks) | 0.4124 | 0.1352 |
+| **32b** | **+ Hierarchical consistency loss (λ=0.5)** | **0.4888** | **0.1524** |
 
 Las claves del progreso: modelo clínico correcto (RigoBERTa-Clinical), pre-entrenamiento
 combinado con jerga médica real (task_X), freeze=20 imprescindible con 500 muestras,
@@ -1790,7 +1796,7 @@ confirmó que la truncación no era el cuello de botella: el problema es la rati
 | ------ | -------- | ---------------- | ------ |
 | **Más datos (back-translation)** | Alto | +3-8pp F1 | Pendiente |
 | **Datasets adicionales** | Medio | +pretrain encodings | Ya hacemos pretrain CIE-10 |
-| **Hierarchical consistency loss** | Medio | +1-3pp F1-macro (códigos raros) | **→ Paso 32** |
+| **Hierarchical consistency loss** | Medio | +1-3pp F1-macro (códigos raros) | ✓ Paso 32 (+0.46pp micro, +0.3pp macro) |
 | **Ensemble de checkpoints** | Bajo | +0.5-1pp gratis | Pendiente |
 | **Sliding window** | Alto | −0.72pp | Descartado (paso 31) |
 

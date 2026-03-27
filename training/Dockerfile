@@ -6,6 +6,7 @@ FROM cie10-ml-base:latest AS base
 WORKDIR /home/cie10user
 
 RUN pip3 install --no-cache-dir "datasets<4.0.0" # We need to stay below version 4.0.0 for compatibility with the Codiesp dataset, it has a script
+RUN pip3 install --no-cache-dir grequests progressbar2
 
 # Copiar el código fuente de entrenamiento (contexto = training/)
 COPY training/bert-classifier bert-classifier
