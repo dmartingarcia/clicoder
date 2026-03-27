@@ -7,7 +7,7 @@ defmodule AppWeb.ConversationChannel do
   alias App.CommandedApplication
   alias App.Commands.{StartConversation, SendMessage, AnalyzeReport, ValidateCode, RejectCode}
   alias App.Repo
-  alias App.Projections.{ConversationProjection, MessageProjection, PredictedCodeProjection, AnalysisCardProjection}
+  alias App.Projections.{ConversationProjection, MessageProjection, PredictedCodeProjection, AnalysisCardProjection, CodeSuggestionProjection}
 
   require Logger
   import Ecto.Query, only: [from: 2]
@@ -140,6 +140,37 @@ defmodule AppWeb.ConversationChannel do
 
       {:error, reason} ->
         {:reply, {:error, %{reason: inspect(reason)}}, socket}
+    end
+  end
+
+  @impl true
+  def handle_in("suggest_code", %{"selected_text" => selected_text, "suggested_code" => suggested_code}, socket) do
+    conversation_id = socket.assigns.conversation_id
+    user_id = socket.assigns.user_id
+
+    case Repo.get_by(ConversationProjection, conversation_id: conversation_id) do
+      nil ->
+        {:reply, {:error, %{reason: "conversation not found"}}, socket}
+
+      conversation ->
+        changeset = CodeSuggestionProjection.changeset(
+          %CodeSuggestionProjection{},
+          %{
+            suggestion_id: UUID.uuid4(),
+            conversation_id: conversation.id,
+            selected_text: selected_text,
+            suggested_code: String.upcase(suggested_code),
+            suggested_by: user_id
+          }
+        )
+
+        case Repo.insert(changeset) do
+          {:ok, suggestion} ->
+            {:reply, {:ok, %{suggestion_id: suggestion.suggestion_id}}, socket}
+
+          {:error, reason} ->
+            {:reply, {:error, %{reason: inspect(reason)}}, socket}
+        end
     end
   end
 

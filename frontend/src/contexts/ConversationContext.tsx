@@ -18,7 +18,7 @@ export interface AnalysisCard {
   kind: 'card';
   card_id: string;
   message_id: string;
-  card_type: 'summary' | 'codes' | 'recommendations' | 'text';
+  card_type: 'summary' | 'codes' | 'recommendations' | 'text' | 'suggest';
   content: string | AnalysisCode[];
 }
 
@@ -67,6 +67,7 @@ interface ConversationContextType {
   analyzeReport: (reportText: string) => void;
   validateCode: (codeId: string, cie10Code: string) => void;
   rejectCode: (codeId: string, cie10Code: string, reason: string) => void;
+  suggestCode: (selectedText: string, suggestedCode: string) => void;
   deleteConversation: (conversationId: string) => void;
   restoreConversation: (conversationId: string) => void;
 }
@@ -140,6 +141,18 @@ export function ConversationProvider({ children, userId, token }: { children: Re
           for (const card of resp.history.analysis_cards ?? []) {
             items.push({ ...card, kind: 'card' });
           }
+          // Re-inject suggestion card if analysis was done
+          const hasAnalysis = (resp.history.analysis_cards ?? []).length > 0;
+          const reportMsg = items.find((item) => item.kind === 'user');
+          if (hasAnalysis && reportMsg && reportMsg.kind === 'user') {
+            items.push({
+              kind: 'card' as const,
+              card_id: `suggest-history-${reportMsg.message_id}`,
+              message_id: reportMsg.message_id,
+              card_type: 'suggest' as const,
+              content: reportMsg.content,
+            });
+          }
           setChatItems(items);
           setPredictedCodes(resp.history.predicted_codes ?? []);
         }
@@ -179,6 +192,19 @@ export function ConversationProvider({ children, userId, token }: { children: Re
     ch.on('analysis_complete', (payload: { message_id: string; predicted_codes?: PredictedCode[] }) => {
       setIsAnalyzing(false);
       if (payload.predicted_codes?.length) setPredictedCodes(payload.predicted_codes);
+      // Inject suggestion card so user can annotate the report text
+      setChatItems((prev) => {
+        if (prev.some((item) => item.kind === 'card' && item.card_type === 'suggest')) return prev;
+        const reportMsg = prev.find((item) => item.kind === 'user');
+        if (!reportMsg || reportMsg.kind !== 'user') return prev;
+        return [...prev, {
+          kind: 'card' as const,
+          card_id: `suggest-${Date.now()}`,
+          message_id: reportMsg.message_id,
+          card_type: 'suggest' as const,
+          content: reportMsg.content,
+        }];
+      });
       loadConversations();
     });
 
@@ -245,6 +271,13 @@ export function ConversationProvider({ children, userId, token }: { children: Re
       .receive('error', () => toast.error(t('errors.reject_failed')));
   }, [channel]);
 
+  const suggestCode = useCallback((selectedText: string, suggestedCode: string) => {
+    if (!channel) return;
+    channel.push('suggest_code', { selected_text: selectedText, suggested_code: suggestedCode })
+      .receive('ok', () => toast.success(t('cards.suggestion_saved')))
+      .receive('error', () => toast.error(t('errors.suggest_failed')));
+  }, [channel]);
+
   const deleteConversation = useCallback(async (conversationId: string) => {
     try {
       await fetch(`${config.apiUrl}/conversations/${conversationId}`, {
@@ -292,6 +325,7 @@ export function ConversationProvider({ children, userId, token }: { children: Re
         analyzeReport,
         validateCode,
         rejectCode,
+        suggestCode,
         deleteConversation,
         restoreConversation,
       }}
