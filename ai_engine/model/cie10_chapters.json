@@ -1,0 +1,65 @@
+{
+  "I": {
+    "name": "Ciertas enfermedades infecciosas y parasitarias"
+  },
+  "II": {
+    "name": "Neoplasias"
+  },
+  "III": {
+    "name": "Enfermedades de la sangre y órganos hematopoyéticos"
+  },
+  "IV": {
+    "name": "Enfermedades endocrinas, nutricionales y metabólicas"
+  },
+  "V": {
+    "name": "Trastornos mentales y del comportamiento"
+  },
+  "VI": {
+    "name": "Enfermedades del sistema nervioso"
+  },
+  "VII": {
+    "name": "Enfermedades del ojo y sus anexos"
+  },
+  "VIII": {
+    "name": "Enfermedades del oído y de la apófisis mastoides"
+  },
+  "IX": {
+    "name": "Enfermedades del sistema circulatorio"
+  },
+  "X": {
+    "name": "Enfermedades del sistema respiratorio"
+  },
+  "XI": {
+    "name": "Enfermedades del aparato digestivo"
+  },
+  "XII": {
+    "name": "Enfermedades de la piel y del tejido subcutáneo"
+  },
+  "XIII": {
+    "name": "Enfermedades del sistema osteomuscular"
+  },
+  "XIV": {
+    "name": "Enfermedades del aparato genitourinario"
+  },
+  "XV": {
+    "name": "Embarazo, parto y puerperio"
+  },
+  "XVI": {
+    "name": "Ciertas afecciones originadas en el período perinatal"
+  },
+  "XVII": {
+    "name": "Malformaciones congénitas"
+  },
+  "XVIII": {
+    "name": "Síntomas, signos y hallazgos anormales"
+  },
+  "XIX": {
+    "name": "Traumatismos, envenenamientos y otras consecuencias"
+  },
+  "XX": {
+    "name": "Causas externas de morbilidad y mortalidad"
+  },
+  "XXI": {
+    "name": "Factores que influyen en el estado de salud"
+  }
+}
