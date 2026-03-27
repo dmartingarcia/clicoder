@@ -20,16 +20,15 @@ training/.venv
 /**ignore/*
 .huggingface_cache
 
-# Datasets
-training/csv_import_scripts/**/*.csv
-training/csv_import_scripts/codiesp_csvs
-training/csv_import_scripts/cie10-csvs
+# Datasets grandes (>20MB)
+training/csv_import_scripts/cie10-csvs/cie10-es-procedures.csv
+training/csv_import_scripts/codiesp_csvs/codiesp_extra_mesh_source_train.csv
+training/csv_import_scripts/codiesp_csvs/codiesp_extra_cie_source_train.csv
 
 # Model artifacts
 **/.transformers_cache
 **/transformers_cache
-ai_engine/model
-!ai_engine/model/baseline_dict.json
+ai_engine/model/baseline_cache/
 ai_engine/snapshots
 **/cache
 
