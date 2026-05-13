@@ -1,0 +1,204 @@
+\chapter{Desarrollo}
+\label{cap:Desarrollo}
+
+En este capítulo se describe el proceso de desarrollo del sistema de codificación clínica automática, siguiendo las fases definidas en el plan de gestión del capítulo~\ref{cap:Planificacion}. El sistema se organiza en cuatro componentes principales que se comunican entre sí: el motor de inteligencia artificial (\emph{AI Engine}), el backend, el frontend y la infraestructura de datos. Cada uno de estos componentes se ha desarrollado de forma independiente, con interfaces bien definidas, lo que permite su sustitución o actualización sin afectar al resto del sistema.
+
+\section{Requisitos y análisis del sistema}
+
+Los requisitos funcionales y no funcionales del sistema quedan recogidos en el capítulo~\ref{cap:Objetivo}. En este apartado se presentan los modelos de análisis que permiten comprender la estructura del sistema antes de abordar su diseño.
+
+\subsection{Modelo conceptual}
+
+El sistema maneja las siguientes entidades principales:
+
+\begin{itemize}
+    \item \textbf{Usuario}: representa al codificador clínico que interactúa con el sistema. Tiene atributos de identificación (nombre, apellidos, nombre de usuario, email), credenciales (contraseña en hash bcrypt), preferencias (idioma) y estado de cuenta (confirmado/no confirmado).
+    \item \textbf{Análisis}: sesión de codificación asociada a un usuario. Agrupa el informe clínico enviado y todas las tarjetas de respuesta generadas por el sistema.
+    \item \textbf{Tarjeta de análisis} (\emph{AnalysisCard}): unidad de respuesta del sistema ante un informe. Puede ser de tres tipos: resumen textual (\texttt{summary}), lista de códigos predichos (\texttt{codes}) o recomendaciones clínicas (\texttt{recommendations}).
+    \item \textbf{Código predicho}: cada código CIE-10-ES sugerido por el modelo, con su puntuación de confianza y su estado de revisión (pendiente, validado o rechazado por el codificador).
+    \item \textbf{Código CIE-10-ES}: entrada del catálogo oficial, con su código alfanumérico, descripción en español y metadatos clínicos (restricciones de sexo, edad, etc.).
+\end{itemize}
+
+\subsection{Modelo de casos de uso}
+
+Los actores del sistema son el \textbf{codificador clínico} (usuario autenticado) y el \textbf{motor de IA} (actor secundario). Los casos de uso principales son:
+
+\begin{itemize}
+    \item Registrarse e iniciar sesión.
+    \item Crear un nuevo análisis y enviar un informe clínico.
+    \item Consultar los códigos predichos y sus niveles de confianza.
+    \item Validar o rechazar cada código predicho.
+    \item Consultar el historial de análisis anteriores.
+    \item Cambiar el idioma de la interfaz.
+\end{itemize}
+
+\subsection{Modelo de interfaz de usuario}
+
+La interfaz sigue un esquema de dos columnas: un panel lateral izquierdo con el historial de análisis del usuario y controles de sesión, y un área central de chat donde se visualizan el informe enviado y las tarjetas de respuesta generadas por el sistema. Esta disposición permite al codificador consultar análisis anteriores sin abandonar el flujo de trabajo actual.
+
+\section{Diseño del sistema}
+
+\subsection{Arquitectura general}
+
+El sistema sigue una arquitectura orientada a servicios con cuatro capas bien diferenciadas. Para describir la arquitectura se utiliza el modelo C4~\cite{Brown22}.
+
+\textbf{Nivel de contexto.} El sistema recibe informes clínicos en texto libre de parte del codificador clínico y devuelve propuestas de codificación CIE-10-ES. Se comunica con el portal eCIE-maps del Ministerio de Sanidad como fuente de datos externa (en la fase de adquisición de datos).
+
+\textbf{Nivel de contenedores.} El sistema se compone de cuatro contenedores:
+
+\begin{enumerate}
+    \item \textbf{Frontend} (Next.js 16, TypeScript): interfaz web que el usuario utiliza para enviar informes y visualizar resultados. Se comunica con el backend mediante una API REST para autenticación y con un canal WebSocket para el intercambio de mensajes en tiempo real.
+    \item \textbf{Backend} (Elixir 1.15, Phoenix 1.8): orquestador central del sistema. Gestiona la autenticación de usuarios, la persistencia de conversaciones mediante CQRS/Event Sourcing con la biblioteca Commanded, y la comunicación con el motor de IA.
+    \item \textbf{AI Engine} (Python, FastAPI): servicio de inferencia que carga el modelo BERT entrenado y expone un endpoint \texttt{POST /predict} que recibe un texto clínico y devuelve los códigos CIE-10-ES predichos con sus puntuaciones de confianza.
+    \item \textbf{Base de datos} (PostgreSQL 15): almacena usuarios, conversaciones, tarjetas de análisis y el registro de eventos del sistema (event store de Commanded).
+\end{enumerate}
+
+\subsection{Diseño del motor de inteligencia artificial}
+
+El motor de IA es el componente más crítico del sistema. Su diseño pasa por tres fases: adquisición de datos, entrenamiento del modelo y exposición del servicio de inferencia.
+
+\subsubsection{Adquisición de datos}
+
+El sistema requiere dos fuentes de datos: el corpus CodiEsp~\cite{miranda2020} y el catálogo oficial de códigos CIE-10-ES.
+
+El corpus CodiEsp se descarga mediante el script \texttt{collect\_codiesp\_dataset.py}, que obtiene los ficheros de entrenamiento, validación y test para diagnósticos (sufijo \texttt{\_D\_}), procedimientos (sufijo \texttt{\_P\_}) y la variante extendida con anotaciones a nivel de \emph{span} (sufijo \texttt{\_X\_}). El resultado son seis ficheros CSV que totalizan aproximadamente 1,2\,GB.
+
+El catálogo oficial de códigos CIE-10-ES no está disponible en ningún formato de descarga pública estructurada, por lo que se obtiene mediante \emph{scraping} sobre el portal eCIE-maps del Ministerio de Sanidad (\texttt{https://www.eciemaps.sanidad.gob.es}). Los scripts \texttt{collect\_diagnoses.py}, \texttt{collect\_procedures.py} y \texttt{collect\_chemicals.py} iteran sobre los posibles prefijos de código y realizan peticiones a la API interna del portal, guardando los resultados en los ficheros \texttt{cie10-es-diagnoses.csv}, \texttt{cie10-es-procedures.csv} y \texttt{cie10-es-chemicals.csv}, respectivamente. Cada entrada incluye el código, la descripción en español y metadatos clínicos (restricciones de sexo, edad perinatal/pediátrica/materna/adulta, exención de POA y prohibición como diagnóstico principal).
+
+\subsubsection{Análisis exploratorio de los datos}
+
+Antes de diseñar el modelo se realizó un análisis estadístico de las fuentes de datos, documentado en los notebooks \texttt{codiesp\_analisis\_estadistico.ipynb} y \texttt{cie10\_analisis\_estadistico.ipynb}. El análisis caracteriza la distribución de longitudes de los informes, la frecuencia de aparición de cada código y el solapamiento entre las particiones de entrenamiento, validación y test. Este análisis pone de manifiesto el fuerte desequilibrio de clases inherente a la distribución de diagnósticos clínicos: un pequeño número de códigos concentra la mayor parte de los casos, mientras que muchos códigos de enfermedades raras o procedimientos poco frecuentes aparecen en muy pocos documentos del corpus.
+
+\subsubsection{Selección del modelo base}
+
+Se evaluaron cinco modelos candidatos para la codificación del texto clínico. La comparativa, recogida en \texttt{ANALISIS\_MODELOS.md}, consideró rendimiento en CodiEsp, especialización en español médico, velocidad de inferencia y coste computacional de entrenamiento. Los modelos evaluados fueron:
+
+\begin{itemize}
+    \item \texttt{PlanTL-GOB-ES/roberta-base-biomedical-clinical-es} (RoBERTa-BSC, 125M parámetros), entrenado por el Barcelona Supercomputing Center sobre historias clínicas, informes radiológicos y notas médicas en español.
+    \item \texttt{PlanTL-GOB-ES/roberta-large-bne-medical} (355M parámetros), variante de mayor tamaño del mismo grupo.
+    \item \texttt{dccuchile/bert-base-spanish-wwm-cased} (BETO, 110M parámetros), modelo de propósito general en español.
+    \item \texttt{sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2} (33M parámetros), orientado a generación de embeddings.
+    \item \texttt{distilbert-base-multilingual-cased} (66M parámetros), versión destilada multilingüe de BERT.
+\end{itemize}
+
+El modelo seleccionado como base fue \texttt{BSC-LT/RigoBERTa} para el entrenamiento final en producción, dado que combina la especialización en dominio clínico español con una ventana de contexto de 4096 tokens (arquitectura DeBERTa-v2), lo que permite procesar informes de alta hospitalaria sin necesidad de truncación agresiva. Para pruebas rápidas se usa \texttt{roberta-base} como alternativa más ligera.
+
+\subsubsection{Arquitectura del clasificador}
+
+El clasificador sigue una arquitectura plana (\emph{flat}) de clasificación multilabel. La entrada es el texto del informe clínico codificado por el tokenizador del modelo base; la salida es un vector de probabilidades de dimensión igual al número de códigos presentes en el corpus de entrenamiento (aproximadamente 1.767 códigos únicos en la partición de diagnósticos de CodiEsp).
+
+Sobre el codificador BERT se añade una cabeza de clasificación compuesta por una capa de \emph{dropout} (p\,=\,0,1) y una capa lineal que proyecta la representación del token \texttt{[CLS]} al espacio de códigos. La activación utilizada en inferencia es una sigmoide por código, de modo que cada predicción es independiente del resto y el modelo puede asignar simultáneamente cualquier subconjunto de códigos. Durante el entrenamiento se utiliza \emph{Binary Cross-Entropy} como función de pérdida, con la planificación del tasso de aprendizaje mediante \emph{cosine schedule with warmup}.
+
+La selección de los códigos predichos se realiza mediante un umbral por defecto de 0,5 sobre la probabilidad. Si ningún código supera el umbral, el sistema devuelve los \(k\) códigos con mayor probabilidad para garantizar siempre una respuesta al usuario. Tanto el umbral como el valor de \(k\) son configurables en el fichero \texttt{config.json} generado durante el entrenamiento.
+
+Además del clasificador BERT, el motor incluye un clasificador de diccionario (\texttt{baseline\_dict.py}) basado en coincidencia de términos con las descripciones oficiales de los códigos CIE-10-ES, que actúa como \emph{baseline} de referencia y como fallback cuando el modelo BERT no está disponible.
+
+\subsection{Diseño del backend}
+
+El backend está desarrollado en Elixir 1.15 con el \emph{framework} Phoenix 1.8. Se organiza en torno al patrón CQRS (\emph{Command Query Responsibility Segregation}) y \emph{Event Sourcing}, implementado mediante la biblioteca Commanded. Este patrón separa las operaciones de escritura (comandos) de las de lectura (consultas), y registra todo cambio de estado como un evento inmutable en el \emph{event store}, lo que proporciona trazabilidad completa de todas las acciones del sistema.
+
+Los comandos principales son: \texttt{RegisterUser}, \texttt{AnalyzeReport}, \texttt{ReceiveAIPrediction}, \texttt{ValidateCode} y \texttt{RejectCode}. Cada comando genera uno o más eventos que son procesados por proyectores que actualizan las vistas de lectura en PostgreSQL.
+
+La comunicación en tiempo real entre frontend y backend se realiza mediante canales WebSocket de Phoenix. El canal \texttt{ConversationChannel} gestiona el envío de informes, la recepción de predicciones del motor de IA y la difusión de tarjetas de análisis al cliente.
+
+\subsection{Diseño del frontend}
+
+El frontend está desarrollado en Next.js 16 con React 19 y TypeScript. La interfaz utiliza Tailwind CSS 4 y la biblioteca de componentes shadcn/ui. La arquitectura de estado se basa en contextos de React: \texttt{AuthContext} gestiona la sesión del usuario, \texttt{ConversationContext} gestiona el estado del análisis activo y el historial, e \texttt{I18nContext} gestiona las traducciones de la interfaz (español e inglés).
+
+La configuración de URLs de backend y WebSocket se centraliza en \texttt{src/lib/config.ts}, que lee las variables de entorno \texttt{NEXT\_PUBLIC\_API\_URL} y \texttt{NEXT\_PUBLIC\_WS\_URL}, evitando cualquier \emph{hardcode} de direcciones.
+
+\section{Implementación del sistema}
+
+\subsection{Estructura del repositorio}
+
+El repositorio se organiza en los siguientes directorios de alto nivel:
+
+\begin{itemize}
+    \item \texttt{ai\_engine/}: servicio FastAPI de inferencia. Contiene el módulo \texttt{classifier.py} con la clase \texttt{CIE10Classifier}, el script de entrenamiento \texttt{train.py}, el punto de entrada \texttt{main.py} y los artefactos del modelo entrenado en \texttt{model/}.
+    \item \texttt{ai\_engine\_mock/}: versión simulada del motor de IA para desarrollo local, que devuelve predicciones ficticias sin necesidad de cargar el modelo BERT.
+    \item \texttt{backend/}: aplicación Phoenix. La lógica de negocio se organiza en \texttt{lib/app/} (contextos, agregados, proyectores) y la capa web en \texttt{lib/app\_web/} (controladores, canales, \emph{plugs}).
+    \item \texttt{frontend/}: aplicación Next.js. Los componentes de UI están en \texttt{src/components/}, los contextos en \texttt{src/contexts/} y la lógica de comunicación en \texttt{src/lib/}.
+    \item \texttt{training/}: entorno de entrenamiento separado del servicio de producción. Contiene los scripts de descarga de datos en \texttt{csv\_import\_scripts/}, los notebooks de análisis estadístico en \texttt{data\_analysis/} y los notebooks de entrenamiento en \texttt{bert-classifier/}.
+\end{itemize}
+
+El repositorio se gestiona con Git. El historial de commits refleja el desarrollo incremental del sistema y puede consultarse en el repositorio del proyecto.
+
+\subsection{Pipeline de entrenamiento}
+
+El entrenamiento del modelo se orquesta mediante un \texttt{Makefile} en la raíz del proyecto y en \texttt{training/}. El proceso completo se puede lanzar con \texttt{make train-all}, que ejecuta en secuencia: configuración del entorno virtual Python, descarga del corpus CodiEsp, entrenamiento del modelo y exportación de los artefactos al directorio \texttt{ai\_engine/model/}.
+
+El script \texttt{train.py} acepta los siguientes parámetros configurables por línea de comandos: ruta a los ficheros de entrenamiento y validación, ruta al fichero de descripciones CIE-10-ES, directorio de salida, nombre del modelo base, longitud máxima de secuencia, número de épocas, tamaño de batch, acumulación de gradientes y dispositivo de cómputo. El modelo guarda un checkpoint del mejor resultado en validación (por F1-score micro), el mapeo código-índice y un fichero \texttt{config.json} con todos los hiperparámetros, de modo que la inferencia posterior no requiere conocer los parámetros de entrenamiento.
+
+\subsection{Servicio de inferencia}
+
+El servicio de inferencia (\texttt{ai\_engine/main.py}) es una aplicación FastAPI que carga el modelo BERT al arrancar mediante el mecanismo de ciclo de vida (\texttt{lifespan}). Expone los siguientes endpoints:
+
+\begin{itemize}
+    \item \texttt{POST /predict}: recibe el texto del informe y devuelve una lista de tarjetas con resumen, códigos predichos y recomendaciones.
+    \item \texttt{GET /health}: comprueba que el servicio está en funcionamiento y que el modelo está cargado.
+\end{itemize}
+
+Si el directorio del modelo no existe al arrancar, el servicio se inicia igualmente y devuelve un error 503 en las peticiones de predicción, lo que facilita el desarrollo sin necesidad de tener el modelo entrenado.
+
+\subsection{Autenticación y seguridad}
+
+El sistema implementa autenticación mediante registro con confirmación por email. Al registrarse, el usuario recibe un email con un enlace de confirmación generado con \texttt{Phoenix.Token}. Una vez confirmada la cuenta, el inicio de sesión devuelve un token Bearer que el frontend almacena en \texttt{localStorage} y envía en la cabecera \texttt{Authorization} de cada petición REST y en el \emph{handshake} del WebSocket. El \emph{plug} \texttt{RequireAuth} verifica el token en todas las rutas protegidas.
+
+Las contraseñas se almacenan hasheadas con bcrypt. El servicio de email se implementa con Swoosh y, en el entorno de desarrollo, se captura con Mailpit (accesible en \texttt{http://localhost:8025}).
+
+\subsection{Internacionalización}
+
+La interfaz soporta español e inglés. Las traducciones del backend se almacenan en ficheros YAML (\texttt{priv/translations/es.yml} y \texttt{en.yml}) y se sirven a través del endpoint \texttt{GET /api/translations/:locale}. El frontend las carga al arrancar mediante \texttt{I18nContext} y las aplica con la función \texttt{t(key, vars)}, que soporta interpolación de variables. La preferencia de idioma se persiste en la base de datos del usuario y se sincroniza con el backend al cambiar de idioma.
+
+\section{Pruebas del sistema}
+
+\subsection{Estrategia}
+
+La estrategia de pruebas cubre los tres componentes principales del sistema: el motor de IA, el backend y el frontend. Se distinguen pruebas unitarias, de integración y de sistema, con distinto alcance en cada componente según su naturaleza.
+
+\subsection{Pruebas del motor de inteligencia artificial}
+
+Las pruebas del motor de IA se realizan en dos niveles. A nivel de \emph{baseline}, el clasificador de diccionario se valida manualmente sobre un conjunto de ejemplos conocidos. A nivel del modelo BERT, las métricas de evaluación (precisión, recall y F1-score micro y macro) se calculan automáticamente al final de cada época de entrenamiento sobre el conjunto de validación, y al finalizar el entrenamiento se genera una curva de aprendizaje que permite detectar sobreajuste o convergencia prematura.
+
+\subsection{Pruebas del backend}
+
+El backend incluye una suite de pruebas ExUnit organizada en \texttt{backend/test/}. Las pruebas cubren los módulos de contexto (registro y autenticación de usuarios, gestión de conversaciones) y los controladores de la API REST. La cobertura de código se genera con la herramienta \texttt{mix coveralls} y se almacena en \texttt{backend/cover/}.
+
+\subsection{Pruebas del frontend}
+
+El frontend utiliza Vitest como \emph{framework} de pruebas. La configuración se encuentra en \texttt{frontend/vitest.config.ts} y los informes de cobertura en \texttt{frontend/coverage/}. Las pruebas cubren los componentes de UI más críticos y los contextos de estado.
+
+\subsection{Pruebas de sistema}
+
+Las pruebas de sistema verifican el flujo completo de uso: registro, inicio de sesión, envío de un informe clínico, recepción de las tarjetas de análisis y validación de códigos. En el entorno de desarrollo se utiliza el motor de IA simulado (\texttt{ai\_engine\_mock}) para desacoplar las pruebas de sistema del proceso de entrenamiento.
+
+\section{Despliegue}
+
+\subsection{Arquitectura de despliegue}
+
+El sistema se despliega mediante Docker Compose. Cada componente reside en su propio contenedor con su \texttt{Dockerfile} específico. La configuración base (\texttt{docker-compose.yml}) define los servicios y sus dependencias; las variantes \texttt{docker-compose.gpu.yml} y \texttt{docker-compose.cpu.yml} permiten configurar el motor de IA con o sin aceleración por GPU.
+
+Los servicios y sus puertos de escucha son los que se indican en la tabla~\ref{tab:servicios}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\hline
+\textbf{Servicio} & \textbf{Tecnología} & \textbf{URL local} \\
+\hline
+Frontend & Next.js 16 & \texttt{http://localhost:3000} \\
+Backend & Phoenix 1.8 & \texttt{http://localhost:4000} \\
+AI Engine & FastAPI & \texttt{http://localhost:8000} \\
+Base de datos & PostgreSQL 15 & \texttt{localhost:5432} \\
+Mailpit (email dev) & Mailpit & \texttt{http://localhost:8025} \\
+\hline
+\end{tabular}
+\caption{Servicios del sistema y puertos de escucha en entorno local.}
+\label{tab:servicios}
+\end{table}
+
+\subsection{Puesta en marcha}
+
+El sistema se levanta con el comando \texttt{make up} desde la raíz del repositorio, que ejecuta \texttt{docker compose up} con la configuración apropiada. Las migraciones de base de datos se aplican con \texttt{make backend-migrate}. El modelo de IA se entrena y exporta con \texttt{make train-all}, y el contenedor del motor de IA se reconstruye con \texttt{make train-export} tras un nuevo entrenamiento.
+
+La imagen base del motor de IA (\texttt{Dockerfile.ml-base}) instala las dependencias Python más pesadas (PyTorch, Transformers) en una capa separada, de modo que las reconstrucciones posteriores —que solo cambian el código de aplicación— son significativamente más rápidas.
