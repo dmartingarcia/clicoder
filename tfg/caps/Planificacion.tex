@@ -1,0 +1,260 @@
+\chapter{Plan de gestión del trabajo}\label{cap:Planificacion}
+
+Este capítulo describe cómo se organiza el desarrollo del proyecto: la metodología adoptada, los recursos empleados, la gestión de la configuración, la planificación temporal y la estimación de costes y riesgos.
+
+\section{Metodología de desarrollo}
+
+Dado que el proyecto combina investigación aplicada en \emph{la selección y entrenamiento de modelos de lenguaje} con el desarrollo de un sistema de software completo, se opta por una \textbf{metodología ágil basada en Kanban}~\cite{Vijayasarathy16}. Este enfoque es especialmente apropiado cuando los requisitos evolucionan a medida que se van obteniendo los resultados.
+
+Kanban no impone iteraciones de duración fija ni \emph{sprints} formales, sino que organiza el trabajo en un tablero con columnas que representan los posibles estados de cada tarea: \textbf{Backlog} (identificadas pero no iniciadas), \textbf{En progreso} (activas), \textbf{En revisión} (completadas y pendientes de verificación) y \textbf{Hecho} (finalizadas). Esto permite visualizar el flujo de trabajo de forma continua sin la rigidez de otras metodologías.
+
+El límite de trabajo en curso (\emph{Work In Progress}, WIP) se fija en dos tareas simultáneas en la columna de \emph{En progreso}, una restricción que obliga a completar las tareas antes de comenzar nuevas y reduce el coste de los cambios de contexto.
+
+\section{Recursos}
+
+\subsection{Recursos humanos}
+
+El proyecto se realiza íntegramente por un único desarrollador, con la dirección y supervisión del tutor académico. El desarrollador asume todos los roles del proceso de desarrollo (analista, diseñador, desarrollador, responsable de pruebas y documentador).
+
+\subsection{Recursos hardware}
+
+\begin{itemize}
+    \item \textbf{Equipo de desarrollo}: Equipo personal con sistema operativo Debian, utilizado para el desarrollo de todos los componentes del sistema (backend, frontend, scripts de datos, etc) y para la ejecución de los distintos contenedores Docker.
+    \item \textbf{GPU para entrenamiento}: El modelo BERT requiere para su entrenamiento el acceso a GPU o TPU con soporte CUDA. El sistema está preparado para el entrenamiento tanto en GPU local, como en la nube, mediante un entorno dockerizado. En CPU, el entrenamiento puede tardar entre 12 y 24 horas según el número de épocas; en GPU (en este caso RTX 3080 o equivalente), entre 2 y 4 horas.
+    \item \textbf{Espacio en disco}: El corpus CodiEsp y los artefactos del modelo entrenado requieren aproximadamente 5\,GB de almacenamiento, se dispondrá de al menos 200\,GB para garantizar espacio suficiente para logs, checkpoints y otros archivos temporales.
+\end{itemize}
+
+\subsection{Recursos software}
+
+Las herramientas y tecnologías empleadas en el proyecto se agrupan por las siguientes categoría:
+
+\textbf{Entorno de desarrollo:}
+\begin{itemize}[noitemsep]
+    \item Visual Studio Code como editor principal.
+    \item Docker para la ejecución de los contenedores en Debian.
+    \item Jupyter Notebook para el desarrollo interactivo de los experimentos de entrenamiento y análisis de datos.
+\end{itemize}
+
+\textbf{Lenguajes y \emph{frameworks}:}
+\begin{itemize}[noitemsep]
+    \item Python 3.x con FastAPI, PyTorch y HuggingFace Transformers para el motor de inferencia.
+    \item Elixir 1.15 con Phoenix 1.8 y Commanded para el backend.
+    \item TypeScript con Next.js 16 y React 19 para el frontend.
+    \item SQL (PostgreSQL 15) para la persistencia.
+\end{itemize}
+
+\textbf{Control de versiones y calidad:}
+\begin{itemize}[noitemsep]
+    \item Git y GitHub para el control de versiones y el alojamiento del repositorio.
+    \item Husky y commitlint para la validación automática del formato de los mensajes de commit (Conventional Commits).
+    \item GitHub Actions para la integración continua (CI) en las diferentes partes del proyecto.
+\end{itemize}
+
+\textbf{Pruebas:}
+\begin{itemize}[noitemsep]
+    \item ExUnit y excoveralls para las pruebas del backend en Elixir.
+    \item Vitest para las pruebas del frontend en TypeScript.
+\end{itemize}
+
+\textbf{Documentación:}
+\begin{itemize}[noitemsep]
+    \item \LaTeX{} para la redacción de la memoria del TFG.
+    \item Markdown para la documentación técnica interna del repositorio.
+\end{itemize}
+
+\textbf{Infraestructura:}
+\begin{itemize}[noitemsep]
+    \item Docker Compose para la orquestación de los contenedores en desarrollo.
+    \item Mailpit como servidor SMTP de captura de email en el entorno local.
+    \item Make como herramienta de automatización de tareas del ciclo de vida del proyecto.
+    \item GitHub Packages para el alojamiento de la imagen Docker del motor de inferencia.
+    \item Kubernetes para la orquestación de contenedores en el entorno de producción.
+    \item Traefik como proxy inverso para la gestión de rutas y certificados en el entorno de producción.
+    \item Prometheus y Grafana para el monitoreo del rendimiento y la salud del sistema en producción.
+    \item Sentry para la gestión de errores y excepciones en producción.
+\end{itemize}
+
+\section{Gestión de la configuración y aseguramiento de la calidad}
+
+\subsection{Control de versiones}
+
+El repositorio Git sigue el esquema de ramas habitual para este tipo de proyectos: una rama principal (\texttt{main}) que siempre contiene código funcional, ademas de las ramas de trabajo (\texttt{feature branches}) para el desarrollo de cada funcionalidad.
+
+Los mensajes de commit siguen el estándar \emph{Conventional Commits}, validado automáticamente mediante el \emph{hook} de pre-commit de Husky y commitlint. Este estándar impone un formato estructurado (\texttt{tipo(ámbito): descripción}) que facilita la lectura del historial y la generación automática de notas de versión.
+
+\subsection{Integración continua}
+
+Se configura un flujo de CI con GitHub Actions que se ejecuta automáticamente en cada \emph{push} a la rama principal. El flujo incluye la verificación del formato de commits y la ejecución de la suite de pruebas, tanto del backend como del frontend.
+
+\subsection{Aseguramiento de la calidad}
+
+La calidad del código se garantiza mediante varios mecanismos complementarios:
+
+\begin{itemize}
+    \item \textbf{Pruebas automáticas}: La creación de la suite ExUnit para el backend (con informe de cobertura generado por excoveralls) y Vitest para el frontend.
+    \item \textbf{Linting}: El uso y configuración de linters específicos para cada lenguaje (ESLint para TypeScript, Flake8 para Python, Credo para Elixir) con reglas adaptadas al estilo del proyecto.
+    \item \textbf{Revisión de código}: Al tratarse de un proyecto unipersonal, la revisión se realiza mediante la lectura sistemática del código generado antes de cada \emph{commit} significativo.
+    \item \textbf{Separación de entornos}: El uso de stubs y mocks para el motor de inferencia (\texttt{ai\_engine\_mock}) permite desarrollar y evaluar el estado, tanto del backend como del frontend, sin necesidad del modelo BERT entrenado, evitando dependencias que dificulten las pruebas de integración.
+    \item \textbf{Métricas de entrenamiento}: El proceso de entrenamiento registra las métricas de validación en cada época y genera curvas de aprendizaje, lo que permite detectar sobreajuste o problemas de convergencia de forma inmediata para actuar en consecuencia (ajuste de hiperparámetros, cambio de modelo base, etc).
+\end{itemize}
+
+\section{Planificación}
+
+El tablero Kanban se organiza en torno a seis \textbf{hitos o épicas} que agrupan el conjunto de tareas del proyecto y cada una representa un componente o fase del sistema. Las tareas se priorizan y completan de forma continua a lo largo del desarrollo.
+
+\subsection{Épica 1: Adquisición y preparación de datos}
+
+Tareas completadas:
+\begin{itemize}[noitemsep]
+    \item Descarga del corpus CodiEsp (diagnósticos, procedimientos y variante extendida).
+    \item Desarrollo del script de \emph{scraping} sobre el portal eCIE-maps para obtener el catálogo CIE-10-ES.
+    \item Análisis estadístico del corpus: Distribución de longitudes, frecuencia de códigos, desequilibrio de clases, stop-words y lemmatización.
+    \item Análisis estadístico del catálogo CIE-10-ES: Cobertura, distribución por capítulos y uso de vocabulario médico específico.
+    \item Generación de los ficheros CSV de entrenamiento, validación y test.
+\end{itemize}
+
+\subsection{Épica 2: Modelo de clasificación}
+
+Tareas completadas:
+\begin{itemize}[noitemsep]
+    \item Comparativa de los distintos modelos base apropiados para este uso.
+    \item Implementación del clasificador plano multilabel basado en un modelo clínico preentrenado BERT.
+    \item Configuración del pipeline de entrenamiento (función de pérdida, optimizador, \emph{scheduler}).
+    \item Implementación del clasificador de diccionario como \emph{baseline}.
+    \item Entrenamiento y selección del mejor checkpoint por F1-score micro en validación.
+    \item Evaluación sobre el conjunto de test con métricas de precisión, recall y F1.
+\end{itemize}
+
+\subsection{Épica 3: Servicio de inferencia (AI Engine)}
+
+Tareas completadas:
+\begin{itemize}[noitemsep]
+    \item Implementación del servicio FastAPI y su entorno.
+    \item Endpoints \texttt{POST /predict} y \texttt{GET /health}.
+    \item Desarrollo de un servicio mock para la ejecución de pruebas en entornos CI y el desarrollo de los otros componentes, sin necesidad de GPU.
+    \item Dockerización del servicio con imagen base optimizada para PyTorch.
+\end{itemize}
+
+\subsection{Épica 4: Backend}
+
+Tareas completadas:
+\begin{itemize}[noitemsep]
+    \item Preparación del entorno y las diferentes herramientas (linting, static analysis)
+    \item Sistema de autenticación con registro, confirmación por email e inicio de sesión con un token Bearer.
+    \item Arquitectura CQRS/Event Sourcing con Commanded y PostgreSQL como \emph{event store}.
+    \item Canal WebSocket para comunicación en tiempo real con el frontend.
+    \item Pipeline de análisis para la recepción del informe médico, la llamada al AI Engine y el almacenamiento de los resultados.
+    \item Soporte de internacionalización (i18n) en español e inglés.
+    \item Implementación de la suite de pruebas con ExUnit así como un informe de cobertura.
+    \item Dockerización del entorno de desarrollo, pruebas y producción.
+\end{itemize}
+
+\subsection{Épica 5: Frontend}
+
+Tareas completadas:
+\begin{itemize}[noitemsep]
+    \item Página de autenticación con formularios de registro e inicio de sesión.
+    \item Interfaz de chat con renderizado de tarjetas tipadas (resumen, códigos, recomendaciones).
+    \item Panel lateral con historial de los diferentes analisis, asi como de controles de sesión.
+    \item Componentes de validación y rechazo de los códigos predichos, asi como los motivos.
+    \item Selector de idioma y carga de traducciones con el backend.
+    \item Configuración centralizada de URLs mediante variables de entorno.
+    \item Dockerización del entorno de desarrollo, pruebas y producción.
+\end{itemize}
+
+\subsection{Épica 6: Infraestructura y calidad}
+
+Tareas completadas:
+\begin{itemize}[noitemsep]
+    \item Configuración de Docker Compose para todos los servicios.
+    \item Makefile con targets para todo el ciclo de vida del proyecto.
+    \item Configuración de commitlint y Husky para validación de commits.
+    \item Workflow de GitHub Actions para CI.
+    \item Dockerización del entorno de entrenamiento con soporte CPU y GPU.
+    \item Implementación del entorno de producción con un cluster de Kubernetes.
+    \item Monitorizacion del servicio mediante Prometheus y Grafana.
+    \item Gestion de errores utilizando el SaaS Sentry.
+\end{itemize}
+
+\subsection{Orden de ejecución de las épicas}
+
+Las épicas no se desarrollan de forma estrictamente secuencial. Los primeros pasos en todas las epicas seran siempre el establecimiento del entorno de desarrollo.
+
+La de adquisición de datos se abordan en segundo lugar, ya que el resto del sistema depende de ambas: sin los CSV del corpus no hay entrenamiento posible. A continuación se trabaja en paralelo sobre el motor de IA y el backend, usando el \emph{mock} del AI Engine, para desacoplar ambas líneas de trabajo y poder avanzar en la integración del backend sin necesidad de disponer del modelo entrenado. El frontend se desarrolla progresivamente a medida que el backend expone nuevos endpoints y canales. La épica de modelo de clasificación es la de mayor duración y la que más variaciones presenta durante el desarrollo, dado que el rendimiento en validación determina si es necesario ajustar la arquitectura, los hiperparámetros o el preprocesamiento de los datos.
+
+#PORAAQUIVAMOS
+
+\subsection{Estimación de esfuerzo por épica}
+
+La tabla~\ref{tab:planificacion} recoge la estimación de esfuerzo por épica expresada en puntos de historia relativos, donde cada punto equivale aproximadamente a media jornada de trabajo efectivo. Esta unidad relativa resulta más adecuada que las horas absolutas en un proyecto con dedicación variable e irregular, ya que refleja la complejidad percibida de cada épica con independencia de cuándo se realiza.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\hline
+\textbf{Épica} & \textbf{Puntos estimados} & \textbf{Puntos reales} \\
+\hline
+Adquisición y preparación de datos & 8 & 8 \\
+Modelo de clasificación & 16 & 20 \\
+Servicio de inferencia & 4 & 4 \\
+Backend & 16 & 16 \\
+Frontend & 12 & 12 \\
+Infraestructura y calidad & 4 & 4 \\
+Redacción de la memoria & 12 & 12 \\
+\hline
+\textbf{Total} & \textbf{72} & \textbf{76} \\
+\hline
+\end{tabular}
+\caption{Estimación y esfuerzo real por épica en puntos de historia.}
+\label{tab:planificacion}
+\end{table}
+
+La épica de modelo de clasificación es la única que supera la estimación inicial. La diferencia de cuatro puntos se explica por la necesidad de explorar un número mayor de configuraciones de hiperparámetros del previsto: los primeros experimentos con batch size y tasa de aprendizaje por defecto no alcanzan el nivel de F1 micro esperado en validación, lo que obliga a repetir el ciclo de entrenamiento con distintas combinaciones antes de dar por cerrada esa épica. Este tipo de desviación es habitual en proyectos con componentes de investigación aplicada, donde el resultado de un experimento condiciona las decisiones que siguen.
+
+\section{Costes y análisis de riesgos}
+
+\subsection{Estimación de costes}
+
+Los costes del proyecto se dividen en dos categorías: costes de personal y costes de recursos materiales. Dado que se trata de un TFG desarrollado por un único alumno, los costes de personal son los más significativos y los que mejor reflejan el esfuerzo real invertido.
+
+\textbf{Costes de personal.} A partir de los 76 puntos de historia estimados, asumiendo que cada punto equivale a media jornada de trabajo efectivo de cuatro horas, el volumen total de trabajo se sitúa en torno a las 304 horas. Tomando como referencia el coste horario de un perfil junior de ingeniería de software en España —entre 20 y 25\,€/hora con todos los costes sociales incluidos—, el coste de personal asciende a entre 6.000 y 7.600\,€. Este rango representa el presupuesto de referencia si el proyecto se encargara a un profesional externo.
+
+\textbf{Costes de recursos materiales.}
+\begin{itemize}
+    \item \textbf{Hardware de desarrollo}: el desarrollo se realiza sobre hardware propio ya amortizado, por lo que no genera un coste adicional directo. Si se amortiza el coste del equipo proporcionalmente a la duración del proyecto (asumiendo un equipo de 1.500\,€ con vida útil de cuatro años), el coste imputado es de aproximadamente 95\,€.
+    \item \textbf{GPU para entrenamiento}: si no se dispone de GPU local, el entrenamiento puede realizarse en plataformas de computación en la nube. Estimando entre 4 y 8 horas de GPU necesarias para completar el entrenamiento final a un coste de entre 0,50 y 2\,€/hora, el coste total de cómputo se sitúa entre 2 y 16\,€ por ejecución de entrenamiento. Considerando varias ejecuciones de prueba durante la fase de experimentación, el coste total de GPU se estima en menos de 50\,€.
+    \item \textbf{Software}: todas las herramientas, \emph{frameworks} y modelos utilizados son de código abierto y gratuitos. El acceso al modelo RigoBERTa desde HuggingFace Hub requiere un token de usuario, cuya obtención es gratuita.
+    \item \textbf{Infraestructura de red y almacenamiento}: el corpus CodiEsp y los artefactos del modelo se almacenan localmente. No hay costes de almacenamiento en la nube ni de ancho de banda significativos.
+\end{itemize}
+
+El coste total estimado del proyecto, incluyendo personal y materiales, se sitúa entre \textbf{6.100 y 7.700\,€}, siendo el coste de personal el componente dominante con más del 95\,\% del total.
+
+\subsection{Análisis de riesgos}
+
+La identificación y gestión de riesgos es una parte esencial del plan de gestión de cualquier proyecto software, más aún en proyectos con componentes de investigación aplicada, donde el resultado de los experimentos no está garantizado de antemano. A continuación se enumeran los riesgos identificados durante la planificación del proyecto, clasificados por su probabilidad de ocurrencia (Baja, Media o Alta) y por el impacto que tendrían sobre el desarrollo si se materializaran (Bajo, Medio o Alto).
+
+La tabla~\ref{tab:riesgos} recoge los principales riesgos identificados, su probabilidad de ocurrencia, el impacto estimado y las medidas de mitigación adoptadas.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{p{4cm}ccp{5cm}}
+\hline
+\textbf{Riesgo} & \textbf{Prob.} & \textbf{Impacto} & \textbf{Mitigación} \\
+\hline
+Rendimiento insuficiente del modelo sobre CodiEsp & Media & Alto & Evaluación temprana sobre conjunto de validación; posibilidad de cambiar el modelo base o ajustar hiperparámetros. \\
+\hline
+Coste computacional excesivo de entrenamiento sin GPU & Alta & Medio & Configuración Docker con soporte GPU; posibilidad de usar entornos en la nube como alternativa. \\
+\hline
+Cambios en la API del portal eCIE-maps que rompan el \emph{scraping} & Baja & Medio & Los CSV ya generados se almacenan en el repositorio; el \emph{scraping} es una fase de adquisición puntual, no continua. \\
+\hline
+Desequilibrio extremo de clases que dificulte el aprendizaje & Alta & Medio & Análisis previo de la distribución; uso de ponderación de clases en la función de pérdida. \\
+\hline
+Indisponibilidad del corpus CodiEsp & Baja & Alto & Copia local de los datos incluida en el repositorio de entrenamiento. \\
+\hline
+\end{tabular}
+\caption{Análisis de riesgos del proyecto.}
+\label{tab:riesgos}
+\end{table}
+
+De los riesgos identificados, los dos que mayor atención requieren durante el desarrollo son el rendimiento del modelo y el desequilibrio de clases. El primero porque condiciona directamente la utilidad del sistema: un modelo que no supere los \emph{baselines} descritos en la literatura no aporta valor frente a las soluciones existentes. El segundo porque es una característica inherente a cualquier corpus de diagnósticos clínicos reales, donde la distribución de frecuencias sigue una ley de potencia: un pequeño conjunto de códigos de enfermedades comunes acapara la mayoría de los ejemplos de entrenamiento, mientras que los códigos de enfermedades raras o procedimientos poco frecuentes cuentan con muy pocos ejemplos. Este desequilibrio puede llevar a que el modelo aprenda a predecir siempre los códigos más frecuentes y a ignorar sistemáticamente los menos comunes, lo que penaliza las métricas macro y degrada la utilidad clínica del sistema para los casos atípicos. La ponderación de clases en la función de pérdida y el análisis previo de la distribución del corpus son las medidas de mitigación más directas para este riesgo.
