@@ -24,35 +24,21 @@
    {\textbf{\large\textsf{Resumen}}\par} % Título de resumen
 \end{center}   
 \makeatother %
-La codificación manual de diagnósticos clínicos en sistemas CIE-10 presenta importantes desafíos operativos: complejidad creciente (68,069 códigos vs 14,025 en CIE-9), tiempos promedios de 15 minutos por caso \cite{gogorcena2017cie10es}. 
+La codificación manual de diagnósticos clínicos en sistemas CIE-10 presenta importantes desafíos operativos: complejidad creciente (68.069 códigos frente a los 14.025 de CIE-9) y tiempos medios de 14 minutos por caso~\cite{sanidad2016cie10,gogorcena2017cie10es}, con el agravante de requerir personal especializado para evitar errores de clasificación.
 
-Este trabajo propone un sistema automático de codificación mediante modelos BERT multi-etiqueta y con jerarquía, adaptados a narrativas clínicas en español, abordando tres problemáticas clave:
+Este trabajo propone un sistema automático de codificación mediante modelos BERT multilabel adaptados a narrativas clínicas en español, abordando tres problemáticas clave:
 
-1) Procesamiento de lenguaje clínico no estructurado
+\begin{itemize}
+  \item Procesamiento de lenguaje clínico no estructurado.
+  \item Asignación múltiple de códigos jerárquicamente relacionados.
+  \item Adaptación a los requisitos de trazabilidad y auditabilidad del Reglamento UE 2017/745~\cite{eu2017745}, aplicable al software de apoyo a la decisión clínica.
+\end{itemize}
 
-2) Asignación múltiple de códigos jerárquicamente relacionados
+La metodología combina técnicas avanzadas de PLN con conocimiento clínico estructurado: preentrenamiento débil sobre las descripciones oficiales del catálogo CIE-10-ES, \emph{fine-tuning} del modelo RigoBERTa-Clinical~\cite{miranda2020} con función de pérdida Binary Cross-Entropy ponderada para combatir el desequilibrio extremo de clases, y calibración de umbrales de decisión por código sobre el conjunto de validación del corpus CodiEsp.
 
-3) Adaptación a requisitos regulatorios de la Orden SSI/1461/2022, normativa española emitida por el Ministerio de Sanidad.
+Los resultados muestran un F1-score micro de 0,537 en codificación de diagnósticos sobre el corpus CodiEsp (F1 macro de 0,127, reflejo del fuerte desequilibrio de clases). El modelo reduce la fase de propuesta de codificación a menos de un segundo por informe, frente a los 14 minutos de media del proceso manual, requiriendo únicamente revisión humana en los casos de baja certeza.
 
-La metodología combina técnicas avanzadas de PLN con conocimiento clínico estructurado:
-
-1) Preprocesamiento específico para textos médicos (normalización de entidades clínicas y detección de negaciones)
-
-2) Fine-tuning del modelo BETO (BERT para español) con capas de atención jerárquica
-
-3) Mecanismo de pérdida adaptativa para manejar el desbalance extremo de clases. El sistema se entrena y evalúa usando los datos proporcionados en el Codiesp \cite{miranda2020}, un conjunto de informes codificados de forma manual por expertos, con datos de entrenamiento, test y validación.
-
-Los resultados muestran un F1-score de //TODO \%// en codificación primaria, superando el rendimiento humano (0.89). El modelo reduce el tiempo de codificación //TODO, añadir datos// manteniendo compliance con niveles de especificidad requeridos.
-
-El trabajo pretende demostrar la viabilidad de sistemas basados en transformers para codificación clínica automatizada, proponiendo un pipeline reproducible que integra: 
-
-1) Un componente de clasificación automática basado en los datos de entrada
-
-2) Un módulo de auditoría automática y gestión de incidencias
-
-3) Una interfaz API REST para la integración con sistemas hospitalarios. 
-
-Las limitaciones identificadas (sesgos en datos de entrenamiento, manejo de neologismos médicos) establecen directrices para futuras investigaciones.
+El trabajo demuestra la viabilidad de sistemas basados en transformers para codificación clínica automatizada, proponiendo un \emph{pipeline} reproducible que integra un clasificador multilabel, un servicio de inferencia con API REST y una interfaz web de demostración en tiempo real. Las limitaciones identificadas —cobertura reducida de códigos poco frecuentes y ausencia de datos de hospitales reales— establecen las líneas prioritarias para trabajos futuros.
 
 \bigskip
 \noindent\textbf{Palabras clave}: CIE-10, BERT, clasificación multilabel, codificación clínica, procesamiento de lenguaje natural.
@@ -74,18 +60,32 @@ Las limitaciones identificadas (sesgos en datos de entrenamiento, manejo de neol
    {\textsc{BACHELOR DISSERTATION - ESCUELA SUPERIOR DE INFORMÁTICA 
    (UCLM)}\par}
    \vspace{1cm} %  
-   {\textbf{\Large Guided template for TFG}\par}
+   {\textbf{\Large\@tituloCorto}\par}
    \vspace{0.4cm} %
    {\@autor \\ \@cityTF,{} \@monthTF{} \@yearTF\par} 
    \vspace{0.9cm} %
    {\textbf{\large\textsf{Abstract}}\par} 
 \end{center}   
 \makeatother %
-\emph{English version for the abstract.}
+Manual coding of clinical diagnoses in ICD-10 systems presents significant operational challenges: growing complexity (68,069 codes versus 14,025 in ICD-9) and an average coding time of 14 minutes per case~\cite{sanidad2016cie10}, compounded by the need for specialist staff to avoid classification errors.
 
-\bigskip 
+This work proposes an automatic coding system based on multilabel BERT models adapted to clinical narratives in Spanish, addressing three key problems:
 
-\noindent\textbf{Keywords}: \dots
+\begin{itemize}
+  \item Processing of unstructured clinical language.
+  \item Multiple assignment of hierarchically related codes.
+  \item Compliance with the traceability and auditability requirements of EU Regulation 2017/745~\cite{eu2017745}, applicable to clinical decision-support software.
+\end{itemize}
+
+The methodology combines advanced NLP techniques with structured clinical knowledge: weak pre-training on the official ICD-10-ES catalogue descriptions, fine-tuning of the RigoBERTa-Clinical model with weighted Binary Cross-Entropy loss to address extreme class imbalance, and per-code decision threshold calibration on the CodiEsp validation set~\cite{miranda2020}.
+
+Results show a micro F1-score of 0.537 on diagnostic coding over the CodiEsp corpus (macro F1 of 0.127, reflecting strong class imbalance). The model reduces the coding proposal phase to under one second per report, compared to the 14-minute average of the manual process, requiring human review only for low-confidence cases.
+
+The work demonstrates the feasibility of transformer-based systems for automated clinical coding, proposing a reproducible pipeline integrating a multilabel classifier, a REST API inference service, and a real-time web interface. Identified limitations~---~limited coverage of rare codes and absence of real hospital data~---~define the priority directions for future work.
+
+\bigskip
+
+\noindent\textbf{Keywords}: ICD-10, BERT, multilabel classification, clinical coding, natural language processing.
 
 \cleardoublepage % Se incluye para modificar el contador de página antes de añadir 
 
