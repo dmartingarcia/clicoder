@@ -1,25 +1,70 @@
-\chapter{Sobre la Bibliografía}
+\chapter{Comparativa de modelos candidatos}
 \label{cap:AnexoA}
 
-En los anexos se incluirá, de modo opcional, material suplementario que podrá consistir en manuales de usuario, listados seleccionados de código fuente, esquemas, planos y en general aquel contenido que complementa a la memoria. Se recomienda que no sean excesivamente voluminosos, aunque su extensión no está sometida a la regulación por normativa, ya que esta afecta únicamente al texto principal de la memoria.
+Se evaluaron nueve modelos preentrenados como posible codificador de texto para el clasificador CIE-10. Los criterios de selección fueron: rendimiento en el corpus CodiEsp, especialización en español clínico, longitud de ventana de contexto y coste computacional de inferencia y entrenamiento.
 
-En esta plantilla hemos decidido incluir dos anexos. En el primero de ellos se hacen algunos comentarios adicionales sobre la bibliografía. En el segundo se aporta una breve introducción a \LaTeX{} cuya información puede servir de ejemplo de inclusión de ciertos elementos en la preparación de la memoria del TFG.
+\section{Modelos evaluados}
 
-Todo el material de terceros se debe citar convenientemente sin contravenir los términos de las licencias de uso y distribución de dicho material. Esto se extiende al uso de diagramas y fotografías. El incumplimiento de la legislación vigente en materia de protección de la propiedad intelectual es responsabilidad exclusiva del autor, independientemente de la cesión de derechos que este haya convenido.
+\subsection{\texttt{PlanTL-GOB-ES/roberta-base-biomedical-clinical-es}}
 
-La sección de \emph{Bibliografía}, que si se prefiere se puede titular \emph{Referencias}, incluirá un listado ordenado preferentemente por orden alfabético (primer apellido del autor principal), con todas las obras citadas en el texto. En la lista de referencias se especificará para cada obra: autores, título, editorial y año de publicación. Este formato se conseguirá en \LaTeX{} mediante el uso del estilo estándar \texttt{plain} o cualquier otro derivado con estilo de citación numérica. En algunas titulaciones se obliga a una ordenación por orden de cita en el texto que con Bib\TeX{} se puede obtener mediante los estilos estándar \texttt{ieeetr} (estilo para los IEEE \emph{transactions}) y \texttt{unsrt} (estilo \emph{unsorted}). 
+Modelo RoBERTa~\cite{liu2019roberta} de 125M parámetros entrenado por el Barcelona Supercomputing Center sobre corpus clínico en español: historias clínicas, informes radiológicos y notas médicas. Ventana de contexto de 512 tokens. Ofrece el mejor equilibrio entre especialización médica y velocidad de inferencia en CPU. Obtuvo un F1 de 0{,}76 en las pruebas de nivel~1 (clasificación de capítulos).
 
-Es muy importante tener presente que en esta sección solo se debe incluir las referencias bibliográficas citadas expresamente en el documento. Si se desea incluir fuentes consultadas, pero no citadas, se puede confeccionar con ellas una sección denominada \emph{Material de consulta}, aunque estas referencias se pueden incluir opcionalmente a lo largo del documento como notas a pie de página.
+\subsection{\texttt{PlanTL-GOB-ES/roberta-large-bne-medical}}
 
-En las titulaciones técnicas se empleará estilo de citación numérico con el número de la referencia entre corchetes. La cita podrá incluir el número de página concreto de la referencia que se desea citar. El uso correcto de la citación implica dejar claro al lector cuál es el texto, material o idea citado. Las obras referenciadas sin mención explícita o implícita al material concreto citado se deberían considerar material de consulta y, por tanto, ser agrupadas como \emph{Material de consulta}, distinguiéndolas claramente de aquellas otras en las que sí se recurre a la citación.
+Variante de 355M parámetros del mismo grupo~\cite{liu2019roberta}. Mayor capacidad pero requiere GPU con al menos 16\,GB de VRAM para un entrenamiento viable. No se evaluó experimentalmente por restricciones de cómputo; se descartó para los niveles en los que el coste no estaba justificado.
 
-En las titulaciones que requieren un estilo de citación de tipo autor-año (no numérico), se puede incluir el paquete \LaTeX{} \texttt{apacite} (con la opción \texttt{natbibapa}) y especificar este mismo estilo en la sección de bibliografía en el argumento del comando \texttt{bibliographystyle}.
+\subsection{\texttt{BSC-LT/RigoBERTa}}
 
-Cuando se desee incluir referencias a páginas genéricas de la Web sin mención expresa a un artículo con título y autor definido, dichas referencias se pueden incluir como notas al pie de página o como un apartado de fuentes de consulta dedicado a \emph{Direcciones de Internet}. Por el contrario, los documentos electrónicos publicados en Internet se pueden incluir empleando el tipo de entrada \texttt{misc} con el comando \texttt{url} como se muestra en la bibliografía que acompaña esta plantilla. Observarás que el campo \texttt{note} se emplea para añadir información adicional como la fecha de la última consulta de fuentes publicadas en Internet, y para la inclusión del DOI de algunas obras para su rápida recuperación. Sin embargo, ten cuidado porque esta estrategia puede necesitar una adaptación con un estilo de citación autor-año.
+Modelo basado en la arquitectura DeBERTa-v2~\cite{he2021deberta} desarrollado por la unidad de tecnologías del lenguaje del Barcelona Supercomputing Center~\cite{vacaserrano2022rigoberta}. Ventana de contexto nativa de 4096 tokens, lo que permite procesar informes de alta hospitalaria completos sin truncación agresiva. Obtuvo un F1 de 0{,}74 en nivel~1 y fue seleccionado como modelo base para el entrenamiento final en producción.
 
+\subsection{\texttt{IIC/RigoBERTa-Clinical}}
 
+Variante clínica de RigoBERTa desarrollada por el Instituto de Ingeniería del Conocimiento~\cite{garciasubies2026rigobertaclinical}, también sobre arquitectura DeBERTa-v2~\cite{he2021deberta} y especializada en textos médicos en español. Se evaluó como alternativa a \texttt{BSC-LT/RigoBERTa} con resultados comparables.
 
+\subsection{\texttt{jhu-clsp/mmBERT-base}}
 
+Modelo multilingüe (\emph{multilingual BERT}) desarrollado por el Centro de Procesamiento del Lenguaje y del Habla de la Universidad Johns Hopkins~\cite{marone2025mmbert}. Ventana efectiva de 1500 tokens. Obtuvo un F1 de 0{,}74 en las pruebas de nivel~1, equiparable a RigoBERTa, aunque sin especialización en dominio clínico español.
 
+\subsection{\texttt{answerdotai/ModernBERT-base}}
 
+Arquitectura de nueva generación (2024) con mecanismo Flash Attention y ventana de contexto de 8192 tokens~\cite{warner2024modernbert}. Obtuvo el mejor F1 registrado en las pruebas de validación (0{,}80), lo que lo convierte en el modelo con mayor potencial para iteraciones futuras del sistema.
 
+\subsection{\texttt{dccuchile/bert-base-spanish-wwm-cased} (BETO)}
+
+Modelo BERT~\cite{devlin2019} de 110M parámetros entrenado sobre corpus en español de propósito general~\cite{canete2020beto}. Sin especialización médica; F1 estimado de 0{,}75 en CodiEsp. Útil como referencia de línea base en español.
+
+\subsection{\texttt{sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}}
+
+Modelo de 33M parámetros optimizado para generación de embeddings de similitud semántica~\cite{reimers2019sentencebert}. No es adecuado para clasificación directa; se evaluó únicamente como posible componente de una arquitectura basada en recuperación (\emph{RAG}).
+
+\subsection{\texttt{distilbert-base-multilingual-cased}}
+
+Versión destilada de BERT multilingüe con 66M parámetros~\cite{sanh2019distilbert}. Un 40\,\% más rápido que BERT base con pérdida de precisión moderada. Sin especialización en español médico; considerado como alternativa para entornos con recursos de cómputo muy limitados.
+
+\section{Tabla resumen}
+
+\begin{table}[h]
+\centering
+\caption{Comparativa de los modelos candidatos evaluados.}
+\label{tab:modelos}
+\begin{tabular}{lrccl}
+\hline
+\textbf{Modelo} & \textbf{Params} & \textbf{Ventana} & \textbf{F1 nivel~1} & \textbf{Dominio} \\
+\hline
+RoBERTa-BSC (base)        & 125M  & 512   & 0{,}76            & Clínico ES \\
+RoBERTa-BSC (large)       & 355M  & 512   & —                 & Clínico ES \\
+RigoBERTa (BSC-LT)        & 125M  & 4096  & 0{,}74            & Clínico ES \\
+RigoBERTa-Clinical (IIC)  & 125M  & 4096  & 0{,}74            & Clínico ES \\
+mmBERT                    & 110M  & 1500  & 0{,}74            & Multilingüe \\
+ModernBERT                & 149M  & 8192  & \textbf{0{,}80}   & General \\
+BETO                      & 110M  & 512   & 0{,}75*           & Español \\
+MiniLM multilingüe        & 33M   & 512   & —                 & Embeddings \\
+DistilBERT multilingüe    & 66M   & 512   & 0{,}68*           & Multilingüe \\
+\hline
+\multicolumn{5}{l}{\small * Estimación a partir de benchmarks publicados en CodiEsp; no evaluado experimentalmente.}
+\end{tabular}
+\end{table}
+
+\section{Criterio de selección}
+
+\texttt{BSC-LT/RigoBERTa} fue seleccionado para el entrenamiento en producción por combinar especialización en dominio clínico español con una ventana de contexto amplia (4096 tokens), factor crítico dado que los informes de alta hospitalaria superan habitualmente los 512 tokens. \texttt{answerdotai/ModernBERT-base} queda identificado como candidato preferente para iteraciones futuras gracias a su ventana de 8192 tokens y mejor F1 experimental.
