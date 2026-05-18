@@ -79,7 +79,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
     \item Un clasificador jerárquico propaga errores: un error en el nivel de capítulo excluye todos los códigos correctos de ese capítulo en los niveles inferiores.
     \item La granularidad de bloque (3 caracteres) cubre el uso clínico habitual. Los códigos a 4 o 5 caracteres tienen frecuencias demasiado bajas en el corpus CodiEsp para entrenarse con fiabilidad.
     \item El espacio de 1.767 clases es manejable con una sola cabeza de clasificación multilabel, sin necesidad de múltiples modelos.
-    \item La simplicidad del clasificador plano facilita el mantenimiento y la actualización del modelo cuando se publiquen nuevas versiones de CodiEsp.
+    \item La simplicidad del clasificador plano facilita el mantenimiento y la actualización del modelo cuando se publiquen nuevas versiones de CIE.
 \end{itemize}
 
 \textbf{Alternativa registrada.} Los notebooks \texttt{0\_clasificador\_jerarquico\_Introducción.ipynb} y \texttt{7\_clasificador\_jerarquico\_analisis\_nivel\_2.ipynb} documentan la arquitectura jerárquica de dos niveles como vía de mejora futura para incrementar la precisión en códigos de alta especificidad.
@@ -125,7 +125,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 02 & Backend       & CQRS + Event Sourcing por trazabilidad clínica y separación lectura/escritura. \\
 03 & Frontend      & Next.js + React 19 por SSR, tipado fuerte y velocidad de desarrollo. \\
 04 & Base de datos & PostgreSQL dual (eventos + proyecciones) por simplicidad operacional. \\
-05 & Motor de IA   & Clasificador plano sobre 1.767 bloques por robustez frente a propagación de errores. \\
+05 & Motor de IA   & Clasificador plano sobre 1.767 bloques por robustez frente a la propagación de errores. \\
 06 & Motor de IA   & FastAPI sobre HTTP por desacoplamiento y facilidad de consumo desde Elixir. \\
 07 & Motor de IA   & Servicio \emph{mock} con la misma interfaz para agilizar el desarrollo. \\
 \hline

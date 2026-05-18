@@ -47,7 +47,7 @@ El repositorio incluye tres ficheros de sobreescritura de Docker Compose que ada
 
     \item[\texttt{docker-compose.cpu.yml}] Configuración para máquinas sin GPU. Sobreescribe \texttt{DEVICE=cpu} en \texttt{ai\_engine}. El backend de atención cambia automáticamente a SDPA (\emph{Scaled Dot-Product Attention}). Tiempo de inferencia aproximado: 30 segundos por informe.
 
-    \item[\texttt{docker-compose.mock.yml}] Sustituye el servicio \texttt{ai\_engine} por \texttt{ai\_engine\_mock}, una implementación ligera en FastAPI que devuelve predicciones ficticias sin cargar ningún modelo. Recomendado para desarrollo del frontend y del backend cuando no se necesita inferencia real.
+    \item[\texttt{docker-compose.mock.yml}] Sustituye el servicio \texttt{ai\_engine} por \texttt{ai\_engine\_mock}, una implementación ligera en FastAPI que devuelve predicciones ficticias sin cargar ningún modelo. Recomendado para el desarrollo del frontend y del backend cuando no se necesita inferencia real.
 \end{description}
 
 \section{Variables de entorno}
