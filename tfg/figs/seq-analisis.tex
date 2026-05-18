@@ -1,0 +1,98 @@
+% Diagrama de secuencia — Análisis de informe clínico
+% Uso: \input{figs/seq-analisis} dentro de figure+\centering+\resizebox{\textwidth}{!}{...}
+%
+% Participantes (x): Usuario=0, Frontend=3.6, Backend=7.2, AI Engine=11
+% Tiempo (y): crece hacia abajo (negativo en tikz)
+
+\begin{tikzpicture}[
+  every node/.style={font=\small\sffamily},
+  % Cabecera de participante
+  phead/.style={
+    draw=aquaESI!80, fill=aquaESI!20, thick,
+    rectangle, rounded corners=3pt,
+    minimum width=2.4cm, minimum height=0.75cm, align=center
+  },
+  % Línea de vida
+  life/.style={draw=gray!40, thick, dashed},
+  % Mensaje síncrono (flecha llena)
+  sync/.style={->, >=Stealth, thick, aquaESI!80},
+  % Mensaje de retorno (flecha discontinua)
+  ret/.style={->, >=Stealth, dashed, thick, gray!60},
+  % Nota lateral
+  note/.style={
+    draw=ocre!60, fill=ocre!10,
+    rectangle, rounded corners=2pt,
+    font=\scriptsize\sffamily, inner sep=3pt, align=left
+  },
+  % Etiqueta de mensaje
+  msglbl/.style={font=\scriptsize\sffamily, fill=white,
+                 inner sep=1pt, above, midway}
+]
+
+%% ---- COORDENADAS X de cada participante ----
+\def\xu{0}      % Usuario
+\def\xf{3.6}    % Frontend
+\def\xb{7.2}    % Backend
+\def\xa{11.0}   % AI Engine
+
+%% ---- CABECERAS ----
+\node[phead] at (\xu, 0)  {\textbf{Usuario}};
+\node[phead] at (\xf, 0)  {\textbf{Frontend}};
+\node[phead] at (\xb, 0)  {\textbf{Backend}};
+\node[phead] at (\xa, 0)  {\textbf{AI Engine}};
+
+%% ---- LÍNEAS DE VIDA ----
+\draw[life] (\xu,-0.38) -- (\xu,-10.2);
+\draw[life] (\xf,-0.38) -- (\xf,-10.2);
+\draw[life] (\xb,-0.38) -- (\xb,-10.2);
+\draw[life] (\xa,-0.38) -- (\xa,-10.2);
+
+%% ---- ACTIVACIONES (barras sobre línea de vida) ----
+% Backend activo durante la llamada al AI Engine
+\filldraw[draw=aquaESI!70, fill=aquaESI!25]
+  (\xb-0.12,-2.2) rectangle (\xb+0.12,-6.8);
+% AI Engine activo durante inferencia
+\filldraw[draw=turquesa!70, fill=turquesa!20]
+  (\xa-0.12,-2.8) rectangle (\xa+0.12,-5.8);
+
+%% ---- MENSAJES ----
+
+% 1. Usuario → Frontend
+\draw[sync] (\xu,-1.0) -- node[msglbl]{1:\enspace envía informe clínico} (\xf,-1.0);
+
+% 2. Frontend → Backend (WebSocket)
+\draw[sync] (\xf,-1.8) -- node[msglbl]{2:\enspace [WS] analyze\_report} (\xb,-1.8);
+
+% 3. Backend: despacha comando (auto-mensaje)
+\draw[sync, rounded corners=4pt]
+  (\xb,-2.4) -- ++(0.6,0) -- ++(0,-0.55) -- node[right, font=\scriptsize\sffamily]
+  {3: dispatch(AnalyzeReport)} ++(-0.6,0);
+
+% 4. Backend → AI Engine
+\draw[sync] (\xb,-3.6) -- node[msglbl]{4:\enspace POST /predict \{text\}} (\xa,-3.6);
+
+% 5. AI Engine → Backend (respuesta)
+\draw[ret] (\xa,-5.2) -- node[msglbl]{5:\enspace \{codes, confidence\_scores\}} (\xb,-5.2);
+
+% 6. Backend: despacha evento (auto-mensaje)
+\draw[sync, rounded corners=4pt]
+  (\xb,-6.0) -- ++(0.6,0) -- ++(0,-0.55) -- node[right, font=\scriptsize\sffamily]
+  {6: dispatch(ReceiveAIPrediction) → Event Store} ++(-0.6,0);
+
+% 7. Backend → Frontend: tarjeta resumen
+\draw[ret] (\xb,-7.4) -- node[msglbl]{7:\enspace [WS] card:summary} (\xf,-7.4);
+
+% 8. Backend → Frontend: tarjeta códigos
+\draw[ret] (\xb,-8.2) -- node[msglbl]{8:\enspace [WS] card:codes} (\xf,-8.2);
+
+% 9. Backend → Frontend: tarjeta recomendaciones
+\draw[ret] (\xb,-9.0) -- node[msglbl]{9:\enspace [WS] card:recommendations} (\xf,-9.0);
+
+% 10. Frontend → Usuario
+\draw[ret] (\xf,-9.8) -- node[msglbl]{10:\enspace muestra tarjetas de análisis} (\xu,-9.8);
+
+%% ---- NOTA LATERAL ----
+\node[note, right=0.3cm] at (\xa,-4.4)
+  {Inferencia BERT\\$\sim$2--5\,s (GPU)};
+
+\end{tikzpicture}

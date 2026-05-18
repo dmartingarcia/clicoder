@@ -1,0 +1,127 @@
+% Diagrama de flujo CQRS / Event Sourcing
+% Uso: \input{figs/cqrs-flujo} dentro de figure+\centering+\resizebox{\textwidth}{!}{...}
+%
+% Flujo: Comando → Manejador → Agregado → Evento → EventStore → Proyector → Modelo de lectura
+
+\begin{tikzpicture}[
+  every node/.style={font=\small\sffamily},
+  %--- Escritura (lado izquierdo) ---
+  cmd/.style={
+    draw=palered!80, fill=palered!10, thick,
+    rectangle, rounded corners=4pt,
+    minimum width=2.6cm, minimum height=1.1cm,
+    align=center
+  },
+  handler/.style={
+    draw=gray!60, fill=gray!10, thick,
+    rectangle, rounded corners=4pt,
+    minimum width=2.6cm, minimum height=1.1cm,
+    align=center
+  },
+  agg/.style={
+    draw=aquaESI!80, fill=aquaESI!15, thick,
+    rectangle, rounded corners=4pt,
+    minimum width=2.6cm, minimum height=1.1cm,
+    align=center
+  },
+  evt/.style={
+    draw=ocre!80, fill=ocre!15, thick,
+    rectangle, rounded corners=4pt,
+    minimum width=2.6cm, minimum height=1.1cm,
+    align=center
+  },
+  store/.style={
+    draw=turquesa!80, fill=turquesa!15, thick,
+    cylinder, shape border rotate=90,
+    minimum height=1.4cm, minimum width=2.4cm,
+    align=center
+  },
+  proj/.style={
+    draw=gray!70, fill=gray!12, thick,
+    rectangle, rounded corners=4pt,
+    minimum width=2.6cm, minimum height=1.1cm,
+    align=center
+  },
+  read/.style={
+    draw=aquaESI!60, fill=aquaESI!10, thick,
+    rectangle, rounded corners=4pt,
+    minimum width=2.6cm, minimum height=1.1cm,
+    align=center
+  },
+  %--- Flechas ---
+  arr/.style={->, >=Stealth, thick},
+  lbl/.style={font=\scriptsize\sffamily, midway, fill=white,
+              inner sep=1.5pt, draw=gray!25, rounded corners=2pt},
+  node distance=0.5cm and 0.9cm
+]
+
+%--- LADO ESCRITURA (fila superior) ---
+\node[cmd] (cmd1) at (0,0) {
+  \textbf{Comando}\\
+  \scriptsize AnalyzeReport\\ValidateCode
+};
+
+\node[handler, right=0.9cm of cmd1] (hdlr) {
+  \textbf{Command}\\
+  \textbf{Handler}\\
+  \scriptsize Commanded
+};
+
+\node[agg, right=0.9cm of hdlr] (agg) {
+  \textbf{Agregado}\\
+  \scriptsize Analysis\\(estado)
+};
+
+\node[evt, right=0.9cm of agg] (evt1) {
+  \textbf{Evento}\\
+  \scriptsize ReportAnalyzed\\CodeValidated
+};
+
+\node[store, right=0.9cm of evt1] (es) {
+  \textbf{Event Store}\\
+  \scriptsize PostgreSQL
+};
+
+%--- PROYECTOR (fila inferior) ---
+\node[proj, below=1.4cm of es] (proj) {
+  \textbf{Proyector}\\
+  \scriptsize actualiza\\read models
+};
+
+%--- MODELOS DE LECTURA (fila inferior, de derecha a izquierda) ---
+\node[read, left=0.9cm of proj] (r3) {
+  \scriptsize predicted\_codes
+};
+\node[read, left=0.6cm of r3] (r2) {
+  \scriptsize analysis\_cards
+};
+\node[read, left=0.6cm of r2] (r1) {
+  \scriptsize conversations
+};
+
+%--- FLECHAS DE ESCRITURA ---
+\draw[arr] (cmd1) -- node[lbl, above]{dispatch} (hdlr);
+\draw[arr] (hdlr) -- node[lbl, above]{execute} (agg);
+\draw[arr] (agg)  -- node[lbl, above]{emit} (evt1);
+\draw[arr] (evt1) -- node[lbl, above]{persist} (es);
+
+%--- FLECHA EventStore → Proyector ---
+\draw[arr] (es) -- node[lbl, right]{subscribe} (proj);
+
+%--- FLECHAS Proyector → Modelos de lectura ---
+\draw[arr] (proj) -- (r3);
+\draw[arr] (proj) -- (r2);
+\draw[arr] (proj.west) -- (r1.east);
+
+%--- ETIQUETAS DE ZONA ---
+\node[font=\footnotesize\sffamily\bfseries, palered!80]
+  at ($(cmd1)!0.5!(evt1) + (0,0.95)$) {Lado escritura (Commands)};
+
+\node[font=\footnotesize\sffamily\bfseries, aquaESI!80]
+  at ($(r1)!0.5!(proj) + (0,-0.8)$) {Lado lectura (Query / Proyecciones)};
+
+%--- SEPARADOR ---
+\draw[dashed, gray!50, thick]
+  ($(es.south)!0.5!(proj.north)$) ++(-7,0) -- ++(10,0);
+
+\end{tikzpicture}
