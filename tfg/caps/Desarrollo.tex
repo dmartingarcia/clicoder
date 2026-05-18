@@ -286,7 +286,7 @@ Las pruebas de sistema verifican el flujo completo de uso: registro, inicio de s
 
 El sistema se despliega mediante Docker Compose. Cada componente reside en su propio contenedor con su \texttt{Dockerfile} específico. La configuración base (\texttt{docker-compose.yml}) define los servicios y sus dependencias; las variantes \texttt{docker-compose.gpu.yml} y \texttt{docker-compose.cpu.yml} permiten configurar el motor de IA con o sin aceleración por GPU.
 
-Los servicios y sus puertos de escucha son los que se indican en la tabla~\ref{tab:servicios}.
+Los servicios y sus puertos de escucha son los que se indican en la tabla~\ref{tab:servicios-puertos}.
 
 \begin{table}[h]
 \centering
@@ -302,7 +302,7 @@ Mailpit (email dev) & Mailpit & \texttt{http://localhost:8025} \\
 \hline
 \end{tabular}
 \caption{Servicios del sistema y puertos de escucha en el entorno local.}
-\label{tab:servicios}
+\label{tab:servicios-puertos}
 \end{table}
 
 \subsection{Puesta en marcha}
