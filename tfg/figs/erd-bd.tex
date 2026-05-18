@@ -1,0 +1,153 @@
+% Diagrama entidad-relación — Esquema de base de datos
+% Uso: \input{figs/erd-bd} dentro de figure+\centering+\resizebox{\textwidth}{!}{...}
+%
+% Tablas: users, conversations, messages, analysis_cards,
+%         predicted_codes, code_suggestions, cie10_codes
+
+\begin{tikzpicture}[
+  every node/.style={font=\scriptsize\sffamily},
+  %--- Estilo de tabla ERD (cabecera + campos) ---
+  tbl/.style={
+    rectangle split, rectangle split parts=2,
+    rectangle split part fill={aquaESI!70, white},
+    draw=aquaESI!80, thick, rounded corners=3pt,
+    align=left, text width=3.8cm
+  },
+  tblsm/.style={
+    rectangle split, rectangle split parts=2,
+    rectangle split part fill={turquesa!60, white},
+    draw=turquesa!70, thick, rounded corners=3pt,
+    align=left, text width=3.4cm
+  },
+  tblref/.style={
+    rectangle split, rectangle split parts=2,
+    rectangle split part fill={gray!50, white},
+    draw=gray!60, thick, rounded corners=3pt,
+    align=left, text width=3.4cm
+  },
+  %--- Flechas de FK (1:N) ---
+  fk/.style={->, >=Stealth, thick, gray!60},
+  node distance=1.0cm and 1.6cm
+]
+
+%--- NODOS ---
+
+% users
+\node[tbl] (users) {
+  \textbf{users}
+  \nodepart{two}
+  \underline{id} : uuid PK\\
+  first\_name, last\_name\\
+  username, email\\
+  password\_hash\\
+  locale, confirmed\_at\\
+  inserted\_at, updated\_at
+};
+
+% conversations
+\node[tbl, right=2.0cm of users] (conv) {
+  \textbf{conversations}
+  \nodepart{two}
+  \underline{id} : uuid PK\\
+  conversation\_id : string\\
+  user\_id : uuid FK\\
+  started\_at : utc\_datetime\\
+  status : string\\
+  deleted\_at : utc\_datetime\\
+  inserted\_at, updated\_at
+};
+
+% messages
+\node[tblsm, above right=0.8cm and 1.6cm of conv] (msg) {
+  \textbf{messages}
+  \nodepart{two}
+  \underline{id} : uuid PK\\
+  message\_id : string\\
+  content : text\\
+  user\_id, message\_type\\
+  timestamp : utc\_datetime\\
+  conversation\_id : uuid FK\\
+  inserted\_at, updated\_at
+};
+
+% analysis_cards
+\node[tblsm, right=1.6cm of conv] (cards) {
+  \textbf{analysis\_cards}
+  \nodepart{two}
+  \underline{id} : uuid PK\\
+  card\_id : string\\
+  card\_type : string\\
+  content : text\\
+  position : integer\\
+  message\_id : string\\
+  conversation\_id : uuid FK\\
+  inserted\_at, updated\_at
+};
+
+% predicted_codes
+\node[tblsm, below right=0.8cm and 1.6cm of conv] (pred) {
+  \textbf{predicted\_codes}
+  \nodepart{two}
+  \underline{id} : uuid PK\\
+  code\_id : string\\
+  cie10\_code : string\\
+  confidence\_score : float\\
+  status : string\\
+  validated\_by, rejected\_by\\
+  conversation\_id : uuid FK\\
+  inserted\_at, updated\_at
+};
+
+% code_suggestions
+\node[tblsm, below=1.0cm of conv] (sugg) {
+  \textbf{code\_suggestions}
+  \nodepart{two}
+  \underline{id} : uuid PK\\
+  suggestion\_id : string\\
+  selected\_text : text\\
+  suggested\_code : string\\
+  suggested\_by : string\\
+  conversation\_id : uuid FK\\
+  inserted\_at, updated\_at
+};
+
+% cie10_codes
+\node[tblref, right=1.6cm of pred] (cie10) {
+  \textbf{cie10\_codes}
+  \nodepart{two}
+  \underline{id} : uuid PK\\
+  code : string UNIQUE\\
+  description : text\\
+  type : string\\
+  metadata : jsonb\\
+  inserted\_at, updated\_at
+};
+
+%--- RELACIONES FK ---
+
+% users 1 → N conversations
+\draw[fk] (conv.west) -- node[above, font=\tiny\sffamily]{N} ++(-0.4,0)
+  node[above, font=\tiny\sffamily, at end] {} -- (users.east)
+  node[above, font=\tiny\sffamily, pos=0.9]{1};
+
+% conversations 1 → N messages
+\draw[fk] (msg.south) -- node[right, font=\tiny\sffamily]{N} ++(0,-0.3)
+  -| (conv.north) node[left, font=\tiny\sffamily, pos=0.9]{1};
+
+% conversations 1 → N analysis_cards
+\draw[fk] (cards.west) -- node[above, font=\tiny\sffamily]{N} ++(-0.3,0)
+  -- (conv.east) node[above, font=\tiny\sffamily, pos=0.1]{1};
+
+% conversations 1 → N predicted_codes
+\draw[fk] (pred.north) -- node[right, font=\tiny\sffamily]{N} ++(0,0.3)
+  -| (conv.south) node[left, font=\tiny\sffamily, pos=0.9]{1};
+
+% conversations 1 → N code_suggestions
+\draw[fk] (sugg.north) -- node[right, font=\tiny\sffamily]{N} ++(0,0.2)
+  -- (conv.south) node[right, font=\tiny\sffamily, pos=0.05]{1};
+
+% predicted_codes N → 1 cie10_codes (referencia por código)
+\draw[fk] (pred.east) -- node[above, font=\tiny\sffamily]{N} ++(0.3,0)
+  -- (cie10.west) node[above, font=\tiny\sffamily, pos=0.9]{1};
+
+\end{tikzpicture}
