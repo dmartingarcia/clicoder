@@ -84,6 +84,3 @@ tfg/**/*.gls
 tfg/**/*.bcf
 tfg/**/*.run.xml
 tfg/**/*.pdf
-
-# LaTeX temp file
-tfg/caps/--restos--.tex
