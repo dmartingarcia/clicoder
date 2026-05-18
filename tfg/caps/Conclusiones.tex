@@ -1,43 +1,54 @@
 \chapter{Conclusiones}
 \label{cap:Conclusiones}
 
-
-
-
 \section{Objetivos alcanzados}
-En este capítulo se realizará un juicio crítico y discusión sobre el objetivo general y objetivos secundarios alcanzados. 
 
+El objetivo principal del trabajo —el diseño e implementación de un prototipo funcional de codificación clínica automática en el estándar CIE-10-ES— ha sido alcanzado en su totalidad. El sistema resultante integra un clasificador multilabel basado en transformadores con una arquitectura completa de software que permite a un codificador clínico enviar informes de alta hospitalaria en español y recibir propuestas de codificación con su nivel de confianza asociado, sin necesidad de conocer los detalles del modelo subyacente.
 
+A continuación se revisa el grado de cumplimiento de cada uno de los subobjetivos enumerados en el capítulo~\ref{cap:Objetivo}:
 
+\begin{enumerate}
+    \item \textbf{Adquisición y construcción de las fuentes de datos.} Completado. Se descargó el corpus CodiEsp en sus tres particiones (diagnósticos, procedimientos y variante extendida con anotaciones a nivel de \emph{span}), y se desarrollaron los scripts de \emph{scraping} sobre el portal eCIE-maps del Ministerio de Sanidad para obtener el catálogo completo de códigos CIE-10-ES, cuyo formato de descarga pública estructurada no existe. El resultado son los ficheros CSV que alimentan todas las fases posteriores del proyecto.
 
+    \item \textbf{Módulo de preprocesamiento y gestión del corpus.} Completado. Se implementó el \emph{pipeline} de carga, limpieza y transformación de las anotaciones al formato multilabel requerido por el modelo, incluyendo la conversión de las anotaciones de nivel \emph{span} al nivel de documento empleado en el entrenamiento.
+
+    \item \textbf{Análisis estadístico de las fuentes de datos.} Completado. El análisis de la distribución de longitudes, la frecuencia de aparición de los códigos y el desequilibrio de clases fundamentó las principales decisiones de diseño del modelo: el uso de ponderación de clases en la función de pérdida y la calibración de umbrales de decisión por código en lugar de un umbral global.
+
+    \item \textbf{Módulo clasificador multilabel.} Completado. Tras una evaluación comparativa de nueve modelos candidatos (recogida en el Anexo~\ref{cap:AnexoA}), se seleccionó \texttt{IIC/RigoBERTa-Clinical} como modelo base y se ajustó mediante \emph{fine-tuning} sobre la partición de diagnósticos de CodiEsp. El modelo final, entrenado sobre 500 documentos con 1.767 códigos objetivo, alcanza un \textbf{F1 micro de 0,537} con umbrales por clase optimizados sobre el conjunto de validación (F1 micro de 0,483 con umbral global de 0,3; F1 macro de 0,127). La brecha entre F1 micro y macro refleja el fuerte desequilibrio de clases del corpus, donde muchos códigos cuentan con muy pocos ejemplos de entrenamiento.
+
+    \item \textbf{Servicio de inferencia (API REST).} Completado. El motor de IA expone los \emph{endpoints} \texttt{POST /predict} y \texttt{GET /health} mediante FastAPI, con una imagen Docker optimizada para PyTorch y soporte para CPU y GPU. El servicio arranca incluso sin modelo entrenado, devolviendo un código 503 informativo, lo que facilita el desarrollo y las pruebas de integración.
+
+    \item \textbf{Interfaz web de demostración.} Completado. La interfaz web, desarrollada en Next.js 16 con React 19, permite enviar informes clínicos y visualizar en tiempo real las tarjetas de análisis generadas por el sistema. El codificador puede validar o rechazar individualmente cada código predicho y consultar el historial de análisis anteriores desde el panel lateral.
+\end{enumerate}
+
+Más allá de los subobjetivos enumerados, el desarrollo ha incluido componentes necesarios para alcanzar un prototipo funcional completo: un backend en Elixir con arquitectura CQRS/\emph{Event Sourcing} para la trazabilidad clínica, autenticación con confirmación por email, internacionalización en español e inglés, y una infraestructura de despliegue con Docker Compose y soporte de producción mediante Kubernetes.
 
 \section{Justificación de competencias adquiridas}
-Es muy importante recordar que según la normativa vigente en la ESI-UCLM, el capítulo de conclusiones debe incluir \emph{obligatoriamente} un apartado destinado a justificar la aplicación en el TFG de las competencias específicas (una o más) adquiridas en la tecnología específica cursada, como se indica a continuación:
 
-En el TFG se han aplicado las competencias correspondientes a la Tecnología Específica de \emph{[poner lo que corresponda]}:
+En el TFG se han aplicado las competencias correspondientes a la Tecnología Específica de \emph{Computación}:
 
 \begin{description}
-\item[Código de la competencia 1:] \emph{[Texto de la competencia 1]}. Explicación de cómo se ha aplicado en el TFG.
-\item[\dots] (otras más si las hubiera).
+    \item[CO4:] \emph{Capacidad para conocer y desarrollar técnicas de aprendizaje computacional y diseñar e implementar aplicaciones y sistemas que las utilicen, incluyendo las dedicadas a extracción automática de información y conocimiento a partir de grandes volúmenes de datos.} Esta competencia es el núcleo del trabajo: se ha diseñado, implementado y evaluado un clasificador multilabel de texto clínico basado en transformadores, realizando el ciclo completo de aprendizaje supervisado por transferencia (\emph{fine-tuning}) sobre el corpus CodiEsp. El proceso ha requerido la aplicación de técnicas de aprendizaje profundo: función de pérdida Binary Cross-Entropy con ponderación de clases para combatir el desequilibrio, planificación de la tasa de aprendizaje con \emph{cosine schedule} y \emph{plateau scheduler}, descongelación progresiva de capas del codificador, y calibración de umbrales de decisión por clase sobre el conjunto de validación. El sistema resultante extrae automáticamente códigos CIE-10-ES a partir de informes clínicos en texto libre, y ha sido evaluado con métricas estándar de clasificación multilabel (F1 micro y macro) sobre el \emph{benchmark} CodiEsp de referencia en español.
 \end{description}
 
-
-
-
 \section{Trabajos derivados y futuros}
-Si es pertinente se puede incluir información sobre trabajos derivados como publicaciones o ponencias en preparación, así como trabajos futuros \emph{(solo si estos están iniciados o planificados en el momento que se redacta el texto)}.
 
-Se recomienda evitar la inclusión de una lista de posibles mejoras. Contrariamente a lo que se pueda pensar, pueden transmitir la impresión de que el trabajo se encuentra en un estado incompleto o inacabado.\footnote{En cualquier caso se debe reflexionar sobre este aspecto por si los miembros del comité evaluador preguntan sobre estas posibles mejoras durante la defensa del trabajo.}
+Dos líneas de trabajo concretas surgen del estado actual del prototipo y están siendo consideradas.
 
+La primera es la \textbf{ampliación del corpus de entrenamiento}. El clasificador se ha entrenado sobre 500 documentos de CodiEsp, lo que limita la cobertura de los códigos de enfermedades raras o procedimientos poco frecuentes, como refleja la diferencia entre el F1 micro (0,537) y el F1 macro (0,127). La incorporación de historias clínicas reales anonimizadas, en colaboración con centros hospitalarios, permitiría aumentar la representación de esos códigos y mejorar la utilidad clínica del sistema precisamente en los casos más atípicos. Esta colaboración representa el paso más directo para elevar el rendimiento del modelo.
 
+La segunda es el \textbf{despliegue en la nube mediante infraestructura como código}. El sistema está completamente dockerizado y la infraestructura de producción con Kubernetes y Traefik está ya definida. Por razones de coste, el despliegue en un proveedor cloud no se ha realizado durante el desarrollo del prototipo, pero la arquitectura lo permite sin cambios estructurales: bastaría con provisionar el clúster mediante Terraform y aplicar los manifiestos de Kubernetes existentes. El Anexo~\ref{cap:AnexoI} detalla el diseño completo de este despliegue sobre Azure Kubernetes Service, incluyendo los manifiestos, el módulo Terraform y una estimación de costes.
 
+La tercera es el \textbf{despliegue en entorno hospitalario real con captura de \emph{feedback} de los codificadores}. El prototipo incluye ya los mecanismos de validación y rechazo de códigos por parte del codificador, lo que sienta las bases para un ciclo de retroalimentación activa: las correcciones realizadas por los codificadores clínicos pueden usarse para re-etiquetar documentos y realimentar el entrenamiento del modelo de forma iterativa. La puesta en marcha de este ciclo en un entorno real permitiría evaluar la utilidad del sistema en condiciones de uso auténticas y obtener datos de entrenamiento de mayor calidad que los disponibles en el corpus público.
 
 \section{Valoración personal}
-En esta sección final se realizará un rápido análisis de las lecciones aprendidas en las que se pueden incluir tanto buenas prácticas adquiridas (tecnológicas y procedimentales) como cualquier otro aspecto de interés. También se puede resumir cuantitativamente el tiempo y esfuerzo dedicados al proyecto a lo largo de su desarrollo.
 
+El proyecto ha supuesto un recorrido completo por el ciclo de vida de un sistema de \emph{software} con componente de investigación aplicada: desde la adquisición y el análisis de los datos hasta el despliegue en producción, pasando por la selección y el entrenamiento del modelo, el diseño de la arquitectura y el desarrollo de todos los componentes del sistema.
 
+La parte más exigente y con mayor desviación respecto a la planificación original ha sido el ciclo de experimentación del modelo. Los primeros experimentos con los modelos candidatos no alcanzaban el nivel de rendimiento esperado, lo que obligó a repetir el ciclo de entrenamiento con distintas combinaciones de hiperparámetros, función de pérdida y estrategia de descongelación antes de dar por cerrada esa épica. Esta experiencia ha permitido desarrollar una intuición práctica sobre el impacto de cada decisión de diseño —tasa de aprendizaje, ponderación de clases, umbral de decisión— que difícilmente se adquiere de otro modo que con la experimentación directa y la observación de las curvas de aprendizaje.
 
+Durante la redacción de la memoria se emplearon \texttt{aspell} para la corrección ortográfica y el complemento Grammarly para la corrección gramatical y de estilo, manteniendo en todo momento un registro formal y académico y asegurando la consistencia en el uso de términos técnicos.
 
+El proyecto también ha puesto de manifiesto el valor de mantener los componentes del sistema con interfaces bien definidas. El uso del \emph{mock} del motor de IA para el desarrollo del backend y el frontend, con independencia del estado del modelo entrenado, ha evitado bloqueos entre las distintas líneas de trabajo y ha permitido avanzar en paralelo de forma efectiva, reduciendo el impacto de las iteraciones del ciclo de entrenamiento sobre el resto del sistema.
 
-
-
+En términos cuantitativos, el proyecto se ha desarrollado a lo largo de aproximadamente 376 horas de trabajo efectivo, distribuidas en 94 puntos de historia a lo largo de las seis épicas descritas en el capítulo~\ref{cap:Planificacion}, más 22 puntos adicionales dedicados a la redacción de la presente memoria. El historial de desarrollo queda registrado en el repositorio público del proyecto~\cite{cie10repo2026}. Los primeros experimentos de entrenamiento se iniciaron en noviembre de 2024 en la rama \texttt{master}, acumulando conocimiento progresivo sobre el dominio, los datos y el comportamiento de los modelos candidatos. En enero de 2026, con todo ese aprendizaje consolidado y aprovechando los scripts, análisis y conclusiones ya obtenidos, se tomó la decisión de reescribir el historial Git y comenzar el desarrollo del sistema completo desde una base limpia, lo que permitió avanzar con mayor rapidez y solidez. La rama \texttt{main} resultante concentra más de 50 \emph{commits} del desarrollo definitivo del sistema.
