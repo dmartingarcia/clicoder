@@ -1,4 +1,4 @@
-.PHONY: help build build-base build-backend build-frontend build-ai build-training up down restart logs logs-backend logs-frontend logs-ai logs-db logs-mail clean clean-all dev setup backend-shell backend-migrate backend-rollback backend-seed backend-reset backend-test backend-install backend-format backend-inspect frontend-shell frontend-test frontend-install frontend-format frontend-lint frontend-inspect ai-shell ai-install db-shell db-backup db-reset ps stats prod-build prod-up mailpit training-setup training-dataset training-jupyter training-train training-export training-all training-clean training-docker-cpu training-docker-gpu cpu-build cpu-up cpu-down cpu-dev cpu-logs-ai cpu-ai-shell
+.PHONY: help build build-base build-backend build-frontend build-ai build-training up down restart logs logs-backend logs-frontend logs-ai logs-db logs-mail clean clean-all dev setup backend-shell backend-migrate backend-rollback backend-seed backend-reset backend-test backend-install backend-format backend-inspect frontend-shell frontend-test frontend-install frontend-format frontend-lint frontend-inspect ai-shell ai-install db-shell db-backup db-reset ps stats prod-build prod-up mailpit training-setup training-dataset training-jupyter training-train training-export training-all training-clean training-docker-cpu training-docker-gpu cpu-build cpu-up cpu-down cpu-dev cpu-logs-ai cpu-ai-shell tfg-pdf tfg-clean
 
 # Variables
 COMPOSE      = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
@@ -388,6 +388,30 @@ cpu-logs-ai: ## Ver logs del AI engine CPU
 
 cpu-ai-shell: ## Abrir shell en el AI engine CPU
 	$(COMPOSE_CPU) exec ai_engine sh
+
+TFG_DIR     = tfg
+TFG_MAIN    = uclmTFGesi
+TFG_OUT     = $(TFG_DIR)/build
+TFG_IMAGE   = texlive/texlive:latest
+
+tfg-pdf: ## Compilar memoria TFG a PDF (requiere Docker)
+	@echo "$(BLUE)→ Compilando TFG con pdflatex + bibtex...$(NC)"
+	@mkdir -p $(TFG_OUT)
+	docker run --rm \
+		-v "$$(pwd)/$(TFG_DIR)":/tfg \
+		-w /tfg \
+		$(TFG_IMAGE) \
+		sh -c 'mkdir -p build && \
+		       pdflatex -interaction=nonstopmode -output-directory=build $(TFG_MAIN).tex && \
+		       bibtex build/$(TFG_MAIN) && \
+		       pdflatex -interaction=nonstopmode -output-directory=build $(TFG_MAIN).tex && \
+		       pdflatex -interaction=nonstopmode -output-directory=build $(TFG_MAIN).tex'
+	@echo "$(GREEN)✓ PDF generado en $(TFG_OUT)/$(TFG_MAIN).pdf$(NC)"
+
+tfg-clean: ## Limpiar artefactos de compilación del TFG
+	@echo "$(YELLOW)→ Limpiando build del TFG...$(NC)"
+	@rm -rf $(TFG_OUT)
+	@echo "$(GREEN)✓ Limpio$(NC)"
 
 # Default target
 .DEFAULT_GOAL := help

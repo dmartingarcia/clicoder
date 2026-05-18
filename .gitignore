@@ -58,3 +58,32 @@ ai_engine/snapshots
 # OS
 .DS_Store
 Thumbs.db
+
+# LaTeX build artifacts
+tfg/build/
+tfg/**/*.aux
+tfg/**/*.log
+tfg/**/*.out
+tfg/**/*.toc
+tfg/**/*.lof
+tfg/**/*.lot
+tfg/**/*.fls
+tfg/**/*.fdb_latexmk
+tfg/**/*.synctex.gz
+tfg/**/*.bbl
+tfg/**/*.blg
+tfg/**/*.idx
+tfg/**/*.ind
+tfg/**/*.ilg
+tfg/**/*.acn
+tfg/**/*.acr
+tfg/**/*.alg
+tfg/**/*.glg
+tfg/**/*.glo
+tfg/**/*.gls
+tfg/**/*.bcf
+tfg/**/*.run.xml
+tfg/**/*.pdf
+
+# LaTeX temp file
+tfg/caps/--restos--.tex
