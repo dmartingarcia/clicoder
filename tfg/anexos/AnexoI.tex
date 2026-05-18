@@ -1,0 +1,223 @@
+\chapter{Despliegue simulado en la nube con Kubernetes}
+\label{cap:AnexoI}
+
+Este anexo describe cómo sería el despliegue del sistema en un proveedor cloud mediante Kubernetes y Terraform. El despliegue no se ha realizado durante el desarrollo del prototipo por razones de coste, pero la arquitectura lo permite sin modificar ningún componente: todos los servicios están ya dockerizados y la infraestructura de Kubernetes está diseñada para este escenario.
+
+Se toma Azure Kubernetes Service (AKS) como referencia por su integración nativa con el registro de imágenes (Azure Container Registry) y el soporte para nodos con GPU, necesarios para el motor de IA. El mismo esquema aplica a Amazon EKS o Google GKE con mínimas adaptaciones en los recursos Terraform.
+
+\section{Infraestructura como código con Terraform}
+
+La infraestructura se provisiona mediante Terraform. El módulo principal crea los siguientes recursos en Azure:
+
+\begin{itemize}
+    \item \textbf{Resource Group}: contenedor lógico de todos los recursos del sistema.
+    \item \textbf{Azure Container Registry (ACR)}: almacenamiento de las imágenes Docker de los cuatro servicios.
+    \item \textbf{Azure Kubernetes Service (AKS)}: clúster con dos \emph{node pools}: uno de propósito general (para frontend, backend y base de datos) y uno con GPU (para el motor de IA).
+    \item \textbf{Azure Database for PostgreSQL}: instancia gestionada de PostgreSQL 15, externa al clúster, para garantizar la persistencia independientemente del ciclo de vida de los pods.
+    \item \textbf{Azure Key Vault}: almacenamiento de secretos (credenciales de base de datos, claves de \texttt{Phoenix.Token}, token de HuggingFace).
+\end{itemize}
+
+\begin{lstlisting}[language=bash, caption={Estructura del módulo Terraform.}, label=lst:terraform-structure]
+infra/
+  main.tf          # Proveedor y módulos principales
+  variables.tf     # Variables de configuración
+  outputs.tf       # Salidas (endpoint del clúster, ACR URL)
+  modules/
+    aks/           # Clúster AKS y node pools
+    acr/           # Azure Container Registry
+    postgres/      # Azure Database for PostgreSQL
+    keyvault/      # Azure Key Vault y secretos
+\end{lstlisting}
+
+El fragmento siguiente muestra la declaración del clúster AKS con sus dos \emph{node pools}:
+
+\begin{lstlisting}[language=bash, caption={Declaración del clúster AKS en Terraform.}, label=lst:terraform-aks]
+resource "azurerm_kubernetes_cluster" "cie10" {
+  name                = "cie10-aks"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.cie10.name
+  dns_prefix          = "cie10"
+
+  default_node_pool {
+    name       = "general"
+    node_count = 2
+    vm_size    = "Standard_D2s_v3"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+resource "azurerm_kubernetes_cluster_node_pool" "gpu" {
+  name                  = "gpu"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.cie10.id
+  vm_size               = "Standard_NC6s_v3"  # 1x V100 16GB
+  node_count            = 1
+
+  node_labels = {
+    "workload" = "ai-engine"
+  }
+  node_taints = ["gpu=true:NoSchedule"]
+}
+\end{lstlisting}
+
+\section{Manifiestos de Kubernetes}
+
+Cada servicio se despliega con un \texttt{Deployment} y un \texttt{Service} de Kubernetes. El \emph{Ingress} es gestionado por Traefik, que actúa como proxy inverso y gestiona los certificados TLS mediante cert-manager y Let's Encrypt.
+
+\subsection{Backend (Elixir/Phoenix)}
+
+\begin{lstlisting}[language=bash, caption={Deployment del backend en Kubernetes.}, label=lst:k8s-backend]
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: cie10
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: cie10acr.azurecr.io/backend:latest
+          ports:
+            - containerPort: 4000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cie10-secrets
+                  key: database-url
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: cie10-secrets
+                  key: secret-key-base
+            - name: AI_ENGINE_URL
+              value: "http://ai-engine:8000"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+\end{lstlisting}
+
+\subsection{Motor de IA (FastAPI + GPU)}
+
+El motor de IA se despliega en el \emph{node pool} con GPU mediante un \emph{toleration} y un \emph{nodeSelector}:
+
+\begin{lstlisting}[language=bash, caption={Deployment del motor de IA con GPU en Kubernetes.}, label=lst:k8s-ai]
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-engine
+  namespace: cie10
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-engine
+  template:
+    metadata:
+      labels:
+        app: ai-engine
+    spec:
+      nodeSelector:
+        workload: ai-engine
+      tolerations:
+        - key: "gpu"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
+      containers:
+        - name: ai-engine
+          image: cie10acr.azurecr.io/ai-engine:latest
+          ports:
+            - containerPort: 8000
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cie10-secrets
+                  key: hf-token
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 10
+\end{lstlisting}
+
+\subsection{Ingress con Traefik}
+
+\begin{lstlisting}[language=bash, caption={IngressRoute de Traefik para el sistema.}, label=lst:k8s-ingress]
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: cie10-ingress
+  namespace: cie10
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`cie10.example.com`) && PathPrefix(`/api`)
+      kind: Rule
+      services:
+        - name: backend
+          port: 4000
+    - match: Host(`cie10.example.com`)
+      kind: Rule
+      services:
+        - name: frontend
+          port: 3000
+  tls:
+    certResolver: letsencrypt
+\end{lstlisting}
+
+\section{Flujo de despliegue}
+
+El proceso completo de despliegue desde cero se resume en los siguientes pasos:
+
+\begin{enumerate}
+    \item \texttt{terraform init \&\& terraform apply}: provisiona el clúster AKS, el ACR y la base de datos gestionada en Azure.
+    \item \texttt{az acr build}: construye y publica las imágenes Docker de los cuatro servicios en el ACR.
+    \item \texttt{kubectl apply -f k8s/}: aplica los manifiestos de Kubernetes (Deployments, Services, Secrets, IngressRoutes).
+    \item \texttt{kubectl exec backend -- mix ecto.migrate}: ejecuta las migraciones de base de datos sobre la instancia gestionada de PostgreSQL.
+\end{enumerate}
+
+\section{Estimación de costes en Azure}
+
+La Tabla~\ref{tab:azure-costes} recoge una estimación orientativa de los costes mensuales del despliegue en Azure en la región \emph{West Europe}, con carga de uso moderada.
+
+\begin{table}[h]
+\centering
+\caption{Estimación de costes mensuales en Azure (West Europe).}
+\label{tab:azure-costes}
+\begin{tabular}{llr}
+\hline
+\textbf{Recurso} & \textbf{Configuración} & \textbf{Coste aprox.} \\
+\hline
+AKS node pool general  & 2× Standard\_D2s\_v3 (2 vCPU, 8 GB) & 140\,€/mes \\
+AKS node pool GPU      & 1× Standard\_NC6s\_v3 (6 vCPU, 1× V100) & 1.100\,€/mes \\
+Azure Database PostgreSQL & Burstable, 2 vCPU, 4 GB & 50\,€/mes \\
+Azure Container Registry & Basic & 5\,€/mes \\
+Azure Key Vault        & Estándar & 5\,€/mes \\
+Transferencia de datos & Estimación moderada & 20\,€/mes \\
+\hline
+\textbf{Total estimado} & & \textbf{$\sim$1.320\,€/mes} \\
+\hline
+\end{tabular}
+\end{table}
+
+El coste del nodo con GPU domina el presupuesto. Una alternativa para reducirlo es usar nodos GPU bajo demanda (\emph{spot instances}) con un factor de descuento de hasta el 70\,\%, o bien optar por una instancia CPU para inferencia cuando la latencia no sea crítica, lo que reduciría el coste total a aproximadamente 200\,€/mes.

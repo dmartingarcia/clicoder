@@ -1,0 +1,133 @@
+\chapter{Decisiones de arquitectura}
+\label{cap:AnexoE}
+
+Este anexo recoge las decisiones de diseño más relevantes tomadas durante el desarrollo del sistema, junto con el razonamiento que las justifica y las alternativas descartadas. El formato sigue la estructura de los registros de decisiones de arquitectura (\emph{Architecture Decision Records}, ADR).
+
+\section{ADR-01: Elixir y Phoenix como backend}
+
+\textbf{Contexto.} El sistema requiere gestión de múltiples conexiones WebSocket concurrentes (una por sesión activa), comunicación asíncrona con el motor de IA (cuya respuesta puede tardar entre 10 y 30 segundos) y un modelo de datos con trazabilidad de todas las operaciones.
+
+\textbf{Decisión.} Se elige Elixir 1.15 con el framework Phoenix 1.8~\cite{phoenix2024}.
+
+\textbf{Justificación.}
+\begin{itemize}
+    \item El modelo de actores de la BEAM (\emph{Erlang VM}) gestiona de forma nativa miles de procesos ligeros concurrentes sin bloqueos, lo que encaja directamente con el modelo de canales WebSocket de Phoenix~\cite{phoenix2024}.
+    \item Phoenix Channels proporciona soporte integrado para WebSocket con reconexión automática, multiplexación de temas y difusión (\emph{broadcast}) a todos los clientes suscritos a un canal.
+    \item La tolerancia a fallos de la BEAM (supervisores OTP) garantiza que un error en el procesamiento de una conversación no afecta al resto.
+    \item La biblioteca Commanded~\cite{commanded2024}, disponible solo en el ecosistema Elixir/Erlang, ofrece una implementación madura de CQRS y Event Sourcing con soporte para PostgreSQL~\cite{postgresql2024} como almacén de eventos.
+\end{itemize}
+
+\textbf{Alternativas descartadas.}
+\begin{itemize}
+    \item \textbf{Node.js + Express}: buena gestión de I/O asíncrono, pero el modelo \emph{single-threaded} dificulta el aislamiento de fallos y carece de soporte equivalente para CQRS.
+    \item \textbf{Python + FastAPI}: tecnología ya usada en el motor de IA; mezclarla en el backend habría introducido complejidad operacional sin ventaja arquitectónica.
+    \item \textbf{Go + Gin}: excelente rendimiento, pero ecosistema de Event Sourcing menos maduro y mayor coste de desarrollo para funcionalidades como canales WebSocket multiplexados.
+\end{itemize}
+
+\section{ADR-02: Patrón CQRS y Event Sourcing}
+
+\textbf{Contexto.} El sistema gestiona un flujo de trabajo clínico sensible: cada predicción de código, validación o rechazo tiene implicaciones en la facturación hospitalaria. Se requiere trazabilidad completa de quién hizo qué y cuándo.
+
+\textbf{Decisión.} Se implementa CQRS (\emph{Command Query Responsibility Segregation}) con Event Sourcing mediante la biblioteca Commanded~\cite{commanded2024}.
+
+\textbf{Justificación.}
+\begin{itemize}
+    \item El \emph{event store} actúa como registro de auditoría inmutable: cada acción del sistema queda registrada como un evento con su marca temporal, lo que satisface los requisitos de trazabilidad clínica.
+    \item La separación entre modelo de escritura (comandos + eventos) y modelo de lectura (proyecciones) permite optimizar cada lado de forma independiente. Las proyecciones PostgreSQL están desnormalizadas para lecturas rápidas.
+    \item El \emph{replay} de eventos permite reconstruir el estado del sistema en cualquier punto temporal, lo que facilita la depuración y la auditoría.
+    \item Commanded integra el ciclo de vida completo: despachador de comandos, agregados, manejadores de eventos y proyectores, con soporte para sagas (\emph{process managers}).
+\end{itemize}
+
+\textbf{Coste asumido.} Mayor complejidad inicial de desarrollo respecto a un CRUD convencional. Este coste se consideró justificado por los requisitos de trazabilidad del dominio clínico.
+
+\section{ADR-03: Next.js y React 19 como frontend}
+
+\textbf{Contexto.} La interfaz necesita renderizado en tiempo real (tarjetas de análisis que aparecen progresivamente), navegación entre conversaciones sin recarga de página e internacionalización (español e inglés).
+
+\textbf{Decisión.} Se elige Next.js 16~\cite{nextjs2024} con React 19 y TypeScript.
+
+\textbf{Justificación.}
+\begin{itemize}
+    \item Next.js ofrece renderizado del lado del servidor (SSR) para la carga inicial y enrutamiento basado en el sistema de ficheros, lo que simplifica la estructura del proyecto.
+    \item React 19 incorpora mejoras en el modelo de concurrencia que facilitan la gestión de actualizaciones asíncronas (tarjetas llegando por WebSocket).
+    \item TypeScript garantiza la coherencia de los tipos de datos entre las capas de estado (contextos) y los componentes de UI, reduciendo los errores en tiempo de ejecución.
+    \item Tailwind CSS 4 y shadcn/ui permiten construir una interfaz consistente y accesible con velocidad de desarrollo alta.
+\end{itemize}
+
+\section{ADR-04: PostgreSQL como base de datos única con dos instancias lógicas}
+
+\textbf{Contexto.} El sistema requiere persistencia para dos propósitos distintos: el registro de eventos inmutable (Commanded) y las proyecciones de lectura mutables. Podría usarse una base de datos diferente para cada propósito (p. ej., EventStoreDB para eventos y PostgreSQL para proyecciones).
+
+\textbf{Decisión.} Se usa PostgreSQL 15~\cite{postgresql2024} para ambos propósitos, con dos bases de datos lógicas: \texttt{cie10\_eventstore} y \texttt{cie10\_app}.
+
+\textbf{Justificación.}
+\begin{itemize}
+    \item Reducción de la complejidad operacional: un único sistema de base de datos para administrar, monitorizar y respaldar.
+    \item Commanded para Elixir tiene soporte nativo y maduro para PostgreSQL como \emph{event store}.
+    \item PostgreSQL ofrece tipos JSONB que permiten almacenar el contenido de las tarjetas de análisis sin necesidad de un esquema fijo, lo que facilita la evolución del formato de respuesta del motor de IA.
+    \item Las transacciones ACID de PostgreSQL garantizan la coherencia entre la escritura del evento y la actualización de la proyección en operaciones que requieren atomicidad.
+\end{itemize}
+
+\section{ADR-05: Clasificador plano (\emph{flat}) frente a clasificador jerárquico}
+
+\textbf{Contexto.} CIE-10-ES tiene estructura jerárquica (capítulo → bloque → código específico). Podría entrenarse un clasificador por nivel. Los notebooks de análisis (\texttt{bert-classifier/}) exploraron ambas aproximaciones.
+
+\textbf{Decisión.} En producción se usa un clasificador plano sobre los 1.767 códigos de bloque (3 caracteres), sin clasificación jerárquica por niveles.
+
+\textbf{Justificación.}
+\begin{itemize}
+    \item Un clasificador jerárquico propaga errores: un error en el nivel de capítulo excluye todos los códigos correctos de ese capítulo en los niveles inferiores.
+    \item La granularidad de bloque (3 caracteres) cubre el uso clínico habitual. Los códigos a 4 o 5 caracteres tienen frecuencias demasiado bajas en el corpus CodiEsp para entrenarse con fiabilidad.
+    \item El espacio de 1.767 clases es manejable con una sola cabeza de clasificación multilabel, sin necesidad de múltiples modelos.
+    \item La simplicidad del clasificador plano facilita el mantenimiento y la actualización del modelo cuando se publiquen nuevas versiones de CodiEsp.
+\end{itemize}
+
+\textbf{Alternativa registrada.} Los notebooks \texttt{0\_clasificador\_jerarquico\_Introducción.ipynb} y \texttt{7\_clasificador\_jerarquico\_analisis\_nivel\_2.ipynb} documentan la arquitectura jerárquica de dos niveles como vía de mejora futura para incrementar la precisión en códigos de alta especificidad.
+
+\section{ADR-06: FastAPI como interfaz del motor de IA}
+
+\textbf{Contexto.} El motor de IA debe ser accesible desde el backend Elixir de forma síncrona-asíncrona. Podría implementarse como biblioteca Python embebida, como servicio gRPC o como API REST.
+
+\textbf{Decisión.} Se expone el modelo mediante FastAPI~\cite{fastapi2024} sobre HTTP.
+
+\textbf{Justificación.}
+\begin{itemize}
+    \item FastAPI genera documentación OpenAPI automáticamente, lo que facilita las pruebas manuales del endpoint durante el desarrollo.
+    \item HTTP es el protocolo más sencillo de consumir desde Elixir con la biblioteca \texttt{Req}, sin necesidad de dependencias adicionales.
+    \item El desacoplamiento como servicio independiente permite actualizar el modelo BERT sin recompilar ni reiniciar el backend.
+    \item FastAPI soporta tanto la variante GPU (con CUDA) como la CPU y el modo \emph{mock} mediante la misma interfaz, gestionado únicamente por variables de entorno.
+\end{itemize}
+
+\section{ADR-07: Variante \emph{mock} del motor de IA}
+
+\textbf{Contexto.} Durante el desarrollo del frontend y del backend no siempre es necesario (ni posible) cargar el modelo BERT, que requiere varios GB de memoria y varios minutos de arranque.
+
+\textbf{Decisión.} Se mantiene un servicio \texttt{ai\_engine\_mock} con la misma interfaz HTTP que el motor real, que devuelve predicciones ficticias de forma inmediata.
+
+\textbf{Justificación.}
+\begin{itemize}
+    \item Reduce el ciclo de retroalimentación en el desarrollo frontend de 30 segundos (tiempo de inferencia real) a menos de 1 segundo.
+    \item Permite ejecutar el sistema completo en hardware sin GPU.
+    \item Al compartir la misma interfaz (\texttt{POST /predict}), el backend y el frontend no necesitan ninguna modificación para cambiar entre el motor real y el \emph{mock}.
+\end{itemize}
+
+\section{Resumen de decisiones}
+
+\begin{table}[h]
+\centering
+\caption{Resumen de las decisiones de arquitectura.}
+\label{tab:adr-resumen}
+\begin{tabular}{llp{7cm}}
+\hline
+\textbf{ADR} & \textbf{Componente} & \textbf{Decisión} \\
+\hline
+01 & Backend       & Elixir + Phoenix por concurrencia nativa y WebSocket integrado. \\
+02 & Backend       & CQRS + Event Sourcing por trazabilidad clínica y separación lectura/escritura. \\
+03 & Frontend      & Next.js + React 19 por SSR, tipado fuerte y velocidad de desarrollo. \\
+04 & Base de datos & PostgreSQL dual (eventos + proyecciones) por simplicidad operacional. \\
+05 & Motor de IA   & Clasificador plano sobre 1.767 bloques por robustez frente a propagación de errores. \\
+06 & Motor de IA   & FastAPI sobre HTTP por desacoplamiento y facilidad de consumo desde Elixir. \\
+07 & Motor de IA   & Servicio \emph{mock} con la misma interfaz para agilizar el desarrollo. \\
+\hline
+\end{tabular}
+\end{table}

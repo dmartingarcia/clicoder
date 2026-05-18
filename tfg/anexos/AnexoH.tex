@@ -1,0 +1,102 @@
+\chapter{Configuración y resultados del entrenamiento final}
+\label{cap:AnexoH}
+
+Este anexo documenta los hiperparámetros del modelo desplegado en producción y los resultados de evaluación obtenidos en el conjunto de validación de CodiEsp~\cite{miranda2020}.
+
+\section{Modelo base}
+
+Se emplea \texttt{IIC/RigoBERTa-Clinical}~\cite{garciasubies2026rigobertaclinical}, variante clínica de RigoBERTa~\cite{vacaserrano2022rigoberta} basada en la arquitectura DeBERTa-v2~\cite{he2021deberta} con Flash Attention~2 habilitado. Ventana de contexto: 4096 \emph{tokens} (truncada a 512 en producción por restricciones de memoria de la GPU disponible durante el entrenamiento).
+
+\section{Hiperparámetros}
+
+La Tabla~\ref{tab:hyperparams} recoge la configuración del \emph{run} final (\texttt{20260326T130358Z}).
+
+\begin{table}[h]
+\centering
+\caption{Hiperparámetros del entrenamiento final.}
+\label{tab:hyperparams}
+\begin{tabular}{lll}
+\hline
+\textbf{Parámetro} & \textbf{Valor} & \textbf{Descripción} \\
+\hline
+\multicolumn{3}{l}{\textit{Datos}} \\
+\texttt{num\_codes}      & 1767          & Clases (códigos de bloque CIE-10, 3 caracteres) \\
+\texttt{max\_length}     & 512           & Longitud máxima de secuencia en \emph{tokens} \\
+\texttt{full\_codes}     & \texttt{True} & Clasificación sobre el espacio completo de códigos \\
+\hline
+\multicolumn{3}{l}{\textit{Optimización}} \\
+\texttt{lr}              & $10^{-4}$     & Tasa de aprendizaje \\
+\texttt{warmup\_ratio}   & 0{,}1         & Fracción de pasos de calentamiento \\
+\texttt{lr\_schedule}    & plateau       & Reducción al detectar estancamiento en val. F1 \\
+\texttt{weight\_decay}   & 0{,}1         & Regularización L2 \\
+\texttt{epochs\_max}     & 150           & Máximo de épocas permitido \\
+\texttt{epochs\_run}     & 110           & Épocas ejecutadas hasta parada temprana \\
+\texttt{patience}        & 20            & Épocas sin mejora antes de parar \\
+\hline
+\multicolumn{3}{l}{\textit{Arquitectura}} \\
+\texttt{dropout}         & 0{,}3         & \emph{Dropout} en la cabeza de clasificación \\
+\texttt{freeze\_layers}  & 20            & Capas del codificador congeladas al inicio \\
+\texttt{unfreeze\_every} & 30            & Épocas entre descongelaciones \\
+\texttt{unfreeze\_layers}& 4             & Capas descongeladas en cada paso \\
+\texttt{unfreeze\_lr\_ratio} & 0{,}1     & Factor de reducción de LR para capas descongeladas \\
+\hline
+\multicolumn{3}{l}{\textit{Función de pérdida}} \\
+\texttt{label\_smoothing} & 0{,}1       & Suavizado de etiquetas \\
+\texttt{pos\_weight\_cap} & 10{,}0      & Peso máximo de la clase positiva (desequilibrio) \\
+\hline
+\multicolumn{3}{l}{\textit{Batch}} \\
+\texttt{batch\_size}     & 8             & Tamaño de mini-lote efectivo en GPU \\
+\texttt{grad\_accum}     & 4             & Pasos de acumulación de gradiente \\
+\texttt{effective\_batch}& 32            & Tamaño de lote efectivo resultante \\
+\hline
+\multicolumn{3}{l}{\textit{Inferencia}} \\
+\texttt{threshold}       & 0{,}3         & Umbral de probabilidad para activar una etiqueta \\
+\texttt{pretrain\_epochs}& 10            & Épocas de precalentamiento con todo congelado \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Resultados de evaluación}
+
+El sistema emplea dos estrategias de umbral diferentes. Durante el entrenamiento se usa un umbral global fijo para monitorizar la mejora. En producción se aplican umbrales por clase optimizados sobre el conjunto de validación, que ajustan individualmente el punto de corte de cada uno de los 1.767 códigos para maximizar el F1 micro conjunto.
+
+La Tabla~\ref{tab:final-results} muestra ambas métricas para el modelo desplegado (\emph{run} \texttt{20260326T130358Z}).
+
+\begin{table}[h]
+\centering
+\caption{Resultados del modelo final en validación por estrategia de umbral.}
+\label{tab:final-results}
+\begin{tabular}{llrr}
+\hline
+\textbf{Estrategia} & \textbf{Umbral} & \textbf{F1 micro} & \textbf{F1 macro} \\
+\hline
+Global (entrenamiento) & 0{,}3 fijo & 0{,}483 & 0{,}127 \\
+Por clase (producción) & optimizado & \textbf{0{,}537} & — \\
+\hline
+\end{tabular}
+\end{table}
+
+El mejor \emph{run} registrado (\texttt{20260326T045031Z}) alcanzó F1 micro = 0{,}489 con umbral global y F1 micro = \textbf{0{,}551} con umbrales por clase. Se seleccionó el \emph{run} \texttt{20260326T130358Z} para producción por ofrecer un equilibrio mejor entre F1 micro y F1 macro.
+
+La diferencia entre F1 micro (0{,}537) y F1 macro (0{,}127) refleja el fuerte desequilibrio de clases del corpus: el modelo rinde bien sobre los códigos frecuentes pero tiene dificultades con los poco representados. Este es un límite inherente al corpus de entrenamiento de 500 documentos, donde la mayoría de los 1.767 códigos aparece menos de cinco veces.
+
+\section{Curvas de entrenamiento}
+
+La Figura~\ref{fig:epochs-graph} muestra la evolución del F1 micro de validación y la pérdida de entrenamiento a lo largo de las épocas para los \emph{runs} realizados con \texttt{IIC/RigoBERTa-Clinical}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figs/all_epochs_graph}
+\caption{Curvas de entrenamiento: F1 micro de validación y pérdida de entrenamiento por época.}
+\label{fig:epochs-graph}
+\end{figure}
+
+\section{Artefactos del modelo}
+
+Los artefactos del modelo desplegado en producción se encuentran en \texttt{ai\_engine/model/}:
+
+\begin{description}
+    \item[\texttt{classifier\_20260326T130358Z\_f1=0.4831.pt}] Pesos del modelo PyTorch.
+    \item[\texttt{thresholds\_20260326T130358Z.json}] Umbrales por clase optimizados sobre el conjunto de validación.
+    \item[\texttt{config.json}] Metadatos del modelo activo: nombre, fichero de pesos, fichero de umbrales y parámetros de inferencia.
+\end{description}

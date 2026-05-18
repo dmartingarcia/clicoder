@@ -1,0 +1,125 @@
+\chapter{Análisis estadístico del corpus}
+\label{cap:AnexoG}
+
+Este anexo presenta las principales características estadísticas del corpus CodiEsp~\cite{miranda2020}, que es el conjunto de datos empleado para entrenar y evaluar el clasificador CIE-10.
+
+\section{Descripción general}
+
+CodiEsp es un corpus de textos clínicos en español con sus correspondientes códigos CIE-10-ES anotados manualmente. Para la tarea de diagnóstico se emplean los conjuntos indicados en la Tabla~\ref{tab:codiesp-splits}.
+
+\begin{table}[h]
+\centering
+\caption{Conjuntos de datos del corpus CodiEsp.}
+\label{tab:codiesp-splits}
+\begin{tabular}{lrr}
+\hline
+\textbf{Conjunto} & \textbf{Documentos} & \textbf{Proporción} \\
+\hline
+Entrenamiento & 500  & 50{,}0\,\% \\
+Validación    & 250  & 25{,}0\,\% \\
+Prueba        & 250  & 25{,}0\,\% \\
+\hline
+\textbf{Total} & \textbf{1.000} & 100\,\% \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Estadísticas de los textos clínicos}
+
+Los documentos son informes de alta hospitalaria en español. La Tabla~\ref{tab:text-stats} resume las estadísticas de longitud en número de palabras.
+
+\begin{table}[h]
+\centering
+\caption{Longitud de los textos clínicos por conjunto (en palabras).}
+\label{tab:text-stats}
+\begin{tabular}{lrrrrrr}
+\hline
+\textbf{Conjunto} & \textbf{Media} & \textbf{Des. est.} & \textbf{Mín.} & \textbf{Q1} & \textbf{Mediana} & \textbf{Máx.} \\
+\hline
+Entrenamiento & 349  & 165 & 73  & 225 & 314 & 1172 \\
+Validación    & 352  & 168 & 69  & 225 & 328 & 956  \\
+Prueba        & 353  & 163 & 90  & 236 & 330 & 965  \\
+\hline
+\end{tabular}
+\end{table}
+
+La longitud media de 349 palabras supera el límite de 512 \emph{tokens} de los modelos BERT estándar. Aproximadamente el 25\,\% de los documentos de entrenamiento supera los 435 palabras, lo que justifica el uso de modelos con ventana de contexto extendida como RigoBERTa (4096 \emph{tokens}) o ModernBERT (8192 \emph{tokens}).
+
+\section{Estadísticas de las etiquetas}
+
+Cada documento tiene asignados múltiples códigos CIE-10-ES. La Tabla~\ref{tab:label-stats} muestra las estadísticas del número de etiquetas por documento.
+
+\begin{table}[h]
+\centering
+\caption{Número de etiquetas CIE-10 por documento y conjunto.}
+\label{tab:label-stats}
+\begin{tabular}{lrrrrrr}
+\hline
+\textbf{Conjunto} & \textbf{Media} & \textbf{Des. est.} & \textbf{Mín.} & \textbf{Q1} & \textbf{Mediana} & \textbf{Máx.} \\
+\hline
+Entrenamiento & 11{,}28 & 6{,}95 & 1 & 6  & 10 & 40 \\
+Validación    & 10{,}71 & 6{,}81 & 1 & 5  & 10 & 33 \\
+Prueba        & 11{,}37 & 6{,}59 & 1 & 6  & 10 & 35 \\
+\hline
+\end{tabular}
+\end{table}
+
+En total, el corpus contiene 11.158 asignaciones de código. Los códigos únicos presentes son 2.557, de los cuales 1.767 aparecen en el conjunto de entrenamiento y conforman el espacio de clases del clasificador.
+
+\section{Distribución de códigos}
+
+La distribución de frecuencias de los códigos sigue una ley de potencia: un pequeño número de códigos concentra la mayor parte de las asignaciones, mientras que la mayoría de los 2.557 códigos únicos aparece pocas veces. Los 10 códigos más frecuentes del corpus se indican en la Tabla~\ref{tab:top-codes}.
+
+\begin{table}[h]
+\centering
+\caption{Diez códigos CIE-10 más frecuentes en CodiEsp.}
+\label{tab:top-codes}
+\begin{tabular}{llrr}
+\hline
+\textbf{Código} & \textbf{Descripción (bloque)} & \textbf{Frecuencia} & \textbf{Porcentaje} \\
+\hline
+R52   & Dolor no clasificado en otra parte       & 219 & 1{,}96\,\% \\
+R69   & Enfermedad no especificada               & 198 & 1{,}77\,\% \\
+R50.9 & Fiebre no especificada                   & 191 & 1{,}71\,\% \\
+I10   & Hipertensión esencial                    & 161 & 1{,}44\,\% \\
+R59.9 & Adenomegalias no especificadas           & 136 & 1{,}22\,\% \\
+R60.9 & Edema no especificado                    & 124 & 1{,}11\,\% \\
+R11.10 & Náuseas sin vómitos                    &  92 & 0{,}82\,\% \\
+R59.0  & Adenomegalias localizadas              &  91 & 0{,}82\,\% \\
+B99.9  & Enfermedad infecciosa no especificada  &  89 & 0{,}80\,\% \\
+R58    & Hemorragia no clasificada en otra parte &  88 & 0{,}79\,\% \\
+\hline
+\end{tabular}
+\end{table}
+
+Este desequilibrio extremo motivó el uso de \emph{pos\_weight\_cap} durante el entrenamiento para penalizar los errores en códigos poco frecuentes.
+
+\section{Correlación longitud-etiquetas}
+
+El análisis de correlación entre la longitud del texto y el número de etiquetas asignadas es positivo y moderado:
+
+\begin{itemize}
+    \item Correlación longitud (caracteres) -- número de etiquetas: $r = 0{,}557$
+    \item Correlación número de palabras -- número de etiquetas: $r = 0{,}528$
+\end{itemize}
+
+Los textos más extensos corresponden a ingresos más complejos con más diagnósticos asociados. Esta correlación refuerza la importancia de procesar el documento completo sin truncación agresiva.
+
+\section{Solapamiento entre conjuntos}
+
+La Tabla~\ref{tab:jaccard} muestra el solapamiento de códigos entre los tres conjuntos. El bajo coeficiente de Jaccard refleja la escasez de códigos por conjunto: muchos códigos de validación y prueba no aparecen en entrenamiento, lo que introduce un problema de \emph{zero-shot} implícito que limita el techo teórico del F1 micro.
+
+\begin{table}[h]
+\centering
+\caption{Solapamiento de códigos entre conjuntos (coeficiente de Jaccard).}
+\label{tab:jaccard}
+\begin{tabular}{lrrrr}
+\hline
+\textbf{Par} & \textbf{Únicos A} & \textbf{Únicos B} & \textbf{Comunes} & \textbf{Jaccard} \\
+\hline
+Train vs. Test       & 1.767 & 1.143 & 704 & 0{,}319 \\
+Train vs. Validation & 1.767 & 1.158 & 731 & 0{,}333 \\
+Test vs. Validation  & 1.143 & 1.158 & 551 & 0{,}315 \\
+\hline
+\end{tabular}
+\end{table}
