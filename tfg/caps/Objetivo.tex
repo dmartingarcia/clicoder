@@ -43,18 +43,18 @@ A continuación se especifican los requisitos que debe cumplir el sistema, disti
 \subsection{Requisitos funcionales}
 
 \begin{itemize}
-    \item \textbf{1. Entrada de datos: Aceptar como entrada textos clínicos en español en formato libre, sin requerir marcado ni estructura predefinida.
-    \item \textbf{2. Predicción de códigos: Predecir uno o más códigos CIE-10-ES, tanto de diagnóstico como de procedimiento para cada texto de entrada.
-    \item \textbf{3. Puntuación de confianza: Devolver una puntuación de confianza por cada código predicho, para priorizar la revisión humana de los casos de baja certeza.
-    \item \textbf{4. Inferencia por lotes: Soportar el procesamiento de múltiples textos de manera simultánea, devolviendo los resultados en el mismo orden que las entradas recibidas.
-    \item \textbf{5. API REST: Exponer las funcionalidades a través de una API REST documentada con al menos un endpoint de inferencia y uno de comprobación del estado del servicio.
+    \item \textbf{1. Entrada de datos:} Aceptar como entrada textos clínicos en español en formato libre, sin requerir marcado ni estructura predefinida.
+    \item \textbf{2. Predicción de códigos:} Predecir uno o más códigos CIE-10-ES, tanto de diagnóstico como de procedimiento para cada texto de entrada.
+    \item \textbf{3. Puntuación de confianza:} Devolver una puntuación de confianza por cada código predicho, para priorizar la revisión humana de los casos de baja certeza.
+    \item \textbf{4. Inferencia por lotes:} Soportar el procesamiento de múltiples textos de manera simultánea, devolviendo los resultados en el mismo orden que las entradas recibidas.
+    \item \textbf{5. API REST:} Exponer las funcionalidades a través de una API REST documentada con al menos un endpoint de inferencia y uno de comprobación del estado del servicio.
 \end{itemize}
 
 \subsection{Requisitos no funcionales}
 
 \begin{itemize}
-    \item \textbf{1. Rendimiento.El sistema debe superar los resultados de los modelos descritos en el corpus CodiEsp~\cite{miranda2020}, que actúa como benchmark de referencia para la tarea en español, aspirando a tener resultados competitivos similares a los mejores sistemas participantes en dicha tarea.
-    \item \textbf{2. Latencia.La inferencia debe completarse en un tiempo que no impida la integración en flujos de trabajo clínicos y distintas integraciones con otros sistemas, situándose por debajo del segundo por documento en hardware de consumo (GPU con 16\,GB de VRAM).
-    \item \textbf{3. Modularidad.Los diferentes módulos del sistema deben tener interfaces bien definidas y ser sustituibles de forma independiente, de modo que, por ejemplo, el modelo base pueda cambiarse sin modificar el servicio de inferencia.
-    \item \textbf{4. Trazabilidad.El sistema debe registrar para cada predicción la versión del modelo empleada y el identificador del informe procesado, en línea con los principios de auditabilidad del Reglamento UE 2017/745~\cite{eu2017745} aplicable al software de apoyo a la decisión clínica.
+    \item \textbf{1. Rendimiento:} El sistema debe superar los resultados de los modelos descritos en el corpus CodiEsp~\cite{miranda2020}, que actúa como benchmark de referencia para la tarea en español, aspirando a tener resultados competitivos similares a los mejores sistemas participantes en dicha tarea.
+    \item \textbf{2. Latencia:} La inferencia debe completarse en un tiempo que no impida la integración en flujos de trabajo clínicos y distintas integraciones con otros sistemas, situándose por debajo del segundo por documento en hardware de consumo (GPU con 16\,GB de VRAM).
+    \item \textbf{3. Modularidad:} Los diferentes módulos del sistema deben tener interfaces bien definidas y ser sustituibles de forma independiente, de modo que, por ejemplo, el modelo base pueda cambiarse sin modificar el servicio de inferencia.
+    \item \textbf{4. Trazabilidad:} El sistema debe registrar para cada predicción la versión del modelo empleada y el identificador del informe procesado, en línea con los principios de auditabilidad del Reglamento UE 2017/745~\cite{eu2017745} aplicable al software de apoyo a la decisión clínica.
 \end{itemize}
