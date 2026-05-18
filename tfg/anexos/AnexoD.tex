@@ -3,6 +3,17 @@
 
 Este anexo documenta el esquema de base de datos del sistema. PostgreSQL 15 aloja dos bases de datos con propósitos distintos: \texttt{cie10\_eventstore}, gestionada por la biblioteca Commanded y que actúa como registro de eventos inmutable, y \texttt{cie10\_app}, que contiene las proyecciones de lectura y los datos de referencia del catálogo CIE-10-ES.
 
+\section{Diagrama entidad-relación}
+
+La Figura~\ref{fig:erd-bd} muestra el diagrama entidad-relación de la base de datos \texttt{cie10\_app}, con las tablas de proyección y la tabla de referencia del catálogo CIE-10-ES.
+
+\begin{figure}[ht]
+\centering
+\resizebox{\textwidth}{!}{\input{figs/erd-bd}}
+\caption{Diagrama entidad-relación de la base de datos de aplicación \texttt{cie10\_app}.}
+\label{fig:erd-bd}
+\end{figure}
+
 \section{Tablas de la base de datos de aplicación (\texttt{cie10\_app})}
 
 \subsection{Tabla \texttt{users}}

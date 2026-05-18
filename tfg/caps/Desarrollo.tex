@@ -111,17 +111,17 @@ Se evaluaron nueve modelos candidatos para la codificación del texto clínico. 
 
 \begin{itemize}
     \item \texttt{PlanTL-GOB-ES/roberta-base-biomedical-clinical-es} (RoBERTa-BSC, 125M parámetros), entrenado por el Barcelona Supercomputing Center sobre historias clínicas, informes radiológicos y notas médicas en español.
-    \item \texttt{PlanTL-GOB-ES/roberta-large-bne-medical} (355M parámetros), variante de mayor tamaño del mismo grupo.
-    \item \texttt{BSC-LT/RigoBERTa} (arquitectura DeBERTa-v2, ventana de contexto de 4096 tokens), desarrollado por la unidad de tecnologías del lenguaje del Barcelona Supercomputing Center; modelo seleccionado para el entrenamiento final en producción.
-    \item \texttt{IIC/RigoBERTa-Clinical} (DeBERTa-v2), variante clínica de RigoBERTa desarrollada por el Instituto de Ingeniería del Conocimiento, especializada en textos médicos en español.
-    \item \texttt{jhu-clsp/mmBERT-base} (mmBERT, multilingüe), modelo multilingüe con ventana de 1500 tokens desarrollado por el Centro de Procesamiento del Lenguaje y del Habla de la Universidad Johns Hopkins.
+    \item \texttt{PlanTL-GOB-ES/roberta-large-bne} (355M parámetros), variante de mayor tamaño del mismo grupo (deprecado; referencia de escala).
+    \item \texttt{IIC/RigoBERTa-2.0} (arquitectura XLM-RoBERTa-large, $\sim$600M parámetros), versión de propósito general desarrollada por el Instituto de Ingeniería del Conocimiento sobre corpus español de gran escala.
+    \item \texttt{IIC/RigoBERTa-Clinical} (XLM-RoBERTa-large, especialización clínica), variante de RigoBERTa entrenada sobre corpus médico en español por el Instituto de Ingeniería del Conocimiento; modelo seleccionado para el entrenamiento final en producción.
+    \item \texttt{jhu-clsp/mmBERT-base} (mmBERT, arquitectura ModernBERT multilingüe), modelo con ventana de 8192 tokens entrenado sobre 1800+ lenguas, desarrollado por el Centro de Procesamiento del Lenguaje y del Habla de la Universidad Johns Hopkins.
     \item \texttt{answerdotai/ModernBERT-base} (ModernBERT, 2024), arquitectura de última generación con Flash Attention y ventana de 8192 tokens; obtuvo el mejor F1 en las pruebas de validación.
     \item \texttt{dccuchile/bert-base-spanish-wwm-cased} (BETO, 110M parámetros), modelo de propósito general en español.
     \item \texttt{sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2} (33M parámetros), orientado a la generación de embeddings.
     \item \texttt{distilbert-base-multilingual-cased} (66M parámetros), versión destilada multilingüe de BERT.
 \end{itemize}
 
-El modelo seleccionado como base fue \texttt{BSC-LT/RigoBERTa} para el entrenamiento final en producción, dado que combina la especialización en dominio clínico español con una ventana de contexto de 4096 tokens (arquitectura DeBERTa-v2), lo que permite procesar informes de alta hospitalaria sin necesidad de truncación agresiva. Para pruebas rápidas se usa \texttt{roberta-base} como alternativa más ligera.
+El modelo seleccionado como base fue \texttt{IIC/RigoBERTa-Clinical} para el entrenamiento final en producción, dado que combina la especialización en dominio clínico español con la mayor capacidad del grupo de modelos evaluados (XLM-RoBERTa-large, $\sim$600M parámetros) y obtuvo el mejor F1-micro experimental (0{,}799) en la tarea de clasificación de capítulos. Para pruebas rápidas se usa \texttt{roberta-base} como alternativa más ligera.
 
 \subsubsection{Arquitectura del clasificador}
 
@@ -147,17 +147,17 @@ Se evaluaron cinco arquitecturas atendiendo a la especialización en español m�
 \begin{table}[ht]
 \centering
 \small
-\caption{Comparativa de modelos en clasificación de capítulos (F1-micro en validación).}
+\caption{Comparativa de modelos en clasificación de capítulos (F1-micro en validación). \texttt{bc} abrevia \texttt{biomedical-clinical}; prefijo \texttt{PlanTL-GOB-ES} omitido por espacio.}
 \label{tab:modelos-capitulos}
 \begin{tabular}{p{5.5cm}rllr}
 \hline
 \textbf{Modelo} & \textbf{Tokens} & \textbf{Idioma} & \textbf{Dominio} & \textbf{F1-micro} \\
 \hline
-IIC/RigoBERTa-Clinical               & 1.536 & ES    & Clínico   & \textbf{0,799} \\
-PlanTL/roberta-base-bmc-es           &   512 & ES    & Biomédico & 0,781 \\
+IIC/RigoBERTa-Clinical               &   512 & ES    & Clínico   & \textbf{0,799} \\
+PlanTL-GOB-ES/roberta-base-bc-es     &   512 & ES    & Biomédico & 0,781 \\
 ModernBERT (answerAI)                & 8.192 & EN    & General   & 0,601 \\
-PlanTL/longformer-base-4096-bmc-es   & 4.096 & ES    & Biomédico & 0,416 \\
-jhu-clsp/mmBERT-base                 & 1.024 & Multi & General   & 0,121 \\
+PlanTL-GOB-ES/longformer-base-4096-bc-es & 4.096 & ES & Biomédico & 0,416 \\
+jhu-clsp/mmBERT-base                 & 8.192 & Multi & General   & 0,121 \\
 \hline
 \end{tabular}
 \end{table}
@@ -204,6 +204,13 @@ Tres técnicas mostraron impacto relevante: (1) el \emph{preentrenamiento débil
 El backend es el orquestador central del sistema. Desarrollado en Elixir 1.15 con el \emph{framework} Phoenix 1.8, asume tres responsabilidades: gestionar la autenticación y el ciclo de vida de los usuarios, coordinar el flujo de análisis clínico entre el frontend y el motor de IA, y garantizar la trazabilidad completa de todas las acciones sobre cada caso.
 
 Para cumplir el requisito de trazabilidad clínica, el backend se organiza en torno al patrón CQRS (\emph{Command Query Responsibility Segregation}) y \emph{Event Sourcing}, implementado mediante la biblioteca Commanded. Este patrón separa las operaciones de escritura (comandos) de las de lectura (consultas) y registra todo cambio de estado como un evento inmutable en el \emph{event store}, de modo que cualquier acción —desde la creación de un análisis hasta la validación de un código individual— queda registrada con su marca temporal y su autoría. Los comandos principales son: \texttt{RegisterUser}, \texttt{AnalyzeReport}, \texttt{ReceiveAIPrediction}, \texttt{ValidateCode} y \texttt{RejectCode}. Cada comando genera uno o más eventos que son procesados por proyectores que actualizan las vistas de lectura en PostgreSQL. El esquema completo de eventos, comandos y tablas de proyección se documenta en el Anexo~\ref{cap:AnexoD}.
+
+\begin{figure}[ht]
+\centering
+\resizebox{\textwidth}{!}{\input{figs/cqrs-flujo}}
+\caption{Flujo CQRS/\emph{Event Sourcing} del backend: desde el comando hasta los modelos de lectura.}
+\label{fig:cqrs-flujo}
+\end{figure}
 
 El almacenamiento de eventos se implementa sobre PostgreSQL, sin recurrir a una base de datos dedicada para \emph{Event Sourcing} como EventStoreDB o Apache Kafka. Esta decisión (ADR-04, Anexo~\ref{cap:AnexoE}) reduce la complejidad operacional: un único sistema de base de datos para administrar, con soporte nativo y maduro en Commanded. Si el volumen de eventos creciera hasta niveles que saturaran PostgreSQL —lo que en el contexto clínico de un hospital de tamaño medio no se prevé a corto plazo—, la migración a un \emph{broker} de mensajes como Kafka es viable sin cambios estructurales en el dominio. El módulo \texttt{EventStore} de Commanded sigue el principio de inversión de dependencias (SOLID): el dominio depende de una abstracción, no de un adaptador concreto, de modo que sustituir el adaptador PostgreSQL por uno Kafka se limita a cambiar la configuración del supervisor OTP sin tocar los agregados, proyectores ni manejadores de eventos.
 

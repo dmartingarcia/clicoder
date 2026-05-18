@@ -318,7 +318,7 @@
 % INDICACIÓN DE PULSACIÓN DE TECLA
 % -------------------------
 % Uso: \tecla{<key>}
-\usetikzlibrary{shadows} % Necesario para poder crear nuevo comando de indicación de pulsación de tecla.
+\usetikzlibrary{babel,shadows,shapes.geometric,shapes.multipart,arrows.meta,positioning,fit,backgrounds,calc}
 \newcommand*\tecla[1]{%  Para crear indicaciones de pulsación de teclas
   \tikz[baseline=(key.base)]
     \node[%

@@ -15,9 +15,9 @@ El \emph{notebook} \texttt{0\_clasificador\_jerarquico\_Introducción.ipynb} exp
 
 El \emph{notebook} \texttt{1\_clasificador\_jerarquico\_RoBERTa.ipynb} evaluó \texttt{PlanTL-GOB-ES/roberta-base-biomedical-clinical-es} como clasificador plano de primer nivel. El modelo se validó conceptualmente, pero no se llevó a producción por su ventana de contexto limitada a 512 tokens, que trunca la mayoría de los informes del corpus CodiEsp.
 
-\subsection{Fase 2: RigoBERTa-BSC (evaluación)}
+\subsection{Fase 2: IIC/RigoBERTa-2.0 (evaluación)}
 
-El \emph{notebook} \texttt{2\_clasificador\_jerarquico\_RigoBERTa.ipynb} introdujo \texttt{BSC-LT/RigoBERTa}, con arquitectura DeBERTa-v2~\cite{he2021deberta} y ventana de 4096 tokens. Este modelo se evaluó conceptualmente como alternativa más adecuada para textos largos.
+El \emph{notebook} \texttt{2\_clasificador\_jerarquico\_RigoBERTa.ipynb} introdujo \texttt{IIC/RigoBERTa-2.0}~\cite{vacaserrano2022rigoberta}, versión de propósito general de RigoBERTa sobre arquitectura XLM-RoBERTa-large. Este modelo se evaluó conceptualmente como punto de partida previo a la variante clínica.
 
 \subsection{Fase 3: mmBERT — primeros entrenamientos experimentales}
 

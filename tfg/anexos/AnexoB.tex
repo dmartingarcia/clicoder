@@ -3,6 +3,17 @@
 
 Este anexo describe la topología de despliegue del sistema, los servicios que lo componen, sus dependencias y las variantes de configuración disponibles. El sistema se orquesta mediante Docker Compose.
 
+\section{Diagrama de contenedores}
+
+La Figura~\ref{fig:c4-contenedores} muestra la vista de contenedores C4 del sistema: los cuatro componentes desplegables, sus tecnologías y los canales de comunicación entre ellos.
+
+\begin{figure}[ht]
+\centering
+\resizebox{\textwidth}{!}{\input{figs/c4-contenedores}}
+\caption{Diagrama de contenedores C4 del sistema CIE-10-ES.}
+\label{fig:c4-contenedores}
+\end{figure}
+
 \section{Topología de contenedores}
 
 El sistema está formado por siete servicios Docker~\cite{merkel2014docker}. La Tabla~\ref{tab:servicios} resume su función, tecnología, puerto expuesto y dependencias.
@@ -99,4 +110,6 @@ La Tabla~\ref{tab:envvars} recoge las variables de entorno configurables del sis
     \item[\texttt{backend/}] Aplicación Phoenix. \texttt{lib/app/} contiene la lógica de negocio (agregados, comandos, eventos, proyectores); \texttt{lib/app\_web/} contiene la capa HTTP (controladores, canales, \emph{plugs}, router).
     \item[\texttt{frontend/}] Aplicación Next.js. \texttt{src/components/} contiene los componentes de UI; \texttt{src/contexts/} los contextos de estado; \texttt{src/lib/} la configuración y utilidades de red.
     \item[\texttt{training/}] Entorno de entrenamiento aislado. \texttt{csv\_import\_scripts/} para descarga de datos; \texttt{data\_analysis/} para análisis exploratorio; \texttt{bert-classifier/} para notebooks de entrenamiento.
+    \item[\texttt{tfg/}] Contiene los archivos del trabajo de fin de grado, incluyendo capítulos, anexos y figuras.
+    \item[] 
 \end{description}
