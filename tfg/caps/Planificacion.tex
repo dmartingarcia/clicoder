@@ -19,14 +19,14 @@ El proyecto se realiza íntegramente por un único desarrollador, con la direcci
 \subsection{Recursos hardware}
 
 \begin{itemize}
-    \item \textbf{Equipo de desarrollo}: Equipo personal con sistema operativo Debian, utilizado para el desarrollo de todos los componentes del sistema (backend, frontend, scripts de datos, etc) y para la ejecución de los distintos contenedores Docker.
-    \item \textbf{GPU para entrenamiento}: El modelo BERT requiere para su entrenamiento el acceso a GPU o TPU con soporte CUDA. El sistema está preparado para el entrenamiento tanto en GPU local, como en la nube, mediante un entorno dockerizado. En CPU, el entrenamiento puede tardar entre 12 y 24 horas según el número de épocas; en GPU (en este caso RTX 3080 o equivalente), entre 2 y 4 horas.
-    \item \textbf{Espacio en disco}: El corpus CodiEsp y los artefactos del modelo entrenado requieren aproximadamente 5\,GB de almacenamiento, se dispondrá de al menos 200\,GB para garantizar espacio suficiente para logs, checkpoints y otros archivos temporales.
+    \item \textbf{Equipo de desarrollo}: Equipo personal con sistema operativo Debian, utilizado para el desarrollo de todos los componentes del sistema (backend, frontend, scripts de datos, etc.) y para la ejecución de los distintos contenedores Docker.
+    \item \textbf{GPU para entrenamiento}: El modelo BERT requiere para su entrenamiento el acceso a una GPU o TPU con soporte CUDA. El sistema está preparado para el entrenamiento tanto en GPU local como en la nube, mediante un entorno dockerizado. En CPU, el entrenamiento puede tardar entre 12 y 24 horas según el número de épocas; en GPU (en este caso RTX 3080 o equivalente), entre 2 y 4 horas.
+    \item \textbf{Espacio en disco}: El corpus CodiEsp y los artefactos del modelo entrenado requieren aproximadamente 5\,GB de almacenamiento;se dispondrá de al menos 200\,GB para garantizar espacio suficiente para logs, checkpoints y otros archivos temporales.
 \end{itemize}
 
 \subsection{Recursos software}
 
-Las herramientas y tecnologías empleadas en el proyecto se agrupan por las siguientes categoría:
+Las herramientas y tecnologías empleadas en el proyecto se agrupan en las siguientes categorías:
 
 \textbf{Entorno de desarrollo:}
 \begin{itemize}[noitemsep]
@@ -78,7 +78,7 @@ Las herramientas y tecnologías empleadas en el proyecto se agrupan por las sigu
 
 \subsection{Control de versiones}
 
-El repositorio Git sigue el esquema de ramas habitual para este tipo de proyectos: una rama principal (\texttt{main}) que siempre contiene código funcional, ademas de las ramas de trabajo (\texttt{feature branches}) para el desarrollo de cada funcionalidad.
+El repositorio Git sigue el esquema de ramas habitual para este tipo de proyectos: una rama principal (\texttt{main}) que siempre contiene código funcional, además de las ramas de trabajo (\texttt{feature branches}) para el desarrollo de cada funcionalidad.
 
 Los mensajes de commit siguen el estándar \emph{Conventional Commits}, validado automáticamente mediante el \emph{hook} de pre-commit de Husky y commitlint. Este estándar impone un formato estructurado (\texttt{tipo(ámbito): descripción}) que facilita la lectura del historial y la generación automática de notas de versión.
 
@@ -95,7 +95,7 @@ La calidad del código se garantiza mediante varios mecanismos complementarios:
     \item \textbf{Linting}: El uso y configuración de linters específicos para cada lenguaje (ESLint para TypeScript, Flake8 para Python, Credo para Elixir) con reglas adaptadas al estilo del proyecto.
     \item \textbf{Revisión de código}: Al tratarse de un proyecto unipersonal, la revisión se realiza mediante la lectura sistemática del código generado antes de cada \emph{commit} significativo.
     \item \textbf{Separación de entornos}: El uso de stubs y mocks para el motor de inferencia (\texttt{ai\_engine\_mock}) permite desarrollar y evaluar el estado, tanto del backend como del frontend, sin necesidad del modelo BERT entrenado, evitando dependencias que dificulten las pruebas de integración.
-    \item \textbf{Métricas de entrenamiento}: El proceso de entrenamiento registra las métricas de validación en cada época y genera curvas de aprendizaje, lo que permite detectar sobreajuste o problemas de convergencia de forma inmediata para actuar en consecuencia (ajuste de hiperparámetros, cambio de modelo base, etc).
+    \item \textbf{Métricas de entrenamiento}: El proceso de entrenamiento registra las métricas de validación en cada época y genera curvas de aprendizaje, lo que permite detectar sobreajuste o problemas de convergencia de forma inmediata para actuar en consecuencia (ajuste de hiperparámetros, cambio de modelo base, etc.).
 \end{itemize}
 
 \section{Planificación}
@@ -155,8 +155,8 @@ Tareas completadas:
 \begin{itemize}[noitemsep]
     \item Página de autenticación con formularios de registro e inicio de sesión.
     \item Interfaz de chat con renderizado de tarjetas tipadas (resumen, códigos, recomendaciones).
-    \item Panel lateral con historial de los diferentes analisis, asi como de controles de sesión.
-    \item Componentes de validación y rechazo de los códigos predichos, asi como los motivos.
+    \item Panel lateral con historial de los diferentes análisis, así como de controles de sesión.
+    \item Componentes de validación y rechazo de los códigos predichos, así como los motivos.
     \item Selector de idioma y carga de traducciones con el backend.
     \item Configuración centralizada de URLs mediante variables de entorno.
     \item Dockerización del entorno de desarrollo, pruebas y producción.
@@ -172,15 +172,15 @@ Tareas completadas:
     \item Workflow de GitHub Actions para CI.
     \item Dockerización del entorno de entrenamiento con soporte CPU y GPU.
     \item Implementación del entorno de producción con un cluster de Kubernetes.
-    \item Monitorizacion del servicio mediante Prometheus y Grafana.
-    \item Gestion de errores utilizando el SaaS Sentry.
+    \item Monitorización del servicio mediante Prometheus y Grafana.
+    \item Gestión de errores utilizando el SaaS Sentry.
 \end{itemize}
 
 \subsection{Orden de ejecución de las épicas}
 
-Las épicas no se desarrollan de forma estrictamente secuencial. Los primeros pasos en todas las epicas seran siempre el establecimiento del entorno de desarrollo.
+Las épicas no se desarrollan de forma estrictamente secuencial. Los primeros pasos en todas las épicas serán siempre el establecimiento del entorno de desarrollo.
 
-La de adquisición de datos se abordan en segundo lugar, ya que el resto del sistema depende de ambas: sin los CSV del corpus no hay entrenamiento posible. A continuación se trabaja en paralelo sobre el motor de IA y el backend, usando el \emph{mock} del AI Engine, para desacoplar ambas líneas de trabajo y poder avanzar en la integración del backend sin necesidad de disponer del modelo entrenado. El frontend se desarrolla progresivamente a medida que el backend expone nuevos endpoints y canales. La épica de modelo de clasificación es la de mayor duración y la que más variaciones presenta durante el desarrollo, dado que el rendimiento en validación determina si es necesario ajustar la arquitectura, los hiperparámetros o el preprocesamiento de los datos.
+La adquisición de datos se aborda en segundo lugar, ya que el resto del sistema depende de ambas: sin los CSV del corpus no hay entrenamiento posible. A continuación se trabaja en paralelo sobre el motor de IA y el backend, usando el \emph{mock} del AI Engine, para desacoplar ambas líneas de trabajo y poder avanzar en la integración del backend sin necesidad de disponer del modelo entrenado. El frontend se desarrolla progresivamente a medida que el backend expone nuevos endpoints y canales. La épica de modelo de clasificación es la de mayor duración y la que más variaciones presenta durante el desarrollo, dado que el rendimiento en validación determina si es necesario ajustar la arquitectura, los hiperparámetros o el preprocesamiento de los datos.
 
 #PORAAQUIVAMOS
 
@@ -217,12 +217,12 @@ La épica de modelo de clasificación es la única que supera la estimación ini
 
 Los costes del proyecto se dividen en dos categorías: costes de personal y costes de recursos materiales. Dado que se trata de un TFG desarrollado por un único alumno, los costes de personal son los más significativos y los que mejor reflejan el esfuerzo real invertido.
 
-\textbf{Costes de personal.} A partir de los 76 puntos de historia estimados, asumiendo que cada punto equivale a media jornada de trabajo efectivo de cuatro horas, el volumen total de trabajo se sitúa en torno a las 304 horas. Tomando como referencia el coste horario de un perfil junior de ingeniería de software en España —entre 20 y 25\,€/hora con todos los costes sociales incluidos—, el coste de personal asciende a entre 6.000 y 7.600\,€. Este rango representa el presupuesto de referencia si el proyecto se encargara a un profesional externo.
+\textbf{Costes de personal.} A partir de los 76 puntos de historia estimados, asumiendo que cada punto equivale a media jornada de trabajo efectivo de cuatro horas, el volumen total de trabajo se sitúa en torno a las 304 horas. Tomando como referencia el coste horario de un perfil junior de ingeniería de software en España —entre 20 y 25€/hora con todos los costes sociales incluidos—, el coste de personal asciende a entre 6.000 y 7.600€. Este rango representa el presupuesto de referencia si el proyecto se encargara a un profesional externo.
 
 \textbf{Costes de recursos materiales.}
 \begin{itemize}
     \item \textbf{Hardware de desarrollo}: el desarrollo se realiza sobre hardware propio ya amortizado, por lo que no genera un coste adicional directo. Si se amortiza el coste del equipo proporcionalmente a la duración del proyecto (asumiendo un equipo de 1.500\,€ con vida útil de cuatro años), el coste imputado es de aproximadamente 95\,€.
-    \item \textbf{GPU para entrenamiento}: si no se dispone de GPU local, el entrenamiento puede realizarse en plataformas de computación en la nube. Estimando entre 4 y 8 horas de GPU necesarias para completar el entrenamiento final a un coste de entre 0,50 y 2\,€/hora, el coste total de cómputo se sitúa entre 2 y 16\,€ por ejecución de entrenamiento. Considerando varias ejecuciones de prueba durante la fase de experimentación, el coste total de GPU se estima en menos de 50\,€.
+    \item \textbf{GPU para entrenamiento}: si no se dispone de GPU local, el entrenamiento puede realizarse en plataformas de computación en la nube. Estimando entre 4 y 8 horas de GPU necesarias para completar el entrenamiento final a un coste de entre 0,50 y 2€/hora, el coste total de cómputo se sitúa entre 2 y 16€ por ejecución de entrenamiento. Considerando varias ejecuciones de prueba durante la fase de experimentación, el coste total de GPU se estima en menos de 50€.
     \item \textbf{Software}: todas las herramientas, \emph{frameworks} y modelos utilizados son de código abierto y gratuitos. El acceso al modelo RigoBERTa desde HuggingFace Hub requiere un token de usuario, cuya obtención es gratuita.
     \item \textbf{Infraestructura de red y almacenamiento}: el corpus CodiEsp y los artefactos del modelo se almacenan localmente. No hay costes de almacenamiento en la nube ni de ancho de banda significativos.
 \end{itemize}
@@ -242,7 +242,7 @@ La tabla~\ref{tab:riesgos} recoge los principales riesgos identificados, su prob
 \hline
 \textbf{Riesgo} & \textbf{Prob.} & \textbf{Impacto} & \textbf{Mitigación} \\
 \hline
-Rendimiento insuficiente del modelo sobre CodiEsp & Media & Alto & Evaluación temprana sobre conjunto de validación; posibilidad de cambiar el modelo base o ajustar hiperparámetros. \\
+Rendimiento insuficiente del modelo sobre CodiEsp & Media & Alto & Evaluación temprana sobre el conjunto de validación; posibilidad de cambiar el modelo base o ajustar hiperparámetros. \\
 \hline
 Coste computacional excesivo de entrenamiento sin GPU & Alta & Medio & Configuración Docker con soporte GPU; posibilidad de usar entornos en la nube como alternativa. \\
 \hline

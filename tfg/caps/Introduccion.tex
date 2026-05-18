@@ -15,14 +15,14 @@ Este trabajo se centra en el desarrollo de soluciones de codificación automáti
 La motivación de este trabajo surge de varios factores clave identificados:
 \begin{itemize}
 \item Es necesario disponer de conocimientos médicos para la correcta clasificación, haciendo necesario tener personal especializado.
-\item La normativa CIE-10 contiene 68.069 códigos posibles, haciendo que la tarea de clasificar tenga mucha complejidad, y aumentando el número de errores en el proceso de clasificación manual.
+\item La normativa CIE-10 contiene 68.069 códigos posibles, haciendo que la tarea de clasificar tenga mucha complejidad y aumentando el número de errores en el proceso de clasificación manual.
 \item Desde el 1 de enero de 2016 la CIE-10-ES ha sido implantada en España como clasificación de referencia para la codificación clínica, como indica el Real Decreto 69/2015, y su obligatoriedad se está implantando de manera gradual.
 \item El tiempo medio de codificación de un alta hospitalaria es de 14 minutos, 10 minutos más en comparación con la CIE-9, tal y como se indica en el informe de implantación de la CIE-10~\cite{sanidad2016cie10}.
 \end{itemize}
 
 La solución propuesta combina técnicas de Deep Learning con conocimiento clínico estructurado, permitiendo:
 \begin{itemize}
-\item La reducción del tiempo de codificación, así como la automatización del proceso, requiriendo únicamente la posterior revisión humana en el caso de que la certeza sea baja.
+\item La reducción del tiempo de codificación, así como la automatización del proceso, requiere únicamente la posterior revisión humana en el caso de que la certeza sea baja.
 \item La consistencia en la aplicación de normas CIE-10 mediante aprendizaje automático.
 \item La propuesta de códigos con puntuación de confianza asociada, priorizando la revisión de los casos ambiguos.
 \end{itemize}
@@ -36,14 +36,14 @@ El análisis de trabajos previos revela tres generaciones tecnológicas:
 
 \textbf{Modelos estadísticos} (2010-2018): Aplicación de SVM y Random Forests sobre características léxico-sintácticas. Logran un F1=0,79 en CIE-9 pero no consiguen escalar su poder de clasificación a la CIE-10~\cite{liu2018}.
 
-\textbf{Deep Learning} (2018-actual): Modelos secuencia-a-secuencia con atención contextual. El sistema CodiEsp~\cite{miranda2020} alcanza un F1=0,85 en español usando el modelo neuronal BiLSTM.
+\textbf{Deep Learning} (2018-actual): Modelos secuencia a secuencia con atención contextual. El sistema CodiEsp~\cite{miranda2020} alcanza un F1=0,85 en español usando el modelo neuronal BiLSTM.
 
 \subsection{Avances en transformers médicos}
 Los modelos BERT adaptados al dominio clínico, como ClinicalBERT~\cite{alsentzer2019} y BioBERT~\cite{lee2020}, demuestran una gran superioridad en:
 
 \begin{itemize}
 \item Capturar relaciones contextuales en narrativas médicas.
-\item Manejar ambigüedades terminológicas (ej: 'EPOC' como entidad vs. comorbilidad \\TODO explicar\\).
+\item Manejar ambigüedades terminológicas (ej.: 'EPOC' como entidad vs. comorbilidad \\TODO explicar\\).
 \item Transfer-learning entre especialidades médicas.
 \end{itemize}
 

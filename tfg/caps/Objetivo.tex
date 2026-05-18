@@ -1,21 +1,21 @@
 \chapter{Objetivo}
 \label{cap:Objetivo}
 
-El objetivo de este trabajo es el \textbf{diseño e implementación de un sistema de codificación clínica automática en el estandar CIE-10-ES} capaz de asignar, a partir de informes de alta hospitalaria en español, uno o más códigos de diagnósticos y procedimientos, siguiendo la nomenclatura CIE-10-ES.
+El objetivo de este trabajo es el \textbf{diseño e implementación de un sistema de codificación clínica automática en el estándar CIE-10-ES} capaz de asignar, a partir de informes de alta hospitalaria en español, uno o más códigos de diagnósticos y procedimientos, siguiendo la nomenclatura CIE-10-ES.
 
-Este proyecto tendra como fin la creación de un prototipo funcional, que estará compuesto por un modelo de clasificación multilabel basado en BERT y un servicio de inferencia accesible mediante una API REST, asi como una pagina web en la que poder utilizar dicha API.
+Este proyecto tendrá como fin la creación de un prototipo funcional, que estará compuesto por un modelo de clasificación multilabel basado en BERT y un servicio de inferencia accesible mediante una API REST, así como una página web en la que poder utilizar dicha API.
 
-A su vez se utilizara el corpus CodiEsp~\cite{miranda2020} como parte del entorno de trabajo, siendo este, el conjunto de datos de referencia para la codificación clínica automática en español, el mencionado corpus proporciona informes clínicos anotados con sus correspondientes códigos CIE-10-ES tanto para diagnosticos, como para procedimientos, asi como que palabras se han etiquetado como causantes de dicho código.
+A su vez se utilizará el corpus CodiEsp~\cite{miranda2020} como parte del entorno de trabajo, siendo este, el conjunto de datos de referencia para la codificación clínica automática en español, el mencionado corpus proporciona informes clínicos anotados con sus correspondientes códigos CIE-10-ES tanto para diagnósticos, como para procedimientos, así como que palabras se han etiquetado como causantes de dicho código.
 
-También se requerira la adquisición del catálogo oficial de códigos CIE-10-ES, que contiene las descripciones en español de todos los códigos válidos, mediante técnicas de scraping sobre el portal eCIE-maps del Ministerio de Sanidad, dado que no existe ningún formato de descarga pública estructurada.
+También se requerirá la adquisición del catálogo oficial de códigos CIE-10-ES, que contiene las descripciones en español de todos los códigos válidos, mediante técnicas de scraping sobre el portal eCIE-maps del Ministerio de Sanidad, dado que no existe ningún formato de descarga pública estructurada.
 
-La situación de partida es la mencionada en la introducción, que la complejidad del sistema —con 68.069 códigos posibles— hace inviable su manejo manual sin errores y sin apoyo tecnológico. Este sistema tendrá la finalidad de asistir en el proceso, y en ningun caso sustituir a un codificador, sino ofrecerle una propuesta de codificación con nivel de confianza asociado, de modo que se pueda centrar en los casos ambiguos o de baja certeza.
+La situación de partida es la mencionada en la introducción, que la complejidad del sistema —con 68.069 códigos posibles— hace inviable su manejo manual sin errores y sin apoyo tecnológico. Este sistema tendrá la finalidad de asistir en el proceso, y en ningún caso sustituir a un codificador, sino ofrecerle una propuesta de codificación con nivel de confianza asociado, de modo que se pueda centrar en los casos ambiguos o de baja certeza.
 
 Entre las limitaciones y condicionantes del sistema se encuentran las siguientes: el sistema se entrena y evalúa exclusivamente con los conjuntos de datos mencionados anteriormente, por lo que su rendimiento fuera de ese dominio no está garantizado.
 
-Los lenguaje empleados para este proyecto estan asociados a su campo de utilidad, siendo Python para el clasificador, Elixir para el Backend, y Typescript para el Frontend,
+Los lenguajes empleados para este proyecto están asociados a su campo de utilidad, siendo Python para el clasificador, Elixir para el Backend, y Typescript para el Frontend,
 
-Las principales librerias con las que se trabajará son HuggingFace Transformers y PyTorch como entorno lógico de base; y el entrenamiento requira acceso a GPU/TPU.
+Las principales librerias con las que se trabajará son HuggingFace Transformers y PyTorch como entorno lógico de base; y el entrenamiento requiere acceso a GPU/TPU.
 
 \section{Objetivos secundarios}
 
@@ -27,7 +27,7 @@ Dado que el sistema se puede descomponer de forma natural en módulos independie
 
     \item \textbf{Módulo de preprocesamiento y gestión del corpus.} Modulo encargado de la carga, limpieza y transformaciones de las anotaciones al formato multilabel requerido por el modelo.
 
-    \item \textbf{Analisis de datos.} Análisis estadístico de las diferentes fuentes de datos, caracterizando la longitud, la distribución de etiquetas, el solapamiento entre particiones y la relación entre las descripciones oficiales de los códigos y su presencia en el corpus. Este análisis fundamenta las decisiones de diseño del modelo y las futuras estrategias de entrenamiento.
+    \item \textbf{Análisis de datos.} Análisis estadístico de las diferentes fuentes de datos, caracterizando la longitud, la distribución de etiquetas, el solapamiento entre particiones y la relación entre las descripciones oficiales de los códigos y su presencia en el corpus. Este análisis fundamenta las decisiones de diseño del modelo y las futuras estrategias de entrenamiento.
 
     \item \textbf{Módulo clasificador multilabel.} Componente central del sistema. Estará constituido por un modelo BERT preentrenado en español con dominio clínico y ajustado mediante \emph{fine-tuning} sobre el corpus CodiEsp. Incorpora una cabeza de clasificación multilabel con función de pérdida adaptada a la distribución de larga cola de la CIE-10 y umbrales de decisión por código calibrados sobre el conjunto de validación.
 
