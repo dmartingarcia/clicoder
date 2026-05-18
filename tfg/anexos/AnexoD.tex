@@ -1,0 +1,227 @@
+\chapter{Modelo de datos}
+\label{cap:AnexoD}
+
+Este anexo documenta el esquema de base de datos del sistema. PostgreSQL 15 aloja dos bases de datos con propósitos distintos: \texttt{cie10\_eventstore}, gestionada por la biblioteca Commanded y que actúa como registro de eventos inmutable, y \texttt{cie10\_app}, que contiene las proyecciones de lectura y los datos de referencia del catálogo CIE-10-ES.
+
+\section{Tablas de la base de datos de aplicación (\texttt{cie10\_app})}
+
+\subsection{Tabla \texttt{users}}
+
+Almacena los usuarios registrados en el sistema.
+
+\begin{table}[h]
+\centering
+\caption{Columnas de la tabla \texttt{users}.}
+\label{tab:users}
+\begin{tabular}{llll}
+\hline
+\textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
+\hline
+\texttt{id}                  & \texttt{uuid}          & PK, NOT NULL      & Identificador único. \\
+\texttt{first\_name}         & \texttt{varchar}       & NOT NULL          & Nombre del usuario. \\
+\texttt{last\_name}          & \texttt{varchar}       & NOT NULL          & Apellidos. \\
+\texttt{username}            & \texttt{varchar}       & UNIQUE, NOT NULL  & Nombre de usuario. \\
+\texttt{email}               & \texttt{varchar}       & UNIQUE, NOT NULL  & Correo electrónico. \\
+\texttt{password\_hash}      & \texttt{varchar}       & NOT NULL          & Hash bcrypt de la contraseña. \\
+\texttt{confirmation\_token} & \texttt{varchar}       & NULLABLE          & Token de confirmación por email. \\
+\texttt{confirmed\_at}       & \texttt{timestamptz}   & NULLABLE          & Fecha de confirmación de la cuenta. \\
+\texttt{locale}              & \texttt{varchar}       & DEFAULT \texttt{'es'} & Idioma preferido (\texttt{es} o \texttt{en}). \\
+\texttt{inserted\_at}        & \texttt{timestamptz}   & NOT NULL          & Fecha de creación. \\
+\texttt{updated\_at}         & \texttt{timestamptz}   & NOT NULL          & Fecha de última modificación. \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Tabla \texttt{conversations}}
+
+Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario.
+
+\begin{table}[h]
+\centering
+\caption{Columnas de la tabla \texttt{conversations}.}
+\label{tab:conversations}
+\begin{tabular}{llll}
+\hline
+\textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
+\hline
+\texttt{id}               & \texttt{uuid}        & PK, NOT NULL        & Identificador interno. \\
+\texttt{conversation\_id} & \texttt{varchar}     & UNIQUE, NOT NULL    & UUID generado por el cliente. \\
+\texttt{user\_id}         & \texttt{varchar}     & NOT NULL, INDEX     & Referencia al usuario propietario. \\
+\texttt{started\_at}      & \texttt{timestamptz} & NOT NULL            & Momento de inicio de la conversación. \\
+\texttt{status}           & \texttt{varchar}     & DEFAULT \texttt{'active'} & Estado: \texttt{active}. \\
+\texttt{deleted\_at}      & \texttt{timestamptz} & NULLABLE, INDEX     & Borrado lógico (soft delete). \\
+\texttt{inserted\_at}     & \texttt{timestamptz} & NOT NULL            & Fecha de inserción en la proyección. \\
+\texttt{updated\_at}      & \texttt{timestamptz} & NOT NULL            & Fecha de última actualización. \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Índices}: \texttt{(user\_id)}, \texttt{(deleted\_at)}.
+
+\subsection{Tabla \texttt{messages}}
+
+Proyección CQRS de los mensajes intercambiados dentro de cada conversación.
+
+\begin{table}[h]
+\centering
+\caption{Columnas de la tabla \texttt{messages}.}
+\label{tab:messages}
+\begin{tabular}{llll}
+\hline
+\textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
+\hline
+\texttt{id}               & \texttt{uuid}        & PK, NOT NULL   & Identificador interno. \\
+\texttt{message\_id}      & \texttt{varchar}     & UNIQUE, NOT NULL & UUID del mensaje. \\
+\texttt{content}          & \texttt{text}        & NOT NULL       & Contenido textual del mensaje. \\
+\texttt{user\_id}         & \texttt{varchar}     & NOT NULL       & Usuario que emitió el mensaje. \\
+\texttt{timestamp}        & \texttt{timestamptz} & NOT NULL, INDEX & Momento de emisión. \\
+\texttt{message\_type}    & \texttt{varchar}     & NOT NULL       & Tipo: \texttt{user}, \texttt{system} o \texttt{analysis}. \\
+\texttt{conversation\_id} & \texttt{uuid}        & FK → \texttt{conversations}, CASCADE & Conversación a la que pertenece. \\
+\texttt{inserted\_at}     & \texttt{timestamptz} & NOT NULL       & Fecha de inserción. \\
+\texttt{updated\_at}      & \texttt{timestamptz} & NOT NULL       & Fecha de modificación. \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Índices}: \texttt{(conversation\_id)}, \texttt{(message\_id)}, \texttt{(timestamp)}.
+
+\subsection{Tabla \texttt{analysis\_cards}}
+
+Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para cada mensaje de análisis.
+
+\begin{table}[h]
+\centering
+\caption{Columnas de la tabla \texttt{analysis\_cards}.}
+\label{tab:cards}
+\begin{tabular}{llll}
+\hline
+\textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
+\hline
+\texttt{id}               & \texttt{uuid}    & PK, NOT NULL           & Identificador interno. \\
+\texttt{card\_id}         & \texttt{varchar} & UNIQUE, NOT NULL       & UUID de la tarjeta. \\
+\texttt{card\_type}       & \texttt{varchar} & NOT NULL               & Tipo: \texttt{summary}, \texttt{codes} o \texttt{recommendations}. \\
+\texttt{content}          & \texttt{text}    & NOT NULL               & JSON (tipo \texttt{codes}) o texto libre. \\
+\texttt{position}         & \texttt{integer} & NOT NULL               & Orden de renderizado dentro del mensaje. \\
+\texttt{message\_id}      & \texttt{varchar} & NOT NULL, INDEX        & UUID del mensaje al que pertenece. \\
+\texttt{conversation\_id} & \texttt{uuid}    & FK → \texttt{conversations}, CASCADE & Conversación. \\
+\texttt{inserted\_at}     & \texttt{timestamptz} & NOT NULL           & Fecha de inserción. \\
+\texttt{updated\_at}      & \texttt{timestamptz} & NOT NULL           & Fecha de modificación. \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Índices}: \texttt{(conversation\_id)}, \texttt{(message\_id)}.
+
+\subsection{Tabla \texttt{predicted\_codes}}
+
+Proyección CQRS de los códigos CIE-10-ES predichos por el motor de IA, con su ciclo de vida de validación.
+
+\begin{table}[h]
+\centering
+\caption{Columnas de la tabla \texttt{predicted\_codes}.}
+\label{tab:predicted-codes}
+\begin{tabular}{llll}
+\hline
+\textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
+\hline
+\texttt{id}               & \texttt{uuid}    & PK, NOT NULL           & Identificador interno. \\
+\texttt{code\_id}         & \texttt{varchar} & UNIQUE, NOT NULL       & UUID de la predicción. \\
+\texttt{cie10\_code}      & \texttt{varchar} & NOT NULL, INDEX        & Código CIE-10-ES (p. ej., \texttt{E11}). \\
+\texttt{reasoning}        & \texttt{text}    & NOT NULL               & Explicación textual del modelo. \\
+\texttt{confidence\_score}& \texttt{float}   & NOT NULL               & Puntuación de confianza [0, 1]. \\
+\texttt{status}           & \texttt{varchar} & DEFAULT \texttt{'pending'}, INDEX & Estado: \texttt{pending}, \texttt{validated} o \texttt{rejected}. \\
+\texttt{validated\_by}    & \texttt{varchar} & NULLABLE               & ID del usuario que validó. \\
+\texttt{rejected\_by}     & \texttt{varchar} & NULLABLE               & ID del usuario que rechazó. \\
+\texttt{rejection\_reason}& \texttt{text}    & NULLABLE               & Motivo del rechazo. \\
+\texttt{conversation\_id} & \texttt{uuid}    & FK → \texttt{conversations}, CASCADE & Conversación. \\
+\texttt{inserted\_at}     & \texttt{timestamptz} & NOT NULL           & Fecha de inserción. \\
+\texttt{updated\_at}      & \texttt{timestamptz} & NOT NULL           & Fecha de modificación. \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Índices}: \texttt{(conversation\_id)}, \texttt{(code\_id)}, \texttt{(cie10\_code)}, \texttt{(status)}.
+
+\subsection{Tabla \texttt{cie10\_codes}}
+
+Catálogo de referencia de los códigos CIE-10-ES cargados desde los ficheros CSV obtenidos del portal eCIE-maps.
+
+\begin{table}[h]
+\centering
+\caption{Columnas de la tabla \texttt{cie10\_codes}.}
+\label{tab:cie10codes}
+\begin{tabular}{llll}
+\hline
+\textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
+\hline
+\texttt{id}          & \texttt{uuid}    & PK, NOT NULL       & Identificador interno. \\
+\texttt{code}        & \texttt{varchar} & UNIQUE, NOT NULL   & Código alfanumérico (p. ej., \texttt{E11}, \texttt{I10}). \\
+\texttt{description} & \texttt{text}    & NOT NULL           & Descripción oficial en español. \\
+\texttt{type}        & \texttt{varchar} & NOT NULL, INDEX    & Categoría: \texttt{diagnosis}, \texttt{procedure} o \texttt{chemical}. \\
+\texttt{metadata}    & \texttt{jsonb}   & NULLABLE           & Metadatos clínicos (capítulo, restricciones demográficas, etc.). \\
+\texttt{inserted\_at}& \texttt{timestamptz} & NOT NULL       & Fecha de carga. \\
+\texttt{updated\_at} & \texttt{timestamptz} & NOT NULL       & Fecha de actualización. \\
+\hline
+\end{tabular}
+\end{table}
+
+El catálogo contiene aproximadamente 101.246 diagnósticos, 78.496 procedimientos y 5.050 sustancias químicas.
+
+\subsection{Tabla \texttt{code\_suggestions}}
+
+Sugerencias manuales de código realizadas por el usuario al seleccionar un fragmento de texto del informe.
+
+\begin{table}[h]
+\centering
+\caption{Columnas de la tabla \texttt{code\_suggestions}.}
+\label{tab:suggestions}
+\begin{tabular}{llll}
+\hline
+\textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
+\hline
+\texttt{id}               & \texttt{uuid}    & PK, NOT NULL     & Identificador interno. \\
+\texttt{suggestion\_id}   & \texttt{varchar} & UNIQUE, NOT NULL & UUID de la sugerencia. \\
+\texttt{selected\_text}   & \texttt{varchar} & NOT NULL         & Fragmento de texto seleccionado. \\
+\texttt{suggested\_code}  & \texttt{varchar} & NOT NULL         & Código CIE-10-ES propuesto (mayúsculas). \\
+\texttt{suggested\_by}    & \texttt{varchar} & NOT NULL         & ID del usuario que realizó la sugerencia. \\
+\texttt{conversation\_id} & \texttt{uuid}    & FK → \texttt{conversations}, CASCADE & Conversación. \\
+\texttt{inserted\_at}     & \texttt{timestamptz} & NOT NULL     & Fecha de creación. \\
+\texttt{updated\_at}      & \texttt{timestamptz} & NOT NULL     & Fecha de modificación. \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Tabla \texttt{projection\_versions}}
+
+Tabla de control interno de Commanded para garantizar la coherencia de las proyecciones al reproducir el log de eventos.
+
+\begin{table}[h]
+\centering
+\caption{Columnas de la tabla \texttt{projection\_versions}.}
+\label{tab:proj-versions}
+\begin{tabular}{llll}
+\hline
+\textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
+\hline
+\texttt{projection\_name}         & \texttt{varchar} & PK          & Nombre del proyector. \\
+\texttt{last\_seen\_event\_number}& \texttt{bigint}  & NOT NULL    & Último evento procesado por este proyector. \\
+\texttt{inserted\_at}             & \texttt{timestamptz} & NOT NULL & Fecha de creación. \\
+\texttt{updated\_at}              & \texttt{timestamptz} & NOT NULL & Fecha de actualización. \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Base de datos de eventos (\texttt{cie10\_eventstore})}
+
+La base de datos \texttt{cie10\_eventstore} es gestionada íntegramente por la biblioteca \texttt{EventStore} (dependencia de Commanded). Su esquema incluye las tablas \texttt{streams}, \texttt{events} y \texttt{subscriptions}, que almacenan el log de eventos inmutable. No se modifica directamente; toda la interacción se realiza a través del módulo \texttt{App.CommandedApplication}.
+
+Los eventos registrados son: \texttt{ConversationStarted}, \texttt{MessageSent}, \texttt{AnalysisRequested}, \texttt{AIPredictionReceived}, \texttt{CodeValidated} y \texttt{CodeRejected}. Cada evento incluye los campos de la acción más metadatos de Commanded (\texttt{causation\_id}, \texttt{correlation\_id}, \texttt{created\_at}).
+
+\section{Relaciones entre entidades}
+
+\begin{itemize}
+    \item Un \textbf{usuario} tiene cero o más \textbf{conversaciones}.
+    \item Una \textbf{conversación} tiene cero o más \textbf{mensajes}, \textbf{tarjetas de análisis}, \textbf{códigos predichos} y \textbf{sugerencias de código}. Al eliminar una conversación, todos sus registros dependientes se eliminan en cascada.
+    \item Un \textbf{mensaje} de tipo \texttt{analysis} tiene exactamente tres \textbf{tarjetas de análisis}: \texttt{summary} (posición 0), \texttt{codes} (posición 1) y \texttt{recommendations} (posición 2).
+    \item Un \textbf{código predicho} hace referencia a un código del \textbf{catálogo CIE-10-ES} a través del campo \texttt{cie10\_code}, aunque no existe una clave foránea explícita para permitir predicciones de códigos aún no importados al catálogo.
+\end{itemize}
