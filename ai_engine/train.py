@@ -1,12 +1,12 @@
 """
-train.py — Flat multi-label CIE-10 classifier (RigoBERTa)
+train.py — Flat multi-label CIE-10 classifier (RigoBERTa-Clinical)
 
 Entrena un único modelo de clasificación multi-label sobre los ~1767 códigos
 CIE-10 presentes en el dataset CodiESP.  No hay jerarquía: una sola pasada
 forward produce probabilidades para todos los códigos a la vez.
 
-Modelo por defecto: BSC-LT/RigoBERTa  (DeBERTa-v2, ventana 4096 tokens)
-  Equivalente a usar --model_name BSC-LT/RigoBERTa
+Modelo por defecto: IIC/RigoBERTa-Clinical  (XLM-RoBERTa-large, especialización clínica ES)
+  Equivalente a usar --model_name IIC/RigoBERTa-Clinical
 
 Uso básico (desde la raíz del proyecto):
   python ai_engine/train.py
@@ -17,7 +17,7 @@ Con todas las opciones:
       --val_file     training/csv_import_scripts/codiesp_csvs/codiesp_D_source_validation.csv \\
       --cie10_file   training/csv_import_scripts/cie10-csvs/cie10-es-diagnoses.csv \\
       --output_dir   ai_engine/model \\
-      --model_name   BSC-LT/RigoBERTa \\
+      --model_name   IIC/RigoBERTa-Clinical \\
       --max_length   1024 \\
       --epochs       20 \\
       --batch_size   4 \\
@@ -865,7 +865,7 @@ def main():
         default=str(data_dir / "cie10-csvs/cie10-es-diagnoses.csv"))
     parser.add_argument("--output_dir",
         default=str(script_dir / "model"))
-    parser.add_argument("--model_name",  default="BSC-LT/RigoBERTa")
+    parser.add_argument("--model_name",  default="IIC/RigoBERTa-Clinical")
     parser.add_argument("--max_length",  type=int, default=1024)
     parser.add_argument("--epochs",      type=int, default=20)
     parser.add_argument("--batch_size",  type=int, default=4)

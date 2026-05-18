@@ -20,7 +20,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 \textbf{Alternativas descartadas.}
 \begin{itemize}
     \item \textbf{Node.js + Express}: buena gestión de I/O asíncrono, pero el modelo \emph{single-threaded} dificulta el aislamiento de fallos y carece de soporte equivalente para CQRS.
-    \item \textbf{Python + FastAPI}: tecnología ya usada en el motor de IA; mezclarla en el backend habría introducido complejidad operacional sin ventaja arquitectónica.
+    \item \textbf{Python + FastAPI}: tecnología ya usada en el motor de IA; tiene un peor rendimiento en concurrencia y no está tan orientado a sistemas altamente concurrentes y tolerantes a fallos con Event sourcing.
     \item \textbf{Go + Gin}: excelente rendimiento, pero ecosistema de Event Sourcing menos maduro y mayor coste de desarrollo para funcionalidades como canales WebSocket multiplexados.
 \end{itemize}
 

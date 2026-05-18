@@ -3,6 +3,17 @@
 
 Este anexo documenta los protocolos y contratos de comunicación entre los servicios del sistema: la API REST entre frontend y backend, el canal WebSocket para mensajes en tiempo real y la llamada HTTP del backend al motor de IA.
 
+\section{Flujo de análisis clínico}
+
+La Figura~\ref{fig:seq-analisis} ilustra la secuencia completa de mensajes que se intercambian cuando el codificador envía un informe clínico al sistema.
+
+\begin{figure}[ht]
+\centering
+\resizebox{\textwidth}{!}{\input{figs/seq-analisis}}
+\caption{Diagrama de secuencia del flujo de análisis clínico.}
+\label{fig:seq-analisis}
+\end{figure}
+
 \section{API REST: frontend \texorpdfstring{$\rightarrow$}{->} backend}
 
 La base de la URL es configurable mediante la variable de entorno \texttt{NEXT\_PUBLIC\_API\_URL} (valor por defecto: \texttt{http://localhost:4000/api}). Las rutas protegidas requieren la cabecera \texttt{Authorization: Bearer <token>}, donde \texttt{<token>} es un JWT emitido por Phoenix al iniciar sesión con validez de 30 días.
