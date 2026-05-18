@@ -261,13 +261,13 @@
 }
 
 @Misc{sanidad2016cie10,
-  author       = {Ministerio de Sanidad, Servicios Sociales e Igualdad},
-  howpublished = {{URL: }\url{https://blog.planview.com/top-6-software-development-methodologies}},
+  author       = {{Ministerio de Sanidad, Servicios Sociales e Igualdad}},
+  howpublished = {{URL: }\url{https://www.sanidad.gob.es/estadEstudios/estadisticas/normalizacion/CIE10/2016_Informe_EstudiosDobleCodificacion.pdf}},
   title        = {Informe sobre los estudios de doble codificación},
   year         = {2016},
   institution  = {Ministerio de Sanidad, Servicios Sociales e Igualdad},
-  url          ={https://www.sanidad.gob.es/estadEstudios/estadisticas/normalizacion/CIE10/2016_Informe_EstudiosDobleCodificacion.pdf},
-  note         = {Consultado el 22 de abril de 2025}
+  url          = {https://www.sanidad.gob.es/estadEstudios/estadisticas/normalizacion/CIE10/2016_Informe_EstudiosDobleCodificacion.pdf},
+  note         = {Consultado el 18 de mayo de 2026},
 }
 
 @article{gogorcena2017cie10es,
@@ -283,45 +283,47 @@
   note         = {Consultado el 22 de abril de 2025}
 }
 
-@article{aronson2011,
-  author       = {Aronson, Alan R. and Lang, François-Marie},
-  title        = {An overview of SNOMED-CT and its logical foundations},
+@inproceedings{stearns2001snomedct,
+  author       = {Stearns, Michael Q. and Price, Colin and Spackman, Kent A. and Wang, Amy Y.},
+  title        = {{SNOMED} clinical terms: overview of the development process and project status},
+  booktitle    = {Proceedings of the AMIA Annual Symposium},
+  year         = {2001},
+  pages        = {662--666},
+  url          = {https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2243297/},
+  note         = {PMID: 11825268. Consultado el 18 de mayo de 2026},
+}
+
+@article{perotte2014,
+  author       = {Perotte, Adler and Ranganath, Rajesh and Hirsch, Jamie S. and Blei, David and Elhadad, No{\'{e}}mie},
+  title        = {Diagnosis code assignment: models and evaluation metrics},
   journal      = {Journal of the American Medical Informatics Association},
-  volume       = {18},
-  number       = {5},
-  pages        = {435--441},
-  year         = {2011},
-  doi          = {10.1136/amiajnl-2011-000123},
-  note         = {Consultado el 22 de abril de 2025}
+  volume       = {21},
+  number       = {2},
+  pages        = {231--237},
+  year         = {2014},
+  doi          = {10.1136/amiajnl-2013-002159},
+  url          = {https://doi.org/10.1136/amiajnl-2013-002159},
+  note         = {Consultado el 18 de mayo de 2026},
 }
 
-@article{liu2018,
-  author       = {Liu, Xiaoming and Zhang, Wei},
-  title        = {Statistical models for ICD-9 and ICD-10 coding: A comparative study},
-  journal      = {Journal of Biomedical Informatics},
-  volume       = {81},
-  pages        = {1--10},
-  year         = {2018},
-  doi          = {10.1016/j.jbi.2018.01.001},
-  note         = {Consultado el 22 de abril de 2025}
+@InProceedings{miranda2020,
+  author    = {Miranda-Escalada, Antonio and Gonzalez-Agirre, Aitor and Armengol-Estap{\'{e}}, Jordi and Krallinger, Martin},
+  title     = {Overview of Automatic Clinical Coding: Annotations, Guidelines, and Solutions for Non-{English} Clinical Cases at {CodiEsp} Track of {eHealth CLEF} 2020},
+  booktitle = {CLEF 2020 Working Notes. Working Notes of the Conference and Labs of the Evaluation Forum},
+  year      = {2020},
+  series    = {CEUR Workshop Proceedings},
+  volume    = {2696},
+  url       = {https://ceur-ws.org/Vol-2696/paper_100.pdf},
+  note      = {Consultado el 18 de mayo de 2026},
 }
 
-@inproceedings{miranda2020,
-  author       = {Miranda-Escalada, Antonio and Gonzalez-Agirre, Aitor and Armengol-Estapé, Jordi and Krallinger, Martin},
-  title        = {Overview of automatic clinical coding: annotations, guidelines, and solutions for non-English clinical cases at CodiEsp track of CLEF eHealth 2020},
-  booktitle    = {Working Notes of Conference and Labs of the Evaluation (CLEF) Forum. CEUR Workshop Proceedings},
-  year         = {2020},
-  url          = {https://temu.bsc.es/codiesp/},
-  note         = {Consultado el 22 de abril de 2025}
-}
-
-@article{alsentzer2019,
-  author       = {Alsentzer, Emily and Murphy, Joe and Boag, Willie and Weng, Wei-Hung and Jin, Qian and Naumann, Tristan and McDermott, Matthew},
-  title        = {ClinicalBERT: Modeling Clinical Notes},
-  journal      = {arXiv preprint arXiv:1904.05342},
+@inproceedings{alsentzer2019,
+  author       = {Alsentzer, Emily and Murphy, John R. and Boag, Willie and Weng, Wei-Hung and Jina, Di and Naumann, Tristan and McDermott, Matthew},
+  title        = {Publicly Available Clinical {BERT} Embeddings},
+  booktitle    = {Proceedings of the 2nd Clinical Natural Language Processing Workshop (NAACL-HLT 2019)},
   year         = {2019},
-  url          = {https://arxiv.org/abs/1904.05342},
-  note         = {Consultado el 22 de abril de 2025}
+  url          = {https://arxiv.org/abs/1904.03323},
+  note         = {arXiv:1904.03323. Consultado el 18 de mayo de 2026},
 }
 
 @article{lee2020,
@@ -335,6 +337,173 @@
   doi     = {10.1093/bioinformatics/btz682},
   url     = {https://doi.org/10.1093/bioinformatics/btz682},
   note    = {Consultado el 22 de abril de 2025}
+}
+
+@article{devlin2019,
+  author    = {Devlin, Jacob and Chang, Ming-Wei and Lee, Kenton and Toutanova, Kristina},
+  title     = {{BERT}: Pre-training of Deep Bidirectional Transformers for Language Understanding},
+  journal   = {arXiv preprint arXiv:1810.04805},
+  year      = {2019},
+  url       = {https://arxiv.org/abs/1810.04805},
+  note      = {Publicado en NAACL 2019. Consultado el 18 de mayo de 2026},
+}
+
+@article{liu2019roberta,
+  author    = {Liu, Yinhan and Ott, Myle and Goyal, Naman and Du, Jingfei and Joshi, Mandar and Chen, Danqi and Levy, Omer and Lewis, Mike and Zettlemoyer, Luke and Stoyanov, Veselin},
+  title     = {{RoBERTa}: A Robustly Optimized {BERT} Pretraining Approach},
+  journal   = {arXiv preprint arXiv:1907.11692},
+  year      = {2019},
+  url       = {https://arxiv.org/abs/1907.11692},
+  note      = {Consultado el 18 de mayo de 2026},
+}
+
+@inproceedings{he2021deberta,
+  author    = {He, Pengcheng and Liu, Xiaodong and Gao, Jianfeng and Chen, Weizhu},
+  title     = {{DeBERTa}: Decoding-enhanced {BERT} with Disentangled Attention},
+  booktitle = {9th International Conference on Learning Representations (ICLR 2021)},
+  year      = {2021},
+  url       = {https://arxiv.org/abs/2006.03654},
+  note      = {Consultado el 18 de mayo de 2026},
+}
+
+@article{vacaserrano2022rigoberta,
+  author    = {Vaca Serrano, Alejandro and Garcia Subies, Guillem and Montoro Zamorano, Helena and Aldama Garcia, Nuria and Samy, Doaa and Betancur Sanchez, David and Moreno Sandoval, Antonio and Guerrero Nieto, Marta and Barbero Jim{\'e}nez, {\'A}lvaro},
+  title     = {{RigoBERTa}: A State-of-the-Art Language Model For Spanish},
+  journal   = {arXiv preprint arXiv:2205.10233},
+  year      = {2022},
+  url       = {https://arxiv.org/abs/2205.10233},
+  note      = {Consultado el 18 de mayo de 2026},
+}
+
+@article{garciasubies2026rigobertaclinical,
+  author    = {Garc{\'i}a Subies, Guillem and Barbero Jim{\'e}nez, {\'A}lvaro and Mart{\'i}nez Fern{\'a}ndez, Paloma},
+  title     = {Advancing Spanish clinical language understanding through domain-adaptive pretraining and new open clinical resources},
+  journal   = {Engineering Applications of Artificial Intelligence},
+  volume    = {178},
+  pages     = {114998},
+  year      = {2026},
+  doi       = {10.1016/j.engappai.2026.114998},
+  url       = {https://doi.org/10.1016/j.engappai.2026.114998},
+  note      = {Consultado el 18 de mayo de 2026},
+}
+
+@article{warner2024modernbert,
+  author    = {Warner, Benjamin and Chaffin, Antoine and Clavi{\'e}, Benjamin and Weller, Orion and Hallstr{\"o}m, Oskar and Taghadouini, Said and Gallagher, Alexis and Biswas, Raja and Ladhak, Faisal and Aarsen, Tom and Cooper, Nathan and Adams, Griffin and Howard, Jeremy and Poli, Iacopo},
+  title     = {Smarter, Better, Faster, Longer: A Modern Bidirectional Encoder for Fast, Memory Efficient, and Long Context Finetuning and Inference},
+  journal   = {arXiv preprint arXiv:2412.13663},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2412.13663},
+  note      = {Consultado el 18 de mayo de 2026},
+}
+
+@article{marone2025mmbert,
+  author    = {Marone, Marc and Weller, Orion and Fleshman, William and Yang, Eugene and Lawrie, Dawn and Van Durme, Benjamin},
+  title     = {{mmBERT}: A Modern Multilingual Encoder with Annealed Language Learning},
+  journal   = {arXiv preprint arXiv:2509.06888},
+  year      = {2025},
+  url       = {https://arxiv.org/abs/2509.06888},
+  note      = {Consultado el 18 de mayo de 2026},
+}
+
+@article{canete2020beto,
+  author    = {Ca{\~n}ete, Jos{\'e} and Chaperon, Gabriel and Fuentes, Rodrigo and Ho, Jou-Hui and Kang, Hojin and P{\'e}rez, Jorge},
+  title     = {Spanish Pre-Trained {BERT} Model and Evaluation Data},
+  journal   = {arXiv preprint arXiv:2004.02251},
+  year      = {2020},
+  url       = {https://arxiv.org/abs/2004.02251},
+  note      = {Consultado el 18 de mayo de 2026},
+}
+
+@inproceedings{reimers2019sentencebert,
+  author    = {Reimers, Nils and Gurevych, Iryna},
+  title     = {Sentence-{BERT}: Sentence Embeddings using Siamese {BERT}-Networks},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing (EMNLP 2019)},
+  year      = {2019},
+  url       = {https://arxiv.org/abs/1908.10084},
+  note      = {Consultado el 18 de mayo de 2026},
+}
+
+@article{sanh2019distilbert,
+  author    = {Sanh, Victor and Debut, Lysandre and Chaumond, Julien and Wolf, Thomas},
+  title     = {{DistilBERT}, a distilled version of {BERT}: smaller, faster, cheaper and lighter},
+  journal   = {arXiv preprint arXiv:1910.01108},
+  year      = {2019},
+  url       = {https://arxiv.org/abs/1910.01108},
+  note      = {Consultado el 18 de mayo de 2026},
+}
+
+@Misc{phoenix2024,
+  author       = {McCord, Chris and {Phoenix Core Team}},
+  title        = {Phoenix Framework},
+  year         = {2024},
+  howpublished = {{URL:} \url{https://www.phoenixframework.org/}},
+  note         = {Consultado el 18 de mayo de 2026},
+  url          = {https://www.phoenixframework.org/},
+}
+
+@Misc{commanded2024,
+  author       = {Smith, Ben},
+  title        = {Commanded: Use Commanded to build your own {Elixir} applications following the {CQRS/ES} pattern},
+  year         = {2024},
+  howpublished = {{GitHub:} \url{https://github.com/commanded/commanded}},
+  note         = {Consultado el 18 de mayo de 2026},
+  url          = {https://github.com/commanded/commanded},
+}
+
+@Misc{fastapi2024,
+  author       = {Ram{\'i}rez, Sebasti{\'a}n},
+  title        = {{FastAPI} framework, high performance, easy to learn, fast to code, ready for production},
+  year         = {2024},
+  howpublished = {{URL:} \url{https://fastapi.tiangolo.com/}},
+  note         = {Consultado el 18 de mayo de 2026},
+  url          = {https://fastapi.tiangolo.com/},
+}
+
+@Misc{postgresql2024,
+  author       = {{PostgreSQL Global Development Group}},
+  title        = {{PostgreSQL} Documentation, version 15},
+  year         = {2024},
+  howpublished = {{URL:} \url{https://www.postgresql.org/docs/15/}},
+  note         = {Consultado el 18 de mayo de 2026},
+  url          = {https://www.postgresql.org/docs/15/},
+}
+
+@article{merkel2014docker,
+  author    = {Merkel, Dirk},
+  title     = {Docker: Lightweight {Linux} Containers for Consistent Development and Deployment},
+  journal   = {Linux Journal},
+  volume    = {2014},
+  number    = {239},
+  year      = {2014},
+  url       = {https://www.linuxjournal.com/content/docker-linux-containers-consistent-development-and-deployment},
+  note      = {Consultado el 18 de mayo de 2026},
+}
+
+@Misc{nextjs2024,
+  author       = {{Vercel Inc.}},
+  title        = {{Next.js} --- The {React} Framework for the Web},
+  year         = {2024},
+  howpublished = {{URL:} \url{https://nextjs.org/docs}},
+  note         = {Consultado el 18 de mayo de 2026},
+  url          = {https://nextjs.org/docs},
+}
+
+
+@Misc{cie10repo2026,
+  author       = {Martin Garcia, David},
+  title        = {CIE-10: Sistema de Codificación de Diagnósticos Clínicos a través de la norma {CIE-10}},
+  year         = {2026},
+  howpublished = {{URL:} \url{https://github.com/dmartingarcia/CIE-10}},
+  note         = {Repositorio Git del proyecto. Más de 60 \emph{commits} en las ramas \texttt{master} y \texttt{main} entre noviembre de 2024 y mayo de 2026. Consultado el 18 de mayo de 2026},
+  url          = {https://github.com/dmartingarcia/CIE-10},
+}
+
+@Misc{eu2017745,
+  author       = {{Parlamento Europeo} and {Consejo de la Unión Europea}},
+  title        = {Reglamento ({UE}) 2017/745 del Parlamento Europeo y del Consejo, de 5 de abril de 2017, sobre los productos sanitarios},
+  year         = {2017},
+  howpublished = {Diario Oficial de la Uni{\'o}n Europea, L 117, pp. 1--175},
+  note         = {5 de abril de 2017},
 }
 
 @Comment{jabref-meta: databaseType:bibtex;}
