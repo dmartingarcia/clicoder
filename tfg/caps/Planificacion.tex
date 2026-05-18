@@ -10,6 +10,19 @@ Kanban no impone iteraciones de duración fija ni \emph{sprints} formales, sino 
 
 El límite de trabajo en curso (\emph{Work In Progress}, WIP) se fija en dos tareas simultáneas en la columna de \emph{En progreso}, una restricción que obliga a completar las tareas antes de comenzar nuevas y reduce el coste de los cambios de contexto.
 
+\subsection{Flujo de trabajo en el tablero Kanban}
+
+Cada tarea se representa como una tarjeta con descripción breve, componente al que pertenece y criterio de aceptación. Las tarjetas transitan por cuatro columnas:
+
+\begin{itemize}
+    \item \textbf{Backlog}: tareas identificadas y priorizadas pero no iniciadas. Al comienzo de cada sesión se selecciona la de mayor prioridad respetando el límite WIP.
+    \item \textbf{En progreso}: tareas activas. El límite de dos simultáneas reduce la fragmentación del esfuerzo y facilita completar antes de comenzar.
+    \item \textbf{En revisión}: implementación terminada, pendiente de verificación (pruebas, revisión del código o comprobación manual del comportamiento).
+    \item \textbf{Hecho}: tareas completadas y verificadas. Una tarea no avanza hasta cumplir su criterio de aceptación.
+\end{itemize}
+
+La priorización del \emph{backlog} se revisa cada vez que se completa una tarea, no en ciclos fijos. Esto permite reaccionar con agilidad ante los resultados del entrenamiento: cuando los experimentos con un modelo base dan resultados insatisfactorios, la tarea de comparativa de modelos asciende en prioridad antes de que el desvío afecte al resto de la planificación.
+
 \section{Recursos}
 
 \subsection{Recursos humanos}
@@ -78,7 +91,7 @@ Las herramientas y tecnologías empleadas en el proyecto se agrupan en las sigui
 
 \subsection{Control de versiones}
 
-El repositorio Git sigue el esquema de ramas habitual para este tipo de proyectos: una rama principal (\texttt{main}) que siempre contiene código funcional, además de las ramas de trabajo (\texttt{feature branches}) para el desarrollo de cada funcionalidad.
+El repositorio Git del proyecto~\cite{cie10repo2026} sigue el esquema de ramas habitual para este tipo de proyectos: una rama principal (\texttt{main}) que siempre contiene código funcional, además de las ramas de trabajo (\texttt{feature branches}) para el desarrollo de cada funcionalidad.
 
 Los mensajes de commit siguen el estándar \emph{Conventional Commits}, validado automáticamente mediante el \emph{hook} de pre-commit de Husky y commitlint. Este estándar impone un formato estructurado (\texttt{tipo(ámbito): descripción}) que facilita la lectura del historial y la generación automática de notas de versión.
 
@@ -181,8 +194,6 @@ Tareas completadas:
 Las épicas no se desarrollan de forma estrictamente secuencial. Los primeros pasos en todas las épicas serán siempre el establecimiento del entorno de desarrollo.
 
 La adquisición de datos se aborda en segundo lugar, ya que el resto del sistema depende de ambas: sin los CSV del corpus no hay entrenamiento posible. A continuación se trabaja en paralelo sobre el motor de IA y el backend, usando el \emph{mock} del AI Engine, para desacoplar ambas líneas de trabajo y poder avanzar en la integración del backend sin necesidad de disponer del modelo entrenado. El frontend se desarrolla progresivamente a medida que el backend expone nuevos endpoints y canales. La épica de modelo de clasificación es la de mayor duración y la que más variaciones presenta durante el desarrollo, dado que el rendimiento en validación determina si es necesario ajustar la arquitectura, los hiperparámetros o el preprocesamiento de los datos.
-
-#PORAAQUIVAMOS
 
 \subsection{Estimación de esfuerzo por épica}
 
