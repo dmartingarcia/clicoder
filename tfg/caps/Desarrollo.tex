@@ -91,7 +91,7 @@ Tres factores técnicos fueron determinantes para el éxito de la extracción: l
 \subsubsection{Análisis exploratorio de los datos}
 \label{sec:analisis_datos}
 
-Antes de diseñar el modelo se realizó un análisis estadístico exhaustivo de ambas fuentes, documentado en los notebooks \texttt{codiesp\_analisis\_estadistico.ipynb} y \texttt{cie10\_analisis\_estadistico.ipynb}.
+Antes de diseñar el modelo se realizó un análisis estadístico exhaustivo de ambas fuentes, documentado en los notebooks \texttt{codiesp\_analisis\_estadistico.ipynb} y\linebreak \texttt{cie10\_analisis\_estadistico.ipynb}.
 
 \paragraph{Longitud de los textos clínicos.}
 Los informes tienen una longitud media de 2.317 caracteres (349 palabras) en el conjunto de entrenamiento, con desviación estándar de 1.097 caracteres y rango entre 556 y 7.466 caracteres. La distribución es aproximadamente log-normal. Aplicando el tokenizador de RigoBERTa-Clinical se comprobó que el \textbf{33,3\,\% de los documentos supera los 512 tokens} (máximo: 1.486 tokens) y que el \textbf{100\,\% queda por debajo de 2.048 tokens}. Este análisis fue determinante para fijar el parámetro \texttt{max\_length} y descartar la técnica de ventana deslizante, cuyo impacto se analiza en la sección~\ref{sec:entrenamiento}.
@@ -144,19 +144,20 @@ La primera decisión de diseño fue la estrategia de clasificación. Se consider
 \paragraph{Fase 1: exploración y descarte de modelos candidatos.}
 Se evaluaron cinco arquitecturas atendiendo a especialización en español médico, longitud de contexto y velocidad de inferencia. La Tabla~\ref{tab:modelos-capitulos} resume los resultados del clasificador de capítulos.
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
+\small
 \caption{Comparativa de modelos en clasificación de capítulos (F1-micro en validación).}
 \label{tab:modelos-capitulos}
-\begin{tabular}{llllr}
+\begin{tabular}{p{5.5cm}rllr}
 \hline
 \textbf{Modelo} & \textbf{Tokens} & \textbf{Idioma} & \textbf{Dominio} & \textbf{F1-micro} \\
 \hline
-IIC/RigoBERTa-Clinical & 1.536 & ES & Clínico & \textbf{0,799} \\
-PlanTL/roberta-base-biomedical-clinical-es & 512 & ES & Biomédico & 0,781 \\
-ModernBERT (answerAI) & 8.192 & EN & General & 0,601 \\
-PlanTL/longformer-base-4096-biomedical-clinical-es & 4.096 & ES & Biomédico & 0,416 \\
-jhu-clsp/mmBERT-base & 1.024 & Multi & General & 0,121 \\
+IIC/RigoBERTa-Clinical               & 1.536 & ES    & Clínico   & \textbf{0,799} \\
+PlanTL/roberta-base-bmc-es           &   512 & ES    & Biomédico & 0,781 \\
+ModernBERT (answerAI)                & 8.192 & EN    & General   & 0,601 \\
+PlanTL/longformer-base-4096-bmc-es   & 4.096 & ES    & Biomédico & 0,416 \\
+jhu-clsp/mmBERT-base                 & 1.024 & Multi & General   & 0,121 \\
 \hline
 \end{tabular}
 \end{table}
@@ -255,7 +256,7 @@ Las contraseñas se almacenan hasheadas con bcrypt. El servicio de email se impl
 
 \subsection{Internacionalización}
 
-La interfaz soporta español e inglés. Las traducciones del backend se almacenan en ficheros YAML (\texttt{priv/translations/es.yml} y \texttt{en.yml}) y se sirven a través del endpoint \texttt{GET /api/translations/:locale}. El frontend las carga al arrancar mediante \texttt{I18nContext} y las aplica con la función \texttt{t(key, vars)}, que soporta interpolación de variables. La preferencia de idioma se persiste en la base de datos del usuario y se sincroniza con el backend al cambiar de idioma.
+La interfaz soporta español e inglés. Las traducciones del backend se almacenan en ficheros YAML (\texttt{priv/translations/es.yml} y \texttt{en.yml}) y se sirven a través del \emph{endpoint} \texttt{GET\allowbreak\ /api/translations/:locale}. El frontend las carga al arrancar mediante \texttt{I18nContext} y las aplica con la función \texttt{t(key, vars)}, que soporta interpolación de variables. La preferencia de idioma se persiste en la base de datos del usuario y se sincroniza con el backend al cambiar de idioma.
 
 \section{Pruebas del sistema}
 
@@ -273,7 +274,7 @@ El backend incluye una suite de pruebas ExUnit organizada en \texttt{backend/tes
 
 \subsection{Pruebas del frontend}
 
-El frontend utiliza Vitest como \emph{framework} de pruebas. La configuración se encuentra en \texttt{frontend/vitest.config.ts} y los informes de cobertura en \texttt{frontend/coverage/}. Las pruebas cubren los componentes de UI más críticos y los contextos de estado.
+El frontend utiliza Vitest como \emph{framework} de pruebas. La configuración se encuentra en \texttt{frontend/\allowbreak vitest.config.ts} y los informes de cobertura en \texttt{frontend/coverage/}. Las pruebas cubren los componentes de UI más críticos y los contextos de estado.
 
 \subsection{Pruebas de sistema}
 
