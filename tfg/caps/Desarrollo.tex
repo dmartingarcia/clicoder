@@ -40,7 +40,11 @@ La interfaz sigue un esquema de dos columnas: un panel lateral izquierdo con el 
 
 \subsection{Arquitectura general}
 
-El sistema sigue una arquitectura orientada a servicios con cuatro capas bien diferenciadas. Para describir la arquitectura se utiliza el modelo C4~\cite{Brown22}.
+El sistema sigue una arquitectura orientada a servicios con cuatro capas bien diferenciadas: motor de inteligencia artificial, backend, frontend y capa de datos. Cada capa se despliega como un contenedor Docker independiente y se comunica con el resto a través de interfaces explícitas, lo que permite actualizar o sustituir cualquier componente sin afectar al resto del sistema.
+
+El \textbf{frontend} (Next.js, React 19) se comunica con el \textbf{backend} (Elixir, Phoenix 1.8) mediante dos canales: una API REST para operaciones de autenticación y consulta, y un canal WebSocket para la recepción de tarjetas de análisis en tiempo real. El backend actúa como orquestador central: recibe los informes clínicos del usuario, los envía al \textbf{motor de IA} (Python, FastAPI) a través de una llamada HTTP síncrona, y retransmite las predicciones resultantes al cliente a medida que se generan. La \textbf{base de datos} PostgreSQL almacena tanto el registro de eventos inmutable del \emph{event store} como las proyecciones de lectura actualizadas por los proyectores del backend.
+
+Dos decisiones arquitectónicas de peso vertebran el diseño. Por un lado, el patrón CQRS/\emph{Event Sourcing} en el backend proporciona trazabilidad completa de todas las acciones clínicas sobre cada análisis. Por otro, el motor de IA se mantiene como servicio independiente, lo que permite actualizar el modelo BERT sin recompilar ni reiniciar el resto del sistema. Para describir la arquitectura en detalle se emplea el modelo C4~\cite{Brown22}. La topología completa de contenedores, puertos y variables de entorno se amplía en el Anexo~\ref{cap:AnexoB}; los contratos de comunicación entre servicios, en el Anexo~\ref{cap:AnexoC}; el esquema de base de datos, en el Anexo~\ref{cap:AnexoD}; y las decisiones de diseño que justifican las elecciones tecnológicas, en el Anexo~\ref{cap:AnexoE}.
 
 \textbf{Nivel de contexto.} El sistema recibe informes clínicos en texto libre de parte del codificador clínico y devuelve propuestas de codificación CIE-10-ES. Se comunica con el portal eCIE-maps del Ministerio de Sanidad como fuente de datos externa (en la fase de adquisición de datos).
 
@@ -58,24 +62,60 @@ El sistema sigue una arquitectura orientada a servicios con cuatro capas bien di
 El motor de IA es el componente más crítico del sistema. Su diseño pasa por tres fases: adquisición de datos, entrenamiento del modelo y exposición del servicio de inferencia.
 
 \subsubsection{Adquisición de datos}
+\label{sec:adquisicion}
 
-El sistema requiere dos fuentes de datos: el corpus CodiEsp~\cite{miranda2020} y el catálogo oficial de códigos CIE-10-ES.
+El sistema requiere dos fuentes de datos complementarias: el corpus de informes clínicos anotados (CodiEsp) y el catálogo oficial de códigos CIE-10-ES con sus descripciones en español.
 
-El corpus CodiEsp se descarga mediante el script \texttt{collect\_codiesp\_dataset.py}, que obtiene los ficheros de entrenamiento, validación y test para diagnósticos (sufijo \texttt{\_D\_}), procedimientos (sufijo \texttt{\_P\_}) y la variante extendida con anotaciones a nivel de \emph{span} (sufijo \texttt{\_X\_}). El resultado son seis ficheros CSV que totalizan aproximadamente 1,2\,GB.
+\paragraph{Corpus CodiEsp.}
+El corpus CodiEsp~\cite{miranda2020} fue creado en el contexto de la tarea compartida IberLEF 2020 y constituye el único recurso público de referencia para la codificación automática de textos clínicos en español. Contiene 1.000 casos clínicos reales extraídos de historias hospitalarias y anotados manualmente por codificadores profesionales con los códigos CIE-10-ES correspondientes, distribuidos en tres particiones:
 
-El catálogo oficial de códigos CIE-10-ES no está disponible en ningún formato de descarga pública estructurada, por lo que se obtiene mediante \emph{scraping} sobre el portal eCIE-maps del Ministerio de Sanidad (\texttt{https://www.eciemaps.sanidad.gob.es}). Los scripts \texttt{collect\_diagnoses.py}, \texttt{collect\_procedures.py} y \texttt{collect\_chemicals.py} iteran sobre los posibles prefijos de código y realizan peticiones a la API interna del portal, guardando los resultados en los ficheros \texttt{cie10-es-diagnoses.csv}, \texttt{cie10-es-procedures.csv} y \texttt{cie10-es-chemicals.csv}, respectivamente. Cada entrada incluye el código, la descripción en español y metadatos clínicos (restricciones de sexo, edad perinatal/pediátrica/materna/adulta, exención de POA y prohibición como diagnóstico principal).
+\begin{itemize}
+    \item \textbf{Entrenamiento:} 500 documentos (50\,\%).
+    \item \textbf{Validación:} 250 documentos (25\,\%).
+    \item \textbf{Test:} 250 documentos (25\,\%).
+\end{itemize}
+
+La adquisición se realizó mediante el script \texttt{collect\_codiesp\_dataset.py}, que descarga los ficheros de diagnósticos (sufijo \texttt{\_D\_}), procedimientos (\texttt{\_P\_}) y la variante extendida con anotaciones a nivel de \emph{span} (\texttt{\_X\_}), normaliza la codificación de caracteres y genera los ficheros CSV empleados en las fases de entrenamiento y evaluación.
+
+\paragraph{Catálogo CIE-10-ES mediante \emph{scraping} del portal eCIE-maps.}
+El diccionario oficial CIE-10-ES no está disponible en ningún formato de descarga pública estructurada. La única fuente oficial es el portal eCIE-maps del Ministerio de Sanidad (\texttt{www.eciemaps.sanidad.gob.es}), que expone los datos a través de una API web no documentada. Para obtener el catálogo completo se analizó el tráfico de red del portal identificando el patrón de los \emph{endpoints} REST que sirven los datos en formato JSON, y se desarrollaron tres scripts de extracción:
+
+\begin{itemize}
+    \item \texttt{collect\_diagnoses.py}: itera sobre las 260 combinaciones letra–dígito del \emph{endpoint} de diagnósticos mediante peticiones asíncronas con \texttt{grequests}. Genera \texttt{cie10-es-diagnoses.csv} con \textbf{101.246 registros}.
+    \item \texttt{collect\_procedures.py}: recorre la jerarquía de tres niveles de procedimientos (secciones, subsecciones y tablas). Genera \texttt{cie10-es-procedures.csv} con \textbf{78.496 registros}.
+    \item \texttt{collect\_chemicals.py}: recorre las 27 letras del índice de fármacos. Genera \texttt{cie10-es-chemicals.csv} con \textbf{5.050 registros}.
+\end{itemize}
+
+Tres factores técnicos fueron determinantes para el éxito de la extracción: la simulación de cabeceras HTTP de navegador (\texttt{User-Agent}, \texttt{Accept}, \texttt{Referer}) para evitar respuestas 403, el paralelismo con reintentos automáticos para garantizar la integridad del catálogo, y el procesamiento por lotes para evitar el agotamiento de memoria en el volumen de procedimientos. Cada entrada incluye el código, la descripción en español y metadatos clínicos (restricciones de sexo, edad perinatal/pediátrica/materna/adulta, exención de POA y prohibición como diagnóstico principal).
 
 \subsubsection{Análisis exploratorio de los datos}
+\label{sec:analisis_datos}
 
-Antes de diseñar el modelo se realizó un análisis estadístico de las fuentes de datos, documentado en los notebooks \texttt{codiesp\_analisis\_estadistico.ipynb} y \texttt{cie10\_analisis\_estadistico.ipynb}. El análisis caracteriza la distribución de longitudes de los informes, la frecuencia de aparición de cada código y el solapamiento entre las particiones de entrenamiento, validación y test. Este análisis pone de manifiesto el fuerte desequilibrio de clases inherente a la distribución de diagnósticos clínicos: un pequeño número de códigos concentra la mayor parte de los casos, mientras que muchos códigos de enfermedades raras o procedimientos poco frecuentes aparecen en muy pocos documentos del corpus.
+Antes de diseñar el modelo se realizó un análisis estadístico exhaustivo de ambas fuentes, documentado en los notebooks \texttt{codiesp\_analisis\_estadistico.ipynb} y \texttt{cie10\_analisis\_estadistico.ipynb}.
+
+\paragraph{Longitud de los textos clínicos.}
+Los informes tienen una longitud media de 2.317 caracteres (349 palabras) en el conjunto de entrenamiento, con desviación estándar de 1.097 caracteres y rango entre 556 y 7.466 caracteres. La distribución es aproximadamente log-normal. Aplicando el tokenizador de RigoBERTa-Clinical se comprobó que el \textbf{33,3\,\% de los documentos supera los 512 tokens} (máximo: 1.486 tokens) y que el \textbf{100\,\% queda por debajo de 2.048 tokens}. Este análisis fue determinante para fijar el parámetro \texttt{max\_length} y descartar la técnica de ventana deslizante, cuyo impacto se analiza en la sección~\ref{sec:entrenamiento}.
+
+\paragraph{Distribución de etiquetas.}
+Cada documento tiene una media de 11,3 códigos CIE-10-ES asignados (mediana: 10; máximo: 40; mínimo: 1). La correlación entre longitud del texto y número de etiquetas es de 0,56. La distribución de frecuencias sigue una ley de potencia: la mayoría de los 2.557 códigos únicos del corpus aparece en cinco o menos documentos. Esta distribución de cola larga motivó el uso de ponderación de clases en la función de pérdida.
+
+\paragraph{Solapamiento entre particiones.}
+El coeficiente de Jaccard entre particiones se sitúa entre 0,31 y 0,33. El dato más relevante para la evaluación es que \textbf{el 38\,\% de los códigos presentes en test no aparece en ningún documento de entrenamiento}, lo que impone un techo teórico al F1-macro independiente de la arquitectura elegida.
+
+\paragraph{Características del catálogo CIE-10-ES.}
+El catálogo contiene 101.246 entradas en 21 capítulos. Las categorías más representadas son R (síntomas y signos), S (traumatismos), T (envenenamientos) e I (enfermedades circulatorias). Esta distribución, unida a que solo una fracción de los códigos aparece en CodiEsp, justifica el uso de \emph{block codes} de tres caracteres (1.767 categorías) en lugar de los códigos completos, reduciendo el espacio de clases a un nivel manejable para 500 documentos de entrenamiento.
 
 \subsubsection{Selección del modelo base}
 
-Se evaluaron cinco modelos candidatos para la codificación del texto clínico. La comparativa, recogida en \texttt{ANALISIS\_MODELOS.md}, consideró rendimiento en CodiEsp, especialización en español médico, velocidad de inferencia y coste computacional de entrenamiento. Los modelos evaluados fueron:
+Se evaluaron nueve modelos candidatos para la codificación del texto clínico. La comparativa, recogida en el Anexo~\ref{cap:AnexoA}, consideró rendimiento en CodiEsp, especialización en español médico, velocidad de inferencia y coste computacional de entrenamiento. Los modelos evaluados fueron:
 
 \begin{itemize}
     \item \texttt{PlanTL-GOB-ES/roberta-base-biomedical-clinical-es} (RoBERTa-BSC, 125M parámetros), entrenado por el Barcelona Supercomputing Center sobre historias clínicas, informes radiológicos y notas médicas en español.
     \item \texttt{PlanTL-GOB-ES/roberta-large-bne-medical} (355M parámetros), variante de mayor tamaño del mismo grupo.
+    \item \texttt{BSC-LT/RigoBERTa} (arquitectura DeBERTa-v2, ventana de contexto de 4096 tokens), desarrollado por la unidad de tecnologías del lenguaje del Barcelona Supercomputing Center; modelo seleccionado para el entrenamiento final en producción.
+    \item \texttt{IIC/RigoBERTa-Clinical} (DeBERTa-v2), variante clínica de RigoBERTa desarrollada por el Instituto de Ingeniería del Conocimiento, especializada en textos médicos en español.
+    \item \texttt{jhu-clsp/mmBERT-base} (mmBERT, multilingüe), modelo multilingüe con ventana de 1500 tokens desarrollado por el Centro de Procesamiento del Lenguaje y del Habla de la Universidad Johns Hopkins.
+    \item \texttt{answerdotai/ModernBERT-base} (ModernBERT, 2024), arquitectura de última generación con Flash Attention y ventana de 8192 tokens; obtuvo el mejor F1 en las pruebas de validación.
     \item \texttt{dccuchile/bert-base-spanish-wwm-cased} (BETO, 110M parámetros), modelo de propósito general en español.
     \item \texttt{sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2} (33M parámetros), orientado a generación de embeddings.
     \item \texttt{distilbert-base-multilingual-cased} (66M parámetros), versión destilada multilingüe de BERT.
@@ -87,19 +127,86 @@ El modelo seleccionado como base fue \texttt{BSC-LT/RigoBERTa} para el entrenami
 
 El clasificador sigue una arquitectura plana (\emph{flat}) de clasificación multilabel. La entrada es el texto del informe clínico codificado por el tokenizador del modelo base; la salida es un vector de probabilidades de dimensión igual al número de códigos presentes en el corpus de entrenamiento (aproximadamente 1.767 códigos únicos en la partición de diagnósticos de CodiEsp).
 
-Sobre el codificador BERT se añade una cabeza de clasificación compuesta por una capa de \emph{dropout} (p\,=\,0,1) y una capa lineal que proyecta la representación del token \texttt{[CLS]} al espacio de códigos. La activación utilizada en inferencia es una sigmoide por código, de modo que cada predicción es independiente del resto y el modelo puede asignar simultáneamente cualquier subconjunto de códigos. Durante el entrenamiento se utiliza \emph{Binary Cross-Entropy} como función de pérdida, con la planificación del tasso de aprendizaje mediante \emph{cosine schedule with warmup}.
+Sobre el codificador BERT se añade una cabeza de clasificación compuesta por una capa de \emph{dropout} (p\,=\,0,1) y una capa lineal que proyecta la representación del token \texttt{[CLS]} al espacio de códigos. La activación utilizada en inferencia es una sigmoide por código, de modo que cada predicción es independiente del resto y el modelo puede asignar simultáneamente cualquier subconjunto de códigos. Durante el entrenamiento se utiliza \emph{Binary Cross-Entropy} como función de pérdida, con la planificación de la tasa de aprendizaje mediante \emph{cosine schedule with warmup}.
 
 La selección de los códigos predichos se realiza mediante un umbral por defecto de 0,5 sobre la probabilidad. Si ningún código supera el umbral, el sistema devuelve los \(k\) códigos con mayor probabilidad para garantizar siempre una respuesta al usuario. Tanto el umbral como el valor de \(k\) son configurables en el fichero \texttt{config.json} generado durante el entrenamiento.
 
 Además del clasificador BERT, el motor incluye un clasificador de diccionario (\texttt{baseline\_dict.py}) basado en coincidencia de términos con las descripciones oficiales de los códigos CIE-10-ES, que actúa como \emph{baseline} de referencia y como fallback cuando el modelo BERT no está disponible.
 
+\subsubsection{Proceso de entrenamiento experimental}
+\label{sec:entrenamiento}
+
+El proceso de entrenamiento se articuló en cuatro fases experimentales sucesivas, guiadas por los resultados en el conjunto de validación. Se registraron 46 corridas en \texttt{training\_runs.csv}, proporcionando trazabilidad total del proceso. El Anexo~\ref{cap:AnexoF} recoge las curvas de aprendizaje más representativas y el Anexo~\ref{cap:AnexoH} los hiperparámetros y resultados finales.
+
+\paragraph{Decisión arquitectural: clasificación en cascada vs. clasificador plano.}
+La primera decisión de diseño fue la estrategia de clasificación. Se consideró una arquitectura de cascada en dos niveles: un clasificador de capítulos (19–21 clases) seguido de clasificadores especializados por capítulo, que reduciría el espacio de búsqueda en un 95\,\%. Para la implementación final se optó por un clasificador plano sobre los 1.767 \emph{block codes} de tres caracteres, combinando la manejabilidad del segundo nivel con la compatibilidad con un único modelo de producción.
+
+\paragraph{Fase 1: exploración y descarte de modelos candidatos.}
+Se evaluaron cinco arquitecturas atendiendo a especialización en español médico, longitud de contexto y velocidad de inferencia. La Tabla~\ref{tab:modelos-capitulos} resume los resultados del clasificador de capítulos.
+
+\begin{table}[h]
+\centering
+\caption{Comparativa de modelos en clasificación de capítulos (F1-micro en validación).}
+\label{tab:modelos-capitulos}
+\begin{tabular}{llllr}
+\hline
+\textbf{Modelo} & \textbf{Tokens} & \textbf{Idioma} & \textbf{Dominio} & \textbf{F1-micro} \\
+\hline
+IIC/RigoBERTa-Clinical & 1.536 & ES & Clínico & \textbf{0,799} \\
+PlanTL/roberta-base-biomedical-clinical-es & 512 & ES & Biomédico & 0,781 \\
+ModernBERT (answerAI) & 8.192 & EN & General & 0,601 \\
+PlanTL/longformer-base-4096-biomedical-clinical-es & 4.096 & ES & Biomédico & 0,416 \\
+jhu-clsp/mmBERT-base & 1.024 & Multi & General & 0,121 \\
+\hline
+\end{tabular}
+\end{table}
+
+mmBERT fue descartado por ausencia de especialización en español médico. ModernBERT opera exclusivamente en inglés. El Longformer-BSC fue descartado por coste computacional (8.022\,s por corrida, 70× más lento) sin mejora apreciable. \textbf{RigoBERTa-Clinical} fue seleccionado por su arquitectura DeBERTa-v2 con atención desacoplada, tokenizador SentencePiece y compatibilidad con Flash Attention 2 (reducción de VRAM de 15,7\,GB a 13,1\,GB y aceleración de 2,5×).
+
+\paragraph{Fase 2: clasificador de capítulos.}
+RigoBERTa-Clinical alcanzó F1-micro = 0,799 en la tarea de capítulos. El principal hallazgo de esta fase fue el diseño del \emph{LR Brickwall}: un suelo de tasa de aprendizaje fijado en $10^{-5}$ que impide que el scheduler reduzca el LR hasta valores en los que el modelo pierde capacidad de ajustar las clases minoritarias.
+
+\paragraph{Fase 3: clasificador de códigos — colapso trivial.}
+La clasificación sobre 1.767 códigos presentó el reto del \textbf{colapso al mínimo local trivial}: con la función de pérdida binaria estándar, el modelo converge a predecir siempre cero (con 11 etiquetas positivas de media, el 99,4\,\% de las entradas son negativas). La solución fue la ponderación asimétrica por frecuencia inversa de clase:
+\begin{equation}
+w_c = \frac{N_{\text{total}} - N_c}{N_c + \varepsilon}
+\end{equation}
+donde $N_c$ es el número de ocurrencias del código $c$ en entrenamiento. El valor operativo se fijó en el rango 10–25 mediante búsqueda sobre el conjunto de validación.
+
+\paragraph{Fase 4: optimización del clasificador plano.}
+Las 46 corridas identificaron los factores de mayor impacto en F1-micro. La Tabla~\ref{tab:hitos} resume los hitos del proceso.
+
+\begin{table}[h]
+\centering
+\caption{Hitos del proceso de optimización (F1-micro en validación, umbral global 0,3).}
+\label{tab:hitos}
+\begin{tabular}{llr}
+\hline
+\textbf{Fecha} & \textbf{Cambio introducido} & \textbf{F1-micro} \\
+\hline
+2026-03-18 & Primera corrida RigoBERTa (LR\,=\,$3\times10^{-5}$) & 0,320 \\
+2026-03-19 & LR aumentado a $10^{-4}$ & 0,413 \\
+2026-03-19 & Calibración de umbral (0,5 → 0,3) & 0,430 \\
+2026-03-20 & Batch virtual 32 + preentrenamiento 10 épocas & 0,470 \\
+2026-03-24 & \emph{LR schedule plateau} (vs. cosine) & 0,475 \\
+2026-03-24 & \emph{Label smoothing} = 0,1 & 0,482 \\
+2026-03-25 & Descongelado progresivo de capas & 0,484 \\
+2026-03-26 & Configuración consolidada (run final) & \textbf{0,489} \\
+\hline
+\end{tabular}
+\end{table}
+
+Tres técnicas mostraron impacto relevante: (1) el \emph{preentrenamiento débil} sobre las descripciones CIE-10-ES y los fragmentos clínicos del task\_X de CodiEsp, que aportó entre 5 y 8 puntos de F1-micro; (2) el \emph{scheduler plateau}, que solo reduce el LR cuando el F1 se estanca en validación, evitando la convergencia prematura del schedule cosine; y (3) el \textbf{descarte de la ventana deslizante}, cuya fragmentación destruye la coherencia clínica (caída de F1-micro de 0,484 a 0,412). La mejor corrida alcanzó F1-micro = 0,551 con umbrales por clase optimizados; la configuración de producción ofrece un mejor equilibrio micro/macro, como se detalla en el Anexo~\ref{cap:AnexoH}.
+
 \subsection{Diseño del backend}
 
-El backend está desarrollado en Elixir 1.15 con el \emph{framework} Phoenix 1.8. Se organiza en torno al patrón CQRS (\emph{Command Query Responsibility Segregation}) y \emph{Event Sourcing}, implementado mediante la biblioteca Commanded. Este patrón separa las operaciones de escritura (comandos) de las de lectura (consultas), y registra todo cambio de estado como un evento inmutable en el \emph{event store}, lo que proporciona trazabilidad completa de todas las acciones del sistema.
+El backend es el orquestador central del sistema. Desarrollado en Elixir 1.15 con el \emph{framework} Phoenix 1.8, asume tres responsabilidades: gestionar la autenticación y el ciclo de vida de los usuarios, coordinar el flujo de análisis clínico entre el frontend y el motor de IA, y garantizar la trazabilidad completa de todas las acciones sobre cada caso.
 
-Los comandos principales son: \texttt{RegisterUser}, \texttt{AnalyzeReport}, \texttt{ReceiveAIPrediction}, \texttt{ValidateCode} y \texttt{RejectCode}. Cada comando genera uno o más eventos que son procesados por proyectores que actualizan las vistas de lectura en PostgreSQL.
+Para cumplir el requisito de trazabilidad clínica, el backend se organiza en torno al patrón CQRS (\emph{Command Query Responsibility Segregation}) y \emph{Event Sourcing}, implementado mediante la biblioteca Commanded. Este patrón separa las operaciones de escritura (comandos) de las de lectura (consultas), y registra todo cambio de estado como un evento inmutable en el \emph{event store}, de modo que cualquier acción —desde la creación de un análisis hasta la validación de un código individual— queda registrada con su marca temporal y su autoría. Los comandos principales son: \texttt{RegisterUser}, \texttt{AnalyzeReport}, \texttt{ReceiveAIPrediction}, \texttt{ValidateCode} y \texttt{RejectCode}. Cada comando genera uno o más eventos que son procesados por proyectores que actualizan las vistas de lectura en PostgreSQL. El esquema completo de eventos, comandos y tablas de proyección se documenta en el Anexo~\ref{cap:AnexoD}.
 
-La comunicación en tiempo real entre frontend y backend se realiza mediante canales WebSocket de Phoenix. El canal \texttt{ConversationChannel} gestiona el envío de informes, la recepción de predicciones del motor de IA y la difusión de tarjetas de análisis al cliente.
+El almacenamiento de eventos se implementa sobre PostgreSQL, sin recurrir a una base de datos dedicada para \emph{Event Sourcing} como EventStoreDB o Apache Kafka. Esta decisión (ADR-04, Anexo~\ref{cap:AnexoE}) reduce la complejidad operacional: un único sistema de base de datos para administrar, con soporte nativo y maduro en Commanded. Si el volumen de eventos creciera hasta niveles que saturaran PostgreSQL —lo que en el contexto clínico de un hospital de tamaño medio no se prevé a corto plazo—, la migración a un \emph{broker} de mensajes como Kafka es viable sin cambios estructurales en el dominio. El módulo \texttt{EventStore} de Commanded sigue el principio de inversión de dependencias (SOLID): el dominio depende de una abstracción, no de un adaptador concreto, de modo que sustituir el adaptador PostgreSQL por uno Kafka se limita a cambiar la configuración del supervisor OTP sin tocar los agregados, proyectores ni manejadores de eventos.
+
+La comunicación en tiempo real entre frontend y backend se realiza mediante canales WebSocket de Phoenix, tecnología que encaja de forma natural con el modelo de actores de la BEAM. El canal \texttt{ConversationChannel} gestiona el envío de informes, la recepción asíncrona de predicciones del motor de IA y la difusión de tarjetas de análisis al cliente a medida que se generan, sin necesidad de \emph{polling}. La especificación completa de los mensajes WebSocket y de la API REST se recoge en el Anexo~\ref{cap:AnexoC}.
 
 \subsection{Diseño del frontend}
 
