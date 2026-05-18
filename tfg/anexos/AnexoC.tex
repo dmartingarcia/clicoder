@@ -1,7 +1,7 @@
 \chapter{Comunicación entre servicios}
 \label{cap:AnexoC}
 
-Este anexo documenta los protocolos y contratos de comunicación entre los servicios del sistema: la API REST entre frontend y backend, el canal WebSocket para mensajes en tiempo real, y la llamada HTTP del backend al motor de IA.
+Este anexo documenta los protocolos y contratos de comunicación entre los servicios del sistema: la API REST entre frontend y backend, el canal WebSocket para mensajes en tiempo real y la llamada HTTP del backend al motor de IA.
 
 \section{API REST: frontend \texorpdfstring{$\rightarrow$}{->} backend}
 
@@ -81,7 +81,7 @@ GET & \texttt{/translations/:locale} & Devuelve el mapa de cadenas de texto para
 
 La conexión WebSocket se establece contra \texttt{ws://localhost:4000/socket} (configurable con \texttt{NEXT\_PUBLIC\_WS\_URL}) usando la librería \texttt{phoenix\_socket}. El token JWT se pasa como parámetro de conexión para autenticar la sesión.
 
-Cada conversación se subscribe a un canal propio con el topic \texttt{conversation:<conversation\_id>}, donde \texttt{conversation\_id} es un UUID generado por el cliente.
+Cada conversación se suscribe a un canal propio con el topic \texttt{conversation:<conversation\_id>}, donde \texttt{conversation\_id} es un UUID generado por el cliente.
 
 \subsection{Mensajes entrantes (cliente \texorpdfstring{$\rightarrow$}{->} servidor)}
 

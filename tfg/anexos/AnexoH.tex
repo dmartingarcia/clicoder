@@ -30,7 +30,7 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración del \emph{run} final (\t
 \texttt{lr\_schedule}    & plateau       & Reducción al detectar estancamiento en val. F1 \\
 \texttt{weight\_decay}   & 0{,}1         & Regularización L2 \\
 \texttt{epochs\_max}     & 150           & Máximo de épocas permitido \\
-\texttt{epochs\_run}     & 110           & Épocas ejecutadas hasta parada temprana \\
+\texttt{epochs\_run}     & 110           & Épocas ejecutadas hasta la parada temprana \\
 \texttt{patience}        & 20            & Épocas sin mejora antes de parar \\
 \hline
 \multicolumn{3}{l}{\textit{Arquitectura}} \\
@@ -78,7 +78,7 @@ Por clase (producción) & optimizado & \textbf{0{,}537} & — \\
 
 El mejor \emph{run} registrado (\texttt{20260326T045031Z}) alcanzó F1 micro = 0{,}489 con umbral global y F1 micro = \textbf{0{,}551} con umbrales por clase. Se seleccionó el \emph{run} \texttt{20260326T130358Z} para producción por ofrecer un equilibrio mejor entre F1 micro y F1 macro.
 
-La diferencia entre F1 micro (0{,}537) y F1 macro (0{,}127) refleja el fuerte desequilibrio de clases del corpus: el modelo rinde bien sobre los códigos frecuentes pero tiene dificultades con los poco representados. Este es un límite inherente al corpus de entrenamiento de 500 documentos, donde la mayoría de los 1.767 códigos aparece menos de cinco veces.
+La diferencia entre F1 micro (0{,}537) y F1 macro (0{,}127) refleja el fuerte desequilibrio de clases del corpus: el modelo rinde bien sobre los códigos frecuentes, pero tiene dificultades con los poco representados. Este es un límite inherente al corpus de entrenamiento de 500 documentos, donde la mayoría de los 1.767 códigos aparecen menos de cinco veces.
 
 \section{Curvas de entrenamiento}
 

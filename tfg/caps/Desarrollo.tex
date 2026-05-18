@@ -44,7 +44,7 @@ El sistema sigue una arquitectura orientada a servicios con cuatro capas bien di
 
 El \textbf{frontend} (Next.js, React 19) se comunica con el \textbf{backend} (Elixir, Phoenix 1.8) mediante dos canales: una API REST para operaciones de autenticación y consulta, y un canal WebSocket para la recepción de tarjetas de análisis en tiempo real. El backend actúa como orquestador central: recibe los informes clínicos del usuario, los envía al \textbf{motor de IA} (Python, FastAPI) a través de una llamada HTTP síncrona, y retransmite las predicciones resultantes al cliente a medida que se generan. La \textbf{base de datos} PostgreSQL almacena tanto el registro de eventos inmutable del \emph{event store} como las proyecciones de lectura actualizadas por los proyectores del backend.
 
-Dos decisiones arquitectónicas de peso vertebran el diseño. Por un lado, el patrón CQRS/\emph{Event Sourcing} en el backend proporciona trazabilidad completa de todas las acciones clínicas sobre cada análisis. Por otro, el motor de IA se mantiene como servicio independiente, lo que permite actualizar el modelo BERT sin recompilar ni reiniciar el resto del sistema. Para describir la arquitectura en detalle se emplea el modelo C4~\cite{Brown22}. La topología completa de contenedores, puertos y variables de entorno se amplía en el Anexo~\ref{cap:AnexoB}; los contratos de comunicación entre servicios, en el Anexo~\ref{cap:AnexoC}; el esquema de base de datos, en el Anexo~\ref{cap:AnexoD}; y las decisiones de diseño que justifican las elecciones tecnológicas, en el Anexo~\ref{cap:AnexoE}.
+Dos decisiones arquitectónicas de peso vertebran el diseño. Por un lado, el patrón CQRS/\emph{Event Sourcing} en el backend proporciona trazabilidad completa de todas las acciones clínicas sobre cada análisis. Por otro lado, el motor de IA se mantiene como servicio independiente, lo que permite actualizar el modelo BERT sin recompilar ni reiniciar el resto del sistema. Para describir la arquitectura en detalle se emplea el modelo C4~\cite{Brown22}. La topología completa de contenedores, puertos y variables de entorno se amplía en el Anexo~\ref{cap:AnexoB}; los contratos de comunicación entre servicios, en el Anexo~\ref{cap:AnexoC}; el esquema de base de datos, en el Anexo~\ref{cap:AnexoD}; y las decisiones de diseño que justifican las elecciones tecnológicas, en el Anexo~\ref{cap:AnexoE}.
 
 \textbf{Nivel de contexto.} El sistema recibe informes clínicos en texto libre de parte del codificador clínico y devuelve propuestas de codificación CIE-10-ES. Se comunica con el portal eCIE-maps del Ministerio de Sanidad como fuente de datos externa (en la fase de adquisición de datos).
 
@@ -52,7 +52,7 @@ Dos decisiones arquitectónicas de peso vertebran el diseño. Por un lado, el pa
 
 \begin{enumerate}
     \item \textbf{Frontend} (Next.js 16, TypeScript): interfaz web que el usuario utiliza para enviar informes y visualizar resultados. Se comunica con el backend mediante una API REST para autenticación y con un canal WebSocket para el intercambio de mensajes en tiempo real.
-    \item \textbf{Backend} (Elixir 1.15, Phoenix 1.8): orquestador central del sistema. Gestiona la autenticación de usuarios, la persistencia de conversaciones mediante CQRS/Event Sourcing con la biblioteca Commanded, y la comunicación con el motor de IA.
+    \item \textbf{Backend} (Elixir 1.15, Phoenix 1.8): orquestador central del sistema. Gestiona la autenticación de usuarios, la persistencia de conversaciones mediante CQRS/Event Sourcing con la biblioteca Commanded y la comunicación con el motor de IA.
     \item \textbf{AI Engine} (Python, FastAPI): servicio de inferencia que carga el modelo BERT entrenado y expone un endpoint \texttt{POST /predict} que recibe un texto clínico y devuelve los códigos CIE-10-ES predichos con sus puntuaciones de confianza.
     \item \textbf{Base de datos} (PostgreSQL 15): almacena usuarios, conversaciones, tarjetas de análisis y el registro de eventos del sistema (event store de Commanded).
 \end{enumerate}
@@ -117,7 +117,7 @@ Se evaluaron nueve modelos candidatos para la codificación del texto clínico. 
     \item \texttt{jhu-clsp/mmBERT-base} (mmBERT, multilingüe), modelo multilingüe con ventana de 1500 tokens desarrollado por el Centro de Procesamiento del Lenguaje y del Habla de la Universidad Johns Hopkins.
     \item \texttt{answerdotai/ModernBERT-base} (ModernBERT, 2024), arquitectura de última generación con Flash Attention y ventana de 8192 tokens; obtuvo el mejor F1 en las pruebas de validación.
     \item \texttt{dccuchile/bert-base-spanish-wwm-cased} (BETO, 110M parámetros), modelo de propósito general en español.
-    \item \texttt{sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2} (33M parámetros), orientado a generación de embeddings.
+    \item \texttt{sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2} (33M parámetros), orientado a la generación de embeddings.
     \item \texttt{distilbert-base-multilingual-cased} (66M parámetros), versión destilada multilingüe de BERT.
 \end{itemize}
 
@@ -142,7 +142,7 @@ El proceso de entrenamiento se articuló en cuatro fases experimentales sucesiva
 La primera decisión de diseño fue la estrategia de clasificación. Se consideró una arquitectura de cascada en dos niveles: un clasificador de capítulos (19–21 clases) seguido de clasificadores especializados por capítulo, que reduciría el espacio de búsqueda en un 95\,\%. Para la implementación final se optó por un clasificador plano sobre los 1.767 \emph{block codes} de tres caracteres, combinando la manejabilidad del segundo nivel con la compatibilidad con un único modelo de producción.
 
 \paragraph{Fase 1: exploración y descarte de modelos candidatos.}
-Se evaluaron cinco arquitecturas atendiendo a especialización en español médico, longitud de contexto y velocidad de inferencia. La Tabla~\ref{tab:modelos-capitulos} resume los resultados del clasificador de capítulos.
+Se evaluaron cinco arquitecturas atendiendo a la especialización en español médico, longitud de contexto y velocidad de inferencia. La Tabla~\ref{tab:modelos-capitulos} resume los resultados del clasificador de capítulos.
 
 \begin{table}[ht]
 \centering
@@ -203,7 +203,7 @@ Tres técnicas mostraron impacto relevante: (1) el \emph{preentrenamiento débil
 
 El backend es el orquestador central del sistema. Desarrollado en Elixir 1.15 con el \emph{framework} Phoenix 1.8, asume tres responsabilidades: gestionar la autenticación y el ciclo de vida de los usuarios, coordinar el flujo de análisis clínico entre el frontend y el motor de IA, y garantizar la trazabilidad completa de todas las acciones sobre cada caso.
 
-Para cumplir el requisito de trazabilidad clínica, el backend se organiza en torno al patrón CQRS (\emph{Command Query Responsibility Segregation}) y \emph{Event Sourcing}, implementado mediante la biblioteca Commanded. Este patrón separa las operaciones de escritura (comandos) de las de lectura (consultas), y registra todo cambio de estado como un evento inmutable en el \emph{event store}, de modo que cualquier acción —desde la creación de un análisis hasta la validación de un código individual— queda registrada con su marca temporal y su autoría. Los comandos principales son: \texttt{RegisterUser}, \texttt{AnalyzeReport}, \texttt{ReceiveAIPrediction}, \texttt{ValidateCode} y \texttt{RejectCode}. Cada comando genera uno o más eventos que son procesados por proyectores que actualizan las vistas de lectura en PostgreSQL. El esquema completo de eventos, comandos y tablas de proyección se documenta en el Anexo~\ref{cap:AnexoD}.
+Para cumplir el requisito de trazabilidad clínica, el backend se organiza en torno al patrón CQRS (\emph{Command Query Responsibility Segregation}) y \emph{Event Sourcing}, implementado mediante la biblioteca Commanded. Este patrón separa las operaciones de escritura (comandos) de las de lectura (consultas) y registra todo cambio de estado como un evento inmutable en el \emph{event store}, de modo que cualquier acción —desde la creación de un análisis hasta la validación de un código individual— queda registrada con su marca temporal y su autoría. Los comandos principales son: \texttt{RegisterUser}, \texttt{AnalyzeReport}, \texttt{ReceiveAIPrediction}, \texttt{ValidateCode} y \texttt{RejectCode}. Cada comando genera uno o más eventos que son procesados por proyectores que actualizan las vistas de lectura en PostgreSQL. El esquema completo de eventos, comandos y tablas de proyección se documenta en el Anexo~\ref{cap:AnexoD}.
 
 El almacenamiento de eventos se implementa sobre PostgreSQL, sin recurrir a una base de datos dedicada para \emph{Event Sourcing} como EventStoreDB o Apache Kafka. Esta decisión (ADR-04, Anexo~\ref{cap:AnexoE}) reduce la complejidad operacional: un único sistema de base de datos para administrar, con soporte nativo y maduro en Commanded. Si el volumen de eventos creciera hasta niveles que saturaran PostgreSQL —lo que en el contexto clínico de un hospital de tamaño medio no se prevé a corto plazo—, la migración a un \emph{broker} de mensajes como Kafka es viable sin cambios estructurales en el dominio. El módulo \texttt{EventStore} de Commanded sigue el principio de inversión de dependencias (SOLID): el dominio depende de una abstracción, no de un adaptador concreto, de modo que sustituir el adaptador PostgreSQL por uno Kafka se limita a cambiar la configuración del supervisor OTP sin tocar los agregados, proyectores ni manejadores de eventos.
 
@@ -256,7 +256,7 @@ Las contraseñas se almacenan hasheadas con bcrypt. El servicio de email se impl
 
 \subsection{Internacionalización}
 
-La interfaz soporta español e inglés. Las traducciones del backend se almacenan en ficheros YAML (\texttt{priv/translations/es.yml} y \texttt{en.yml}) y se sirven a través del \emph{endpoint} \texttt{GET\allowbreak\ /api/translations/:locale}. El frontend las carga al arrancar mediante \texttt{I18nContext} y las aplica con la función \texttt{t(key, vars)}, que soporta interpolación de variables. La preferencia de idioma se persiste en la base de datos del usuario y se sincroniza con el backend al cambiar de idioma.
+La interfaz soporta español e inglés. Las traducciones del backend se almacenan en ficheros YAML (\texttt{priv/translations/es.yml} y \texttt{en.yml}) y se sirven a través del \emph{endpoint} \texttt{GET\allowbreak\ /api/translations/:locale}. El frontend las carga al arrancar mediante \texttt{I18nContext} y las aplica con la función \texttt{t(key, vars)}, que soporta interpolación de variables. La preferencia de idioma se almacena en la base de datos del usuario y se sincroniza con el backend al cambiar de idioma.
 
 \section{Pruebas del sistema}
 
@@ -301,7 +301,7 @@ Base de datos & PostgreSQL 15 & \texttt{localhost:5432} \\
 Mailpit (email dev) & Mailpit & \texttt{http://localhost:8025} \\
 \hline
 \end{tabular}
-\caption{Servicios del sistema y puertos de escucha en entorno local.}
+\caption{Servicios del sistema y puertos de escucha en el entorno local.}
 \label{tab:servicios}
 \end{table}
 

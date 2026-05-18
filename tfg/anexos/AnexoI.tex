@@ -3,7 +3,7 @@
 
 Este anexo describe cómo sería el despliegue del sistema en un proveedor cloud mediante Kubernetes y Terraform. El despliegue no se ha realizado durante el desarrollo del prototipo por razones de coste, pero la arquitectura lo permite sin modificar ningún componente: todos los servicios están ya dockerizados y la infraestructura de Kubernetes está diseñada para este escenario.
 
-Se toma Azure Kubernetes Service (AKS) como referencia por su integración nativa con el registro de imágenes (Azure Container Registry) y el soporte para nodos con GPU, necesarios para el motor de IA. El mismo esquema aplica a Amazon EKS o Google GKE con mínimas adaptaciones en los recursos Terraform.
+Se toma Azure Kubernetes Service (AKS) como referencia por su integración nativa con el registro de imágenes (Azure Container Registry) y el soporte para nodos con GPU, necesarios para el motor de IA. El mismo esquema se aplica a Amazon EKS o Google GKE con mínimas adaptaciones en los recursos Terraform.
 
 \section{Infraestructura como código con Terraform}
 
