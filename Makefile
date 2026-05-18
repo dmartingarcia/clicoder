@@ -401,9 +401,9 @@ tfg-pdf: ## Compilar memoria TFG a PDF (requiere Docker)
 		-v "$$(pwd)/$(TFG_DIR)":/tfg \
 		-w /tfg \
 		$(TFG_IMAGE) \
-		sh -c 'mkdir -p build && \
+		sh -c 'mkdir -p build build/caps build/preambulo build/anexos && \
 		       pdflatex -interaction=nonstopmode -output-directory=build $(TFG_MAIN).tex && \
-		       bibtex build/$(TFG_MAIN) && \
+		       cd build && BIBINPUTS=../ bibtex $(TFG_MAIN) && cd .. && \
 		       pdflatex -interaction=nonstopmode -output-directory=build $(TFG_MAIN).tex && \
 		       pdflatex -interaction=nonstopmode -output-directory=build $(TFG_MAIN).tex'
 	@echo "$(GREEN)✓ PDF generado en $(TFG_OUT)/$(TFG_MAIN).pdf$(NC)"
