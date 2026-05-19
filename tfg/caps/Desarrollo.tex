@@ -335,3 +335,5 @@ Los principales proveedores de correo (Gmail, Outlook, los servidores corporativ
 \end{itemize}
 
 Swoosh, la librería de email de Phoenix, se configura para producción con un adaptador SMTP externo mediante las variables de entorno \texttt{SMTP\_HOST}, \texttt{SMTP\_PORT}, \texttt{SMTP\_USER} y \texttt{SMTP\_PASS}. La dirección remitente declarada en \texttt{APP\_HOST} (\texttt{clicoder.app}) debe coincidir con el dominio para el que se han publicado los registros SPF, DKIM y DMARC, de lo contrario los principales proveedores de email clasificarán los mensajes como \emph{spam} o los rechazarán directamente.
+
+El proveedor seleccionado para producción es \textbf{Mailjet}, cuyo nivel gratuito permite enviar hasta 200 emails diarios (6.000 mensuales). Dado que la plataforma se encuentra en fase inicial y el volumen de registros es reducido, este límite es suficiente para el tráfico transaccional esperado. La arquitectura no requiere ningún cambio para escalar: cuando el volumen de usuarios crezca, basta con contratar un nivel superior en Mailjet y actualizar las variables de entorno \texttt{SMTP\_*}, sin modificar ningún componente de la aplicación.
