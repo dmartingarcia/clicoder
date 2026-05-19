@@ -115,7 +115,7 @@ Se evaluaron nueve modelos candidatos para la codificación del texto clínico. 
     \item \texttt{IIC/RigoBERTa-2.0} (arquitectura XLM-RoBERTa-large, $\sim$600M parámetros), versión de propósito general desarrollada por el Instituto de Ingeniería del Conocimiento sobre corpus español de gran escala.
     \item \texttt{IIC/RigoBERTa-Clinical} (XLM-RoBERTa-large, especialización clínica), variante de RigoBERTa entrenada sobre corpus médico en español por el Instituto de Ingeniería del Conocimiento; modelo seleccionado para el entrenamiento final en producción.
     \item \texttt{jhu-clsp/mmBERT-base} (mmBERT, arquitectura ModernBERT multilingüe), modelo con ventana de 8192 tokens entrenado sobre 1800+ lenguas, desarrollado por el Centro de Procesamiento del Lenguaje y del Habla de la Universidad Johns Hopkins.
-    \item \texttt{answerdotai/ModernBERT-base} (ModernBERT, 2024), arquitectura de última generación con Flash Attention y ventana de 8192 tokens; obtuvo el mejor F1 en las pruebas de validación.
+    \item \texttt{answerdotai/ModernBERT-base} (ModernBERT, 2024), arquitectura de última generación con Flash Attention y ventana de 8192 tokens; obtuvo un F1-micro de 0{,}601 en pruebas de nivel~1.
     \item \texttt{dccuchile/bert-base-spanish-wwm-cased} (BETO, 110M parámetros), modelo de propósito general en español.
     \item \texttt{sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2} (33M parámetros), orientado a la generación de embeddings.
     \item \texttt{distilbert-base-multilingual-cased} (66M parámetros), versión destilada multilingüe de BERT.
@@ -142,7 +142,7 @@ El proceso de entrenamiento se articuló en cuatro fases experimentales sucesiva
 La primera decisión de diseño fue la estrategia de clasificación. Se consideró una arquitectura de cascada en dos niveles: un clasificador de capítulos (19–21 clases) seguido de clasificadores especializados por capítulo, que reduciría el espacio de búsqueda en un 95\,\%. Para la implementación final se optó por un clasificador plano sobre los 1.767 \emph{block codes} de tres caracteres, combinando la manejabilidad del segundo nivel con la compatibilidad con un único modelo de producción.
 
 \paragraph{Fase 1: exploración y descarte de modelos candidatos.}
-Se evaluaron cinco arquitecturas atendiendo a la especialización en español médico, longitud de contexto y velocidad de inferencia. La Tabla~\ref{tab:modelos-capitulos} resume los resultados del clasificador de capítulos.
+Se evaluaron cinco arquitecturas atendiendo a la especialización en español médico, longitud de contexto y velocidad de inferencia. Para acelerar la comparación, todos los experimentos de esta fase se realizaron sobre la tarea de clasificación de \textbf{capítulos CIE-10} (21 clases), que actúa como aproximación de primer nivel: menos clases implican ciclos de entrenamiento más rápidos y resultados más interpretables, a la vez que el ranking relativo de modelos se transfiere bien a la tarea final. El clasificador de producción opera sobre los 1.767 \emph{block codes} de tres caracteres, que proporcionan el código CIE-10 completo. La Tabla~\ref{tab:modelos-capitulos} resume los resultados del clasificador de capítulos.
 
 \begin{table}[ht]
 \centering
@@ -162,7 +162,7 @@ jhu-clsp/mmBERT-base                 & 8.192 & Multi & General   & 0,121 \\
 \end{tabular}
 \end{table}
 
-mmBERT fue descartado por ausencia de especialización en español médico. ModernBERT opera exclusivamente en inglés. El Longformer-BSC fue descartado por coste computacional (8.022\,s por corrida, 70× más lento) sin mejora apreciable. \textbf{RigoBERTa-Clinical} fue seleccionado por su arquitectura DeBERTa-v2 con atención desacoplada, tokenizador SentencePiece y compatibilidad con Flash Attention 2 (reducción de VRAM de 15,7\,GB a 13,1\,GB y aceleración de 2,5×).
+mmBERT fue descartado por ausencia de especialización en español médico. ModernBERT, pese a su ventana de 8192 tokens, obtuvo F1-micro\,=\,0{,}601 en nivel~1, penalizado por operar con un modelo entrenado en inglés. El Longformer-BSC fue descartado por coste computacional (8.022\,s por corrida, 70× más lento) sin mejora apreciable. \textbf{RigoBERTa-Clinical} fue seleccionado por combinar la mayor F1-micro experimental (0{,}799 en nivel~1) con el mejor equilibrio micro/macro entre los modelos evaluados, gracias a su especialización en texto clínico en español.
 
 \paragraph{Fase 2: clasificador de capítulos.}
 RigoBERTa-Clinical alcanzó F1-micro = 0,799 en la tarea de capítulos. El principal hallazgo de esta fase fue el diseño del \emph{LR Brickwall}: un suelo de tasa de aprendizaje fijado en $10^{-5}$ que impide que el scheduler reduzca el LR hasta valores en los que el modelo pierde capacidad de ajustar las clases minoritarias.
@@ -291,9 +291,11 @@ Las pruebas de sistema verifican el flujo completo de uso: registro, inicio de s
 
 \subsection{Arquitectura de despliegue}
 
-El sistema se despliega mediante Docker Compose. Cada componente reside en su propio contenedor con su \texttt{Dockerfile} específico. La configuración base (\texttt{docker-compose.yml}) define los servicios y sus dependencias; las variantes \texttt{docker-compose.gpu.yml} y \texttt{docker-compose.cpu.yml} permiten configurar el motor de IA con o sin aceleración por GPU.
+El proyecto distingue dos entornos con herramientas de orquestación distintas según sus necesidades.
 
-Los servicios y sus puertos de escucha son los que se indican en la tabla~\ref{tab:servicios-puertos}.
+\textbf{Desarrollo y pruebas.} Cada componente reside en su propio contenedor con su \texttt{Dockerfile} específico, orquestados mediante Docker Compose. La configuración base (\texttt{docker-compose.yml}) define los servicios y sus dependencias; las variantes \texttt{docker-compose.gpu.yml} y \texttt{docker-compose.cpu.yml} permiten configurar el motor de IA con o sin aceleración por GPU. El Makefile centraliza las operaciones habituales del ciclo de desarrollo: levantar el sistema, aplicar migraciones, lanzar los tests o reconstruir el motor de IA tras un nuevo entrenamiento.
+
+Los servicios y sus puertos de escucha en el entorno local son los que se indican en la tabla~\ref{tab:servicios-puertos}.
 
 \begin{table}[h]
 \centering
@@ -312,8 +314,24 @@ Mailpit (email dev) & Mailpit & \texttt{http://localhost:8025} \\
 \label{tab:servicios-puertos}
 \end{table}
 
+\textbf{Producción.} La arquitectura de producción está diseñada sobre Kubernetes (véase el Anexo~\ref{cap:AnexoI}): cada servicio se define como un \emph{Deployment} con su \emph{Service} correspondiente, Traefik actúa como \emph{ingress controller} y proxy inverso, y los certificados TLS se gestionan automáticamente mediante cert-manager y Let's Encrypt. El despliegue en un proveedor cloud no se ha materializado durante el desarrollo del prototipo por razones de coste; constituye un paso futuro una vez validado el sistema. Los manifiestos están preparados y ningún componente requiere modificaciones para realizar ese despliegue. El dominio \texttt{clicoder.app} está registrado y apuntará al clúster cuando el despliegue se materialice.
+
 \subsection{Puesta en marcha}
 
 El sistema se levanta con el comando \texttt{make up} desde la raíz del repositorio, que ejecuta \texttt{docker compose up} con la configuración apropiada. Las migraciones de base de datos se aplican con \texttt{make backend-migrate}. El modelo de IA se entrena y exporta con \texttt{make train-all}, y el contenedor del motor de IA se reconstruye con \texttt{make train-export} tras un nuevo entrenamiento.
 
 La imagen base del motor de IA (\texttt{Dockerfile.ml-base}) instala las dependencias Python más pesadas (PyTorch, Transformers) en una capa separada, de modo que las reconstrucciones posteriores —que solo cambian el código de aplicación— son significativamente más rápidas.
+
+\subsection{Configuración de email en producción}
+
+El sistema envía emails transaccionales en dos situaciones: la confirmación de cuenta al registrarse y, en caso de implementarse en el futuro, la recuperación de contraseña. En el entorno de desarrollo este tráfico es capturado por Mailpit. En producción, sin embargo, la entregabilidad de estos mensajes es un requisito funcional crítico: si el email de confirmación no llega al codificador clínico, el flujo de registro queda bloqueado y el usuario no puede acceder al sistema.
+
+Los principales proveedores de correo (Gmail, Outlook, los servidores corporativos hospitalarios) aplican filtros antispam cada vez más estrictos que rechazan o clasifican como sospechosos los mensajes procedentes de dominios sin autenticación correctamente configurada. En un contexto sanitario esto se agrava: los sistemas de filtrado de hospitales y centros de salud suelen tener políticas más restrictivas que el correo de consumo, precisamente para proteger a los profesionales de ataques de \emph{phishing} que suplanten aplicaciones clínicas. Un sistema de codificación que envía emails con tokens de acceso es un objetivo de suplantación especialmente sensible. Por ello, la autenticidad del dominio remitente se garantiza mediante tres mecanismos estándar configurados en el DNS:
+
+\begin{itemize}
+    \item \textbf{SPF} (\emph{Sender Policy Framework}): registro TXT en el DNS que declara qué servidores están autorizados a enviar email en nombre del dominio. Impide que terceros suplanten el dominio remitente en la cabecera \texttt{From}.
+    \item \textbf{DKIM} (\emph{DomainKeys Identified Mail}): firma criptográfica añadida a cada mensaje por el servidor de envío. El servidor receptor verifica la firma contra la clave pública publicada en el DNS, garantizando que el mensaje no ha sido modificado en tránsito.
+    \item \textbf{DMARC} (\emph{Domain-based Message Authentication, Reporting and Conformance}): política que especifica qué debe hacer el servidor receptor cuando un mensaje no supera las comprobaciones SPF o DKIM (ninguna acción, cuarentena o rechazo), y a qué dirección enviar los informes de actividad. Proporciona visibilidad sobre intentos de suplantación del dominio.
+\end{itemize}
+
+Swoosh, la librería de email de Phoenix, se configura para producción con un adaptador SMTP externo mediante las variables de entorno \texttt{SMTP\_HOST}, \texttt{SMTP\_PORT}, \texttt{SMTP\_USER} y \texttt{SMTP\_PASS}. La dirección remitente declarada en \texttt{APP\_HOST} (\texttt{clicoder.app}) debe coincidir con el dominio para el que se han publicado los registros SPF, DKIM y DMARC, de lo contrario los principales proveedores de email clasificarán los mensajes como \emph{spam} o los rechazarán directamente.
