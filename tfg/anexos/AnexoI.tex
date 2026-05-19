@@ -1,9 +1,9 @@
-\chapter{Despliegue simulado en la nube con Kubernetes}
+\chapter{Arquitectura de producción con Kubernetes}
 \label{cap:AnexoI}
 
-Este anexo describe cómo sería el despliegue del sistema en un proveedor cloud mediante Kubernetes y Terraform. El despliegue no se ha realizado durante el desarrollo del prototipo por razones de coste, pero la arquitectura lo permite sin modificar ningún componente: todos los servicios están ya dockerizados y la infraestructura de Kubernetes está diseñada para este escenario.
+Este anexo describe la arquitectura de producción del sistema mediante Kubernetes y Terraform. El despliegue en un proveedor cloud no se ha realizado durante el desarrollo del prototipo por razones de coste, pero constituye el paso natural siguiente: todos los servicios están dockerizados y los manifiestos de Kubernetes están diseñados y validados para este escenario sin necesidad de modificar ningún componente de la aplicación. Traefik actúa como \emph{ingress controller}, gestionando el enrutamiento y la terminación TLS; los certificados se obtienen y renuevan automáticamente mediante cert-manager y Let's Encrypt.
 
-Se toma Azure Kubernetes Service (AKS) como referencia por su integración nativa con el registro de imágenes (Azure Container Registry) y el soporte para nodos con GPU, necesarios para el motor de IA. El mismo esquema se aplica a Amazon EKS o Google GKE con mínimas adaptaciones en los recursos Terraform.
+Se toma Azure Kubernetes Service (AKS) como proveedor de referencia por su integración nativa con el registro de imágenes (Azure Container Registry) y el soporte para nodos con GPU, necesarios para el motor de IA. El mismo esquema se aplica a Amazon EKS o Google GKE con mínimas adaptaciones en los recursos Terraform.
 
 \section{Infraestructura como código con Terraform}
 
@@ -171,12 +171,12 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`cie10.example.com`) && PathPrefix(`/api`)
+    - match: Host(`clicoder.app`) && PathPrefix(`/api`)
       kind: Rule
       services:
         - name: backend
           port: 4000
-    - match: Host(`cie10.example.com`)
+    - match: Host(`clicoder.app`)
       kind: Rule
       services:
         - name: frontend
