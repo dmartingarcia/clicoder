@@ -3,6 +3,8 @@
 
 Este anexo documenta la evolución del proceso de entrenamiento del clasificador CIE-10, desde los primeros experimentos exploratorios hasta la configuración final desplegada en producción.
 
+Durante las fases de exploración (Fases~1--4), los experimentos se realizaron sobre la tarea de \textbf{clasificación de capítulos CIE-10} (21 clases) como aproximación de primer nivel: el menor número de clases permite ciclos de entrenamiento cortos y resultados interpretables, y el ranking relativo de modelos se transfiere bien a la tarea real. El \textbf{clasificador final de producción} opera sobre los 1.767 \emph{block codes} de tres caracteres, proporcionando el código CIE-10 completo.
+
 \section{Fases de exploración}
 
 El desarrollo del clasificador atravesó varias fases que se corresponden con los \emph{notebooks} del directorio \texttt{bert-classifier/}:
@@ -25,7 +27,7 @@ El \emph{notebook} \texttt{5\_clasificador\_jerarquico\_mmBert.ipynb} inició lo
 
 \subsection{Fase 4: ModernBERT (evaluación)}
 
-El \emph{notebook} \texttt{4\_clasificador\_jerarquico\_ModernBert.ipynb} evaluó la arquitectura ModernBERT~\cite{warner2024modernbert}, que obtuvo el mejor F1 experimental (0{,}80) en pruebas de nivel~1. No se entrenó a fondo por restricciones de tiempo; queda identificado como candidato para iteraciones futuras (véase \ref{cap:AnexoA}).
+El \emph{notebook} \texttt{4\_clasificador\_jerarquico\_ModernBert.ipynb} evaluó la arquitectura ModernBERT~\cite{warner2024modernbert}, que obtuvo un F1-micro de 0{,}601 en pruebas de nivel~1. No se entrenó a fondo por restricciones de tiempo; queda identificado como candidato para iteraciones futuras (véase \ref{cap:AnexoA}).
 
 \subsection{Fase 5: IIC/RigoBERTa-Clinical — entrenamiento intensivo}
 
