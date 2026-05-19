@@ -27,14 +27,14 @@ La priorización del \emph{backlog} se revisa cada vez que se completa una tarea
 
 \subsection{Recursos humanos}
 
-El proyecto se realiza íntegramente por un único desarrollador, con la dirección y supervisión del tutor académico. El desarrollador asume todos los roles del proceso de desarrollo (analista, diseñador, desarrollador, responsable de pruebas y documentador).
+El proyecto se realiza íntegramente por un único desarrollador, con la dirección y supervisión del ambos tutores. El desarrollador asume todos los roles del proceso de desarrollo (analista, diseñador, desarrollador, responsable de pruebas y documentador).
 
 \subsection{Recursos hardware}
 
 \begin{itemize}
-    \item \textbf{Equipo de desarrollo}: Equipo personal con sistema operativo Debian, utilizado para el desarrollo de todos los componentes del sistema (backend, frontend, scripts de datos, etc.) y para la ejecución de los distintos contenedores Docker.
-    \item \textbf{GPU para entrenamiento}: El modelo BERT requiere para su entrenamiento el acceso a una GPU o TPU con soporte CUDA. El sistema está preparado para el entrenamiento tanto en GPU local como en la nube, mediante un entorno dockerizado. En CPU, el entrenamiento puede tardar entre 12 y 24 horas según el número de épocas; en GPU (en este caso RTX 3080 o equivalente), entre 2 y 4 horas.
-    \item \textbf{Espacio en disco}: El corpus CodiEsp y los artefactos del modelo entrenado requieren aproximadamente 5\,GB de almacenamiento;se dispondrá de al menos 200\,GB para garantizar espacio suficiente para logs, checkpoints y otros archivos temporales.
+    \item \textbf{Equipo de desarrollo}: Equipo personal sobremesa con sistema operativo Debian 13 (Trixie) y portatil Macbook Pro M4, ambos utilizados para el desarrollo de los componentes del sistema (backend, frontend, scripts de datos, etc.) y para la ejecución de los distintos contenedores Docker.
+    \item \textbf{GPU para entrenamiento}: El modelo BERT requiere para su entrenamiento el acceso a una GPU o TPU con soporte CUDA. Usaremos uno de los equipos anteriormente mencionados. El sistema está preparado para el entrenamiento tanto en GPU local como en la nube, mediante un entorno dockerizado. En CPU, el entrenamiento puede tardar entre 12 y 24 horas según el número de épocas; en GPU (en este caso RTX 3080 o equivalente), entre 2 y 4 horas.
+    \item \textbf{Espacio en disco}: El corpus de CodiEsp y los artefactos del modelo entrenado requieren aproximadamente 5\,GB de almacenamiento;se dispondrá de al menos 200\,GB para garantizar espacio suficiente para logs, checkpoints y otros archivos temporales.
 \end{itemize}
 
 \subsection{Recursos software}
@@ -43,9 +43,11 @@ Las herramientas y tecnologías empleadas en el proyecto se agrupan en las sigui
 
 \textbf{Entorno de desarrollo:}
 \begin{itemize}[noitemsep]
-    \item Visual Studio Code como editor principal.
-    \item Docker para la ejecución de los contenedores en Debian.
+    \item Visual Studio Code y Spacemacs como editores principales.
+    \item Docker para la ejecución de los contenedores en Debian y OSx.
     \item Jupyter Notebook para el desarrollo interactivo de los experimentos de entrenamiento y análisis de datos.
+    \item Make para la automatización de tareas comunes (entrenamiento, pruebas, generación de documentación).
+    \item Chromium y Postman para la prueba manual de la API REST.
 \end{itemize}
 
 \textbf{Lenguajes y \emph{frameworks}:}
@@ -91,7 +93,7 @@ Las herramientas y tecnologías empleadas en el proyecto se agrupan en las sigui
 
 \subsection{Control de versiones}
 
-El repositorio Git del proyecto~\cite{cie10repo2026} sigue el esquema de ramas habitual para este tipo de proyectos: una rama principal (\texttt{main}) que siempre contiene código funcional, además de las ramas de trabajo (\texttt{feature branches}) para el desarrollo de cada funcionalidad.
+El repositorio Git del proyecto~\cite{cie10repo2026} sigue el esquema de ramas habitual para este tipo de proyectos: una rama principal (\texttt{main}) que siempre contiene código funcional, además de las ramas de trabajo (\texttt{feature branches}) para el desarrollo de cada funcionalidad, que se van integrando en la rama principal una vez estan acabadas y validadas.
 
 Los mensajes de commit siguen el estándar \emph{Conventional Commits}, validado automáticamente mediante el \emph{hook} de pre-commit de Husky y commitlint. Este estándar impone un formato estructurado (\texttt{tipo(ámbito): descripción}) que facilita la lectura del historial y la generación automática de notas de versión.
 
@@ -188,6 +190,8 @@ Tareas completadas:
     \item Monitorización del servicio mediante Prometheus y Grafana.
     \item Gestión de errores utilizando el SaaS Sentry.
 \end{itemize}
+
+El listado completo de tareas del tablero, con sus identificadores y épica asociada, se recoge en el Anexo~\ref{cap:AnexoJ}.
 
 \subsection{Orden de ejecución de las épicas}
 
