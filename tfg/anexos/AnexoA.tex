@@ -27,11 +27,11 @@ Encoder multilingüe moderno (\emph{Modern Multilingual BERT}) desarrollado por 
 
 \subsection{\texttt{answerdotai/ModernBERT-base}}
 
-Arquitectura de nueva generación (2024) con mecanismo Flash Attention y ventana de contexto de 8192 tokens~\cite{warner2024modernbert}. Obtuvo el mejor F1 registrado en las pruebas de validación (0{,}80), lo que lo convierte en el modelo con mayor potencial para iteraciones futuras del sistema.
+Arquitectura de nueva generación (2024) con mecanismo Flash Attention y ventana de contexto de 8192 tokens~\cite{warner2024modernbert}. Obtuvo un F1-micro de 0{,}601 en las pruebas de nivel~1, inferior a RigoBERTa-Clinical, principalmente por operar en inglés frente a un corpus en español. Queda identificado como candidato para iteraciones futuras.
 
 \subsection{\texttt{dccuchile/bert-base-spanish-wwm-cased} (BETO)}
 
-Modelo BERT~\cite{devlin2019} de 110M parámetros entrenado sobre corpus en español de propósito general~\cite{canete2020beto}. Sin especialización médica; F1 estimado de 0{,}75 en CodiEsp. Útil como referencia de línea base en español.
+Modelo BERT~\cite{devlin2019} de 110M parámetros entrenado sobre corpus en español de propósito general~\cite{canete2020beto}. Sin especialización médica. Descartado sin evaluación experimental propia.
 
 \subsection{\texttt{sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}}
 
@@ -56,7 +56,7 @@ RoBERTa-BSC (large)       & 355M        & 512   & —                 & Español
 IIC/RigoBERTa-2.0         & $\sim$600M  & 512   & 0{,}74            & Español \\
 IIC/RigoBERTa-Clinical    & $\sim$600M  & 1536  & \textbf{0{,}799}  & Clínico ES \\
 mmBERT (JHU)              & 307M        & 8192  & 0{,}12            & Multilingüe \\
-ModernBERT                & 149M  & 8192  & \textbf{0{,}80}   & General \\
+ModernBERT                & 149M  & 8192  & 0{,}601           & General \\
 BETO                      & 110M  & 512   & —                 & Español \\
 MiniLM multilingüe        & 33M   & 512   & —                 & Embeddings \\
 DistilBERT multilingüe    & 66M   & 512   & —                 & Multilingüe \\
@@ -66,4 +66,4 @@ DistilBERT multilingüe    & 66M   & 512   & —                 & Multilingüe 
 
 \section{Criterio de selección}
 
-\texttt{IIC/RigoBERTa-Clinical} fue seleccionado para el entrenamiento en producción por combinar especialización en dominio clínico español con el mejor rendimiento experimental (F1-micro\,=\,0{,}799 en clasificación de capítulos) entre los modelos evaluados. \texttt{answerdotai/ModernBERT-base} queda identificado como candidato preferente para iteraciones futuras gracias a su ventana de 8192 tokens y mayor F1 experimental (0{,}80).
+\texttt{IIC/RigoBERTa-Clinical} fue seleccionado para el entrenamiento en producción por tres razones: (1)~especialización en dominio clínico español, que garantiza representaciones adecuadas del vocabulario médico del corpus; (2)~mejor F1-micro experimental (0{,}799 en clasificación de capítulos) entre todos los modelos evaluados; y (3)~el mejor equilibrio entre F1-micro y F1-macro, lo que indica capacidad para clasificar tanto los códigos frecuentes como los minoritarios. \texttt{answerdotai/ModernBERT-base} queda identificado como candidato para iteraciones futuras gracias a su ventana de 8192 tokens, aunque su F1-micro de 0{,}601 en nivel~1 refleja la penalización de operar sobre corpus en español con un modelo entrenado en inglés.
