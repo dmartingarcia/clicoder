@@ -1,14 +1,15 @@
 #!/bin/bash
 set -e
 
-echo "Waiting for database at ${DB_HOST:-db}:${DB_PORT:-5432}..."
-until pg_isready -h "${DB_HOST:-db}" -p "${DB_PORT:-5432}" -U "${POSTGRES_USER:-postgres}" -q; do
-  sleep 1
-done
-echo "Database is ready."
+DB_HOST="${DB_HOST:-db}"
+DB_PORT="${DB_PORT:-5432}"
+DB_USER="${POSTGRES_USER:-postgres}"
 
-echo "Running migrations..."
-mix ecto.create --quiet
-mix ecto.migrate --quiet
+printf "Esperando a PostgreSQL"
+until psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -c '\q' >/dev/null 2>&1; do
+  printf "."
+  sleep 2
+done
+echo " listo."
 
 exec mix phx.server
