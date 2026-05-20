@@ -186,6 +186,16 @@ class CIE10Classifier:
                 entry["description"] = code_descriptions.get(code, "")
             predictions.append(entry)
 
+        # Priorizar hijos sobre padres: si K13.0 está predicho, eliminar K13
+        codes_set = {p["code"] for p in predictions}
+        predictions = [
+            p for p in predictions
+            if not any(
+                other.startswith(p["code"]) and other != p["code"]
+                for other in codes_set
+            )
+        ]
+
         predictions.sort(key=lambda x: x["probability"], reverse=True)
         return predictions[:top_k]
 
