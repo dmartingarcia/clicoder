@@ -29,7 +29,7 @@ defmodule AppWeb.Admin.ConversationLive.Show do
       Repo.all(
         from a in AnalysisCardProjection,
           where: a.conversation_id == ^conv.id,
-          order_by: [asc: a.position]
+          order_by: [asc: a.inserted_at]
       )
 
     {:ok,
@@ -135,7 +135,7 @@ defmodule AppWeb.Admin.ConversationLive.Show do
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contenido</th>
               </tr>
@@ -143,7 +143,7 @@ defmodule AppWeb.Admin.ConversationLive.Show do
             <tbody class="divide-y divide-gray-100">
               <%= for card <- @cards do %>
                 <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-sm text-gray-500"><%= card.position %></td>
+                  <td class="px-4 py-3 text-sm text-gray-500"><%= Calendar.strftime(card.inserted_at, "%d/%m/%Y %H:%M") %></td>
                   <td class="px-4 py-3">
                     <span class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">
                       <%= card.card_type %>
