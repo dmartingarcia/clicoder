@@ -22,9 +22,4 @@ RUN mix compile
 
 EXPOSE 4000
 
-# Script de inicialización
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["mix", "phx.server"]
