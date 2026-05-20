@@ -5,10 +5,21 @@ defmodule AppWeb.Router do
   pipeline :api do
     plug :accepts, ["json"]
     plug AppWeb.Plugs.SetLocale
+    plug OpenApiSpex.Plug.PutApiSpec, module: AppWeb.ApiSpec
   end
 
   pipeline :require_auth do
     plug AppWeb.Plugs.RequireAuth
+  end
+
+  scope "/api" do
+    pipe_through :api
+    get "/openapi", OpenApiSpex.Plug.RenderSpec, []
+  end
+
+  scope "/" do
+    pipe_through :browser
+    get "/docs", OpenApiSpex.Plug.SwaggerUI, path: "/api/openapi"
   end
 
   scope "/api", AppWeb do
