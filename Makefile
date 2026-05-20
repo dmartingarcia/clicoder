@@ -172,7 +172,7 @@ backend-lint: ## Lint del backend (format check + credo)
 	$(BACKEND) mix deps.get
 	$(BACKEND) mix compile
 	$(BACKEND) mix format --check-formatted
-	$(BACKEND) mix credo
+	$(BACKEND) mix credo --strict
 
 ai-lint: ## Lint del AI engine (ruff)
 	$(AI) pip install -q ruff
