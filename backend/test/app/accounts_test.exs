@@ -145,7 +145,8 @@ defmodule App.AccountsTest do
     end
 
     test "returns error for nonexistent email" do
-      assert {:error, :invalid_credentials} = Accounts.authenticate("nobody@example.com", "password")
+      assert {:error, :invalid_credentials} =
+               Accounts.authenticate("nobody@example.com", "password")
     end
   end
 

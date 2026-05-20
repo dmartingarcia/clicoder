@@ -24,17 +24,25 @@ defmodule App.Accounts.User do
     |> cast(attrs, [:first_name, :last_name, :username, :email, :password, :locale])
     |> validate_required([:first_name, :last_name, :username, :email, :password])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "formato de email inválido")
-    |> validate_format(:username, ~r/^[a-zA-Z0-9_]+$/, message: "solo letras, números y guión bajo")
+    |> validate_format(:username, ~r/^[a-zA-Z0-9_]+$/,
+      message: "solo letras, números y guión bajo"
+    )
     |> validate_length(:username, min: 3, message: "mínimo 3 caracteres")
     |> validate_length(:password, min: 6, message: "mínimo 6 caracteres")
     |> unique_constraint(:email, message: "email ya registrado")
     |> unique_constraint(:username, message: "nombre de usuario no disponible")
     |> hash_password()
-    |> put_change(:confirmation_token, :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false))
+    |> put_change(
+      :confirmation_token,
+      :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+    )
   end
 
   def confirm_changeset(user) do
-    change(user, confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second), confirmation_token: nil)
+    change(user,
+      confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      confirmation_token: nil
+    )
   end
 
   defp hash_password(%{valid?: false} = changeset), do: changeset

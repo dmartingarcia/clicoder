@@ -53,11 +53,12 @@ defmodule App.JsonSerializerTest do
 
   describe "deserialize/2 with known event type" do
     test "deserializes JSON into the correct struct" do
-      json = Jason.encode!(%{
-        conversation_id: "conv-abc",
-        user_id: "user-xyz",
-        started_at: nil
-      })
+      json =
+        Jason.encode!(%{
+          conversation_id: "conv-abc",
+          user_id: "user-xyz",
+          started_at: nil
+        })
 
       type = Atom.to_string(App.Events.ConversationStarted)
       result = JsonSerializer.deserialize(json, type: type)
@@ -68,13 +69,14 @@ defmodule App.JsonSerializerTest do
     end
 
     test "deserializes MessageSent event" do
-      json = Jason.encode!(%{
-        conversation_id: "conv-1",
-        message_id: "msg-1",
-        user_id: "user-1",
-        content: "Hello",
-        timestamp: nil
-      })
+      json =
+        Jason.encode!(%{
+          conversation_id: "conv-1",
+          message_id: "msg-1",
+          user_id: "user-1",
+          content: "Hello",
+          timestamp: nil
+        })
 
       type = Atom.to_string(App.Events.MessageSent)
       result = JsonSerializer.deserialize(json, type: type)
@@ -133,11 +135,12 @@ defmodule App.JsonSerializerTest do
 
   describe "atom keys in nested structures" do
     test "nested map keys become atoms" do
-      json = Jason.encode!(%{
-        "cards" => [
-          %{"type" => "summary", "content" => "text", "confidence" => 0.9}
-        ]
-      })
+      json =
+        Jason.encode!(%{
+          "cards" => [
+            %{"type" => "summary", "content" => "text", "confidence" => 0.9}
+          ]
+        })
 
       result = JsonSerializer.deserialize(json, [])
 
@@ -150,14 +153,15 @@ defmodule App.JsonSerializerTest do
     end
 
     test "deeply nested maps have atom keys" do
-      json = Jason.encode!(%{
-        "outer" => %{
-          "inner" => %{
-            "reason" => "test reason",
-            "description" => "some description"
+      json =
+        Jason.encode!(%{
+          "outer" => %{
+            "inner" => %{
+              "reason" => "test reason",
+              "description" => "some description"
+            }
           }
-        }
-      })
+        })
 
       result = JsonSerializer.deserialize(json, [])
 

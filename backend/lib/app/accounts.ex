@@ -15,7 +15,9 @@ defmodule App.Accounts do
 
   def confirm_user(token) do
     case Repo.get_by(User, confirmation_token: token) do
-      nil -> {:error, :invalid_token}
+      nil ->
+        {:error, :invalid_token}
+
       user ->
         user
         |> User.confirm_changeset()
@@ -31,7 +33,9 @@ defmodule App.Accounts do
 
   def update_locale(user_id, locale) do
     case get_user(user_id) do
-      nil -> {:error, :not_found}
+      nil ->
+        {:error, :not_found}
+
       user ->
         user
         |> Ecto.Changeset.change(locale: locale)

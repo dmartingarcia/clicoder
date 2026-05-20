@@ -7,6 +7,7 @@ defmodule App.Fixtures do
 
   alias App.Repo
   alias App.Accounts.User
+
   alias App.Projections.{
     ConversationProjection,
     MessageProjection,
@@ -40,7 +41,10 @@ defmodule App.Fixtures do
     {:ok, user} =
       %User{}
       |> User.registration_changeset(attrs)
-      |> Ecto.Changeset.put_change(:confirmed_at, DateTime.utc_now() |> DateTime.truncate(:second))
+      |> Ecto.Changeset.put_change(
+        :confirmed_at,
+        DateTime.utc_now() |> DateTime.truncate(:second)
+      )
       |> Ecto.Changeset.put_change(:confirmation_token, nil)
       |> Repo.insert()
 
@@ -156,7 +160,14 @@ defmodule App.Fixtures do
     attrs = Map.merge(defaults, attrs)
 
     %MessageProjection{}
-    |> Ecto.Changeset.cast(attrs, [:message_id, :content, :user_id, :timestamp, :message_type, :conversation_id])
+    |> Ecto.Changeset.cast(attrs, [
+      :message_id,
+      :content,
+      :user_id,
+      :timestamp,
+      :message_type,
+      :conversation_id
+    ])
     |> Repo.insert!()
   end
 
@@ -181,8 +192,15 @@ defmodule App.Fixtures do
 
     %PredictedCodeProjection{}
     |> Ecto.Changeset.cast(attrs, [
-      :code_id, :cie10_code, :reasoning, :confidence_score,
-      :status, :validated_by, :rejected_by, :rejection_reason, :conversation_id
+      :code_id,
+      :cie10_code,
+      :reasoning,
+      :confidence_score,
+      :status,
+      :validated_by,
+      :rejected_by,
+      :rejection_reason,
+      :conversation_id
     ])
     |> Repo.insert!()
   end
@@ -207,7 +225,14 @@ defmodule App.Fixtures do
     attrs = Map.merge(defaults, attrs)
 
     %AnalysisCardProjection{}
-    |> Ecto.Changeset.cast(attrs, [:card_id, :card_type, :content, :position, :message_id, :conversation_id])
+    |> Ecto.Changeset.cast(attrs, [
+      :card_id,
+      :card_type,
+      :content,
+      :position,
+      :message_id,
+      :conversation_id
+    ])
     |> Repo.insert!()
   end
 end

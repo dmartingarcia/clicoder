@@ -9,35 +9,50 @@ defmodule AppWeb.Cie10Controller do
   @max_results 20
   @default_results 10
 
-  operation :search,
+  operation(:search,
     summary: "Buscar códigos CIE-10",
     tags: ["CIE-10"],
     parameters: [
-      OpenApiSpex.Operation.parameter(:q, :query, :string, "Texto a buscar (código o descripción)", required: true),
-      OpenApiSpex.Operation.parameter(:limit, :query, :integer, "Número máximo de resultados (1-#{@max_results})", example: 10),
+      OpenApiSpex.Operation.parameter(
+        :q,
+        :query,
+        :string,
+        "Texto a buscar (código o descripción)",
+        required: true
+      ),
+      OpenApiSpex.Operation.parameter(
+        :limit,
+        :query,
+        :integer,
+        "Número máximo de resultados (1-#{@max_results})",
+        example: 10
+      ),
       OpenApiSpex.Operation.parameter(:type, :query, :string, "Filtrar por tipo",
-        schema: %OpenApiSpex.Schema{type: :string, enum: ["diagnosis", "procedure", "chemical"]})
+        schema: %OpenApiSpex.Schema{type: :string, enum: ["diagnosis", "procedure", "chemical"]}
+      )
     ],
     responses: [
-      ok: {"Resultados de búsqueda", "application/json",
-       %OpenApiSpex.Schema{
-         type: :object,
-         properties: %{
-           results: %OpenApiSpex.Schema{
-             type: :array,
-             items: %OpenApiSpex.Schema{
-               type: :object,
-               properties: %{
-                 code: %OpenApiSpex.Schema{type: :string},
-                 description: %OpenApiSpex.Schema{type: :string},
-                 type: %OpenApiSpex.Schema{type: :string},
-                 metadata: %OpenApiSpex.Schema{type: :object}
+      ok:
+        {"Resultados de búsqueda", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{
+             results: %OpenApiSpex.Schema{
+               type: :array,
+               items: %OpenApiSpex.Schema{
+                 type: :object,
+                 properties: %{
+                   code: %OpenApiSpex.Schema{type: :string},
+                   description: %OpenApiSpex.Schema{type: :string},
+                   type: %OpenApiSpex.Schema{type: :string},
+                   metadata: %OpenApiSpex.Schema{type: :object}
+                 }
                }
              }
            }
-         }
-       }}
+         }}
     ]
+  )
 
   # GET /api/cie10/search?q=<query>&limit=<n>&type=<diagnosis|procedure|chemical>
   def search(conn, %{"q" => q} = params) do
@@ -56,18 +71,30 @@ defmodule AppWeb.Cie10Controller do
 
   def search(conn, _params), do: json(conn, %{results: []})
 
-  operation :show,
+  operation(:show,
     summary: "Obtener código CIE-10",
     tags: ["CIE-10"],
     parameters: [
-      OpenApiSpex.Operation.parameter(:code, :path, :string, "Código CIE-10", required: true, example: "J18.9")
+      OpenApiSpex.Operation.parameter(:code, :path, :string, "Código CIE-10",
+        required: true,
+        example: "J18.9"
+      )
     ],
     responses: [
-      ok: {"Código encontrado", "application/json",
-       %OpenApiSpex.Schema{type: :object, properties: %{result: %OpenApiSpex.Schema{type: :object}}}},
-      not_found: {"Código no encontrado", "application/json",
-       %OpenApiSpex.Schema{type: :object, properties: %{error: %OpenApiSpex.Schema{type: :string}}}}
+      ok:
+        {"Código encontrado", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{result: %OpenApiSpex.Schema{type: :object}}
+         }},
+      not_found:
+        {"Código no encontrado", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{error: %OpenApiSpex.Schema{type: :string}}
+         }}
     ]
+  )
 
   # GET /api/cie10/codes/:code
   def show(conn, %{"code" => code}) do
@@ -82,22 +109,30 @@ defmodule AppWeb.Cie10Controller do
     end
   end
 
-  operation :children,
+  operation(:children,
     summary: "Hijos de un código CIE-10",
     tags: ["CIE-10"],
     parameters: [
-      OpenApiSpex.Operation.parameter(:code, :path, :string, "Código padre", required: true, example: "J18")
+      OpenApiSpex.Operation.parameter(:code, :path, :string, "Código padre",
+        required: true,
+        example: "J18"
+      )
     ],
     responses: [
-      ok: {"Lista de hijos", "application/json",
-       %OpenApiSpex.Schema{
-         type: :object,
-         properties: %{
-           children: %OpenApiSpex.Schema{type: :array, items: %OpenApiSpex.Schema{type: :object}},
-           is_leaf: %OpenApiSpex.Schema{type: :boolean}
-         }
-       }}
+      ok:
+        {"Lista de hijos", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{
+             children: %OpenApiSpex.Schema{
+               type: :array,
+               items: %OpenApiSpex.Schema{type: :object}
+             },
+             is_leaf: %OpenApiSpex.Schema{type: :boolean}
+           }
+         }}
     ]
+  )
 
   # GET /api/cie10/codes/:code/children
   def children(conn, %{"code" => code}) do
@@ -181,6 +216,7 @@ defmodule AppWeb.Cie10Controller do
   end
 
   defp parse_limit(nil), do: @default_results
+
   defp parse_limit(s) when is_binary(s) do
     case Integer.parse(s) do
       {n, ""} -> min(max(n, 1), @max_results)

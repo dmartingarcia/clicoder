@@ -11,7 +11,11 @@ defmodule App.Accounts.Emails do
     confirm_url = "http://#{host}:#{port}/api/auth/confirm/#{user.confirmation_token}"
 
     app_title = Translations.t(locale, "app.title")
-    subject_line = if locale == "en", do: "Confirm your account — #{app_title}", else: "Confirma tu cuenta — #{app_title}"
+
+    subject_line =
+      if locale == "en",
+        do: "Confirm your account — #{app_title}",
+        else: "Confirma tu cuenta — #{app_title}"
 
     email =
       new()
