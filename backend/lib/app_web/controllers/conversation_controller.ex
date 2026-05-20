@@ -1,10 +1,23 @@
 defmodule AppWeb.ConversationController do
   use AppWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias App.Repo
   alias App.Projections.ConversationProjection
 
   import Ecto.Query
+
+  operation :index,
+    summary: "Listar conversaciones activas",
+    tags: ["Conversations"],
+    security: [%{"bearer_auth" => []}],
+    parameters: [
+      OpenApiSpex.Operation.parameter(:user_id, :query, :string, "ID del usuario", required: true)
+    ],
+    responses: [
+      ok: {"Lista de conversaciones", "application/json",
+       %OpenApiSpex.Schema{type: :object, properties: %{conversations: %OpenApiSpex.Schema{type: :array, items: %OpenApiSpex.Schema{type: :object}}}}}
+    ]
 
   # Active conversations (not deleted)
   def index(conn, %{"user_id" => user_id}) do
@@ -25,6 +38,18 @@ defmodule AppWeb.ConversationController do
     |> json(%{error: "user_id is required"})
   end
 
+  operation :trash,
+    summary: "Conversaciones en papelera",
+    tags: ["Conversations"],
+    security: [%{"bearer_auth" => []}],
+    parameters: [
+      OpenApiSpex.Operation.parameter(:user_id, :query, :string, "ID del usuario", required: true)
+    ],
+    responses: [
+      ok: {"Conversaciones eliminadas", "application/json",
+       %OpenApiSpex.Schema{type: :object, properties: %{conversations: %OpenApiSpex.Schema{type: :array, items: %OpenApiSpex.Schema{type: :object}}}}}
+    ]
+
   # Trash: soft-deleted conversations
   def trash(conn, %{"user_id" => user_id}) do
     conversations =
@@ -44,6 +69,18 @@ defmodule AppWeb.ConversationController do
     |> json(%{error: "user_id is required"})
   end
 
+  operation :delete,
+    summary: "Mover conversación a papelera",
+    tags: ["Conversations"],
+    security: [%{"bearer_auth" => []}],
+    parameters: [
+      OpenApiSpex.Operation.parameter(:conversation_id, :path, :string, "ID de la conversación", required: true)
+    ],
+    responses: [
+      ok: {"Eliminada", "application/json", %OpenApiSpex.Schema{type: :object, properties: %{ok: %OpenApiSpex.Schema{type: :boolean}}}},
+      not_found: {"No encontrada", "application/json", %OpenApiSpex.Schema{type: :object, properties: %{error: %OpenApiSpex.Schema{type: :string}}}}
+    ]
+
   # Soft delete
   def delete(conn, %{"conversation_id" => conversation_id}) do
     user_id = conn.assigns.current_user_id
@@ -60,6 +97,18 @@ defmodule AppWeb.ConversationController do
         json(conn, %{ok: true})
     end
   end
+
+  operation :restore,
+    summary: "Restaurar conversación de la papelera",
+    tags: ["Conversations"],
+    security: [%{"bearer_auth" => []}],
+    parameters: [
+      OpenApiSpex.Operation.parameter(:conversation_id, :path, :string, "ID de la conversación", required: true)
+    ],
+    responses: [
+      ok: {"Restaurada", "application/json", %OpenApiSpex.Schema{type: :object, properties: %{ok: %OpenApiSpex.Schema{type: :boolean}}}},
+      not_found: {"No encontrada", "application/json", %OpenApiSpex.Schema{type: :object, properties: %{error: %OpenApiSpex.Schema{type: :string}}}}
+    ]
 
   # Restore from trash
   def restore(conn, %{"conversation_id" => conversation_id}) do

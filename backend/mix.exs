@@ -75,6 +75,9 @@ defmodule App.MixProject do
       {:yaml_elixir, "~> 2.9"},
       {:nimble_csv, "~> 1.2"},
 
+      # OpenAPI / Swagger
+      {:open_api_spex, "~> 3.21"},
+
       # Dev / test
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test}
