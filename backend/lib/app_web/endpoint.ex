@@ -55,9 +55,14 @@ defmodule AppWeb.Endpoint do
 
   # CORS para el frontend
   plug CORSPlug,
-    origin: ["http://localhost:5173", "http://localhost:3000"],
+    origin: &AppWeb.Endpoint.cors_origins/0,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     headers: ["Authorization", "Content-Type", "Accept"]
+
+  def cors_origins do
+    System.get_env("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173")
+    |> String.split(",", trim: true)
+  end
 
   plug AppWeb.Router
 end
