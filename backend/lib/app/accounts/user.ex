@@ -14,6 +14,7 @@ defmodule App.Accounts.User do
     field :locale, :string, default: "es"
     field :confirmation_token, :string
     field :confirmed_at, :utc_datetime
+    field :is_admin, :boolean, default: false
 
     timestamps(type: :utc_datetime)
   end
