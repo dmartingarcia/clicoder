@@ -72,7 +72,7 @@ function ProcedureDetail({ meta }: { meta: Record<string, unknown> }) {
         <MetaRow label={t('cie10.gender')} value={meta.gender as string} />
         <MetaRow label={t('cie10.times_selected')} value={meta.times_selected as number} />
       </div>
-      {meta.definition && (
+      {Boolean(meta.definition) && (
         <div className="mt-3 bg-white rounded-lg p-3">
           <p className="text-xs text-gray-500 mb-1">{t('cie10.definition')}</p>
           <p className="text-sm text-gray-700">{meta.definition as string}</p>
@@ -106,7 +106,7 @@ function ChemicalDetail({ meta }: { meta: Record<string, unknown> }) {
           </div>
         ))}
       </div>
-      {meta.notes && (
+      {Boolean(meta.notes) && (
         <div className="mt-3 bg-white rounded-lg p-3">
           <p className="text-xs text-gray-500 mb-1">{t('cie10.notes')}</p>
           <p className="text-sm text-gray-700">{meta.notes as string}</p>
