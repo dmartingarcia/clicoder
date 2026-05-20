@@ -29,6 +29,3 @@ unless Repo.get_by(User, email: "admin@test.com") do
 
   IO.puts("Seed: usuario admin@test.com / password123 creado")
 end
-
-# Admin dashboard (Phoenix LiveDashboard — solo disponible en dev)
-IO.puts("Admin dashboard: http://localhost:4000/dev/dashboard")

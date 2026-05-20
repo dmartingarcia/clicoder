@@ -34,9 +34,17 @@ defmodule AppWeb.Router do
     put "/users/locale", AuthController, :update_locale
   end
 
+  pipeline :browser do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+  end
+
   # Admin backoffice
   scope "/admin", AppWeb.Admin, as: :admin do
-    pipe_through [:fetch_session, :protect_from_forgery]
+    pipe_through [:browser]
 
     get "/login", SessionController, :new
     post "/login", SessionController, :create
@@ -44,7 +52,7 @@ defmodule AppWeb.Router do
   end
 
   scope "/admin", AppWeb.Admin, as: :admin do
-    pipe_through [:fetch_session, :protect_from_forgery, AppWeb.Plugs.RequireAdmin]
+    pipe_through [:browser, AppWeb.Plugs.RequireAdmin]
 
     live_session :admin,
       on_mount: [],
@@ -64,7 +72,7 @@ defmodule AppWeb.Router do
     import Phoenix.LiveDashboard.Router
 
     scope "/dev" do
-      pipe_through [:fetch_session, :protect_from_forgery]
+      pipe_through [:browser]
 
       live_dashboard "/dashboard", metrics: AppWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview

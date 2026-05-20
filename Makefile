@@ -50,11 +50,14 @@ up: frontend-install ## Levantar todos los servicios
 	@echo "$(GREEN)Levantando servicios...$(NC)"
 	$(COMPOSE) up -d
 	@echo "$(GREEN)Servicios levantados:$(NC)"
-	@echo "  - Frontend:    http://localhost:3000"
-	@echo "  - Backend API: http://localhost:4000"
-	@echo "  - AI Engine:   http://localhost:8000"
-	@echo "  - Mailpit UI:  http://localhost:8025"
-	@echo "  - PostgreSQL:  localhost:5432"
+	@echo "  - Frontend:      http://localhost:3000"
+	@echo "  - Backend API:   http://localhost:4000"
+	@echo "  - Admin:         http://localhost:4000/admin"
+	@echo "  - Live Dashboard:http://localhost:4000/dev/dashboard"
+	@echo "  - AI Engine:     http://localhost:8000"
+	@echo "  - AI Docs:       http://localhost:8000/docs"
+	@echo "  - Mailpit UI:    http://localhost:8025"
+	@echo "  - PostgreSQL:    localhost:5432"
 
 down: ## Detener todos los servicios
 	@echo "$(YELLOW)Deteniendo servicios...$(NC)"
@@ -302,11 +305,14 @@ cpu-up: frontend-install ## Levantar servicios en modo CPU (sin GPU)
 	@echo "$(GREEN)Levantando servicios en modo CPU...$(NC)"
 	$(COMPOSE_CPU) up -d db backend frontend ai_engine
 	@echo "$(GREEN)Servicios levantados (modo CPU):$(NC)"
-	@echo "  - Frontend:    http://localhost:3000"
-	@echo "  - Backend API: http://localhost:4000"
-	@echo "  - AI Engine:   http://localhost:8000 (CPU)"
-	@echo "  - Mailpit UI:  http://localhost:8025"
-	@echo "  - PostgreSQL:  localhost:5432"
+	@echo "  - Frontend:      http://localhost:3000"
+	@echo "  - Backend API:   http://localhost:4000"
+	@echo "  - Admin:         http://localhost:4000/admin"
+	@echo "  - Live Dashboard:http://localhost:4000/dev/dashboard"
+	@echo "  - AI Engine:     http://localhost:8000 (CPU)"
+	@echo "  - AI Docs:       http://localhost:8000/docs"
+	@echo "  - Mailpit UI:    http://localhost:8025"
+	@echo "  - PostgreSQL:    localhost:5432"
 
 cpu-down: ## Detener servicios del modo CPU
 	@echo "$(YELLOW)Deteniendo servicios CPU...$(NC)"
@@ -322,11 +328,14 @@ mock-up: frontend-install ## Levantar servicios en modo mock (sin GPU, sin model
 	@echo "$(GREEN)Levantando servicios en modo mock...$(NC)"
 	$(COMPOSE_MOCK) up -d db backend frontend ai_engine
 	@echo "$(GREEN)Servicios levantados (modo mock):$(NC)"
-	@echo "  - Frontend:    http://localhost:3000"
-	@echo "  - Backend API: http://localhost:4000"
-	@echo "  - AI Engine:   http://localhost:8000 (mock)"
-	@echo "  - Mailpit UI:  http://localhost:8025"
-	@echo "  - PostgreSQL:  localhost:5432"
+	@echo "  - Frontend:      http://localhost:3000"
+	@echo "  - Backend API:   http://localhost:4000"
+	@echo "  - Admin:         http://localhost:4000/admin"
+	@echo "  - Live Dashboard:http://localhost:4000/dev/dashboard"
+	@echo "  - AI Engine:     http://localhost:8000 (mock)"
+	@echo "  - AI Docs:       http://localhost:8000/docs"
+	@echo "  - Mailpit UI:    http://localhost:8025"
+	@echo "  - PostgreSQL:    localhost:5432"
 
 mock-down: ## Detener servicios del modo mock
 	@echo "$(YELLOW)Deteniendo servicios mock...$(NC)"
