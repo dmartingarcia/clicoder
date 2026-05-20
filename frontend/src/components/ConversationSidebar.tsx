@@ -14,8 +14,15 @@ export function ConversationSidebar() {
   const { locale, setLocale, t } = useI18n();
   const [trashOpen, setTrashOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [localeOpen, setLocaleOpen] = useState(false);
 
-  const toggleLocale = () => setLocale(locale === 'es' ? 'en' : 'es', token ?? undefined);
+  const LOCALES: { code: string; flag: string }[] = [
+    { code: 'es', flag: '🇪🇸' },
+    { code: 'en', flag: '🇬🇧' },
+    { code: 'fr', flag: '🇫🇷' },
+    { code: 'it', flag: '🇮🇹' },
+    { code: 'de', flag: '🇩🇪' },
+  ];
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString(locale, { day: '2-digit', month: 'short' });
@@ -32,14 +39,31 @@ export function ConversationSidebar() {
           <p className="text-xs text-gray-400 truncate">@{user?.username}</p>
         </div>
         <div className="flex flex-col gap-1 shrink-0 mt-1">
-          <button
-            onClick={toggleLocale}
-            title={locale === 'es' ? 'Switch to English' : 'Cambiar a Español'}
-            className="p-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors flex items-center gap-1"
-          >
-            <Globe className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase">{locale}</span>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setLocaleOpen((o) => !o)}
+              className="p-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors flex items-center gap-1"
+            >
+              <span>{LOCALES.find((l) => l.code === locale)?.flag}</span>
+              <span className="text-xs font-medium uppercase">{locale}</span>
+            </button>
+            {localeOpen && (
+              <div className="absolute right-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded shadow-lg z-50 min-w-15">
+                {LOCALES.map(({ code, flag }) => (
+                  <button
+                    key={code}
+                    onClick={() => { setLocale(code, token ?? undefined); setLocaleOpen(false); }}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-medium uppercase transition-colors flex items-center gap-2 ${
+                      code === locale ? 'text-white bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                    }`}
+                  >
+                    <span>{flag}</span>
+                    {code}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={logout}
             title={t('auth.logout')}
