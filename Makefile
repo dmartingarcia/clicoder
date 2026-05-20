@@ -174,6 +174,10 @@ backend-lint: ## Lint del backend (format check + credo)
 	$(BACKEND) mix format --check-formatted
 	$(BACKEND) mix credo --strict
 
+backend-dialyzer: ## Análisis estático de tipos del backend (Dialyzer)
+	$(BACKEND) mix deps.get
+	$(BACKEND) mix dialyzer --format dialyxir
+
 ai-lint: ## Lint del AI engine (ruff)
 	$(AI) pip install -q ruff
 	$(AI) ruff check .
