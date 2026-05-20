@@ -168,11 +168,21 @@ ai-install: ## Instalar dependencias del AI engine
 backend-format: ## Formatear código del backend
 	$(BACKEND) mix format
 
+backend-lint: ## Lint del backend (format check + credo)
+	$(BACKEND) mix deps.get
+	$(BACKEND) mix compile
+	$(BACKEND) mix format --check-formatted
+	$(BACKEND) mix credo
+
+ai-lint: ## Lint del AI engine (ruff)
+	$(AI) pip install -q ruff
+	$(AI) ruff check .
+
 frontend-format: ## Formatear código del frontend
 	$(COMPOSE) run --rm --no-deps frontend npm format
 
 frontend-lint: ## Lint del frontend
-	$(COMPOSE) run --rm --no-deps frontend npm lint
+	$(COMPOSE) run --rm --no-deps frontend npm run lint
 
 # Backup y restore
 db-backup: ## Backup de la base de datos
