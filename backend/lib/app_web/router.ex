@@ -33,6 +33,22 @@ defmodule AppWeb.Router do
     put "/users/locale", AuthController, :update_locale
   end
 
+  # Admin backoffice
+  scope "/admin", AppWeb.Admin, as: :admin do
+    pipe_through [:fetch_session, :protect_from_forgery]
+
+    get "/login", SessionController, :new
+    post "/login", SessionController, :create
+    delete "/logout", SessionController, :delete
+  end
+
+  scope "/admin", AppWeb.Admin, as: :admin do
+    pipe_through [:fetch_session, :protect_from_forgery, AppWeb.Plugs.RequireAdmin]
+
+    live "/users", UserLive.Index, :index
+    live "/users/:id", UserLive.Show, :show
+  end
+
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:app, :dev_routes) do
     # If you want to use the LiveDashboard in production, you should put
