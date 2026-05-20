@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { searchCie10, Cie10Result } from '@/lib/cie10';
+import { searchCie10, Cie10Result, getAncestors } from '@/lib/cie10';
 import {
   Loader2, FileText, Stethoscope, CheckCircle2, XCircle,
   AlertCircle, ClipboardList, Lightbulb, Activity, Tag, ExternalLink,
@@ -65,13 +65,33 @@ function CodesCard({
           <div key={i} className="bg-white rounded-lg p-3 shadow-sm">
             <div className="flex items-start justify-between gap-2 mb-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <Link
-                  href={`/codes/${c.code}`}
-                  target="_blank"
-                  className="font-bold text-indigo-700 hover:underline flex items-center gap-0.5"
-                >
-                  {c.code} <ExternalLink className="h-3 w-3 opacity-60" />
-                </Link>
+                <div className="flex flex-col gap-0.5">
+                  <Link
+                    href={`/codes/${c.code}`}
+                    target="_blank"
+                    className="font-bold text-indigo-700 hover:underline flex items-center gap-0.5"
+                  >
+                    {c.code} <ExternalLink className="h-3 w-3 opacity-60" />
+                  </Link>
+                  {getAncestors(c.code).length > 0 && (
+                    <div className="flex items-center gap-0.5 flex-wrap text-[10px] text-gray-400">
+                      {getAncestors(c.code).map((ancestor, idx) => (
+                        <span key={ancestor} className="flex items-center gap-0.5">
+                          {idx > 0 && <span className="opacity-50">›</span>}
+                          <Link
+                            href={`/codes/${ancestor}`}
+                            target="_blank"
+                            className="hover:text-indigo-500 hover:underline"
+                          >
+                            {ancestor}
+                          </Link>
+                        </span>
+                      ))}
+                      <span className="opacity-50">›</span>
+                      <span className="font-medium text-gray-500">{c.code}</span>
+                    </div>
+                  )}
+                </div>
                 {c.description && <span className="text-xs text-gray-500">{c.description}</span>}
                 <Badge
                   variant={c.status === 'validated' ? 'default' : c.status === 'rejected' ? 'destructive' : 'secondary'}
