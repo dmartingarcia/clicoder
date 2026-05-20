@@ -9,3 +9,22 @@
 #
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
+
+alias App.Repo
+alias App.Accounts.User
+
+# Usuario de prueba: admin@test.com / password123
+unless Repo.get_by(User, email: "admin@test.com") do
+  %User{}
+  |> User.registration_changeset(%{
+    first_name: "Admin",
+    last_name: "Test",
+    username: "admin",
+    email: "admin@test.com",
+    password: "password123"
+  })
+  |> User.confirm_changeset()
+  |> Repo.insert!()
+
+  IO.puts("Seed: usuario admin@test.com / password123 creado")
+end

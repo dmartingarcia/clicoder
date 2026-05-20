@@ -133,6 +133,7 @@ backend-seed: backend-install ## Primera vez: create + migrate + eventstore + se
 	$(COMPOSE) run --rm --no-deps backend mix event_store.init || true
 	$(COMPOSE) run --rm --no-deps backend mix run priv/repo/seeds.exs
 	$(COMPOSE) run --rm --no-deps backend mix cie10.import
+	@echo "$(GREEN)Usuario de prueba: admin@test.com / password123$(NC)"
 
 db-reset: ## Reset completo: drop + backend-seed
 	$(COMPOSE) up -d db
