@@ -82,7 +82,7 @@ services:
     volumes:
       - ./ai_engine:/app
       - ./training/csv_import_scripts:/data:ro
-      - huggingface_cache:/root/.cache/huggingface
+      - ./.huggingface_cache:/root/.cache/huggingface
 
   # Backend: Elixir Phoenix + Commanded
   backend:
@@ -138,6 +138,5 @@ services:
 
 volumes:
   postgres_data:
-  huggingface_cache:
   backend_build:
   backend_deps:
