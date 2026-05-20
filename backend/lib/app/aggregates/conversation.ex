@@ -13,8 +13,24 @@ defmodule App.Aggregates.Conversation do
   ]
 
   alias App.Aggregates.Conversation
-  alias App.Commands.{StartConversation, SendMessage, AnalyzeReport, ReceiveAIPrediction, ValidateCode, RejectCode}
-  alias App.Events.{ConversationStarted, MessageSent, AnalysisRequested, AIPredictionReceived, CodeValidated, CodeRejected}
+
+  alias App.Commands.{
+    StartConversation,
+    SendMessage,
+    AnalyzeReport,
+    ReceiveAIPrediction,
+    ValidateCode,
+    RejectCode
+  }
+
+  alias App.Events.{
+    ConversationStarted,
+    MessageSent,
+    AnalysisRequested,
+    AIPredictionReceived,
+    CodeValidated,
+    CodeRejected
+  }
 
   # Command Handlers
   def execute(%Conversation{conversation_id: nil}, %StartConversation{} = cmd) do
@@ -37,7 +53,8 @@ defmodule App.Aggregates.Conversation do
     }
   end
 
-  def execute(%Conversation{pending_analysis: true}, %AnalyzeReport{}), do: {:error, :analysis_in_progress}
+  def execute(%Conversation{pending_analysis: true}, %AnalyzeReport{}),
+    do: {:error, :analysis_in_progress}
 
   def execute(%Conversation{}, %AnalyzeReport{} = cmd) do
     %AnalysisRequested{
@@ -62,15 +79,20 @@ defmodule App.Aggregates.Conversation do
 
   def execute(%Conversation{} = conv, %ValidateCode{} = cmd) do
     cond do
-      cmd.cie10_code in conv.validated_codes -> {:error, :code_already_validated}
-      cmd.cie10_code in conv.rejected_codes -> {:error, :code_was_rejected}
-      true -> %CodeValidated{
-        conversation_id: cmd.conversation_id,
-        code_id: cmd.code_id,
-        cie10_code: cmd.cie10_code,
-        validated_by: cmd.validated_by,
-        validation_timestamp: cmd.validation_timestamp
-      }
+      cmd.cie10_code in conv.validated_codes ->
+        {:error, :code_already_validated}
+
+      cmd.cie10_code in conv.rejected_codes ->
+        {:error, :code_was_rejected}
+
+      true ->
+        %CodeValidated{
+          conversation_id: cmd.conversation_id,
+          code_id: cmd.code_id,
+          cie10_code: cmd.cie10_code,
+          validated_by: cmd.validated_by,
+          validation_timestamp: cmd.validation_timestamp
+        }
     end
   end
 
@@ -91,10 +113,11 @@ defmodule App.Aggregates.Conversation do
 
   # Event Handlers (State Evolution)
   def apply(%Conversation{} = conv, %ConversationStarted{} = evt) do
-    %Conversation{conv |
-      conversation_id: evt.conversation_id,
-      user_id: evt.user_id,
-      started_at: evt.started_at
+    %Conversation{
+      conv
+      | conversation_id: evt.conversation_id,
+        user_id: evt.user_id,
+        started_at: evt.started_at
     }
   end
 
@@ -105,12 +128,15 @@ defmodule App.Aggregates.Conversation do
       content: evt.content,
       timestamp: evt.timestamp
     }
+
     %Conversation{conv | messages: conv.messages ++ [message]}
   end
 
-  def apply(%Conversation{} = conv, %AnalysisRequested{}), do: %Conversation{conv | pending_analysis: true}
+  def apply(%Conversation{} = conv, %AnalysisRequested{}),
+    do: %Conversation{conv | pending_analysis: true}
 
-  def apply(%Conversation{} = conv, %AIPredictionReceived{}), do: %Conversation{conv | pending_analysis: false}
+  def apply(%Conversation{} = conv, %AIPredictionReceived{}),
+    do: %Conversation{conv | pending_analysis: false}
 
   def apply(%Conversation{} = conv, %CodeValidated{} = evt) do
     %Conversation{conv | validated_codes: conv.validated_codes ++ [evt.cie10_code]}

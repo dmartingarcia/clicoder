@@ -5,6 +5,7 @@ defmodule App.Router do
   use Commanded.Commands.Router
 
   alias App.Aggregates.Conversation
+
   alias App.Commands.{
     StartConversation,
     SendMessage,
@@ -16,12 +17,15 @@ defmodule App.Router do
 
   identify(Conversation, by: :conversation_id, prefix: "conversation-")
 
-  dispatch([
-    StartConversation,
-    SendMessage,
-    AnalyzeReport,
-    ReceiveAIPrediction,
-    ValidateCode,
-    RejectCode
-  ], to: Conversation)
+  dispatch(
+    [
+      StartConversation,
+      SendMessage,
+      AnalyzeReport,
+      ReceiveAIPrediction,
+      ValidateCode,
+      RejectCode
+    ],
+    to: Conversation
+  )
 end

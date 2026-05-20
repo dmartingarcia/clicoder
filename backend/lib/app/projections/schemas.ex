@@ -13,8 +13,12 @@ defmodule App.Projections.ConversationProjection do
     field :deleted_at, :utc_datetime
 
     has_many :messages, App.Projections.MessageProjection, foreign_key: :conversation_id
-    has_many :predicted_codes, App.Projections.PredictedCodeProjection, foreign_key: :conversation_id
-    has_many :analysis_cards, App.Projections.AnalysisCardProjection, foreign_key: :conversation_id
+
+    has_many :predicted_codes, App.Projections.PredictedCodeProjection,
+      foreign_key: :conversation_id
+
+    has_many :analysis_cards, App.Projections.AnalysisCardProjection,
+      foreign_key: :conversation_id
 
     timestamps(type: :utc_datetime)
   end
@@ -104,8 +108,15 @@ defmodule App.Projections.PredictedCodeProjection do
   def changeset(projection, attrs) do
     projection
     |> cast(attrs, [
-      :code_id, :cie10_code, :reasoning, :confidence_score,
-      :status, :validated_by, :rejected_by, :rejection_reason, :conversation_id
+      :code_id,
+      :cie10_code,
+      :reasoning,
+      :confidence_score,
+      :status,
+      :validated_by,
+      :rejected_by,
+      :rejection_reason,
+      :conversation_id
     ])
     |> validate_required([:cie10_code, :conversation_id])
   end
@@ -131,8 +142,20 @@ defmodule App.Projections.CodeSuggestionProjection do
 
   def changeset(suggestion, attrs) do
     suggestion
-    |> cast(attrs, [:suggestion_id, :selected_text, :suggested_code, :suggested_by, :conversation_id])
-    |> validate_required([:suggestion_id, :selected_text, :suggested_code, :suggested_by, :conversation_id])
+    |> cast(attrs, [
+      :suggestion_id,
+      :selected_text,
+      :suggested_code,
+      :suggested_by,
+      :conversation_id
+    ])
+    |> validate_required([
+      :suggestion_id,
+      :selected_text,
+      :suggested_code,
+      :suggested_by,
+      :conversation_id
+    ])
     |> unique_constraint(:suggestion_id)
   end
 end

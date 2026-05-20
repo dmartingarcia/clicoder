@@ -4,8 +4,20 @@ defmodule App.Projections.ConversationProjector do
     repo: App.Repo,
     name: "ConversationProjector"
 
-  alias App.Events.{ConversationStarted, MessageSent, AIPredictionReceived, CodeValidated, CodeRejected}
-  alias App.Projections.{ConversationProjection, MessageProjection, PredictedCodeProjection, AnalysisCardProjection}
+  alias App.Events.{
+    ConversationStarted,
+    MessageSent,
+    AIPredictionReceived,
+    CodeValidated,
+    CodeRejected
+  }
+
+  alias App.Projections.{
+    ConversationProjection,
+    MessageProjection,
+    PredictedCodeProjection,
+    AnalysisCardProjection
+  }
 
   project(%ConversationStarted{} = evt, _metadata, fn multi ->
     {:ok, started_at, _} = DateTime.from_iso8601(evt.started_at)
@@ -76,7 +88,9 @@ defmodule App.Projections.ConversationProjector do
         %PredictedCodeProjection{
           code_id: UUID.uuid4(),
           cie10_code: code_data[:code] || code_data["code"],
-          reasoning: code_data[:reason] || code_data["reason"] || code_data[:reasoning] || code_data["reasoning"],
+          reasoning:
+            code_data[:reason] || code_data["reason"] || code_data[:reasoning] ||
+              code_data["reasoning"],
           confidence_score: code_data[:confidence] || code_data["confidence"],
           status: "pending",
           conversation_id: conversation.id
@@ -91,7 +105,12 @@ defmodule App.Projections.ConversationProjector do
   project(%CodeValidated{} = evt, _metadata, fn multi ->
     Ecto.Multi.run(multi, :validate_code, fn repo, _changes ->
       conversation = repo.get_by!(ConversationProjection, conversation_id: evt.conversation_id)
-      code = repo.get_by!(PredictedCodeProjection, code_id: evt.code_id, conversation_id: conversation.id)
+
+      code =
+        repo.get_by!(PredictedCodeProjection,
+          code_id: evt.code_id,
+          conversation_id: conversation.id
+        )
 
       code
       |> PredictedCodeProjection.changeset(%{
@@ -105,7 +124,12 @@ defmodule App.Projections.ConversationProjector do
   project(%CodeRejected{} = evt, _metadata, fn multi ->
     Ecto.Multi.run(multi, :reject_code, fn repo, _changes ->
       conversation = repo.get_by!(ConversationProjection, conversation_id: evt.conversation_id)
-      code = repo.get_by!(PredictedCodeProjection, code_id: evt.code_id, conversation_id: conversation.id)
+
+      code =
+        repo.get_by!(PredictedCodeProjection,
+          code_id: evt.code_id,
+          conversation_id: conversation.id
+        )
 
       code
       |> PredictedCodeProjection.changeset(%{
@@ -120,7 +144,11 @@ defmodule App.Projections.ConversationProjector do
   @impl Commanded.Event.Handler
   def error({:error, reason}, event, _failure_context) do
     require Logger
-    Logger.warning("ConversationProjector skipping event #{inspect(event.event_type)} due to: #{inspect(reason)}")
+
+    Logger.warning(
+      "ConversationProjector skipping event #{inspect(event.event_type)} due to: #{inspect(reason)}"
+    )
+
     :skip
   end
 end

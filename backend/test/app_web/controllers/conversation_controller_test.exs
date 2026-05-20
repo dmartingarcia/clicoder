@@ -164,8 +164,11 @@ defmodule AppWeb.ConversationControllerTest do
       assert %{"ok" => true} = json_response(conn, 200)
 
       # Verify deleted_at is now set in the database
-      updated = App.Repo.get_by!(App.Projections.ConversationProjection,
-        conversation_id: conv.conversation_id)
+      updated =
+        App.Repo.get_by!(App.Projections.ConversationProjection,
+          conversation_id: conv.conversation_id
+        )
+
       assert updated.deleted_at != nil
     end
 
@@ -219,8 +222,11 @@ defmodule AppWeb.ConversationControllerTest do
       assert %{"ok" => true} = json_response(conn, 200)
 
       # Verify deleted_at is now nil
-      updated = App.Repo.get_by!(App.Projections.ConversationProjection,
-        conversation_id: conv.conversation_id)
+      updated =
+        App.Repo.get_by!(App.Projections.ConversationProjection,
+          conversation_id: conv.conversation_id
+        )
+
       assert is_nil(updated.deleted_at)
     end
 

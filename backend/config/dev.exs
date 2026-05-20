@@ -9,7 +9,8 @@ config :app, App.Repo,
 
 config :app, App.EventStore,
   serializer: App.JsonSerializer,
-  url: System.get_env("EVENT_STORE_URL") || "postgresql://postgres:changeme@db:5432/cie10_eventstore"
+  url:
+    System.get_env("EVENT_STORE_URL") || "postgresql://postgres:changeme@db:5432/cie10_eventstore"
 
 # URL del microservicio de IA
 config :app, :ai_engine_url, System.get_env("AI_ENGINE_URL") || "http://localhost:8000"

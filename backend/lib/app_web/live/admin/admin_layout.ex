@@ -1,7 +1,6 @@
 defmodule AppWeb.Admin.AdminLayout do
   use Phoenix.Component
 
-  import Phoenix.HTML
   import Phoenix.VerifiedRoutes, only: []
 
   def admin(assigns) do

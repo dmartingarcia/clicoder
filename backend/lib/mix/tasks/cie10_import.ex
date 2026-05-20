@@ -32,7 +32,9 @@ defmodule Mix.Tasks.Cie10.Import do
     n_procedures = import_procedures(Path.join(base_dir, "cie10-es-procedures.csv"))
     n_chemicals = import_chemicals(Path.join(base_dir, "cie10-es-chemicals.csv"))
 
-    Logger.info("Import complete — diagnoses: #{n_diagnoses}, procedures: #{n_procedures}, chemicals: #{n_chemicals}")
+    Logger.info(
+      "Import complete — diagnoses: #{n_diagnoses}, procedures: #{n_procedures}, chemicals: #{n_chemicals}"
+    )
   end
 
   # ── Diagnoses ──────────────────────────────────────────────────────────────
@@ -81,8 +83,19 @@ defmodule Mix.Tasks.Cie10.Import do
       |> File.stream!(read_ahead: 100_000)
       |> CsvParser.parse_stream(skip_headers: true)
       |> Stream.map(fn row ->
-        [code, class_name, subclass_name, procedure, procedure_def, localization, approach,
-         device, calification, definition, description | rest] = pad(row, 13)
+        [
+          code,
+          class_name,
+          subclass_name,
+          procedure,
+          procedure_def,
+          localization,
+          approach,
+          device,
+          calification,
+          definition,
+          description | rest
+        ] = pad(row, 13)
 
         times = List.first(rest, "") |> String.trim()
         gender = Enum.at(rest, 1, "") |> String.trim()

@@ -5,9 +5,24 @@ defmodule AppWeb.ConversationChannel do
   use AppWeb, :channel
 
   alias App.CommandedApplication
-  alias App.Commands.{StartConversation, SendMessage, AnalyzeReport, ReceiveAIPrediction, ValidateCode, RejectCode}
+
+  alias App.Commands.{
+    StartConversation,
+    SendMessage,
+    AnalyzeReport,
+    ReceiveAIPrediction,
+    ValidateCode,
+    RejectCode
+  }
+
   alias App.Repo
-  alias App.Projections.{ConversationProjection, PredictedCodeProjection, AnalysisCardProjection, CodeSuggestionProjection}
+
+  alias App.Projections.{
+    ConversationProjection,
+    PredictedCodeProjection,
+    AnalysisCardProjection,
+    CodeSuggestionProjection
+  }
 
   require Logger
   import Ecto.Query, only: [from: 2]
@@ -90,6 +105,7 @@ defmodule AppWeb.ConversationChannel do
       content: report_text,
       timestamp: timestamp
     }
+
     CommandedApplication.dispatch(msg_cmd)
 
     analyze_cmd = %AnalyzeReport{
@@ -144,7 +160,11 @@ defmodule AppWeb.ConversationChannel do
   end
 
   @impl true
-  def handle_in("suggest_code", %{"selected_text" => selected_text, "suggested_code" => suggested_code}, socket) do
+  def handle_in(
+        "suggest_code",
+        %{"selected_text" => selected_text, "suggested_code" => suggested_code},
+        socket
+      ) do
     conversation_id = socket.assigns.conversation_id
     user_id = socket.assigns.user_id
 
@@ -153,16 +173,17 @@ defmodule AppWeb.ConversationChannel do
         {:reply, {:error, %{reason: "conversation not found"}}, socket}
 
       conversation ->
-        changeset = CodeSuggestionProjection.changeset(
-          %CodeSuggestionProjection{},
-          %{
-            suggestion_id: UUID.uuid4(),
-            conversation_id: conversation.id,
-            selected_text: selected_text,
-            suggested_code: String.upcase(suggested_code),
-            suggested_by: user_id
-          }
-        )
+        changeset =
+          CodeSuggestionProjection.changeset(
+            %CodeSuggestionProjection{},
+            %{
+              suggestion_id: UUID.uuid4(),
+              conversation_id: conversation.id,
+              selected_text: selected_text,
+              suggested_code: String.upcase(suggested_code),
+              suggested_by: user_id
+            }
+          )
 
         case Repo.insert(changeset) do
           {:ok, suggestion} ->
@@ -175,7 +196,11 @@ defmodule AppWeb.ConversationChannel do
   end
 
   @impl true
-  def handle_in("reject_code", %{"code_id" => code_id, "cie10_code" => cie10_code, "reason" => reason}, socket) do
+  def handle_in(
+        "reject_code",
+        %{"code_id" => code_id, "cie10_code" => cie10_code, "reason" => reason},
+        socket
+      ) do
     conversation_id = socket.assigns.conversation_id
     user_id = socket.assigns.user_id
 
@@ -242,6 +267,7 @@ defmodule AppWeb.ConversationChannel do
             {:ok, decoded} -> decoded
             _ -> card.content
           end
+
         _ ->
           card.content
       end
@@ -257,6 +283,7 @@ defmodule AppWeb.ConversationChannel do
 
   defp persist_prediction_direct(conversation_id, message_id, cards) do
     conversation = Repo.get_by(ConversationProjection, conversation_id: conversation_id)
+
     unless is_nil(conversation) do
       cards
       |> Enum.with_index()
@@ -316,7 +343,10 @@ defmodule AppWeb.ConversationChannel do
             :ok
 
           {:error, reason} ->
-            Logger.warning("ReceiveAIPrediction dispatch failed (#{inspect(reason)}), persisting directly")
+            Logger.warning(
+              "ReceiveAIPrediction dispatch failed (#{inspect(reason)}), persisting directly"
+            )
+
             persist_prediction_direct(conversation_id, message_id, cards)
         end
 
@@ -339,10 +369,14 @@ defmodule AppWeb.ConversationChannel do
           )
           |> Enum.map(&format_code/1)
 
-        broadcast!(socket, "analysis_complete", %{message_id: message_id, predicted_codes: predicted_codes})
+        broadcast!(socket, "analysis_complete", %{
+          message_id: message_id,
+          predicted_codes: predicted_codes
+        })
 
       {:error, reason} ->
         Logger.error("AI Engine request failed: #{inspect(reason)}")
+
         broadcast!(socket, "analysis_failed", %{
           message_id: message_id,
           error: "No se pudo contactar con el motor de análisis"
@@ -350,6 +384,7 @@ defmodule AppWeb.ConversationChannel do
 
       {:ok, %{status: status}} ->
         Logger.error("AI Engine returned HTTP #{status}")
+
         broadcast!(socket, "analysis_failed", %{
           message_id: message_id,
           error: "Error del motor de análisis: HTTP #{status}"

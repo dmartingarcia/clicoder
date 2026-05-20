@@ -5,31 +5,48 @@ defmodule AppWeb.AuthController do
   alias App.Accounts
   alias App.Translations
 
-  operation :register,
+  operation(:register,
     summary: "Registrar usuario",
     tags: ["Auth"],
-    request_body: {"Datos de registro", "application/json",
-     %OpenApiSpex.Schema{
-       type: :object,
-       properties: %{
-         first_name: %OpenApiSpex.Schema{type: :string},
-         last_name: %OpenApiSpex.Schema{type: :string},
-         username: %OpenApiSpex.Schema{type: :string},
-         email: %OpenApiSpex.Schema{type: :string, format: :email},
-         password: %OpenApiSpex.Schema{type: :string, format: :password}
-       },
-       required: [:first_name, :last_name, :username, :email, :password]
-     }, required: true},
+    request_body:
+      {"Datos de registro", "application/json",
+       %OpenApiSpex.Schema{
+         type: :object,
+         properties: %{
+           first_name: %OpenApiSpex.Schema{type: :string},
+           last_name: %OpenApiSpex.Schema{type: :string},
+           username: %OpenApiSpex.Schema{type: :string},
+           email: %OpenApiSpex.Schema{type: :string, format: :email},
+           password: %OpenApiSpex.Schema{type: :string, format: :password}
+         },
+         required: [:first_name, :last_name, :username, :email, :password]
+       }, required: true},
     responses: [
-      created: {"Usuario creado, pendiente de confirmación", "application/json",
-       %OpenApiSpex.Schema{type: :object, properties: %{status: %OpenApiSpex.Schema{type: :string}, message: %OpenApiSpex.Schema{type: :string}}}},
-      unprocessable_entity: {"Errores de validación", "application/json",
-       %OpenApiSpex.Schema{type: :object, properties: %{errors: %OpenApiSpex.Schema{type: :object}}}}
+      created:
+        {"Usuario creado, pendiente de confirmación", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{
+             status: %OpenApiSpex.Schema{type: :string},
+             message: %OpenApiSpex.Schema{type: :string}
+           }
+         }},
+      unprocessable_entity:
+        {"Errores de validación", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{errors: %OpenApiSpex.Schema{type: :object}}
+         }}
     ]
+  )
 
   def register(conn, params) do
     locale = conn.assigns[:locale] || "es"
-    attrs = params |> Map.take(["first_name", "last_name", "username", "email", "password"]) |> Map.put("locale", locale)
+
+    attrs =
+      params
+      |> Map.take(["first_name", "last_name", "username", "email", "password"])
+      |> Map.put("locale", locale)
 
     case Accounts.register_user(attrs) do
       {:ok, user} ->
@@ -50,24 +67,37 @@ defmodule AppWeb.AuthController do
     end
   end
 
-  operation :login,
+  operation(:login,
     summary: "Login",
     tags: ["Auth"],
-    request_body: {"Credenciales", "application/json",
-     %OpenApiSpex.Schema{
-       type: :object,
-       properties: %{
-         email: %OpenApiSpex.Schema{type: :string, format: :email},
-         password: %OpenApiSpex.Schema{type: :string, format: :password}
-       },
-       required: [:email, :password]
-     }, required: true},
+    request_body:
+      {"Credenciales", "application/json",
+       %OpenApiSpex.Schema{
+         type: :object,
+         properties: %{
+           email: %OpenApiSpex.Schema{type: :string, format: :email},
+           password: %OpenApiSpex.Schema{type: :string, format: :password}
+         },
+         required: [:email, :password]
+       }, required: true},
     responses: [
-      ok: {"Token JWT y datos del usuario", "application/json",
-       %OpenApiSpex.Schema{type: :object, properties: %{token: %OpenApiSpex.Schema{type: :string}, user: %OpenApiSpex.Schema{type: :object}}}},
-      unauthorized: {"Credenciales inválidas", "application/json",
-       %OpenApiSpex.Schema{type: :object, properties: %{error: %OpenApiSpex.Schema{type: :string}}}}
+      ok:
+        {"Token JWT y datos del usuario", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{
+             token: %OpenApiSpex.Schema{type: :string},
+             user: %OpenApiSpex.Schema{type: :object}
+           }
+         }},
+      unauthorized:
+        {"Credenciales inválidas", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{error: %OpenApiSpex.Schema{type: :string}}
+         }}
     ]
+  )
 
   def login(conn, %{"email" => email, "password" => password}) do
     locale = conn.assigns[:locale] || "es"
@@ -89,23 +119,35 @@ defmodule AppWeb.AuthController do
     end
   end
 
-  operation :confirm,
+  operation(:confirm,
     summary: "Confirmar email",
     tags: ["Auth"],
     parameters: [
-      OpenApiSpex.Operation.parameter(:token, :path, :string, "Token de confirmación", required: true)
+      OpenApiSpex.Operation.parameter(:token, :path, :string, "Token de confirmación",
+        required: true
+      )
     ],
     responses: [
-      found: {"Redirige al frontend con token", "application/json", %OpenApiSpex.Schema{type: :object}},
-      not_found: {"Token inválido", "application/json", %OpenApiSpex.Schema{type: :object, properties: %{error: %OpenApiSpex.Schema{type: :string}}}}
+      found:
+        {"Redirige al frontend con token", "application/json", %OpenApiSpex.Schema{type: :object}},
+      not_found:
+        {"Token inválido", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{error: %OpenApiSpex.Schema{type: :string}}
+         }}
     ]
+  )
 
   def confirm(conn, %{"token" => token}) do
     case Accounts.confirm_user(token) do
       {:ok, user} ->
         auth_token = Phoenix.Token.sign(AppWeb.Endpoint, "user auth", user.id)
         frontend_url = System.get_env("FRONTEND_URL") || "http://localhost:3000"
-        redirect(conn, external: "#{frontend_url}?confirmed=1&token=#{auth_token}&user_id=#{user.id}")
+
+        redirect(conn,
+          external: "#{frontend_url}?confirmed=1&token=#{auth_token}&user_id=#{user.id}"
+        )
 
       {:error, :invalid_token} ->
         conn
@@ -114,20 +156,28 @@ defmodule AppWeb.AuthController do
     end
   end
 
-  operation :update_locale,
+  operation(:update_locale,
     summary: "Actualizar idioma del usuario",
     tags: ["Auth"],
     security: [%{"bearer_auth" => []}],
-    request_body: {"Locale", "application/json",
-     %OpenApiSpex.Schema{
-       type: :object,
-       properties: %{locale: %OpenApiSpex.Schema{type: :string, enum: ["es", "en", "fr", "it", "de"]}},
-       required: [:locale]
-     }, required: true},
+    request_body:
+      {"Locale", "application/json",
+       %OpenApiSpex.Schema{
+         type: :object,
+         properties: %{
+           locale: %OpenApiSpex.Schema{type: :string, enum: ["es", "en", "fr", "it", "de"]}
+         },
+         required: [:locale]
+       }, required: true},
     responses: [
-      ok: {"Locale actualizado", "application/json",
-       %OpenApiSpex.Schema{type: :object, properties: %{locale: %OpenApiSpex.Schema{type: :string}}}}
+      ok:
+        {"Locale actualizado", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{locale: %OpenApiSpex.Schema{type: :string}}
+         }}
     ]
+  )
 
   def update_locale(conn, %{"locale" => locale}) do
     user_id = conn.assigns[:current_user_id]

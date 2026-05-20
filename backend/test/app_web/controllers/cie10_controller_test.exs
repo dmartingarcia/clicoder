@@ -43,7 +43,7 @@ defmodule AppWeb.Cie10ControllerTest do
       conn = get(conn, "/api/cie10/search?q=A00")
       %{"results" => results} = json_response(conn, 200)
 
-      assert length(results) >= 1
+      assert results != []
       codes = Enum.map(results, & &1["code"])
       assert "A00" in codes
     end
@@ -52,7 +52,7 @@ defmodule AppWeb.Cie10ControllerTest do
       conn = get(conn, "/api/cie10/search?q=cólera")
       %{"results" => results} = json_response(conn, 200)
 
-      assert length(results) >= 1
+      assert results != []
       descriptions = Enum.map(results, & &1["description"])
       assert Enum.any?(descriptions, &String.contains?(String.downcase(&1), "cólera"))
     end

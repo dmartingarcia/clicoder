@@ -15,7 +15,15 @@ end
 
 defmodule App.Events.AIPredictionReceived do
   @derive Jason.Encoder
-  defstruct [:conversation_id, :message_id, :cards, :predicted_codes, :reasoning, :confidence_scores, :received_at]
+  defstruct [
+    :conversation_id,
+    :message_id,
+    :cards,
+    :predicted_codes,
+    :reasoning,
+    :confidence_scores,
+    :received_at
+  ]
 end
 
 # These structs exist solely to register their field atoms at compile time.
@@ -39,5 +47,12 @@ end
 
 defmodule App.Events.CodeRejected do
   @derive Jason.Encoder
-  defstruct [:conversation_id, :code_id, :cie10_code, :rejection_reason, :rejected_by, :rejected_at]
+  defstruct [
+    :conversation_id,
+    :code_id,
+    :cie10_code,
+    :rejection_reason,
+    :rejected_by,
+    :rejected_at
+  ]
 end

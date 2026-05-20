@@ -60,7 +60,11 @@ defmodule AppWeb.ConversationChannelTest do
       socket = connect_socket(user)
 
       assert {:ok, reply, _socket} =
-               subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{conv.conversation_id}")
+               subscribe_and_join(
+                 socket,
+                 AppWeb.ConversationChannel,
+                 "conversation:#{conv.conversation_id}"
+               )
 
       assert reply.status == "joined"
       assert Map.has_key?(reply, :history)
@@ -82,7 +86,11 @@ defmodule AppWeb.ConversationChannelTest do
       socket = connect_socket(user)
 
       assert {:ok, reply, _socket} =
-               subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{conv.conversation_id}")
+               subscribe_and_join(
+                 socket,
+                 AppWeb.ConversationChannel,
+                 "conversation:#{conv.conversation_id}"
+               )
 
       [msg | _] = reply.history.messages
 
@@ -108,7 +116,11 @@ defmodule AppWeb.ConversationChannelTest do
       socket = connect_socket(user)
 
       assert {:ok, reply, _socket} =
-               subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{conv.conversation_id}")
+               subscribe_and_join(
+                 socket,
+                 AppWeb.ConversationChannel,
+                 "conversation:#{conv.conversation_id}"
+               )
 
       [code | _] = reply.history.predicted_codes
 
@@ -124,14 +136,27 @@ defmodule AppWeb.ConversationChannelTest do
       user = user_fixture()
       conv = conversation_fixture(user)
 
-      _card2 = analysis_card_fixture(conv, %{card_type: "recommendations", position: 2, card_id: UUID.uuid4()})
-      _card0 = analysis_card_fixture(conv, %{card_type: "summary", position: 0, card_id: UUID.uuid4()})
-      _card1 = analysis_card_fixture(conv, %{card_type: "codes", position: 1, card_id: UUID.uuid4()})
+      _card2 =
+        analysis_card_fixture(conv, %{
+          card_type: "recommendations",
+          position: 2,
+          card_id: UUID.uuid4()
+        })
+
+      _card0 =
+        analysis_card_fixture(conv, %{card_type: "summary", position: 0, card_id: UUID.uuid4()})
+
+      _card1 =
+        analysis_card_fixture(conv, %{card_type: "codes", position: 1, card_id: UUID.uuid4()})
 
       socket = connect_socket(user)
 
       assert {:ok, reply, _socket} =
-               subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{conv.conversation_id}")
+               subscribe_and_join(
+                 socket,
+                 AppWeb.ConversationChannel,
+                 "conversation:#{conv.conversation_id}"
+               )
 
       positions = Enum.map(reply.history.analysis_cards, & &1.position)
       assert positions == Enum.sort(positions)
@@ -144,7 +169,11 @@ defmodule AppWeb.ConversationChannelTest do
       socket = connect_socket(user)
 
       assert {:ok, reply, _socket} =
-               subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{conv.conversation_id}")
+               subscribe_and_join(
+                 socket,
+                 AppWeb.ConversationChannel,
+                 "conversation:#{conv.conversation_id}"
+               )
 
       assert reply.status == "joined"
       assert reply.history.messages == []

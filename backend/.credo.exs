@@ -1,4 +1,4 @@
-%Credo.Config{
+%{
   configs: [
     %{
       name: "default",
@@ -20,7 +20,8 @@
           {Credo.Check.Readability.TrailingWhiteSpace, []},
 
           # Design
-          {Credo.Check.Design.AliasUsage, [priority: :low, if_nested_deeper_than: 2, if_called_more_often_than: 0]},
+          {Credo.Check.Design.AliasUsage,
+           [priority: :low, if_nested_deeper_than: 2, if_called_more_often_than: 0]},
 
           # Warnings
           {Credo.Check.Warning.ApplicationConfigInModuleAttribute, []},
@@ -55,6 +56,7 @@
           # Too noisy for this codebase style
           {Credo.Check.Readability.MaxLineLength, []},
           {Credo.Check.Readability.Specs, []},
+          {Credo.Check.Readability.ModuleDoc, []},
           {Credo.Check.Design.TagTODO, []},
           {Credo.Check.Design.TagFIXME, []}
         ]
