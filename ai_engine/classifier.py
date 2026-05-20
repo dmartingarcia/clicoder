@@ -89,8 +89,9 @@ class CIE10Classifier:
         self.tokenizer = AutoTokenizer.from_pretrained(self.config["model_name"])
 
         # Checkpoint
+        model_file = self.config.get("model_file", "classifier.pt")
         ckpt = torch.load(
-            model_path / "classifier.pt",
+            model_path / model_file,
             map_location=self.device,
             weights_only=False,
         )
