@@ -47,6 +47,27 @@ defmodule AppWeb do
     end
   end
 
+  def html do
+    quote do
+      use Phoenix.Component
+
+      import Phoenix.HTML
+      import Phoenix.Flash, only: [get: 2]
+
+      unquote(verified_routes())
+    end
+  end
+
+  def live_view do
+    quote do
+      use Phoenix.LiveView
+
+      use Gettext, backend: AppWeb.Gettext
+
+      unquote(verified_routes())
+    end
+  end
+
   def verified_routes do
     quote do
       use Phoenix.VerifiedRoutes,

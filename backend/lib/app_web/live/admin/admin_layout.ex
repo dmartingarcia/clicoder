@@ -1,7 +1,10 @@
 defmodule AppWeb.Admin.AdminLayout do
-  use AppWeb, :html
+  use Phoenix.Component
 
-  def render("admin.html", assigns) do
+  import Phoenix.HTML
+  import Phoenix.VerifiedRoutes, only: []
+
+  def admin(assigns) do
     ~H"""
     <!DOCTYPE html>
     <html lang="es">
@@ -9,24 +12,18 @@ defmodule AppWeb.Admin.AdminLayout do
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Backoffice — CIE-10</title>
-        <link rel="stylesheet" href={~p"/assets/app.css"} />
-        <script defer src={~p"/assets/app.js"}></script>
+        <link rel="stylesheet" href="/assets/app.css" />
+        <script defer src="/assets/app.js"></script>
       </head>
       <body class="bg-gray-100 min-h-screen">
         <nav class="bg-indigo-700 text-white px-6 py-3 flex items-center justify-between shadow">
           <div class="flex items-center gap-6">
             <span class="font-bold text-lg">CIE-10 Backoffice</span>
-            <.link navigate={~p"/admin/users"} class="text-indigo-200 hover:text-white text-sm">
-              Usuarios
-            </.link>
+            <a href="/admin/users" class="text-indigo-200 hover:text-white text-sm">Usuarios</a>
           </div>
-          <.link
-            href={~p"/admin/logout"}
-            method="delete"
-            class="text-indigo-200 hover:text-white text-sm"
-          >
+          <a href="/admin/logout" data-method="delete" class="text-indigo-200 hover:text-white text-sm">
             Cerrar sesión
-          </.link>
+          </a>
         </nav>
         <main>
           {@inner_content}

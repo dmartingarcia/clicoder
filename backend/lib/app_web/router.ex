@@ -1,5 +1,6 @@
 defmodule AppWeb.Router do
   use AppWeb, :router
+  import Phoenix.LiveView.Router
 
   pipeline :api do
     plug :accepts, ["json"]
