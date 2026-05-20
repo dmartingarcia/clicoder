@@ -265,6 +265,71 @@ Las contraseñas se almacenan hasheadas con bcrypt. El servicio de email se impl
 
 La interfaz soporta español e inglés. Las traducciones del backend se almacenan en ficheros YAML (\texttt{priv/translations/es.yml} y \texttt{en.yml}) y se sirven a través del \emph{endpoint} \texttt{GET\allowbreak\ /api/translations/:locale}. El frontend las carga al arrancar mediante \texttt{I18nContext} y las aplica con la función \texttt{t(key, vars)}, que soporta interpolación de variables. La preferencia de idioma se almacena en la base de datos del usuario y se sincroniza con el backend al cambiar de idioma.
 
+\subsection{Calidad del código y buenas prácticas}
+\label{sec:calidad}
+
+El proyecto aplica un conjunto de principios arquitectónicos y herramientas de calidad de forma consistente en todos sus componentes, lo que permite detectar errores de forma temprana, mantener la coherencia del código y facilitar su evolución a medida que el sistema crece.
+
+\subsubsection{Arquitectura orientada a eventos y CQRS}
+
+Una \textbf{arquitectura orientada a eventos} (\emph{event-driven architecture}, EDA) es un estilo arquitectónico en el que los componentes del sistema se comunican emitiendo y reaccionando a eventos~\cite{Fowler02}. Un evento representa un hecho ocurrido en el pasado —irreversible e inmutable— y no una instrucción dirigida a un destinatario concreto. Los productores de eventos no conocen a sus consumidores; los consumidores se suscriben a los eventos que les interesan y reaccionan de forma independiente. Este desacoplamiento permite que cada componente evolucione, escale y falle de forma autónoma sin afectar al resto del sistema.
+
+\textbf{Event Sourcing}~\cite{Young10} lleva este principio al nivel del modelo de datos: en lugar de almacenar únicamente el estado actual de una entidad (la fila actual en una tabla relacional), el sistema persiste la secuencia completa de eventos que han producido ese estado. El estado actual se obtiene siempre reproduciendo los eventos desde el origen. Esta estrategia proporciona un historial de auditoría completo y gratuito —especialmente relevante en un contexto clínico donde la trazabilidad de las decisiones es un requisito regulatorio— y permite reconstruir el estado del sistema en cualquier instante del pasado.
+
+El patrón \textbf{CQRS} (\emph{Command Query Responsibility Segregation})~\cite{Young10} separa el modelo de escritura del modelo de lectura. Los \textbf{comandos} expresan la intención de cambiar el estado del sistema (\texttt{AnalyzeReport}, \texttt{ValidateCode}…); son procesados por los agregados, que validan las invariantes de negocio y emiten los eventos correspondientes. Las \textbf{consultas} operan sobre modelos de lectura desnormalizados —las proyecciones—, optimizados para las necesidades de la interfaz y actualizados de forma asíncrona por los proyectores a medida que llegan los eventos. La combinación CQRS/Event Sourcing ofrece tres ventajas concretas para este proyecto: (1)~trazabilidad completa de cada acción clínica sobre cada análisis; (2)~independencia entre la carga de escritura (predicciones del modelo BERT) y la carga de lectura (consultas del historial por el codificador); y (3)~posibilidad de añadir nuevas proyecciones —por ejemplo, estadísticas de uso o informes de calidad— sin modificar el dominio.
+
+En el backend del proyecto, CQRS/Event Sourcing se implementa mediante la biblioteca Commanded~\cite{commanded2024}. Los comandos principales son \texttt{RegisterUser}, \texttt{AnalyzeReport}, \texttt{ReceiveAIPrediction}, \texttt{ValidateCode} y \texttt{RejectCode}. El \emph{event store} se almacena en PostgreSQL (ADR-04, Anexo~\ref{cap:AnexoE}), decisión que reduce la complejidad operacional sin comprometer la capacidad de migrar a un \emph{broker} de mensajes dedicado si el volumen lo exigiera.
+
+\subsubsection{Principios SOLID}
+
+Los principios SOLID~\cite{MartinCleanCode08,MartinPPP02} son un conjunto de cinco directrices de diseño orientado a objetos formuladas y sistematizadas por Robert C. Martin (\emph{Uncle Bob}) que buscan producir sistemas con bajo acoplamiento, alta cohesión y facilidad de extensión y mantenimiento. Martin los desarrolla en profundidad en \emph{Clean Code}~\cite{MartinCleanCode08} y en \emph{Agile Software Development}~\cite{MartinPPP02}, y los eleva al nivel arquitectónico en \emph{Clean Architecture}~\cite{MartinCleanArch17}.
+
+\begin{itemize}
+    \item \textbf{S — Principio de responsabilidad única} (\emph{Single Responsibility Principle}, SRP): \emph{«Una clase debe tener una, y solo una, razón para cambiar»}~\cite{MartinPPP02}. En el backend, este principio separa los agregados (lógica de negocio y validación de invariantes), los proyectores (actualización de vistas de lectura) y los manejadores de proceso (\emph{process managers}): cada módulo tiene un único motivo de cambio, de modo que una modificación en las reglas de negocio no obliga a modificar la capa de persistencia ni viceversa.
+
+    \item \textbf{O — Principio abierto/cerrado} (\emph{Open/Closed Principle}, OCP): \emph{«Las entidades software deben estar abiertas a la extensión pero cerradas a la modificación»}~\cite{MartinPPP02}. En el motor de IA, la clase \texttt{CIE10Classifier} encapsula la lógica de inferencia de modo que añadir soporte para un nuevo modelo base, una nueva estrategia de umbral o un nuevo formato de salida no requiere modificar el código de inferencia existente, sino extender la clase o intercambiar el artefacto del modelo.
+
+    \item \textbf{L — Principio de sustitución de Liskov} (\emph{Liskov Substitution Principle}, LSP): \emph{«Los subtipos deben poder sustituirse por sus tipos base»}~\cite{Liskov87,MartinPPP02}. En el backend, los diferentes adaptadores de Commanded (\texttt{EventStore.Adapters.Postgres}, un eventual adaptador Kafka) implementan la misma interfaz del \emph{event store}; el resto del dominio los usa de forma intercambiable sin necesidad de conocer la implementación concreta.
+
+    \item \textbf{I — Principio de segregación de interfaces} (\emph{Interface Segregation Principle}, ISP): \emph{«Los clientes no deben ser forzados a depender de interfaces que no utilizan»}~\cite{MartinPPP02}. En el frontend, los contextos de React están segregados por dominio: \texttt{AuthContext} expone únicamente operaciones de sesión, \texttt{ConversationContext} las del análisis activo e \texttt{I18nContext} las de internacionalización. Ningún componente de la interfaz depende de estado o métodos que no le conciernen, lo que simplifica las pruebas y limita la propagación de re-renderizados.
+
+    \item \textbf{D — Principio de inversión de dependencias} (\emph{Dependency Inversion Principle}, DIP): \emph{«Los módulos de alto nivel no deben depender de los módulos de bajo nivel; ambos deben depender de abstracciones»}~\cite{MartinPPP02}. Este principio es el más visible en la arquitectura del backend: el dominio de negocio depende de la abstracción \texttt{EventStore} definida por Commanded, no del adaptador PostgreSQL que la implementa. Sustituir ese adaptador se reduce a cambiar la configuración del supervisor OTP sin modificar ningún agregado, proyector ni manejador de eventos.
+\end{itemize}
+
+La aplicación sistemática de estos principios produce sistemas donde cada cambio tiene un alcance acotado y predecible, reduciendo el riesgo de regresiones y facilitando la incorporación de nuevas funcionalidades sin reescribir código existente. Martin sintetiza esta idea en \emph{Clean Code} con la regla de los \emph{boy scouts}~\cite{MartinCleanCode08}: \emph{«Deja el código más limpio de lo que lo encontraste»}, principio que también ha guiado las sesiones de refactorización durante el desarrollo del proyecto.
+
+\subsubsection{Linters, formatters y análisis estático}
+
+Cada componente cuenta con herramientas de formato, linting y análisis estático, integradas como objetivos del \texttt{Makefile}. La ejecución de cada target produce un informe legible en la salida estándar que identifica exactamente el fichero, la línea y la regla infringida, lo que permite corregir los problemas sin abandonar el terminal.
+
+\begin{itemize}
+    \item \textbf{Backend (Elixir).}
+    \begin{itemize}
+        \item \texttt{mix format} / \texttt{mix format --check-formatted}: formateador oficial del lenguaje. En modo \texttt{--check-formatted} falla la compilación si algún fichero no está formateado, lo que garantiza consistencia sin negociación (\texttt{make backend-format}, \texttt{make backend-lint}).
+        \item Credo~\cite{Credo} (\texttt{--strict}): analizador estático que detecta antipatrones, módulos con múltiples responsabilidades, código duplicado, complejidad ciclomática elevada y violaciones de estilo. Genera un informe priorizado por categoría (\texttt{make backend-lint}).
+        \item Dialyxir~\cite{Dialyxir}: envoltorio de Dialyzer, la herramienta de análisis de tipos de la plataforma Erlang/OTP. Infiere los tipos de las funciones y detecta llamadas imposibles, cláusulas inalcanzables y contratos de tipo rotos sin necesidad de anotaciones explícitas, gracias al análisis de flujo sobre el bytecode BEAM. Genera su informe con \texttt{make backend-dialyzer}.
+    \end{itemize}
+    \item \textbf{Motor de IA (Python).} Ruff~\cite{Ruff} integra en una única herramienta las capacidades de Flake8, isort y pycodestyle. Comprueba conformidad con PEP\,8, ordenación de importaciones, variables no utilizadas y más de 800 reglas adicionales. Su salida identifica regla, fichero y línea; puede aplicar correcciones automáticas con \texttt{--fix}. Se ejecuta con \texttt{make ai-lint}.
+    \item \textbf{Frontend (TypeScript/Next.js).}
+    \begin{itemize}
+        \item ESLint con \texttt{eslint-config-next}: aplica las reglas recomendadas para React y Next.js, detectando accesibilidad básica, uso incorrecto de hooks y patrones desaconsejados (\texttt{make frontend-lint}).
+        \item Compilador TypeScript en modo estricto (\texttt{strict: true}): actúa como analizador estático de tipos en tiempo de compilación. Detecta tipos \texttt{unknown} sin acotar, propiedades inexistentes, asignaciones incompatibles y rutas de código no controladas. Los errores de tipo bloquean la construcción del artefacto de producción (\texttt{next build}).
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Cobertura de pruebas}
+
+La cobertura de código se mide de forma independiente en cada componente:
+
+\begin{itemize}
+    \item \textbf{Backend:} la herramienta \texttt{mix coveralls} genera informes HTML en \texttt{backend/cover/} que detallan las líneas cubiertas por la suite ExUnit, identificando los módulos con menor cobertura para priorizar la escritura de nuevas pruebas.
+    \item \textbf{Frontend:} Vitest con el proveedor \texttt{@vitest/coverage-v8} genera informes de cobertura en \texttt{frontend/coverage/} al ejecutar \texttt{npm run test:coverage}. V8 instrumenta el código JavaScript directamente a nivel de motor, obteniendo métricas más precisas que los instrumentadores basados en transformaciones de AST.
+\end{itemize}
+
+\subsubsection{Docker como plataforma de desarrollo reproducible}
+
+Todo el ciclo de vida del proyecto —desarrollo, pruebas, entrenamiento y despliegue— se orquesta con Docker Compose. Esta decisión tiene dos consecuencias directas para la calidad del proyecto. Primera, el entorno es completamente reproducible: cualquier colaborador puede levantar el sistema completo con \texttt{make up} sin instalar dependencias locales ni configurar versiones de lenguaje. Segunda, los linters y formatters se ejecutan dentro del mismo contenedor que el código de producción (\texttt{make backend-lint}, \texttt{make ai-lint}, \texttt{make frontend-lint}), eliminando las diferencias entre el entorno de desarrollo local y el de CI. Las variantes \texttt{docker-compose.gpu.yml} y \texttt{docker-compose.cpu.yml} permiten ajustar la configuración del motor de IA a la infraestructura disponible sin modificar el resto del sistema.
+
 \section{Pruebas del sistema}
 
 \subsection{Estrategia}
