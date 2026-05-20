@@ -106,6 +106,16 @@ class CIE10Classifier:
         self.model.to(self.device)
         self.model.eval()
 
+        # Thresholds por clase (generados en entrenamiento)
+        self.per_class_thresholds: Optional[List[float]] = None
+        thresholds_file = self.config.get("thresholds_file")
+        if thresholds_file:
+            thr_path = model_path / thresholds_file
+            if thr_path.exists():
+                with open(thr_path, encoding="utf-8") as f:
+                    thr_data = json.load(f)
+                self.per_class_thresholds = thr_data.get("per_class_thresholds")
+
         print(f"CIE10Classifier cargado: {len(self.code_to_idx)} códigos · device={self.device}")
 
     def predict(
@@ -154,10 +164,15 @@ class CIE10Classifier:
             logits = self.model(input_ids, attention_mask)
             probs  = torch.sigmoid(logits).cpu().numpy()[0]
 
-        # Recoger predicciones por encima del umbral
+        # Recoger predicciones por encima del umbral (por clase si disponible)
         predictions = []
         for idx, prob in enumerate(probs):
-            if prob < threshold:
+            thr = (
+                self.per_class_thresholds[idx]
+                if self.per_class_thresholds is not None
+                else threshold
+            )
+            if prob < thr:
                 continue
             code    = self.idx_to_code[str(idx)]
             chapter = _extract_chapter(code)
@@ -170,23 +185,6 @@ class CIE10Classifier:
             if code_descriptions is not None:
                 entry["description"] = code_descriptions.get(code, "")
             predictions.append(entry)
-
-        # Si no hay ninguno sobre el umbral, devolver los top_k más altos
-        if not predictions:
-            top_indices = np.argsort(probs)[::-1][:top_k]
-            for idx in top_indices:
-                prob    = float(probs[idx])
-                code    = self.idx_to_code[str(idx)]
-                chapter = _extract_chapter(code)
-                entry   = {
-                    "code":         code,
-                    "probability":  prob,
-                    "chapter":      chapter or "",
-                    "chapter_name": self.chapters.get(chapter or "", {}).get("name", "") if chapter else "",
-                }
-                if code_descriptions is not None:
-                    entry["description"] = code_descriptions.get(code, "")
-                predictions.append(entry)
 
         predictions.sort(key=lambda x: x["probability"], reverse=True)
         return predictions[:top_k]
