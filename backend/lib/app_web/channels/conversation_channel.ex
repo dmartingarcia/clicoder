@@ -5,9 +5,9 @@ defmodule AppWeb.ConversationChannel do
   use AppWeb, :channel
 
   alias App.CommandedApplication
-  alias App.Commands.{StartConversation, SendMessage, AnalyzeReport, ValidateCode, RejectCode}
+  alias App.Commands.{StartConversation, SendMessage, AnalyzeReport, ReceiveAIPrediction, ValidateCode, RejectCode}
   alias App.Repo
-  alias App.Projections.{ConversationProjection, MessageProjection, PredictedCodeProjection, AnalysisCardProjection, CodeSuggestionProjection}
+  alias App.Projections.{ConversationProjection, PredictedCodeProjection, AnalysisCardProjection, CodeSuggestionProjection}
 
   require Logger
   import Ecto.Query, only: [from: 2]
@@ -256,7 +256,7 @@ defmodule AppWeb.ConversationChannel do
   end
 
   defp persist_prediction_direct(conversation_id, message_id, cards) do
-    conversation = App.Repo.get_by(App.Projections.ConversationProjection, conversation_id: conversation_id)
+    conversation = Repo.get_by(ConversationProjection, conversation_id: conversation_id)
     unless is_nil(conversation) do
       cards
       |> Enum.with_index()
@@ -265,7 +265,7 @@ defmodule AppWeb.ConversationChannel do
         card_content = card["content"]
         content = if card_type == "codes", do: Jason.encode!(card_content), else: card_content
 
-        %App.Projections.AnalysisCardProjection{
+        %AnalysisCardProjection{
           card_id: UUID.uuid4(),
           card_type: card_type,
           content: content,
@@ -273,7 +273,7 @@ defmodule AppWeb.ConversationChannel do
           message_id: message_id,
           conversation_id: conversation.id
         }
-        |> App.Repo.insert(on_conflict: :nothing)
+        |> Repo.insert(on_conflict: :nothing)
       end)
 
       codes_content =
@@ -282,7 +282,7 @@ defmodule AppWeb.ConversationChannel do
         |> Map.get("content", [])
 
       Enum.each(codes_content, fn code ->
-        %App.Projections.PredictedCodeProjection{
+        %PredictedCodeProjection{
           code_id: UUID.uuid4(),
           cie10_code: code["code"],
           reasoning: code["reason"] || code["reasoning"],
@@ -290,7 +290,7 @@ defmodule AppWeb.ConversationChannel do
           status: "pending",
           conversation_id: conversation.id
         }
-        |> App.Repo.insert(on_conflict: :nothing)
+        |> Repo.insert(on_conflict: :nothing)
       end)
     end
   end
@@ -298,11 +298,11 @@ defmodule AppWeb.ConversationChannel do
   defp call_ai_engine(conversation_id, message_id, report_text, socket) do
     ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
 
-    case Req.post("#{ai_url}/predict", json: %{text: report_text}) do
+    case Req.post("#{ai_url}/predict", json: %{text: report_text}, receive_timeout: 60_000) do
       {:ok, %{status: 200, body: body}} ->
         cards = body["cards"] || []
 
-        cmd = %App.Commands.ReceiveAIPrediction{
+        cmd = %ReceiveAIPrediction{
           conversation_id: conversation_id,
           message_id: message_id,
           cards: cards,
@@ -311,22 +311,16 @@ defmodule AppWeb.ConversationChannel do
           confidence_scores: []
         }
 
-        # Try event store; fall back to direct DB write so cards always persist
-        dispatched =
-          try do
-            CommandedApplication.dispatch(cmd)
-          rescue
-            e ->
-              Logger.error("ReceiveAIPrediction dispatch raised: #{inspect(e)}")
-              {:error, :exception}
-          end
+        case CommandedApplication.dispatch(cmd) do
+          :ok ->
+            :ok
 
-        if dispatched != :ok do
-          persist_prediction_direct(conversation_id, message_id, cards)
+          {:error, reason} ->
+            Logger.warning("ReceiveAIPrediction dispatch failed (#{inspect(reason)}), persisting directly")
+            persist_prediction_direct(conversation_id, message_id, cards)
         end
 
-        cards
-        |> Enum.each(fn card ->
+        Enum.each(cards, fn card ->
           broadcast!(socket, "analysis_card_received", %{
             message_id: message_id,
             card_id: UUID.uuid4(),
@@ -336,9 +330,9 @@ defmodule AppWeb.ConversationChannel do
         end)
 
         predicted_codes =
-          App.Repo.all(
-            from p in App.Projections.PredictedCodeProjection,
-              join: c in App.Projections.ConversationProjection,
+          Repo.all(
+            from p in PredictedCodeProjection,
+              join: c in ConversationProjection,
               on: p.conversation_id == c.id,
               where: c.conversation_id == ^conversation_id,
               select: p
@@ -355,7 +349,7 @@ defmodule AppWeb.ConversationChannel do
         })
 
       {:ok, %{status: status}} ->
-        Logger.error("AI Engine returned status #{status}")
+        Logger.error("AI Engine returned HTTP #{status}")
         broadcast!(socket, "analysis_failed", %{
           message_id: message_id,
           error: "Error del motor de análisis: HTTP #{status}"

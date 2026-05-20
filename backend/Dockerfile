@@ -1,4 +1,4 @@
-FROM elixir:1.15-alpine AS build
+FROM elixir:1.18-alpine AS build
 
 RUN apk add --no-cache build-base git nodejs npm postgresql-client bash
 
@@ -20,6 +20,9 @@ COPY .formatter.exs .
 
 RUN mix compile
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 4000
 
-CMD ["mix", "phx.server"]
+CMD ["/entrypoint.sh"]
