@@ -30,7 +30,7 @@ make ai-train MODEL=jhu-clsp/mmBERT-base MAX_LENGTH=1024 BATCH_SIZE=1 GRAD_ACCUM
 
 | Parámetro | Default | Descripción |
 |-----------|---------|-------------|
-| `--model_name` | `jhu-clsp/mmBERT-base` | Modelo HuggingFace base |
+| `--model_name` | `IIC/RigoBERTa-Clinical` | Modelo HuggingFace base |
 | `--max_length` | `512` | Longitud máxima de tokens |
 | `--epochs` | `20` | Épocas máximas |
 | `--batch_size` | `1` | Batch size por paso (CPU: 1 para evitar OOM) |
@@ -48,7 +48,7 @@ predice simultáneamente todos los códigos CIE-10. No hay jerarquía de capítu
 evita el error en cascada (si el capítulo falla, todos sus códigos también fallan).
 
 ```
-texto clínico → tokenizer → encoder (22 capas) → [CLS] → dropout → Linear(hidden, N_códigos) → sigmoid → umbral
+texto clínico → tokenizer → encoder (24 capas) → [CLS] → dropout → Linear(hidden, N_códigos) → sigmoid → umbral
 ```
 
 La función de pérdida es `BCEWithLogitsLoss` (binary cross-entropy por código), con
@@ -1790,7 +1790,7 @@ El progressive unfreezing (paso 30) fue el último salto real. El sliding window
 confirmó que la truncación no era el cuello de botella: el problema es la ratio datos/clases
 (~500 documentos, 1767 clases → menos de 1 ejemplo de media por clase).
 
-### Opciones por orden de impacto esperado (actualizado paso 31)
+### Opciones por orden de impacto esperado (actualizado paso 32)
 
 | Opción | Esfuerzo | Impacto esperado | Estado |
 | ------ | -------- | ---------------- | ------ |
