@@ -161,8 +161,10 @@ defmodule Mix.Tasks.Cie10.Import do
     stream
     |> Stream.chunk_every(@batch_size)
     |> Enum.reduce(0, fn batch, total ->
+      unique_batch = batch |> Enum.uniq_by(& &1.code)
+
       {inserted, _} =
-        App.Repo.insert_all(App.Cie10Code, batch,
+        App.Repo.insert_all(App.Cie10Code, unique_batch,
           on_conflict: {:replace, [:description, :metadata, :updated_at]},
           conflict_target: :code
         )

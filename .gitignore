@@ -2,6 +2,10 @@
 /node_modules/
 /package-lock.json
 
+# Frontend deps (bind-mounted into Docker)
+/frontend/node_modules/
+/frontend/.next/
+
 **/.venv
 **/__pycache__
 **/*.pyc

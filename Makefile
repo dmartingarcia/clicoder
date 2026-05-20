@@ -1,4 +1,4 @@
-.PHONY: help build build-base build-backend build-frontend build-ai build-training up down restart logs logs-backend logs-frontend logs-ai logs-db logs-mail clean clean-all dev setup backend-shell backend-migrate backend-rollback backend-seed backend-reset backend-test backend-install backend-format backend-inspect frontend-shell frontend-test frontend-install frontend-format frontend-lint frontend-inspect ai-shell ai-install db-shell db-backup db-reset ps stats prod-build prod-up mailpit training-setup training-dataset training-jupyter training-train training-export training-all training-clean training-docker-cpu training-docker-gpu cpu-build cpu-up cpu-down cpu-dev cpu-logs-ai cpu-ai-shell tfg-pdf tfg-clean
+.PHONY: help build build-base build-backend build-frontend build-ai build-training up down logs clean clean-all setup reset shell backend-migrate backend-rollback backend-seed backend-reset backend-test backend-install backend-format frontend-test frontend-install frontend-format frontend-lint ai-install db-backup db-reset mailpit training-setup training-dataset training-jupyter-cpu training-jupyter-gpu training-clean cpu-build cpu-up cpu-down mock-build mock-up mock-down tfg-pdf tfg-clean
 
 # Variables
 COMPOSE      = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
@@ -30,7 +30,7 @@ build: build-base ## Construir todos los contenedores
 	@echo "$(GREEN)Construyendo contenedores...$(NC)"
 	$(COMPOSE) build
 
-build-backend:## Construir solo backend
+build-backend: ## Construir solo backend
 	@echo "$(GREEN)Construyendo backend...$(NC)"
 	$(COMPOSE) build backend
 
@@ -46,7 +46,7 @@ build-training: build-base ## Construir solo training
 	@echo "$(GREEN)Construyendo training...$(NC)"
 	$(COMPOSE) build training
 
-up: ## Levantar todos los servicios
+up: frontend-install ## Levantar todos los servicios
 	@echo "$(GREEN)Levantando servicios...$(NC)"
 	$(COMPOSE) up -d
 	@echo "$(GREEN)Servicios levantados:$(NC)"
@@ -60,31 +60,35 @@ down: ## Detener todos los servicios
 	@echo "$(YELLOW)Deteniendo servicios...$(NC)"
 	$(COMPOSE) down
 
-restart: ## Reiniciar todos los servicios
-	@echo "$(YELLOW)Reiniciando servicios...$(NC)"
-	$(COMPOSE) restart
-
-logs: ## Ver logs de todos los servicios
-	$(COMPOSE) logs -f
-
-logs-backend: ## Ver logs del backend
-	$(COMPOSE) logs -f backend
-
-logs-frontend: ## Ver logs del frontend
-	$(COMPOSE) logs -f frontend
-
-logs-ai: ## Ver logs del AI engine
-	$(COMPOSE) logs -f ai_engine
-
-logs-db: ## Ver logs de la base de datos
-	$(COMPOSE) logs -f db
-
-logs-mail: ## Ver logs de Mailpit
-	$(COMPOSE) logs -f mailpit
+logs: ## Ver logs (pregunta por servicio o todos)
+	@echo "$(GREEN)Servicios disponibles:$(NC)"
+	@echo "  1) todos"
+	@echo "  2) backend"
+	@echo "  3) frontend"
+	@echo "  4) ai_engine"
+	@echo "  5) db"
+	@echo "  6) mailpit"
+	@read -p "Servicio [1]: " c; \
+	case $${c:-1} in \
+		1|todos)    docker compose logs -f ;; \
+		2|backend)  docker compose logs -f backend ;; \
+		3|frontend) docker compose logs -f frontend ;; \
+		4|ai_engine) docker compose logs -f ai_engine ;; \
+		5|db)       docker compose logs -f db ;; \
+		6|mailpit)  docker compose logs -f mailpit ;; \
+		*) echo "Opción no válida" ;; \
+	esac
 
 mailpit: ## Abrir Mailpit en el navegador (fake email inbox)
 	@echo "$(GREEN)Abriendo Mailpit en http://localhost:8025$(NC)"
 	open http://localhost:8025 2>/dev/null || xdg-open http://localhost:8025 2>/dev/null || echo "Abre manualmente: http://localhost:8025"
+
+setup: ## Setup completo desde cero: down -v + build + seed + up
+	$(COMPOSE) down -v --remove-orphans
+	$(COMPOSE) build --progress=plain backend
+	$(COMPOSE) build --progress=plain frontend
+	$(MAKE) backend-seed
+	$(COMPOSE) up -d
 
 clean: ## Limpiar contenedores, volúmenes e imágenes
 	@echo "$(YELLOW)Limpiando todo...$(NC)"
@@ -96,34 +100,21 @@ clean-all: ## Limpieza profunda (incluye imágenes)
 	$(COMPOSE) down -v --rmi all --remove-orphans
 	docker system prune -af
 
-# Comandos de desarrollo
-dev: ## Levantar servicios en modo desarrollo con logs
-	@echo "$(GREEN)Iniciando modo desarrollo...$(NC)"
-	$(COMPOSE) up
-
-setup: build ## Setup inicial del proyecto
-	@echo "$(GREEN)Setup inicial del proyecto...$(NC)"
-	$(COMPOSE) up -d db
-	@echo "Esperando a PostgreSQL..."
-	@sleep 5
-	$(COMPOSE) up -d backend
-	@echo "Esperando inicialización del backend..."
-	@sleep 10
-	$(COMPOSE) up -d ai_engine frontend
-	@echo "$(GREEN)Setup completado!$(NC)"
-
 # Shells interactivos
-backend-shell: ## Abrir shell en el contenedor del backend
-	$(BACKEND) sh
-
-frontend-shell: ## Abrir shell en el contenedor del frontend
-	$(FRONTEND) sh
-
-ai-shell: ## Abrir shell en el contenedor de IA
-	$(AI) sh
-
-db-shell: ## Abrir shell de PostgreSQL
-	$(DB) psql -U postgres -d cie10_app
+shell: ## Abrir shell interactivo (pregunta por contenedor)
+	@echo "$(GREEN)Contenedores disponibles:$(NC)"
+	@echo "  1) backend"
+	@echo "  2) frontend"
+	@echo "  3) ai_engine"
+	@echo "  4) db"
+	@read -p "Contenedor: " c; \
+	case $$c in \
+		1|backend)    docker exec -it elixir_backend sh ;; \
+		2|frontend)   docker exec -it nextjs_frontend sh ;; \
+		3|ai_engine)  docker exec -it ai_engine sh ;; \
+		4|db)         docker exec -it cie10_db psql -U postgres -d cie10_app ;; \
+		*) echo "Opción no válida" ;; \
+	esac
 
 # Comandos de base de datos
 backend-migrate: ## Ejecutar migraciones de Ecto
@@ -134,20 +125,19 @@ backend-rollback: ## Rollback última migración
 	@echo "$(YELLOW)Rollback de migración...$(NC)"
 	$(BACKEND) mix ecto.rollback
 
-backend-seed: ## Poblar base de datos con datos de prueba
-	@echo "$(GREEN)Poblando base de datos...$(NC)"
-	$(BACKEND) mix run priv/repo/seeds.exs
+backend-seed: backend-install ## Primera vez: create + migrate + eventstore + seeds + CIE-10
+	$(COMPOSE) up -d db
+	$(COMPOSE) run --rm --no-deps backend mix ecto.create || true
+	$(COMPOSE) run --rm --no-deps backend mix ecto.migrate
+	$(COMPOSE) run --rm --no-deps backend mix event_store.create || true
+	$(COMPOSE) run --rm --no-deps backend mix event_store.init || true
+	$(COMPOSE) run --rm --no-deps backend mix run priv/repo/seeds.exs
+	$(COMPOSE) run --rm --no-deps backend mix cie10.import
 
-backend-import-cie10: ## Importar códigos CIE-10 a la base de datos (~185K códigos)
-	@echo "$(GREEN)Importando códigos CIE-10 desde CSV...$(NC)"
-	$(BACKEND) mix cie10.import
-	@echo "$(GREEN)Importación completada$(NC)"
-
-db-reset: ## Resetear base de datos (drop, create, migrate, seed)
-	@echo "$(YELLOW)Reseteando base de datos...$(NC)"
-	$(BACKEND) mix ecto.drop
-	$(BACKEND) mix ecto.create
-	$(BACKEND) mix ecto.migrate
+db-reset: ## Reset completo: drop + backend-seed
+	$(COMPOSE) up -d db
+	$(COMPOSE) run --rm --no-deps backend mix ecto.drop || true
+	$(MAKE) backend-seed
 
 # Testing
 backend-test: ## Ejecutar tests del backend
@@ -156,36 +146,16 @@ backend-test: ## Ejecutar tests del backend
 
 frontend-test: ## Ejecutar tests del frontend
 	@echo "$(GREEN)Ejecutando tests del frontend...$(NC)"
-	$(FRONTEND) npm test
+	$(COMPOSE) run --rm --no-deps frontend npm test
 
 # Comandos útiles
-ps: ## Ver estado de los servicios
-	$(COMPOSE) ps
-
-stats: ## Ver estadísticas de recursos
-	docker stats
-
-backend-inspect: ## Inspeccionar configuración del backend
-	$(COMPOSE) config backend
-
-frontend-inspect: ## Inspeccionar configuración del frontend
-	$(COMPOSE) config frontend
-
 # Producción
-prod-build: ## Build para producción
-	@echo "$(GREEN)Building para producción...$(NC)"
-	$(COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml build
-
-prod-up: ## Levantar en modo producción
-	@echo "$(GREEN)Levantando en modo producción...$(NC)"
-	$(COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml up -d
-
 # Instalación de dependencias
 backend-install: ## Instalar dependencias del backend
-	$(BACKEND) mix deps.get
+	$(COMPOSE) run --rm --no-deps backend mix deps.get
 
 frontend-install: ## Instalar dependencias del frontend
-	$(FRONTEND) npm install
+	$(COMPOSE) run --rm --no-deps frontend npm install
 
 ai-install: ## Instalar dependencias del AI engine
 	$(AI) pip install -r requirements.txt
@@ -195,10 +165,10 @@ backend-format: ## Formatear código del backend
 	$(BACKEND) mix format
 
 frontend-format: ## Formatear código del frontend
-	$(FRONTEND) npm run format
+	$(COMPOSE) run --rm --no-deps frontend npm format
 
 frontend-lint: ## Lint del frontend
-	$(FRONTEND) npm run lint
+	$(COMPOSE) run --rm --no-deps frontend npm lint
 
 # Backup y restore
 db-backup: ## Backup de la base de datos
@@ -228,49 +198,26 @@ training-collect-procedures: ## Descargar procedimientos
 	@echo "$(YELLOW)→ Descargando procedimientos (Docker)...$(NC)"
 	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && python3 collect_procedures.py'
 
-training-jupyter: ## Abrir Jupyter para entrenar manualmente
-	@echo "$(YELLOW)→ Abriendo Jupyter Notebook (Docker)...$(NC)"
+training-jupyter-cpu: ## Abrir Jupyter (CPU)
+	@echo "$(YELLOW)→ Abriendo Jupyter Notebook (CPU)...$(NC)"
+	@echo "$(YELLOW)  Jupyter disponible en: http://localhost:8888$(NC)"
+	@echo "$(YELLOW)  Abriendo navegador en 3 segundos...$(NC)"
+	@echo "$(YELLOW)  CTRL+C para detener$(NC)"
+	@(sleep 3 && xdg-open http://localhost:8888 2>/dev/null || true) & \
+	$(COMPOSE_CPU) run --rm --service-ports training bash -c 'cd bert-classifier && jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token="" --NotebookApp.password="" --NotebookApp.disable_check_xsrf=True --NotebookApp.trust_xheaders=True'
+
+training-jupyter-gpu: ## Abrir Jupyter (GPU)
+	@echo "$(YELLOW)→ Abriendo Jupyter Notebook (GPU)...$(NC)"
 	@echo "$(YELLOW)  Jupyter disponible en: http://localhost:8888$(NC)"
 	@echo "$(YELLOW)  Abriendo navegador en 3 segundos...$(NC)"
 	@echo "$(YELLOW)  CTRL+C para detener$(NC)"
 	@(sleep 3 && xdg-open http://localhost:8888 2>/dev/null || true) & \
 	$(COMPOSE) run --rm --service-ports training bash -c 'cd bert-classifier && jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token="" --NotebookApp.password="" --NotebookApp.disable_check_xsrf=True --NotebookApp.trust_xheaders=True'
 
-training-train: ## Entrenar modelo CIE-10 completo
-	@echo "$(YELLOW)→ Entrenando modelo (Docker, esto puede tardar varias horas)...$(NC)"
-	$(COMPOSE) run --rm training bash -c 'cd bert-classifier && source .venv/bin/activate && jupyter nbconvert --to notebook --execute clasificador_jerarquico_2niveles.ipynb --output clasificador_jerarquico_2niveles_executed.ipynb'
-
-training-export: ## Exportar modelo entrenado a ai_engine
-	@echo "$(YELLOW)→ Exportando modelo a ai_engine (Docker)...$(NC)"
-	$(COMPOSE) run --rm training bash -c 'mkdir -p ../ai_engine/model && cp bert-classifier/snapshots/nivel1_capitulos/best_model.pt ../ai_engine/model/chapter_classifier.pt 2>/dev/null || echo "Advertencia: No se encontró modelo Nivel 1" && cp bert-classifier/snapshots/nivel2_codigos/best_model.pt ../ai_engine/model/code_classifier.pt 2>/dev/null || echo "Advertencia: No se encontró modelo Nivel 2"'
-	@echo "$(GREEN)✓ Modelos exportados a ai_engine/model/$(NC)"
-
-training-all: ## Pipeline completo: setup + dataset + train + export
-	@echo "$(BLUE)═══════════════════════════════════════════════════════════$(NC)"
-	@echo "$(BLUE)  Pipeline completo de entrenamiento CIE-10$(NC)"
-	@echo "$(BLUE)═══════════════════════════════════════════════════════════$(NC)"
-	@echo ""
-	$(MAKE) training-setup
-	$(MAKE) training-dataset
-	$(MAKE) training-train
-	$(MAKE) training-export
-	@echo "$(GREEN)════════════════════════════════════════════════════$(NC)"
-	@echo "$(GREEN)  ✓ Pipeline completo finalizado$(NC)"
-	@echo "$(GREEN)  Modelo entrenado y exportado a ai_engine/$(NC)"
-	@echo "$(GREEN)════════════════════════════════════════════════════$(NC)"
-
 training-clean: ## Limpiar entornos de entrenamiento
 	@echo "$(YELLOW)→ Limpiando entorno de entrenamiento (Docker)...$(NC)"
 	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && make clean || true; cd ../bert-classifier && rm -rf .venv __pycache__ .ipynb_checkpoints'
 	@echo "$(GREEN)✓ Limpieza completada$(NC)"
-
-training-docker-cpu: ## Ejecutar entorno Docker training (CPU)
-	@echo "$(YELLOW)→ Ejecutando entorno Docker training (CPU)...$(NC)"
-	docker run -it --rm -v $$(pwd):/workspace -w /workspace/training cie10-training
-
-training-docker-gpu: ## Ejecutar entorno Docker training (GPU)
-	@echo "$(YELLOW)→ Ejecutando entorno Docker training (GPU, si disponible)...$(NC)"
-	docker run --gpus all -it --rm -v $$(pwd):/workspace -w /workspace/training cie10-training
 
 # Entrenamiento del clasificador (ai_engine/train.py)
 # Los datos y el token HF se inyectan desde docker-compose.yml
@@ -294,7 +241,7 @@ ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requier
 		--val_file   /data/codiesp_csvs/codiesp_D_source_validation.csv \
 		--cie10_file /data/cie10-csvs/cie10-es-diagnoses.csv \
 		--output_dir /app/model \
-		--model_name $(or $(MODEL),jhu-clsp/mmBERT-base) \
+		--model_name $(or $(MODEL),IIC/RigoBERTa-Clinical) \
 		--max_length $(or $(MAX_LENGTH),1024) \
 		--batch_size $(or $(BATCH_SIZE),1) \
 		--grad_accum $(or $(GRAD_ACCUM),16) \
@@ -306,19 +253,6 @@ ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requier
 	$(COMPOSE_CPU) run --rm ai_engine python plot_runs.py
 	@echo "$(GREEN)✓ Gráfico guardado en ai_engine/model/all_trainings_graph.png$(NC)"
 
-ai-train-quick: ## Pipeline de prueba (1 época, modelo público, sin token)
-	@echo "$(YELLOW)→ Entrenamiento de prueba (1 época, max_length=256)...$(NC)"
-	$(COMPOSE_CPU) run --rm ai_engine python train.py \
-		--train_file /data/codiesp_csvs/codiesp_D_source_train.csv \
-		--val_file   /data/codiesp_csvs/codiesp_D_source_validation.csv \
-		--cie10_file /data/cie10-csvs/cie10-es-diagnoses.csv \
-		--output_dir /app/model \
-		--model_name PlanTL-GOB-ES/roberta-base-biomedical-clinical-es \
-		--max_length 256 \
-		--epochs 1 \
-		--batch_size 4 \
-		--device auto
-
 ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
 	@echo "$(BLUE)→ Entrenando con GPU...$(NC)"
 	$(COMPOSE) run --rm ai_engine python train.py \
@@ -326,7 +260,7 @@ ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
 		--val_file   /data/codiesp_csvs/codiesp_D_source_validation.csv \
 		--cie10_file /data/cie10-csvs/cie10-es-diagnoses.csv \
 		--output_dir /app/model \
-		--model_name $(or $(MODEL),jhu-clsp/mmBERT-base) \
+		--model_name $(or $(MODEL),IIC/RigoBERTa-Clinical) \
 		--max_length $(or $(MAX_LENGTH),1024) \
 		--batch_size $(or $(BATCH_SIZE),4) \
 		--grad_accum $(or $(GRAD_ACCUM),4) \
@@ -360,18 +294,18 @@ ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
 	$(COMPOSE) run --rm ai_engine python plot_runs.py
 	@echo "$(GREEN)✓ Gráfico guardado en ai_engine/model/all_trainings_graph.png$(NC)"
 
-# Modo mock (desarrollo sin GPU, ai_engine simulado)
-cpu-build: ## Construir AI engine mock (sin CUDA, imagen ligera)
-	@echo "$(GREEN)Construyendo AI engine mock...$(NC)"
-	$(COMPOSE_MOCK) build ai_engine
+# Modo CPU (desarrollo sin GPU)
+cpu-build: ## Construir AI engine en modo CPU (sin CUDA)
+	@echo "$(GREEN)Construyendo AI engine (CPU)...$(NC)"
+	$(COMPOSE_CPU) build ai_engine
 
-cpu-up: ## Levantar servicios en modo CPU (sin GPU)
+cpu-up: frontend-install ## Levantar servicios en modo CPU (sin GPU)
 	@echo "$(GREEN)Levantando servicios en modo CPU...$(NC)"
 	$(COMPOSE_CPU) up -d db backend frontend ai_engine
 	@echo "$(GREEN)Servicios levantados (modo CPU):$(NC)"
 	@echo "  - Frontend:    http://localhost:3000"
 	@echo "  - Backend API: http://localhost:4000"
-	@echo "  - AI Engine:   http://localhost:8000 (CPU mock)"
+	@echo "  - AI Engine:   http://localhost:8000 (CPU)"
 	@echo "  - Mailpit UI:  http://localhost:8025"
 	@echo "  - PostgreSQL:  localhost:5432"
 
@@ -379,15 +313,26 @@ cpu-down: ## Detener servicios del modo CPU
 	@echo "$(YELLOW)Deteniendo servicios CPU...$(NC)"
 	$(COMPOSE_CPU) down
 
-cpu-dev: ## Levantar modo CPU con logs en consola
-	@echo "$(GREEN)Iniciando modo desarrollo CPU...$(NC)"
-	$(COMPOSE_CPU) up db backend frontend ai_engine
 
-cpu-logs-ai: ## Ver logs del AI engine CPU
-	$(COMPOSE_CPU) logs -f ai_engine
+# Modo mock (desarrollo sin GPU, ai_engine simulado con respuestas fijas)
+mock-build: ## Construir AI engine mock
+	@echo "$(GREEN)Construyendo AI engine mock...$(NC)"
+	$(COMPOSE_MOCK) build ai_engine
 
-cpu-ai-shell: ## Abrir shell en el AI engine CPU
-	$(COMPOSE_CPU) exec ai_engine sh
+mock-up: frontend-install ## Levantar servicios en modo mock (sin GPU, sin modelo real)
+	@echo "$(GREEN)Levantando servicios en modo mock...$(NC)"
+	$(COMPOSE_MOCK) up -d db backend frontend ai_engine
+	@echo "$(GREEN)Servicios levantados (modo mock):$(NC)"
+	@echo "  - Frontend:    http://localhost:3000"
+	@echo "  - Backend API: http://localhost:4000"
+	@echo "  - AI Engine:   http://localhost:8000 (mock)"
+	@echo "  - Mailpit UI:  http://localhost:8025"
+	@echo "  - PostgreSQL:  localhost:5432"
+
+mock-down: ## Detener servicios del modo mock
+	@echo "$(YELLOW)Deteniendo servicios mock...$(NC)"
+	$(COMPOSE_MOCK) down
+
 
 TFG_DIR     = tfg
 TFG_MAIN    = uclmTFGesi
