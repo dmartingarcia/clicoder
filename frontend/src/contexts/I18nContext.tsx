@@ -15,7 +15,7 @@ interface I18nContextType {
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
-const SUPPORTED_LOCALES = ['es', 'en'];
+const SUPPORTED_LOCALES = ['es', 'en', 'fr', 'it', 'de'];
 const DEFAULT_LOCALE = 'es';
 const STORAGE_KEY = 'cie10_locale';
 const TRANSLATIONS_CACHE_KEY = 'cie10_translations';

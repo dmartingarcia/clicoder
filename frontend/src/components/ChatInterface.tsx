@@ -413,7 +413,9 @@ function ChatItemView({
 export function ChatInterface() {
   const { activeConversationId, pendingConversation, chatItems, predictedCodes, isAnalyzing, analyzeReport, validateCode, rejectCode, createConversation } = useConversation();
   const { t } = useI18n();
+  const MAX_WORDS = 1024;
   const [reportText, setReportText] = useState('');
+  const wordCount = reportText.trim() ? reportText.trim().split(/\s+/).length : 0;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -424,7 +426,7 @@ export function ChatInterface() {
 
   const handleAnalyze = () => {
     const text = reportText.trim();
-    if (!text || text.length < 20) return;
+    if (!text || text.length < 20 || wordCount > MAX_WORDS) return;
     analyzeReport(text);
     setReportText('');
   };
@@ -457,7 +459,7 @@ export function ChatInterface() {
           </div>
 
           {/* Chat stream */}
-          <ScrollArea className="flex-1 px-6 py-4" ref={scrollRef}>
+          <div className="flex-1 overflow-y-auto px-6 py-4" ref={scrollRef}>
             <div className="space-y-4 max-w-3xl mx-auto">
               {chatItems.length === 0 && !isAnalyzing && (
                 <div className="flex flex-col items-center gap-3 py-16 text-gray-400">
@@ -508,7 +510,7 @@ export function ChatInterface() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Report input */}
           <div className="bg-white border-t px-6 py-4">
@@ -535,13 +537,18 @@ export function ChatInterface() {
                   {t('chat.min_chars', { min: 20, remaining: 20 - reportText.trim().length })}
                 </p>
               )}
+              {wordCount > MAX_WORDS && (
+                <p className="text-xs text-red-600 mt-1">
+                  {t('chat.max_words_error', { max: MAX_WORDS })}
+                </p>
+              )}
               <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-gray-400">
-                  {t('chat.char_count', { count: reportText.length })}
+                <span className={`text-xs ${wordCount > MAX_WORDS ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
+                  {t('chat.word_count', { count: wordCount, max: MAX_WORDS })}
                 </span>
                 <Button
                   onClick={handleAnalyze}
-                  disabled={isAnalyzing || reportText.trim().length < 20}
+                  disabled={isAnalyzing || reportText.trim().length < 20 || wordCount > MAX_WORDS}
                   className="bg-blue-600 hover:bg-blue-700 gap-2"
                   size="sm"
                 >

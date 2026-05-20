@@ -49,6 +49,8 @@ chat:
   report_label: "Clinical report"
   report_placeholder: "Paste the patient's clinical report here…"
   char_count: "{count} chars · Ctrl+Enter to analyse"
+  word_count: "{count} / {max} words · Ctrl+Enter to analyse"
+  max_words_error: "Report exceeds the model's {max}-word limit. Please shorten it before submitting."
   analyze_button: "Analyse report"
   min_chars: "Minimum {min} characters required ({remaining} remaining)"
 
