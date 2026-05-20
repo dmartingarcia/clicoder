@@ -116,19 +116,19 @@ function ChemicalDetail({ meta }: { meta: Record<string, unknown> }) {
   );
 }
 
-function ChildrenGrid({ code, children }: { code: string; children: Cie10Child[] }) {
+function ChildrenGrid({ items }: { items: Cie10Child[] }) {
   const { t } = useI18n();
-  const inferredType = children.find(c => c.type)?.type ?? 'diagnosis';
+  const inferredType = items.find(c => c.type)?.type ?? 'diagnosis';
   const accent = CHILD_ACCENT[inferredType] ?? CHILD_ACCENT.diagnosis;
 
   return (
     <Card className="p-4">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1">
         <FolderOpen className="h-3.5 w-3.5" />
-        {t('cie10.subcategories')} ({children.length})
+        {t('cie10.subcategories')} ({items.length})
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-        {children.map((child) => (
+        {items.map((child) => (
           <Link
             key={child.code}
             href={`/codes/${child.code}`}
@@ -152,7 +152,6 @@ export default function CodeDetailPage() {
   const { t } = useI18n();
   const [entry, setEntry] = useState<Cie10Result | null>(null);
   const [children, setChildren] = useState<Cie10Child[]>([]);
-  const [isLeaf, setIsLeaf] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -160,10 +159,10 @@ export default function CodeDetailPage() {
 
   useEffect(() => {
     if (!code) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setEntry(null);
     setChildren([]);
-    setIsLeaf(false);
     setNotFound(false);
 
     Promise.all([
@@ -176,7 +175,6 @@ export default function CodeDetailPage() {
         setNotFound(true);
       }
       setChildren(childrenResult.children);
-      setIsLeaf(childrenResult.is_leaf);
       setLoading(false);
     });
   }, [code]);
@@ -277,7 +275,7 @@ export default function CodeDetailPage() {
 
         {/* Children */}
         {children.length > 0 && (
-          <ChildrenGrid code={code} children={children} />
+          <ChildrenGrid items={children} />
         )}
       </div>
     </div>
