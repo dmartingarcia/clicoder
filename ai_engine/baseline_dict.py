@@ -28,6 +28,7 @@ Uso:
 
 import argparse
 import ast
+import csv
 import hashlib
 import os
 import pickle
@@ -458,9 +459,9 @@ def load_corpus(
         if lemma_note_cache_file:
             _save_cache(lemma_note_cache_file, lemma_texts)
     else:
-        print(f"  [cache] lemas de notas cargados")
+        print("  [cache] lemas de notas cargados")
 
-    labels_list = [parse_labels(l) for l in df["labels"]]
+    labels_list = [parse_labels(lbl) for lbl in df["labels"]]
 
     # Índice nota → conjunto de n-gramas únicos
     note_ngrams: list[set[str]] = [
@@ -608,9 +609,6 @@ def load_clinical(
 # Predicción
 # ---------------------------------------------------------------------------
 
-import csv as _csv_module
-csv = _csv_module
-
 
 def predict(
     texts: list[str],
@@ -725,7 +723,7 @@ def main():
         print(f"[data] {name}={len(df)}")
 
     # MLBinarizer sobre la unión de bloques de ambos splits
-    all_labels = [parse_labels(l) for df in splits.values() for l in df["labels"]]
+    all_labels = [parse_labels(lbl) for df in splits.values() for lbl in df["labels"]]
     all_blocks = sorted({b for lbls in all_labels for b in lbls})
     mlb_classes = set(all_blocks)
     mlb = MultiLabelBinarizer()
@@ -781,7 +779,7 @@ def main():
 
     for source in individual_sources:
         if source == "clinical":
-            print(f"\n[clinical] task_x train+val")
+            print("\n[clinical] task_x train+val")
             print("  NOTA: usa etiquetas de val → resultados semi-supervisados")
         elif source == "corpus":
             print(f"\n[corpus] n-gramas discriminativos de {args.train_file}")
@@ -817,7 +815,7 @@ def main():
             continue
 
         for split_name, df in splits.items():
-            labels = [parse_labels(l) for l in df["labels"]]
+            labels = [parse_labels(lbl) for lbl in df["labels"]]
             Y_true = mlb.transform(labels)
             preds, n_ignored = predict(df["text"].tolist(), block_patterns,
                                        split_name, mlb_classes)
@@ -848,7 +846,7 @@ def main():
         n_phrases = sum(len(v) for v in combined.values())
         print(f"  {n_blocks} bloques, {n_phrases} patrones")
         for split_name, df in splits.items():
-            labels = [parse_labels(l) for l in df["labels"]]
+            labels = [parse_labels(lbl) for lbl in df["labels"]]
             Y_true = mlb.transform(labels)
             preds, n_ignored = predict(df["text"].tolist(), combined,
                                        split_name, mlb_classes)

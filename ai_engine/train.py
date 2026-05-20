@@ -28,7 +28,6 @@ Con todas las opciones:
 import argparse
 import json
 import os
-import sys
 import time
 from pathlib import Path
 
@@ -294,7 +293,9 @@ def pretrain(model, pretrain_loader, device, epochs, lr, weight_decay):
     pretrain_start = _time.time()
 
     def _fmt(s):
-        s = int(s); h, m = divmod(s, 3600); m, s = divmod(m, 60)
+        s = int(s)
+        h, m = divmod(s, 3600)
+        m, s = divmod(m, 60)
         return f"{h}h{m:02d}m{s:02d}s" if h else f"{m}m{s:02d}s"
 
     for epoch in range(1, epochs + 1):
@@ -976,7 +977,7 @@ def main():
         print(f"[warn] CIE-10 file not found: {args.cie10_file}")
 
     # Tokenizer
-    print(f"\n[model] Loading tokenizer …")
+    print("\n[model] Loading tokenizer …")
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
     # Datasets
@@ -1180,7 +1181,7 @@ def main():
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerow(row)
-    print(f"[save] training_runs.csv  (append)")
+    print("[save] training_runs.csv  (append)")
 
     # ---- Historial de épocas (para gráfico comparativo multi-run) ----
     history_path = output_dir / f"training_history_{timestamp}.json"

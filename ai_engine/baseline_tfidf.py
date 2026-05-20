@@ -10,7 +10,6 @@ Uso:
 """
 
 import argparse
-import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -35,7 +34,7 @@ def main():
     parser.add_argument("--threshold", type=float, default=0.5)
     args = parser.parse_args()
 
-    print(f"[data] Cargando datos...")
+    print("[data] Cargando datos...")
     train_df = pd.read_csv(args.train_file)
     val_df   = pd.read_csv(args.val_file)
     for df in (train_df, val_df):
@@ -43,15 +42,15 @@ def main():
         df.dropna(subset=["text", "labels"], inplace=True)
     print(f"[data] train={len(train_df)}  val={len(val_df)}")
 
-    train_labels = [parse_labels(l) for l in train_df["labels"]]
-    val_labels   = [parse_labels(l) for l in val_df["labels"]]
+    train_labels = [parse_labels(lbl) for lbl in train_df["labels"]]
+    val_labels   = [parse_labels(lbl) for lbl in val_df["labels"]]
 
     mlb = MultiLabelBinarizer()
     Y_train = mlb.fit_transform(train_labels)
     Y_val   = mlb.transform(val_labels)
     print(f"[data] {len(mlb.classes_)} códigos únicos en train")
 
-    print(f"\n[model] Entrenando TF-IDF + Logistic Regression (binary relevance)...")
+    print("\n[model] Entrenando TF-IDF + Logistic Regression (binary relevance)...")
     pipeline = Pipeline([
         ("tfidf", TfidfVectorizer(
             analyzer="word",
@@ -81,7 +80,7 @@ def main():
     print(f"  macro — F1={f1_macro:.4f}")
 
     # Sweep de thresholds para encontrar el óptimo
-    print(f"\n[sweep] F1-micro por threshold:")
+    print("\n[sweep] F1-micro por threshold:")
     for thr in (0.1, 0.2, 0.3, 0.4, 0.5, 0.6):
         p = (Y_prob >= thr).astype(int)
         f = f1_score(Y_val, p, average="micro", zero_division=0)
