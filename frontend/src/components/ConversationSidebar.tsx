@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PlusCircle, MessageSquare, LogOut, Globe, Trash2, RotateCcw, ChevronDown, ChevronRight } from 'lucide-react';
+import { PlusCircle, MessageSquare, LogOut, Trash2, RotateCcw, ChevronDown, ChevronRight } from 'lucide-react';
 
 export function ConversationSidebar() {
   const { conversations, trashedConversations, activeConversationId, createConversation, switchConversation, deleteConversation, restoreConversation } = useConversation();

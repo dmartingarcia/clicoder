@@ -106,10 +106,10 @@ export function ConversationProvider({ children, userId, token }: { children: Re
       });
       const data = await res.json();
       setConversations(data.conversations ?? []);
-    } catch (err) {
+    } catch {
       toast.error(t('errors.load_conversations'));
     }
-  }, [userId, token]);
+  }, [userId, token, t]);
 
   useEffect(() => {
     loadConversations();
@@ -232,6 +232,7 @@ export function ConversationProvider({ children, userId, token }: { children: Re
       ch.leave();
       channelRef.current = null;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeConversationId, token, loadConversations]);
 
   const createConversation = useCallback(() => {
@@ -257,26 +258,26 @@ export function ConversationProvider({ children, userId, token }: { children: Re
       channel.push('analyze_report', { report_text: reportText })
         .receive('error', () => toast.error(t('errors.analyze_failed')));
     }
-  }, [activeConversationId, channel]);
+  }, [activeConversationId, channel, t]);
 
   const validateCode = useCallback((codeId: string, cie10Code: string) => {
     if (!channel) return;
     channel.push('validate_code', { code_id: codeId, cie10_code: cie10Code })
       .receive('error', () => toast.error(t('errors.validate_failed')));
-  }, [channel]);
+  }, [channel, t]);
 
   const rejectCode = useCallback((codeId: string, cie10Code: string, reason: string) => {
     if (!channel) return;
     channel.push('reject_code', { code_id: codeId, cie10_code: cie10Code, reason })
       .receive('error', () => toast.error(t('errors.reject_failed')));
-  }, [channel]);
+  }, [channel, t]);
 
   const suggestCode = useCallback((selectedText: string, suggestedCode: string) => {
     if (!channel) return;
     channel.push('suggest_code', { selected_text: selectedText, suggested_code: suggestedCode })
       .receive('ok', () => toast.success(t('cards.suggestion_saved')))
       .receive('error', () => toast.error(t('errors.suggest_failed')));
-  }, [channel]);
+  }, [channel, t]);
 
   const deleteConversation = useCallback(async (conversationId: string) => {
     try {
