@@ -45,8 +45,12 @@ defmodule AppWeb.Router do
   scope "/admin", AppWeb.Admin, as: :admin do
     pipe_through [:fetch_session, :protect_from_forgery, AppWeb.Plugs.RequireAdmin]
 
-    live "/users", UserLive.Index, :index
-    live "/users/:id", UserLive.Show, :show
+    live_session :admin,
+      on_mount: [],
+      layout: {AppWeb.Admin.AdminLayout, :admin} do
+      live "/users", UserLive.Index, :index
+      live "/users/:id", UserLive.Show, :show
+    end
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

@@ -1,0 +1,117 @@
+\chapter{Guía de arranque del sistema}
+\label{cap:AnexoK}
+
+Este anexo describe los pasos necesarios para poner en marcha el sistema en un entorno de desarrollo local. Toda la infraestructura se gestiona mediante Docker Compose y un \texttt{Makefile} que centraliza los comandos habituales.
+
+\section{Requisitos previos}
+
+\begin{itemize}
+  \item \textbf{Docker} 24 o superior con el plugin \texttt{docker compose} (v2).
+  \item \textbf{GNU Make}.
+  \item \textbf{Git}.
+  \item \textit{Opcional — modo GPU:} controlador NVIDIA y \texttt{nvidia-container-toolkit} instalados en el sistema anfitrión.
+\end{itemize}
+
+\section{Configuración del entorno}
+
+Antes de arrancar por primera vez es necesario crear el fichero de variables de entorno a partir de la plantilla incluida en el repositorio:
+
+\begin{lstlisting}[language=bash]
+cp .env.example .env
+\end{lstlisting}
+
+Los valores por defecto son válidos para un entorno local de desarrollo. Las variables más relevantes se recogen en la tabla~\ref{tab:env-vars}.
+
+\begin{table}[h]
+\centering
+\caption{Variables de entorno principales.}
+\label{tab:env-vars}
+\begin{tabular}{lll}
+\hline
+\textbf{Variable} & \textbf{Valor por defecto} & \textbf{Descripción} \\
+\hline
+\texttt{POSTGRES\_PASSWORD} & \texttt{changeme}   & Contraseña de PostgreSQL \\
+\texttt{SECRET\_KEY\_BASE}  & (valor de ejemplo)  & Clave secreta de Phoenix \\
+\texttt{HF\_TOKEN}          & \texttt{hf\_xxx...} & Token de Hugging Face (modo GPU) \\
+\texttt{BACKEND\_PORT}      & \texttt{4000}       & Puerto del backend Elixir \\
+\texttt{FRONTEND\_PORT}     & \texttt{3000}       & Puerto del frontend Next.js \\
+\texttt{AI\_ENGINE\_PORT}   & \texttt{8000}       & Puerto del motor de IA \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Primera puesta en marcha}
+
+El siguiente comando realiza la instalación completa desde cero: detiene servicios previos, construye las imágenes, crea y migra las bases de datos, carga los datos iniciales y arranca todos los contenedores:
+
+\begin{lstlisting}[language=bash]
+make setup
+\end{lstlisting}
+
+Este proceso puede tardar varios minutos la primera vez, principalmente por la descarga de imágenes base y la compilación de dependencias Elixir.
+
+\section{Arranque y parada habituales}
+
+Una vez completada la primera puesta en marcha, el ciclo de trabajo diario se reduce a dos comandos:
+
+\begin{lstlisting}[language=bash]
+make up     # Levanta todos los servicios en segundo plano
+make down   # Detiene todos los servicios
+\end{lstlisting}
+
+Tras ejecutar \texttt{make up} los servicios quedan accesibles en las siguientes URLs (tabla~\ref{tab:urls}).
+
+\begin{table}[h]
+\centering
+\caption{URLs de acceso a los servicios en entorno local.}
+\label{tab:urls}
+\begin{tabular}{ll}
+\hline
+\textbf{Servicio} & \textbf{URL} \\
+\hline
+Frontend (Next.js)    & \url{http://localhost:3000} \\
+Backend API (Phoenix) & \url{http://localhost:4000} \\
+Motor de IA (FastAPI) & \url{http://localhost:8000} \\
+Backoffice admin (Phoenix) & \url{http://localhost:4000/admin} \\
+Mailpit (bandeja SMTP de pruebas) & \url{http://localhost:8025} \\
+PostgreSQL            & \texttt{localhost:5432} \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Modos de ejecución}
+
+El sistema admite tres modos de ejecución en función de la disponibilidad de hardware y del estado del modelo entrenado (tabla~\ref{tab:modos}).
+
+\begin{table}[h]
+\centering
+\caption{Modos de ejecución disponibles.}
+\label{tab:modos}
+\begin{tabular}{lll}
+\hline
+\textbf{Modo} & \textbf{Comando} & \textbf{Requisito} \\
+\hline
+GPU  & \texttt{make up}      & GPU NVIDIA + modelo entrenado \\
+CPU  & \texttt{make cpu-up}  & Modelo entrenado (inferencia lenta) \\
+Mock & \texttt{make mock-up} & Ninguno (respuestas simuladas) \\
+\hline
+\end{tabular}
+\end{table}
+
+El modo \textit{mock} es el recomendado para desarrollo frontend y pruebas funcionales sin necesidad de disponer del modelo entrenado.
+
+\section{Consulta de logs}
+
+Para inspeccionar la salida de cualquier servicio en tiempo real:
+
+\begin{lstlisting}[language=bash]
+make logs   # Menú interactivo para seleccionar el servicio
+\end{lstlisting}
+
+\section{Reset de base de datos}
+
+Si es necesario partir de un estado limpio sin reconstruir imágenes:
+
+\begin{lstlisting}[language=bash]
+make db-reset   # Drop + migrate + seed
+\end{lstlisting}
