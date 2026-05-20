@@ -42,17 +42,21 @@ Los valores por defecto son válidos para un entorno local de desarrollo. Las va
 
 \section{Primera puesta en marcha}
 
-El siguiente comando realiza la instalación completa desde cero: detiene servicios previos, construye las imágenes, crea y migra las bases de datos, carga los datos iniciales y arranca todos los contenedores:
+La primera vez es necesario ejecutar dos comandos en orden. El primero prepara el entorno: detiene servicios previos, construye las imágenes Docker, crea y migra las bases de datos y carga los datos iniciales:
 
 \begin{lstlisting}[language=bash]
 make setup
 \end{lstlisting}
 
-Este proceso puede tardar varios minutos la primera vez, principalmente por la descarga de imágenes base y la compilación de dependencias Elixir.
+Este proceso puede tardar varios minutos la primera vez, principalmente por la descarga de imágenes base y la compilación de dependencias Elixir. \textbf{No levanta los servicios}; una vez completado, hay que arrancarlos explícitamente:
+
+\begin{lstlisting}[language=bash]
+make up
+\end{lstlisting}
 
 \section{Arranque y parada habituales}
 
-Una vez completada la primera puesta en marcha, el ciclo de trabajo diario se reduce a dos comandos:
+A partir de la segunda vez, el ciclo de trabajo diario se reduce a dos comandos:
 
 \begin{lstlisting}[language=bash]
 make up     # Levanta todos los servicios en segundo plano
@@ -99,6 +103,25 @@ Mock & \texttt{make mock-up} & Ninguno (respuestas simuladas) \\
 \end{table}
 
 El modo \textit{mock} es el recomendado para desarrollo frontend y pruebas funcionales sin necesidad de disponer del modelo entrenado.
+
+\section{Usuarios de prueba}
+
+El comando \texttt{make setup} (a través de \texttt{mix run priv/repo/seeds.exs}) crea automáticamente los siguientes usuarios con la cuenta ya confirmada (tabla~\ref{tab:seeds}).
+
+\begin{table}[h]
+\centering
+\caption{Usuarios de prueba creados por el seed.}
+\label{tab:seeds}
+\begin{tabular}{llll}
+\hline
+\textbf{Email} & \textbf{Contraseña} & \textbf{Username} & \textbf{Rol} \\
+\hline
+\texttt{admin@test.com} & \texttt{password123} & \texttt{admin} & Administrador \\
+\hline
+\end{tabular}
+\end{table}
+
+El usuario administrador tiene acceso al backoffice en \url{http://localhost:4000/admin}.
 
 \section{Consulta de logs}
 

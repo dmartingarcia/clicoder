@@ -83,12 +83,12 @@ mailpit: ## Abrir Mailpit en el navegador (fake email inbox)
 	@echo "$(GREEN)Abriendo Mailpit en http://localhost:8025$(NC)"
 	open http://localhost:8025 2>/dev/null || xdg-open http://localhost:8025 2>/dev/null || echo "Abre manualmente: http://localhost:8025"
 
-setup: ## Setup completo desde cero: down -v + build + seed + up
+setup: ## Setup completo desde cero: down -v + build + seed (sin levantar). Luego usa `make up`
 	$(COMPOSE) down -v --remove-orphans
 	$(COMPOSE) build --progress=plain backend
 	$(COMPOSE) build --progress=plain frontend
 	$(MAKE) backend-seed
-	$(COMPOSE) up -d
+	@echo "$(GREEN)Setup completado. Usa 'make up' para levantar los servicios.$(NC)"
 
 clean: ## Limpiar contenedores, volúmenes e imágenes
 	@echo "$(YELLOW)Limpiando todo...$(NC)"
