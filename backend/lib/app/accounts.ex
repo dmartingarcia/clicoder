@@ -1,7 +1,6 @@
 defmodule App.Accounts do
   alias App.Repo
   alias App.Accounts.{User, Emails}
-  import Ecto.Query, except: [update: 2]
 
   def register_user(attrs) do
     case %User{} |> User.registration_changeset(attrs) |> Repo.insert() do

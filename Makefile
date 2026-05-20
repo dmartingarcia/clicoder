@@ -118,12 +118,12 @@ shell: ## Abrir shell interactivo (pregunta por contenedor)
 
 # Comandos de base de datos
 backend-migrate: ## Ejecutar migraciones de Ecto
-	@echo "$(GREEN)Ejecutando migraciones...$(NC)"
-	$(BACKEND) mix ecto.migrate
+	$(COMPOSE) up -d db
+	$(COMPOSE) run --rm --no-deps backend mix ecto.migrate
 
 backend-rollback: ## Rollback última migración
-	@echo "$(YELLOW)Rollback de migración...$(NC)"
-	$(BACKEND) mix ecto.rollback
+	$(COMPOSE) up -d db
+	$(COMPOSE) run --rm --no-deps backend mix ecto.rollback
 
 backend-seed: backend-install ## Primera vez: create + migrate + eventstore + seeds + CIE-10
 	$(COMPOSE) up -d db
@@ -179,28 +179,28 @@ db-backup: ## Backup de la base de datos
 
 # Training y ML con prefijo training-
 training-setup: ## Configurar entorno de entrenamiento
-	@echo "$(YELLOW)→ Configurando entorno de entrenamiento (Docker)...$(NC)"
+	@echo "$(YELLOW)Configurando entorno de entrenamiento (Docker)...$(NC)"
 	$(COMPOSE) run --rm training bash -c 'cd bert-classifier && python3 -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install torch transformers scikit-learn pandas tqdm jupyter ipykernel && .venv/bin/python -m ipykernel install --user --name=cie10-training'
-	@echo "$(GREEN)✓ Entorno configurado correctamente$(NC)"
+	@echo "$(GREEN)Entorno configurado correctamente$(NC)"
 
 training-dataset: ## Descargar dataset CODIESP
-	@echo "$(YELLOW)→ Descargando dataset CODIESP (Docker)...$(NC)"
+	@echo "$(YELLOW)Descargando dataset CODIESP (Docker)...$(NC)"
 	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && python3 collect_codiesp_dataset.py'
 
 training-collect-chemicals: ## Descargar tabla de químicos
-	@echo "$(YELLOW)→ Descargando tabla de químicos (Docker)...$(NC)"
+	@echo "$(YELLOW)Descargando tabla de químicos (Docker)...$(NC)"
 	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && python3 collect_chemicals.py'
 
 training-collect-diagnoses: ## Descargar diagnósticos
-	@echo "$(YELLOW)→ Descargando diagnósticos (Docker)...$(NC)"
+	@echo "$(YELLOW)Descargando diagnósticos (Docker)...$(NC)"
 	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && python3 collect_diagnoses.py'
 
 training-collect-procedures: ## Descargar procedimientos
-	@echo "$(YELLOW)→ Descargando procedimientos (Docker)...$(NC)"
+	@echo "$(YELLOW)Descargando procedimientos (Docker)...$(NC)"
 	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && python3 collect_procedures.py'
 
 training-jupyter-cpu: ## Abrir Jupyter (CPU)
-	@echo "$(YELLOW)→ Abriendo Jupyter Notebook (CPU)...$(NC)"
+	@echo "$(YELLOW)Abriendo Jupyter Notebook (CPU)...$(NC)"
 	@echo "$(YELLOW)  Jupyter disponible en: http://localhost:8888$(NC)"
 	@echo "$(YELLOW)  Abriendo navegador en 3 segundos...$(NC)"
 	@echo "$(YELLOW)  CTRL+C para detener$(NC)"
@@ -208,7 +208,7 @@ training-jupyter-cpu: ## Abrir Jupyter (CPU)
 	$(COMPOSE_CPU) run --rm --service-ports training bash -c 'cd bert-classifier && jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token="" --NotebookApp.password="" --NotebookApp.disable_check_xsrf=True --NotebookApp.trust_xheaders=True'
 
 training-jupyter-gpu: ## Abrir Jupyter (GPU)
-	@echo "$(YELLOW)→ Abriendo Jupyter Notebook (GPU)...$(NC)"
+	@echo "$(YELLOW)Abriendo Jupyter Notebook (GPU)...$(NC)"
 	@echo "$(YELLOW)  Jupyter disponible en: http://localhost:8888$(NC)"
 	@echo "$(YELLOW)  Abriendo navegador en 3 segundos...$(NC)"
 	@echo "$(YELLOW)  CTRL+C para detener$(NC)"
@@ -216,15 +216,15 @@ training-jupyter-gpu: ## Abrir Jupyter (GPU)
 	$(COMPOSE) run --rm --service-ports training bash -c 'cd bert-classifier && jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token="" --NotebookApp.password="" --NotebookApp.disable_check_xsrf=True --NotebookApp.trust_xheaders=True'
 
 training-clean: ## Limpiar entornos de entrenamiento
-	@echo "$(YELLOW)→ Limpiando entorno de entrenamiento (Docker)...$(NC)"
+	@echo "$(YELLOW)Limpiando entorno de entrenamiento (Docker)...$(NC)"
 	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && make clean || true; cd ../bert-classifier && rm -rf .venv __pycache__ .ipynb_checkpoints'
-	@echo "$(GREEN)✓ Limpieza completada$(NC)"
+	@echo "$(GREEN)Limpieza completada$(NC)"
 
 # Entrenamiento del clasificador (ai_engine/train.py)
 # Los datos y el token HF se inyectan desde docker-compose.yml
 
 ai-baseline-dict: ## Baseline de diccionario CIE-10 (diagnoses + procedures + chemicals)
-	@echo "$(BLUE)→ Ejecutando baseline de diccionario...$(NC)"
+	@echo "$(BLUE)Ejecutando baseline de diccionario...$(NC)"
 	$(COMPOSE_CPU) run --rm ai_engine python baseline_dict.py \
 		--val_file          /data/codiesp_csvs/codiesp_D_source_validation.csv \
 		--diagnoses_file    /data/cie10-csvs/cie10-es-diagnoses.csv \
@@ -234,9 +234,7 @@ ai-baseline-dict: ## Baseline de diccionario CIE-10 (diagnoses + procedures + ch
 		$(if $(MIN_LEN),--min_phrase_len $(MIN_LEN),)
 
 ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requiere HF_TOKEN en .env)
-	@echo "$(BLUE)═══════════════════════════════════════════════════════════$(NC)"
-	@echo "$(BLUE)  Entrenando clasificador CIE-10$(NC)"
-	@echo "$(BLUE)═══════════════════════════════════════════════════════════$(NC)"
+	@echo "$(BLUE)Entrenando clasificador CIE-10$(NC)"
 	$(COMPOSE_CPU) run --rm ai_engine python train.py \
 		--train_file /data/codiesp_csvs/codiesp_D_source_train.csv \
 		--val_file   /data/codiesp_csvs/codiesp_D_source_validation.csv \
@@ -249,13 +247,13 @@ ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requier
 		--pos_weight_cap $(or $(POS_WEIGHT_CAP),10.0) \
 		--lr $(or $(LR),5e-6) \
 		--device auto
-	@echo "$(GREEN)✓ Modelo guardado en ai_engine/model/$(NC)"
-	@echo "$(BLUE)→ Generando gráfico comparativo de runs...$(NC)"
+	@echo "$(GREEN)Modelo guardado en ai_engine/model/$(NC)"
+	@echo "$(BLUE)Generando gráfico comparativo de runs...$(NC)"
 	$(COMPOSE_CPU) run --rm ai_engine python plot_runs.py
-	@echo "$(GREEN)✓ Gráfico guardado en ai_engine/model/all_trainings_graph.png$(NC)"
+	@echo "$(GREEN)Gráfico guardado en ai_engine/model/all_trainings_graph.png$(NC)"
 
 ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
-	@echo "$(BLUE)→ Entrenando con GPU...$(NC)"
+	@echo "$(BLUE)Entrenando con GPU...$(NC)"
 	$(COMPOSE) run --rm ai_engine python train.py \
 		--train_file /data/codiesp_csvs/codiesp_D_source_train.csv \
 		--val_file   /data/codiesp_csvs/codiesp_D_source_validation.csv \
@@ -290,10 +288,10 @@ ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
 		$(if $(UNFREEZE_LR_RATIO),--unfreeze_lr_ratio $(UNFREEZE_LR_RATIO),) \
 		$(if $(LAMBDA_HIER),--lambda_hier $(LAMBDA_HIER),) \
 		--device cuda
-	@echo "$(GREEN)✓ Modelo guardado en ai_engine/model/$(NC)"
-	@echo "$(BLUE)→ Generando gráfico comparativo de runs...$(NC)"
+	@echo "$(GREEN)Modelo guardado en ai_engine/model/$(NC)"
+	@echo "$(BLUE)Generando gráfico comparativo de runs...$(NC)"
 	$(COMPOSE) run --rm ai_engine python plot_runs.py
-	@echo "$(GREEN)✓ Gráfico guardado en ai_engine/model/all_trainings_graph.png$(NC)"
+	@echo "$(GREEN)Gráfico guardado en ai_engine/model/all_trainings_graph.png$(NC)"
 
 # Modo CPU (desarrollo sin GPU)
 cpu-build: ## Construir AI engine en modo CPU (sin CUDA)
@@ -341,7 +339,7 @@ TFG_OUT     = $(TFG_DIR)/build
 TFG_IMAGE   = texlive/texlive:latest
 
 tfg-pdf: ## Compilar memoria TFG a PDF (requiere Docker)
-	@echo "$(BLUE)→ Compilando TFG con pdflatex + bibtex...$(NC)"
+	@echo "$(BLUE)Compilando TFG con pdflatex + bibtex...$(NC)"
 	@mkdir -p $(TFG_OUT)
 	docker run --rm \
 		-v "$$(pwd)/$(TFG_DIR)":/tfg \
@@ -352,12 +350,12 @@ tfg-pdf: ## Compilar memoria TFG a PDF (requiere Docker)
 		       cd build && BIBINPUTS=../ bibtex $(TFG_MAIN) && cd .. && \
 		       pdflatex -interaction=nonstopmode -output-directory=build $(TFG_MAIN).tex && \
 		       pdflatex -interaction=nonstopmode -output-directory=build $(TFG_MAIN).tex'
-	@echo "$(GREEN)✓ PDF generado en $(TFG_OUT)/$(TFG_MAIN).pdf$(NC)"
+	@echo "$(GREEN)PDF generado en $(TFG_OUT)/$(TFG_MAIN).pdf$(NC)"
 
 tfg-clean: ## Limpiar artefactos de compilación del TFG
-	@echo "$(YELLOW)→ Limpiando build del TFG...$(NC)"
+	@echo "$(YELLOW)Limpiando build del TFG...$(NC)"
 	@rm -rf $(TFG_OUT)
-	@echo "$(GREEN)✓ Limpio$(NC)"
+	@echo "$(GREEN)Limpio$(NC)"
 
 # Default target
 .DEFAULT_GOAL := help

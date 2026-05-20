@@ -41,7 +41,6 @@ defmodule AppWeb.Cie10Controller do
   # GET /api/cie10/codes/:code/children
   def children(conn, %{"code" => code}) do
     prefix = String.upcase(code)
-    prefix_len = String.length(prefix)
     like_pattern = "#{sanitize(prefix)}%"
 
     child_codes =
