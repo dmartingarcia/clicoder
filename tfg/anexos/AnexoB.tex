@@ -22,7 +22,7 @@ El sistema está formado por siete servicios Docker~\cite{merkel2014docker}. La 
 \centering
 \caption{Servicios del sistema y sus características de despliegue.}
 \label{tab:servicios}
-\begin{tabular}{llrll}
+\begin{tabular}{lp{3.5cm}rp{2.5cm}l}
 \hline
 \textbf{Servicio} & \textbf{Tecnología} & \textbf{Puerto} & \textbf{Depende de} & \textbf{Rol} \\
 \hline
@@ -30,8 +30,8 @@ El sistema está formado por siete servicios Docker~\cite{merkel2014docker}. La 
 \texttt{backend}    & Elixir 1.15, Phoenix 1.8         & 4000  & db, ai\_engine  & Orquestador \\
 \texttt{ai\_engine} & Python 3.11, FastAPI             & 8000  & —               & Inferencia IA \\
 \texttt{db}         & PostgreSQL 15                    & 5432  & —               & Persistencia \\
-\texttt{mailpit}    & Mailpit                          & 8025 (UI), 1025 (SMTP) & — & Email (dev) \\
-\texttt{cie10\_ml\_base} & CUDA + PyTorch + Transformers & —   & —               & Imagen base ML \\
+\texttt{mailpit}    & Mailpit                          & 8025/1025 & —           & Email (dev) \\
+\texttt{cie10\_ml\_base} & CUDA + PyTorch + Transformers & — & —               & Imagen base ML \\
 \texttt{training}   & Python, Jupyter Lab              & 8888  & cie10\_ml\_base & Entrenamiento \\
 \hline
 \end{tabular}
@@ -69,15 +69,15 @@ La Tabla~\ref{tab:envvars} recoge las variables de entorno configurables del sis
 \centering
 \caption{Variables de entorno del sistema.}
 \label{tab:envvars}
-\begin{tabular}{lll}
+\begin{tabular}{lp{6.5cm}l}
 \hline
 \textbf{Variable} & \textbf{Valor por defecto} & \textbf{Consumidor} \\
 \hline
 \multicolumn{3}{l}{\textit{Base de datos}} \\
 \texttt{POSTGRES\_USER}      & \texttt{postgres}   & db \\
 \texttt{POSTGRES\_PASSWORD}  & \texttt{changeme}   & db, backend \\
-\texttt{DATABASE\_URL}       & \texttt{postgresql://postgres:changeme@db:5432/cie10\_app} & backend \\
-\texttt{EVENT\_STORE\_URL}   & \texttt{postgresql://postgres:changeme@db:5432/cie10\_eventstore} & backend \\
+\texttt{DATABASE\_URL}       & \nolinkurl{postgresql://postgres:changeme@db:5432/cie10_app} & backend \\
+\texttt{EVENT\_STORE\_URL}   & \nolinkurl{postgresql://postgres:changeme@db:5432/cie10_eventstore} & backend \\
 \hline
 \multicolumn{3}{l}{\textit{Backend}} \\
 \texttt{SECRET\_KEY\_BASE}   & (mínimo 64 bytes en prod.) & backend \\

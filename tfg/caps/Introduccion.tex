@@ -38,6 +38,10 @@ El análisis de trabajos previos revela tres generaciones tecnológicas:
 
 \textbf{Deep Learning} (2018-actual): Modelos basados en transformers con atención multicabezal, que desplazaron a las arquitecturas BiLSTM previas. En la tarea CodiEsp, los mejores sistemas alcanzan un MAP de 0,48~\cite{miranda2020} en codificación diagnóstica en español.
 
+Un caso ilustrativo en el contexto de CodiEsp es el del equipo IAM del \emph{Service d'Information Médicale} de Burdeos, que ganó la tarea de 2020 sin recurrir al Deep Learning~\cite{cossin2020}. Su sistema combinaba un superdiccionario construido a partir del catálogo oficial CIE-10-ES, UMLS y SNOMED-CT, con normalización de texto agresiva (minúsculas, eliminación de acentos y \emph{stopwords}, lematización) y coincidencia de cadenas para mapear directamente fragmentos del texto a códigos. El resultado fue una precisión de 0,82 en diagnósticos procesando todo el corpus en menos de 5 segundos en un portátil convencional.
+
+Este resultado evidencia un \emph{trade-off} fundamental: los enfoques por diccionario tienden a superar a los modelos neuronales en precisión cuando el corpus de entrenamiento es reducido —como ocurre en CodiEsp—, ya que si el término está en el léxico, la asignación es directa y casi infalible. Sin embargo, son intrínsecamente rígidos ante formulaciones no previstas o variantes lingüísticas no indexadas. El presente trabajo incluye un clasificador de diccionario como \emph{baseline} de referencia, pero el foco es el clasificador neuronal basado en RigoBERTa-Clinical, cuyo valor añadido reside en la capacidad de generalizar a expresiones no vistas en el diccionario.
+
 \subsection{Avances en transformers médicos}
 Los modelos BERT adaptados al dominio clínico, como ClinicalBERT~\cite{alsentzer2019} y BioBERT~\cite{lee2020}, demuestran una gran superioridad en:
 

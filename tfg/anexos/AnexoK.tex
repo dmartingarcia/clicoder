@@ -105,7 +105,7 @@ Mock & \texttt{make mock-up} & Ninguno (respuestas simuladas) \\
 Cada modo se describe a continuación:
 
 \begin{itemize}
-  \item \textbf{GPU} (\texttt{make up}): modo de producción. Requiere una GPU NVIDIA con \texttt{nvidia-container-toolkit} y un modelo previamente entrenado montado en \texttt{ai\_engine/model/}. Es el único modo que ofrece tiempos de inferencia aceptables en uso real.
+  \item \textbf{GPU} (\texttt{make up}): modo de producción. Requiere una GPU NVIDIA con \texttt{nvidia-\allowbreak{}container-toolkit} y un modelo previamente entrenado montado en \texttt{ai\_engine/\allowbreak{}model/}. Es el único modo que ofrece tiempos de inferencia aceptables en uso real.
   \item \textbf{CPU} (\texttt{make cpu-up}): carga el modelo real pero realiza la inferencia en CPU. Útil para probar el modelo en una máquina sin GPU. La respuesta puede tardar varios segundos por petición.
   \item \textbf{Mock} (\texttt{make mock-up}): el motor de IA devuelve respuestas fijas sin cargar ningún modelo. Recomendado para desarrollo del frontend y pruebas funcionales del backend cuando no se dispone de modelo entrenado.
 \end{itemize}
@@ -144,3 +144,35 @@ Si es necesario partir de un estado limpio sin reconstruir imágenes:
 \begin{lstlisting}[language=bash]
 make db-reset   # Drop + migrate + seed
 \end{lstlisting}
+
+\section{Motor de IA: diccionario y entrenamiento}
+
+El motor de IA opera en dos modos complementarios: un clasificador neuronal basado en RigoBERTa-Clinical y un clasificador por diccionario (\emph{baseline}) basado en coincidencia de patrones. Ambos requieren pasos de preparación independientes.
+
+\subsection{Regenerar el diccionario de términos clínicos}
+
+El clasificador por diccionario utiliza un fichero \texttt{model/baseline\_dict.json} que mapea términos clínicos lematizados a bloques CIE-10. Este fichero se construye a partir de cuatro fuentes combinadas: las descripciones oficiales del catálogo CIE-10-ES, los términos clínicos reales extraídos de las anotaciones del corpus CodiEsp, y \emph{n}-gramas discriminativos minados de las notas de entrenamiento. Adicionalmente, el sistema expande abreviaturas clínicas frecuentes en español (\texttt{HTA}, \texttt{DM2}, \texttt{EPOC}, \texttt{IAM}\dots) a su forma completa antes de lematizar, siguiendo la estrategia del equipo IAM ganador de CodiEsp~2020.
+
+Es necesario regenerarlo cuando se modifica \texttt{baseline\_dict.py}, se actualizan los ficheros de datos de CodiEsp o se cambia cualquier parámetro de construcción del diccionario. El proceso lee los datos desde \texttt{/data/}, lematiza todos los términos con spaCy (el resultado se almacena en caché en \texttt{model/baseline\_cache/} para acelerar ejecuciones sucesivas) y escribe el diccionario resultante:
+
+\begin{lstlisting}[language=bash]
+make ai-baseline-dict 2>&1 | tee /tmp/dict.log
+\end{lstlisting}
+
+La primera ejecución puede tardar entre 15 y 30~minutos porque lematiza las decenas de miles de entradas del catálogo y las notas del corpus. Las ejecuciones posteriores son mucho más rápidas gracias a la caché. Al finalizar se imprime un resumen con el número de bloques CIE-10 cubiertos y los patrones generados por cada fuente.
+
+Para comparar el rendimiento con y sin expansión de abreviaturas (útil para medir el impacto aislado de esa mejora), se puede desactivar puntualmente:
+
+\begin{lstlisting}[language=bash]
+make ai-baseline-dict NO_ABBREVS=1 2>&1 | tee /tmp/dict_noabbrev.log
+\end{lstlisting}
+
+\subsection{Entrenar el clasificador neuronal}
+
+El clasificador neuronal se entrena con \texttt{train.py} sobre el corpus CodiEsp. El proceso descarga el modelo base desde Hugging Face (requiere \texttt{HF\_TOKEN} en \texttt{.env}), fine-tunea el codificador RigoBERTa-Clinical con una cabeza de clasificación \emph{multi-label} y guarda el modelo resultante en \texttt{ai\_engine/model/}. El entrenamiento se lanza con GPU explícita mediante:
+
+\begin{lstlisting}[language=bash]
+make ai-train-gpu 2>&1 | tee /tmp/train.log
+\end{lstlisting}
+
+Cada \emph{run} guarda un checkpoint con el mejor F1-micro de validación, los umbrales por clase optimizados y un registro de métricas por época en \texttt{model/training\_runs.csv}. El proceso completo dura entre 2 y 4~horas en una GPU de la familia Ampere, dependiendo del número de épocas configurado.

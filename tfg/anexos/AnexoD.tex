@@ -24,7 +24,7 @@ Almacena los usuarios registrados en el sistema.
 \centering
 \caption{Columnas de la tabla \texttt{users}.}
 \label{tab:users}
-\begin{tabular}{llll}
+\begin{tabular}{llp{3.5cm}p{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -51,7 +51,7 @@ Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario.
 \centering
 \caption{Columnas de la tabla \texttt{conversations}.}
 \label{tab:conversations}
-\begin{tabular}{llll}
+\begin{tabular}{llp{3.5cm}p{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -77,7 +77,7 @@ Proyección CQRS de los mensajes intercambiados dentro de cada conversación.
 \centering
 \caption{Columnas de la tabla \texttt{messages}.}
 \label{tab:messages}
-\begin{tabular}{llll}
+\begin{tabular}{llp{3.5cm}p{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -104,7 +104,7 @@ Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para 
 \centering
 \caption{Columnas de la tabla \texttt{analysis\_cards}.}
 \label{tab:cards}
-\begin{tabular}{llll}
+\begin{tabular}{llp{3.5cm}p{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -131,7 +131,7 @@ Proyección CQRS de los códigos CIE-10-ES predichos por el motor de IA, con su 
 \centering
 \caption{Columnas de la tabla \texttt{predicted\_codes}.}
 \label{tab:predicted-codes}
-\begin{tabular}{llll}
+\begin{tabular}{llp{3.5cm}p{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -161,7 +161,7 @@ Catálogo de referencia de los códigos CIE-10-ES cargados desde los ficheros CS
 \centering
 \caption{Columnas de la tabla \texttt{cie10\_codes}.}
 \label{tab:cie10codes}
-\begin{tabular}{llll}
+\begin{tabular}{llp{3.5cm}p{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -186,7 +186,7 @@ Sugerencias manuales de código realizadas por el usuario al seleccionar un frag
 \centering
 \caption{Columnas de la tabla \texttt{code\_suggestions}.}
 \label{tab:suggestions}
-\begin{tabular}{llll}
+\begin{tabular}{llp{3.5cm}p{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -210,7 +210,7 @@ Tabla de control interno de Commanded para garantizar la coherencia de las proye
 \centering
 \caption{Columnas de la tabla \texttt{projection\_versions}.}
 \label{tab:proj-versions}
-\begin{tabular}{llll}
+\begin{tabular}{llp{3.5cm}p{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -226,7 +226,7 @@ Tabla de control interno de Commanded para garantizar la coherencia de las proye
 
 La base de datos \texttt{cie10\_eventstore} es gestionada íntegramente por la biblioteca \texttt{EventStore} (dependencia de Commanded). Su esquema incluye las tablas \texttt{streams}, \texttt{events} y \texttt{subscriptions}, que almacenan el log de eventos inmutable. No se modifica directamente; toda la interacción se realiza a través del módulo \texttt{App.CommandedApplication}.
 
-Los eventos registrados son: \texttt{ConversationStarted}, \texttt{MessageSent}, \texttt{AnalysisRequested}, \texttt{AIPredictionReceived}, \texttt{CodeValidated} y \texttt{CodeRejected}. Cada evento incluye los campos de la acción más metadatos de Commanded (\texttt{causation\_id}, \texttt{correlation\_id}, \texttt{created\_at}).
+Los eventos registrados son: \texttt{ConversationStarted}, \texttt{MessageSent}, \texttt{AnalysisRequested}, \texttt{AIPrediction\allowbreak{}Received}, \texttt{CodeValidated} y \texttt{CodeRejected}. Cada evento incluye los campos de la acción más metadatos de Commanded (\texttt{causation\_id}, \texttt{correlation\_id}, \texttt{created\_at}).
 
 \section{Relaciones entre entidades}
 
