@@ -44,6 +44,7 @@ chat:
   welcome_body: "Wählen Sie eine frühere Analyse aus oder erstellen Sie eine neue, um zu beginnen."
   new_analysis: "Neue Analyse"
   analysis_header: "ICD-10-Analyse"
+  engine_label: "Engine"
   empty_state: "Fügen Sie den klinischen Bericht unten ein, um die Analyse zu starten"
   analyzing: "Klinischen Bericht analysieren…"
   report_label: "Klinischer Bericht"

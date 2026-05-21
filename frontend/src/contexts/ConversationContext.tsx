@@ -62,6 +62,7 @@ interface ConversationContextType {
   chatItems: ChatItem[];
   predictedCodes: PredictedCode[];
   isAnalyzing: boolean;
+  engine: string | null;
   createConversation: () => void;
   switchConversation: (conversationId: string) => void;
   analyzeReport: (reportText: string) => void;
@@ -82,6 +83,7 @@ export function ConversationProvider({ children, userId, token }: { children: Re
   const [chatItems, setChatItems] = useState<ChatItem[]>([]);
   const [predictedCodes, setPredictedCodes] = useState<PredictedCode[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [engine, setEngine] = useState<string | null>(null);
   const [pendingConversation, setPendingConversation] = useState(false);
   const [trashedConversations, setTrashedConversations] = useState<ConversationSummary[]>([]);
   const channelRef = useRef<Channel | null>(null);
@@ -127,6 +129,7 @@ export function ConversationProvider({ children, userId, token }: { children: Re
     setChatItems([]);
     setPredictedCodes([]);
     setIsAnalyzing(false);
+    setEngine(null);
 
     const socket = getSocket(token);
     const ch = socket.channel(`conversation:${activeConversationId}`, {});
@@ -180,18 +183,22 @@ export function ConversationProvider({ children, userId, token }: { children: Re
     ch.on('analysis_started', () => setIsAnalyzing(true));
 
     ch.on('analysis_card_received', (payload: { message_id: string; card_id: string; card_type: AnalysisCard['card_type']; content: string | AnalysisCode[] }) => {
-      setChatItems((prev) => [...prev, {
-        kind: 'card',
-        card_id: payload.card_id,
-        message_id: payload.message_id,
-        card_type: payload.card_type,
-        content: payload.content,
-      }]);
+      setChatItems((prev) => {
+        if (prev.some((item) => item.kind === 'card' && item.card_id === payload.card_id)) return prev;
+        return [...prev, {
+          kind: 'card',
+          card_id: payload.card_id,
+          message_id: payload.message_id,
+          card_type: payload.card_type,
+          content: payload.content,
+        }];
+      });
     });
 
-    ch.on('analysis_complete', (payload: { message_id: string; predicted_codes?: PredictedCode[] }) => {
+    ch.on('analysis_complete', (payload: { message_id: string; predicted_codes?: PredictedCode[]; engine?: string }) => {
       setIsAnalyzing(false);
       if (payload.predicted_codes?.length) setPredictedCodes(payload.predicted_codes);
+      if (payload.engine) setEngine(payload.engine);
       // Inject suggestion card so user can annotate the report text
       setChatItems((prev) => {
         if (prev.some((item) => item.kind === 'card' && item.card_type === 'suggest')) return prev;
@@ -239,6 +246,7 @@ export function ConversationProvider({ children, userId, token }: { children: Re
     setActiveConversationId(null);
     setChatItems([]);
     setPredictedCodes([]);
+    setEngine(null);
     setPendingConversation(true);
   }, []);
 
@@ -321,6 +329,7 @@ export function ConversationProvider({ children, userId, token }: { children: Re
         chatItems,
         predictedCodes,
         isAnalyzing,
+        engine,
         createConversation,
         switchConversation,
         analyzeReport,

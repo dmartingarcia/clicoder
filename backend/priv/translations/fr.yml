@@ -44,6 +44,7 @@ chat:
   welcome_body: "Sélectionnez une analyse précédente ou créez-en une nouvelle pour commencer."
   new_analysis: "Nouvelle analyse"
   analysis_header: "Analyse CIM-10"
+  engine_label: "Moteur"
   empty_state: "Collez le rapport clinique ci-dessous pour lancer l'analyse"
   analyzing: "Analyse du rapport clinique…"
   report_label: "Rapport clinique"

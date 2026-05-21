@@ -281,7 +281,8 @@ defmodule AppWeb.ConversationChannel do
     }
   end
 
-  defp persist_prediction_direct(conversation_id, message_id, cards) do
+  # Inserts analysis cards directly (fallback when CQRS projection is delayed/fails).
+  defp persist_cards_direct(conversation_id, message_id, cards) do
     conversation = Repo.get_by(ConversationProjection, conversation_id: conversation_id)
 
     unless is_nil(conversation) do
@@ -302,15 +303,27 @@ defmodule AppWeb.ConversationChannel do
         }
         |> Repo.insert(on_conflict: :nothing)
       end)
+    end
+  end
 
+  # Always inserts predicted codes directly with pre-generated UUIDs so we can
+  # broadcast them immediately in analysis_complete (avoids async CQRS timing issues).
+  defp persist_predicted_codes_direct(conversation_id, cards) do
+    conversation = Repo.get_by(ConversationProjection, conversation_id: conversation_id)
+
+    if is_nil(conversation) do
+      []
+    else
       codes_content =
         cards
         |> Enum.find(%{}, fn c -> c["type"] == "codes" end)
         |> Map.get("content", [])
 
-      Enum.each(codes_content, fn code ->
+      Enum.map(codes_content, fn code ->
+        code_id = UUID.uuid4()
+
         %PredictedCodeProjection{
-          code_id: UUID.uuid4(),
+          code_id: code_id,
           cie10_code: code["code"],
           reasoning: code["reason"] || code["reasoning"],
           confidence_score: code["confidence"],
@@ -318,6 +331,14 @@ defmodule AppWeb.ConversationChannel do
           conversation_id: conversation.id
         }
         |> Repo.insert(on_conflict: :nothing)
+
+        %{
+          code_id: code_id,
+          cie10_code: code["code"],
+          reasoning: code["reason"] || code["reasoning"],
+          confidence: code["confidence"],
+          status: "pending"
+        }
       end)
     end
   end
@@ -350,10 +371,10 @@ defmodule AppWeb.ConversationChannel do
 
           {:error, reason} ->
             Logger.warning(
-              "ReceiveAIPrediction dispatch failed (#{inspect(reason)}), persisting directly"
+              "ReceiveAIPrediction dispatch failed (#{inspect(reason)}), persisting cards directly"
             )
 
-            persist_prediction_direct(conversation_id, message_id, cards)
+            persist_cards_direct(conversation_id, message_id, cards)
         end
 
         Enum.each(cards, fn card ->
@@ -365,19 +386,14 @@ defmodule AppWeb.ConversationChannel do
           })
         end)
 
-        predicted_codes =
-          Repo.all(
-            from p in PredictedCodeProjection,
-              join: c in ConversationProjection,
-              on: p.conversation_id == c.id,
-              where: c.conversation_id == ^conversation_id,
-              select: p
-          )
-          |> Enum.map(&format_code/1)
+        # Insert predicted codes synchronously with known UUIDs so analysis_complete
+        # always carries the correct code_id values (avoids async CQRS timing race).
+        predicted_codes = persist_predicted_codes_direct(conversation_id, cards)
 
         broadcast!(socket, "analysis_complete", %{
           message_id: message_id,
-          predicted_codes: predicted_codes
+          predicted_codes: predicted_codes,
+          engine: engine
         })
 
       {:error, reason} ->
