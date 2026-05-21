@@ -210,12 +210,12 @@ Tabla de control interno de Commanded para garantizar la coherencia de las proye
 \centering
 \caption{Columnas de la tabla \texttt{projection\_versions}.}
 \label{tab:proj-versions}
-\begin{tabular}{llp{3.5cm}p{4.5cm}}
+\begin{tabular}{p{3.5cm}lp{3cm}p{4cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
 \texttt{projection\_name}         & \texttt{varchar} & PK          & Nombre del proyector. \\
-\texttt{last\_seen\_event\_number}& \texttt{bigint}  & NOT NULL    & Último evento procesado por este proyector. \\
+\texttt{last\_seen\_event\_\allowbreak{}number}& \texttt{bigint}  & NOT NULL    & Último evento procesado por este proyector. \\
 \texttt{inserted\_at}             & \texttt{timestamptz} & NOT NULL & Fecha de creación. \\
 \texttt{updated\_at}              & \texttt{timestamptz} & NOT NULL & Fecha de actualización. \\
 \hline
@@ -226,7 +226,9 @@ Tabla de control interno de Commanded para garantizar la coherencia de las proye
 
 La base de datos \texttt{cie10\_eventstore} es gestionada íntegramente por la biblioteca \texttt{EventStore} (dependencia de Commanded). Su esquema incluye las tablas \texttt{streams}, \texttt{events} y \texttt{subscriptions}, que almacenan el log de eventos inmutable. No se modifica directamente; toda la interacción se realiza a través del módulo \texttt{App.CommandedApplication}.
 
-Los eventos registrados son: \texttt{ConversationStarted}, \texttt{MessageSent}, \texttt{AnalysisRequested}, \texttt{AIPrediction\allowbreak{}Received}, \texttt{CodeValidated} y \texttt{CodeRejected}. Cada evento incluye los campos de la acción más metadatos de Commanded (\texttt{causation\_id}, \texttt{correlation\_id}, \texttt{created\_at}).
+\begin{sloppypar}
+Los eventos registrados son: \texttt{ConversationStarted}, \texttt{MessageSent}, \texttt{AnalysisRequested}, \texttt{AIPredictionReceived}, \texttt{CodeValidated} y \texttt{CodeRejected}. Cada evento incluye los campos de la acción más metadatos de Commanded (\texttt{causation\_id}, \texttt{correlation\_id}, \texttt{created\_at}).
+\end{sloppypar}
 
 \section{Relaciones entre entidades}
 
