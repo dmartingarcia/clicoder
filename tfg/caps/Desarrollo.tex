@@ -282,7 +282,7 @@ Las contraseñas se almacenan hasheadas con bcrypt. El servicio de email se impl
 
 \subsection{Internacionalización}
 
-La interfaz soporta español e inglés. Las traducciones del backend se almacenan en ficheros YAML (\texttt{priv/translations/es.yml} y \texttt{en.yml}) y se sirven a través del \emph{endpoint} \texttt{GET\allowbreak\ /api/translations/:locale}. El frontend las carga al arrancar mediante \texttt{I18nContext} y las aplica con la función \texttt{t(key, vars)}, que soporta interpolación de variables. La preferencia de idioma se almacena en la base de datos del usuario y se sincroniza con el backend al cambiar de idioma.
+La interfaz soporta español e inglés. Las traducciones del backend se almacenan en ficheros YAML (\texttt{priv/\allowbreak{}translations/\allowbreak{}es.yml} y \texttt{en.yml}) y se sirven a través del \emph{endpoint} \texttt{GET\allowbreak\ /api/translations/:locale}. El frontend las carga al arrancar mediante \texttt{I18nContext} y las aplica con la función \texttt{t(key, vars)}, que soporta interpolación de variables. La preferencia de idioma se almacena en la base de datos del usuario y se sincroniza con el backend al cambiar de idioma.
 
 \subsection{Calidad del código y buenas prácticas}
 \label{sec:calidad}

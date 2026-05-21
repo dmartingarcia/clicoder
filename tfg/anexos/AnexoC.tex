@@ -44,14 +44,14 @@ El token se almacena en \texttt{localStorage} bajo la clave \texttt{cie10\_auth}
 \centering
 \caption{Endpoints de conversaciones.}
 \label{tab:api-conv}
-\begin{tabular}{llp{7cm}}
+\begin{tabular}{lp{5cm}p{5cm}}
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
-GET    & \texttt{/conversations?user\_id=<uuid>}                  & Lista conversaciones activas del usuario. \emph{Protegido.} \\
-GET    & \texttt{/conversations/trash?user\_id=<uuid>}            & Lista conversaciones en papelera. \emph{Protegido.} \\
+GET    & \texttt{/conversations?\allowbreak{}user\_id=<uuid>}     & Lista conversaciones activas del usuario. \emph{Protegido.} \\
+GET    & \texttt{/conversations/trash?\allowbreak{}user\_id=<uuid>} & Lista conversaciones en papelera. \emph{Protegido.} \\
 DELETE & \texttt{/conversations/:id}                             & Borrado lógico (soft delete). \emph{Protegido.} \\
-PUT    & \texttt{/conversations/:id/restore}                     & Restaura conversación de la papelera. \emph{Protegido.} \\
+PUT    & \texttt{/conversations/\allowbreak{}:id/restore}        & Restaura conversación de la papelera. \emph{Protegido.} \\
 \hline
 \end{tabular}
 \end{table}
@@ -62,13 +62,13 @@ PUT    & \texttt{/conversations/:id/restore}                     & Restaura conv
 \centering
 \caption{Endpoints del catálogo CIE-10-ES (públicos, solo lectura).}
 \label{tab:api-cie10}
-\begin{tabular}{llp{7cm}}
+\begin{tabular}{lp{5cm}p{5cm}}
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
-GET & \texttt{/cie10/search?q=<query>\&limit=<n>\&type=<tipo>} & Búsqueda en texto libre. \texttt{type} puede ser \texttt{diagnosis}, \texttt{procedure} o \texttt{chemical}. \\
+GET & \texttt{/cie10/search?\allowbreak{}q=<query>\&\allowbreak{}limit=<n>\&\allowbreak{}type=<tipo>} & Búsqueda en texto libre. \texttt{type} puede ser \texttt{diagnosis}, \texttt{procedure} o \texttt{chemical}. \\
 GET & \texttt{/cie10/codes/:code}          & Devuelve un código concreto con su descripción y metadatos. \\
-GET & \texttt{/cie10/codes/:code/children} & Devuelve los códigos hijos en la jerarquía CIE-10. \\
+GET & \texttt{/cie10/codes/\allowbreak{}:code/children} & Devuelve los códigos hijos en la jerarquía CIE-10. \\
 \hline
 \end{tabular}
 \end{table}
@@ -160,12 +160,13 @@ El backend se comunica con el motor de IA mediante HTTP usando la librería Elix
     \item[Respuesta] Objeto JSON con el campo \texttt{cards}, lista de tres objetos:
 \end{description}
 
+{\small
 \begin{verbatim}
 {
   "cards": [
     {
       "type": "summary",
-      "content": "Informe analizado (349 palabras). 11 código(s) CIE-10 identificado(s)..."
+      "content": "Informe analizado. 11 código(s) CIE-10 identificado(s)..."
     },
     {
       "type": "codes",
@@ -181,11 +182,12 @@ El backend se comunica con el motor de IA mediante HTTP usando la librería Elix
     },
     {
       "type": "recommendations",
-      "content": "Revisar y confirmar los códigos asignados con el equipo médico..."
+      "content": "Revisar y confirmar los códigos con el equipo médico..."
     }
   ]
 }
 \end{verbatim}
+}
 
 La llamada se realiza dentro de una \texttt{Task.start} asíncrona, por lo que el backend no bloquea el canal WebSocket durante la inferencia. Cuando la respuesta llega, el backend emite el comando \texttt{ReceiveAIPrediction}, que genera los eventos correspondientes y activa los proyectores que persisten las tarjetas y los códigos predichos.
 
