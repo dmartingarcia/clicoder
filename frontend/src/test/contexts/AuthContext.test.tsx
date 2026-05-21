@@ -184,6 +184,39 @@ describe('AuthProvider', () => {
       expect(result.error).toBe('email ya registrado');
     });
 
+    it('returns generic error message when response has no errors field', async () => {
+      mockFetch({ message: 'Something went wrong' }, 422);
+
+      const getCtx = renderProvider();
+      await waitFor(() => expect(getCtx().mounted).toBe(true));
+
+      let result!: { error?: string };
+      await act(async () => {
+        result = await getCtx().register(fields);
+      });
+
+      expect(result.error).toBe('Error al registrarse');
+    });
+
+    it('persists session on register success with user/token (not pending_confirmation)', async () => {
+      mockFetch({
+        user: { id: 'u2', first_name: 'Ana', last_name: 'López', username: 'ana_lopez', email: 'ana@h.com' },
+        token: 'tok-register',
+      }, 201);
+
+      const getCtx = renderProvider();
+      await waitFor(() => expect(getCtx().mounted).toBe(true));
+
+      let result!: { error?: string };
+      await act(async () => {
+        result = await getCtx().register(fields);
+      });
+
+      expect(result).toEqual({});
+      expect(getCtx().user).not.toBeNull();
+      expect(getCtx().token).toBe('tok-register');
+    });
+
     it('returns network error when fetch throws', async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('net fail'));
 
@@ -256,6 +289,48 @@ describe('AuthProvider', () => {
         render(<Probe onRender={() => {}} />)
       ).toThrow('useAuth must be used within AuthProvider');
       spy.mockRestore();
+    });
+  });
+
+  describe('localStorage error handling', () => {
+    it('handles corrupt localStorage JSON gracefully (loadFromStorage catch)', async () => {
+      // Store invalid JSON so JSON.parse throws
+      localStorage.setItem('cie10_auth', 'NOT_VALID_JSON{{{');
+      const getCtx = renderProvider();
+      // Should not throw — catch branch returns null, auth stays null
+      await waitFor(() => expect(getCtx().mounted).toBe(true));
+      expect(getCtx().user).toBeNull();
+    });
+  });
+
+  describe('?confirmed=1 redirect handling', () => {
+    it('fetches /auth/me and persists session when confirmed=1 params are present', async () => {
+      const user = { id: 'u9', first_name: 'C', last_name: 'D', username: 'cd', email: 'cd@h.com' };
+      mockFetch({ user });
+
+      // Set up location search params before mounting
+      Object.defineProperty(window, 'location', {
+        value: { ...window.location, search: '?confirmed=1&token=conf-tok&user_id=u9' },
+        writable: true,
+        configurable: true,
+      });
+
+      const getCtx = renderProvider();
+      await waitFor(() => expect(getCtx().mounted).toBe(true));
+      // fetch is called for /auth/me
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+      const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toContain('/auth/me');
+      expect((opts as RequestInit).headers).toMatchObject({ Authorization: 'Bearer conf-tok' });
+    });
+
+    afterEach(() => {
+      // Restore clean location
+      Object.defineProperty(window, 'location', {
+        value: { ...window.location, search: '' },
+        writable: true,
+        configurable: true,
+      });
     });
   });
 });

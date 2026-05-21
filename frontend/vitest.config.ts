@@ -12,7 +12,14 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'json', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/test/**', 'src/**/*.d.ts', 'src/app/**'],
+      exclude: [
+        'src/test/**',
+        'src/**/*.d.ts',
+        'src/app/**',
+        'src/components/ui/**',   // shadcn-generated UI primitives
+        'src/lib/config.ts',      // env config, always mocked in tests
+        'src/lib/socket.ts',      // Phoenix socket singleton, always mocked
+      ],
     },
   },
   resolve: {

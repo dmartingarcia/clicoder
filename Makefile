@@ -240,15 +240,23 @@ training-clean: ## Limpiar entornos de entrenamiento
 # Entrenamiento del clasificador (ai_engine/train.py)
 # Los datos y el token HF se inyectan desde docker-compose.yml
 
-ai-baseline-dict: ## Baseline de diccionario CIE-10 (diagnoses + procedures + chemicals)
-	@echo "$(BLUE)Ejecutando baseline de diccionario...$(NC)"
+ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 (clinical+corpus+combined → model/baseline_dict.json)
+	@echo "$(BLUE)Calculando diccionario CIE-10...$(NC)"
 	$(COMPOSE_CPU) run --rm ai_engine python baseline_dict.py \
+		--train_file        /data/codiesp_csvs/codiesp_D_source_train.csv \
 		--val_file          /data/codiesp_csvs/codiesp_D_source_validation.csv \
 		--diagnoses_file    /data/cie10-csvs/cie10-es-diagnoses.csv \
 		--procedures_file   /data/cie10-csvs/cie10-es-procedures.csv \
 		--chemicals_file    /data/cie10-csvs/cie10-es-chemicals.csv \
+		--task_x_train      /data/codiesp_csvs/codiesp_X_source_train.csv \
+		--task_x_val        /data/codiesp_csvs/codiesp_X_source_validation.csv \
+		--sources clinical corpus combined \
+		--corpus_selective \
+		--only_combined \
+		--save_dict         /app/model/baseline_dict.json \
 		$(if $(SOURCES),--sources $(SOURCES),) \
-		$(if $(MIN_LEN),--min_phrase_len $(MIN_LEN),)
+		$(if $(MIN_LEN),--min_phrase_len $(MIN_LEN),) \
+		$(if $(NO_ABBREVS),--no_expand_abbrevs,)
 
 ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requiere HF_TOKEN en .env)
 	@echo "$(BLUE)Entrenando clasificador CIE-10$(NC)"
