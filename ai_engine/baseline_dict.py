@@ -43,6 +43,119 @@ from tqdm import tqdm
 
 
 # ---------------------------------------------------------------------------
+# Versión de lematización — incrementar cuando cambie el comportamiento de
+# lemmatize() para invalidar automáticamente los caches en disco.
+# ---------------------------------------------------------------------------
+
+LEMMA_VERSION = 2  # v2: añadida expansión de abreviaturas clínicas
+
+# ---------------------------------------------------------------------------
+# Abreviaturas clínicas españolas
+#
+# Estrategia IAM (ganadores CodiEsp): antes de lematizar, expandir abreviaturas
+# a su forma completa para que encajen con los patrones del diccionario.
+# Solo se incluyen abreviaturas con semántica unívoca en contexto clínico;
+# las ambiguas (PCR, IC, MS, FA, EC, IRA…) se omiten para evitar falsos positivos.
+# ---------------------------------------------------------------------------
+
+MEDICAL_ABBREVIATIONS: dict[str, str] = {
+    # — Cardiovascular —
+    "HTA":     "hipertensión arterial",
+    "ICC":     "insuficiencia cardíaca congestiva",
+    "IAM":     "infarto agudo de miocardio",
+    "SCA":     "síndrome coronario agudo",
+    "SCASEST": "síndrome coronario agudo sin elevación ST",
+    "SCACEST": "síndrome coronario agudo con elevación ST",
+    "ACV":     "accidente cerebrovascular",
+    "ACVA":    "accidente cerebrovascular agudo",
+    "AIT":     "accidente isquémico transitorio",
+    "TVP":     "trombosis venosa profunda",
+    "TEP":     "tromboembolismo pulmonar",
+    "TEV":     "tromboembolismo venoso",
+    "HAP":     "hipertensión arterial pulmonar",
+    "HVI":     "hipertrofia ventricular izquierda",
+    "HVD":     "hipertrofia ventricular derecha",
+    "BRIHH":   "bloqueo de rama izquierda del haz de His",
+    "BRDHH":   "bloqueo de rama derecha del haz de His",
+    "CID":     "coagulación intravascular diseminada",
+    # — Metabólico / Endocrino —
+    "DM":      "diabetes mellitus",
+    "DM1":     "diabetes mellitus tipo 1",
+    "DM2":     "diabetes mellitus tipo 2",
+    "DMID":    "diabetes mellitus insulinodependiente",
+    "DMNID":   "diabetes mellitus no insulinodependiente",
+    "DLP":     "dislipidemia",
+    "HbA1c":   "hemoglobina glucosilada",
+    # — Respiratorio —
+    "EPOC":    "enfermedad pulmonar obstructiva crónica",
+    "NAC":     "neumonía adquirida en la comunidad",
+    "SDRA":    "síndrome de dificultad respiratoria aguda",
+    "SAHS":    "síndrome de apnea hipopnea del sueño",
+    # — Renal —
+    "ERC":     "enfermedad renal crónica",
+    "IRC":     "insuficiencia renal crónica",
+    "ITU":     "infección del tracto urinario",
+    "IVU":     "infección vías urinarias",
+    # — Neurológico —
+    "TCE":     "traumatismo craneoencefálico",
+    "HIC":     "hipertensión intracraneal",
+    "ELA":     "esclerosis lateral amiotrófica",
+    "SGB":     "síndrome de Guillain-Barré",
+    # — Digestivo / Hepático —
+    "HDA":     "hemorragia digestiva alta",
+    "HDB":     "hemorragia digestiva baja",
+    "EII":     "enfermedad inflamatoria intestinal",
+    "CHC":     "carcinoma hepatocelular",
+    "HCC":     "carcinoma hepatocelular",
+    "PBE":     "peritonitis bacteriana espontánea",
+    "CPRE":    "colangiopancreatografía retrógrada endoscópica",
+    # — Reumatológico / Inmunológico —
+    "AR":      "artritis reumatoide",
+    "LES":     "lupus eritematoso sistémico",
+    "SAF":     "síndrome antifosfolípido",
+    # — Infeccioso —
+    "VIH":     "virus de la inmunodeficiencia humana",
+    "SIDA":    "síndrome de inmunodeficiencia adquirida",
+    "VHC":     "virus de la hepatitis C",
+    "VHB":     "virus de la hepatitis B",
+    # — Oncohematológico —
+    "LH":      "linfoma de Hodgkin",
+    "LNH":     "linfoma no Hodgkin",
+    "LLA":     "leucemia linfoblástica aguda",
+    "LMA":     "leucemia mieloide aguda",
+    "LLC":     "leucemia linfocítica crónica",
+    "LMC":     "leucemia mieloide crónica",
+    # — Traumatológico —
+    "LCA":     "ligamento cruzado anterior",
+    "LCP":     "ligamento cruzado posterior",
+    "PTR":     "prótesis total de rodilla",
+    "PTC":     "prótesis total de cadera",
+    # — Fármacos / Mecanismos —
+    "IECA":    "inhibidor de la enzima convertidora de angiotensina",
+    "ARAII":   "antagonista del receptor de angiotensina II",
+}
+
+# Compilar una sola regex (más largas primero para que ganen sobre substrings)
+_ABBREV_RE = re.compile(
+    r"\b(" + "|".join(re.escape(k) for k in sorted(MEDICAL_ABBREVIATIONS, key=len, reverse=True)) + r")\b"
+)
+
+
+def expand_abbreviations(text: str) -> str:
+    """
+    Expande abreviaturas clínicas españolas antes de lematizar.
+
+    Estrategia del equipo IAM (CodiEsp 2020): normalizar el texto al máximo
+    antes del matching para que encaje con los patrones del diccionario.
+    Solo reemplaza abreviaturas completas (word boundary) y distingue mayúsculas
+    para evitar colisiones con palabras comunes en minúsculas.
+
+    Ejemplo: "Paciente con HTA y DM2" → "Paciente con hipertensión arterial y diabetes mellitus tipo 2"
+    """
+    return _ABBREV_RE.sub(lambda m: MEDICAL_ABBREVIATIONS[m.group(1)], text)
+
+
+# ---------------------------------------------------------------------------
 # Normalización y lematización
 # ---------------------------------------------------------------------------
 
@@ -114,11 +227,13 @@ def _normalize_gender(lemma: str) -> str:
 def lemmatize(text: str) -> str:
     """
     Lematiza el texto con spaCy es_dep_news_trf (transformer):
+    - Expande abreviaturas clínicas (HTA → hipertensión arterial) antes de procesar.
     - Mejor desambiguación morfológica que el modelo estadístico.
     - Excluye espacios y puntuación.
     - Normaliza género de adjetivos al masculino (cardíaca → cardíaco).
     - Devuelve lemas en minúsculas sin acentos.
     """
+    text = expand_abbreviations(text)
     nlp = _get_nlp()
     doc = nlp(text[:100_000])
     tokens = []
@@ -349,7 +464,7 @@ def load_diagnoses(path: str, min_len: int, cache_dir: str | None) -> dict[str, 
         for variant in expand_description(str(row.get("description", ""))):
             pairs.append((block, variant))
     return _build_block_patterns(pairs, "diagnoses", min_len, cache_dir,
-                                  [path, stat.st_size, stat.st_mtime, min_len])
+                                  [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION])
 
 
 def load_procedures(path: str, min_len: int, cache_dir: str | None) -> dict[str, list[re.Pattern]]:
@@ -367,7 +482,7 @@ def load_procedures(path: str, min_len: int, cache_dir: str | None) -> dict[str,
                 for variant in expand_description(val):
                     pairs.append((block, variant))
     return _build_block_patterns(pairs, "procedures", min_len, cache_dir,
-                                  [path, stat.st_size, stat.st_mtime, min_len])
+                                  [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION])
 
 
 def load_chemicals(path: str, min_len: int, cache_dir: str | None) -> dict[str, list[re.Pattern]]:
@@ -382,7 +497,7 @@ def load_chemicals(path: str, min_len: int, cache_dir: str | None) -> dict[str, 
         for variant in expand_description(str(row.get("description", ""))):
             pairs.append((raw_code[:3], variant))
     return _build_block_patterns(pairs, "chemicals", min_len, cache_dir,
-                                  [path, stat.st_size, stat.st_mtime, min_len])
+                                  [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION])
 
 
 def extract_ngrams(lemma_text: str, min_n: int = 2, max_n: int = 5) -> list[str]:
@@ -430,7 +545,7 @@ def load_corpus(
     stat = os.stat(train_path)
     cache_key_parts = [train_path, stat.st_size, stat.st_mtime,
                        min_len, min_freq, min_precision, ngram_max, exclusive,
-                       max_patterns]
+                       max_patterns, LEMMA_VERSION]
     patterns_cache_file = None
     if cache_dir:
         key = _cache_key(*cache_key_parts)
@@ -447,7 +562,7 @@ def load_corpus(
     # Lematizar todas las notas (caché separada, independiente de los parámetros)
     lemma_note_cache_file = None
     if cache_dir:
-        lkey = _cache_key(train_path, stat.st_size, stat.st_mtime)
+        lkey = _cache_key(train_path, stat.st_size, stat.st_mtime, LEMMA_VERSION)
         lemma_note_cache_file = _cache_path(cache_dir, "corpus_lemmas", lkey)
     lemma_texts = _load_cache(lemma_note_cache_file) if lemma_note_cache_file else None
     if lemma_texts is None:
@@ -570,7 +685,7 @@ def load_clinical(
     # Construir mapa de sinónimos (con caché)
     syn_cache_file = None
     if cache_dir:
-        syn_key = _cache_key(*stats, syn_similarity, syn_max)
+        syn_key = _cache_key(*stats, syn_similarity, syn_max, LEMMA_VERSION)
         syn_cache_file = _cache_path(cache_dir, "synonyms_clinical", syn_key)
     syn_map = build_synonym_map(all_terms, min_sim=syn_similarity,
                                 max_n=syn_max, cache_file=syn_cache_file)
@@ -578,7 +693,7 @@ def load_clinical(
     # Lematizar términos + expandir con sinónimos (con caché)
     patterns_cache_file = None
     if cache_dir:
-        pat_key = _cache_key(*stats, syn_similarity, syn_max, min_len)
+        pat_key = _cache_key(*stats, syn_similarity, syn_max, min_len, LEMMA_VERSION)
         patterns_cache_file = _cache_path(cache_dir, "patterns_clinical", pat_key)
     cached_patterns = _load_cache(patterns_cache_file) if patterns_cache_file else None
     if cached_patterns is not None:
@@ -707,9 +822,19 @@ def main():
         help="CSV con tabla bloque→top patrones por fuente (default: /app/model/baseline_report.csv)")
     parser.add_argument("--cache_dir", default="/app/model/baseline_cache")
     parser.add_argument("--no_cache", action="store_true")
+    parser.add_argument("--no_expand_abbrevs", action="store_true",
+        help="Desactiva la expansión de abreviaturas clínicas (para comparar vs baseline)")
     parser.add_argument("--save_dict",
         help="Guarda los patrones combined como JSON en esta ruta (para usar en API)")
     args = parser.parse_args()
+
+    # Expansión de abreviaturas: activa por defecto, desactivable con --no_expand_abbrevs
+    if args.no_expand_abbrevs:
+        global _ABBREV_RE
+        _ABBREV_RE = re.compile(r"(?!)")  # regex que nunca hace match → no-op
+        print("[abbrev] expansión de abreviaturas DESACTIVADA")
+    else:
+        print(f"[abbrev] expansión activa — {len(MEDICAL_ABBREVIATIONS)} abreviaturas registradas")
 
     cache_dir = None if args.no_cache else args.cache_dir
 
