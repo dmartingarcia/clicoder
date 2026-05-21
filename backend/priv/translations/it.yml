@@ -44,6 +44,7 @@ chat:
   welcome_body: "Seleziona un'analisi precedente o creane una nuova per iniziare."
   new_analysis: "Nuova analisi"
   analysis_header: "Analisi ICD-10"
+  engine_label: "Motore"
   empty_state: "Incolla il referto clinico qui sotto per avviare l'analisi"
   analyzing: "Analisi del referto clinico…"
   report_label: "Referto clinico"

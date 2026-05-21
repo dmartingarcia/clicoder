@@ -44,6 +44,7 @@ chat:
   welcome_body: "Selecciona un análisis anterior o crea uno nuevo para comenzar."
   new_analysis: "Nuevo análisis"
   analysis_header: "Análisis CIE-10"
+  engine_label: "Motor"
   empty_state: "Pega el informe clínico abajo para iniciar el análisis"
   analyzing: "Analizando informe clínico…"
   report_label: "Informe clínico"

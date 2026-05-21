@@ -94,8 +94,8 @@ function CodesCard({
                 </div>
                 {c.description && <span className="text-xs text-gray-500">{c.description}</span>}
                 <Badge
-                  variant={c.status === 'validated' ? 'default' : c.status === 'rejected' ? 'destructive' : 'secondary'}
-                  className="text-xs"
+                  variant={c.status === 'rejected' ? 'destructive' : 'secondary'}
+                  className={`text-xs ${c.status === 'validated' ? 'bg-green-100 text-green-700 border border-green-300' : ''}`}
                 >
                   {c.status === 'validated' ? t('cards.status_validated') : c.status === 'rejected' ? t('cards.status_rejected') : t('cards.pending')}
                 </Badge>
@@ -430,7 +430,7 @@ function ChatItemView({
 
 // ─── Main interface ───────────────────────────────────────────────────────────
 export function ChatInterface() {
-  const { activeConversationId, pendingConversation, chatItems, predictedCodes, isAnalyzing, analyzeReport, validateCode, rejectCode, createConversation } = useConversation();
+  const { activeConversationId, pendingConversation, chatItems, predictedCodes, isAnalyzing, engine, analyzeReport, validateCode, rejectCode, createConversation } = useConversation();
   const { t } = useI18n();
   const MAX_WORDS = 1024;
   const [reportText, setReportText] = useState('');
@@ -473,7 +473,10 @@ export function ChatInterface() {
             <Stethoscope className="h-5 w-5 text-blue-600" />
             <div>
               <h2 className="font-semibold text-gray-800">{t('chat.analysis_header')}</h2>
-              <p className="text-xs text-gray-400">ID: {activeConversationId}</p>
+              <p className="text-xs text-gray-400">
+                ID: {activeConversationId}
+                {engine && <span className="ml-3 text-blue-500 font-medium">{t('chat.engine_label')}: {engine}</span>}
+              </p>
             </div>
           </div>
 

@@ -79,26 +79,6 @@ defmodule App.Projections.ConversationProjector do
         |> repo.insert()
       end)
 
-      # Guardar códigos predichos (para validación/rechazo)
-      codes =
-        evt.cards
-        |> Enum.find(%{}, fn c -> (c[:type] || c["type"]) == "codes" end)
-        |> then(fn c -> c[:content] || c["content"] || [] end)
-
-      Enum.each(codes, fn code_data ->
-        %PredictedCodeProjection{
-          code_id: UUID.uuid4(),
-          cie10_code: code_data[:code] || code_data["code"],
-          reasoning:
-            code_data[:reason] || code_data["reason"] || code_data[:reasoning] ||
-              code_data["reasoning"],
-          confidence_score: code_data[:confidence] || code_data["confidence"],
-          status: "pending",
-          conversation_id: conversation.id
-        }
-        |> repo.insert()
-      end)
-
       {:ok, nil}
     end)
   end)
