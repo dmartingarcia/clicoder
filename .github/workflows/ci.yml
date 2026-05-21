@@ -25,9 +25,9 @@ jobs:
       - run: npm ci
       - run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
-  # ── Frontend — lint, build & test with coverage ───────────────────────────
-  frontend:
-    name: Frontend — lint, build & test
+  # ── Frontend — lint & build ───────────────────────────────────────────────
+  frontend-lint:
+    name: Frontend — lint & build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -53,6 +53,26 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: http://localhost:4000/api
           NEXT_PUBLIC_WS_URL: ws://localhost:4000/socket
+
+  # ── Frontend — test with coverage ─────────────────────────────────────────
+  frontend-test:
+    name: Frontend — test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Test with coverage
         run: npm run test:coverage
@@ -92,9 +112,58 @@ jobs:
             " >> $GITHUB_STEP_SUMMARY || true
           fi
 
-  # ── Backend — format, compile & test with coverage ────────────────────────
-  backend:
-    name: Backend — format, compile & test
+  # ── Backend — format, compile & static analysis ───────────────────────────
+  backend-lint:
+    name: Backend — lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18"
+          otp-version: "27"
+
+      - name: Cache deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            backend/deps
+            backend/_build
+          key: ${{ runner.os }}-mix-${{ hashFiles('backend/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Compile (warnings as errors)
+        run: mix compile --warnings-as-errors
+
+      - name: Static analysis (Credo)
+        run: mix credo --strict
+
+      - name: Cache Dialyzer PLTs
+        uses: actions/cache@v4
+        with:
+          path: backend/_build/dev/*.plt
+          key: ${{ runner.os }}-dialyzer-${{ hashFiles('backend/mix.lock') }}
+          restore-keys: ${{ runner.os }}-dialyzer-
+
+      - name: Static analysis (Dialyzer)
+        run: mix dialyzer --format dialyxir
+        env:
+          MIX_ENV: dev
+
+  # ── Backend — test with coverage ──────────────────────────────────────────
+  backend-test:
+    name: Backend — test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -140,14 +209,8 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
-      - name: Check formatting
-        run: mix format --check-formatted
-
-      - name: Compile (warnings as errors)
-        run: mix compile --warnings-as-errors
-
-      - name: Static analysis (Credo)
-        run: mix credo --strict
+      - name: Compile
+        run: mix compile
 
       - name: Set up test databases
         run: |
@@ -220,3 +283,9 @@ jobs:
 
       - name: Lint ai_engine_mock
         run: ruff check ai_engine_mock/
+
+      - name: Format check ai_engine
+        run: ruff format --check ai_engine/
+
+      - name: Format check ai_engine_mock
+        run: ruff format --check ai_engine_mock/
