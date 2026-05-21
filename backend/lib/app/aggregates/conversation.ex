@@ -73,7 +73,8 @@ defmodule App.Aggregates.Conversation do
       predicted_codes: cmd.predicted_codes,
       reasoning: cmd.reasoning,
       confidence_scores: cmd.confidence_scores,
-      received_at: DateTime.utc_now()
+      received_at: DateTime.utc_now(),
+      engine: cmd.engine
     }
   end
 

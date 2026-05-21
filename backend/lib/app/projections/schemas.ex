@@ -70,6 +70,7 @@ defmodule App.Projections.AnalysisCardProjection do
     field :content, :string
     field :position, :integer
     field :message_id, :string
+    field :engine, :string
 
     belongs_to :conversation, App.Projections.ConversationProjection
 
@@ -78,7 +79,7 @@ defmodule App.Projections.AnalysisCardProjection do
 
   def changeset(card, attrs) do
     card
-    |> cast(attrs, [:card_id, :card_type, :content, :position, :message_id, :conversation_id])
+    |> cast(attrs, [:card_id, :card_type, :content, :position, :message_id, :conversation_id, :engine])
     |> validate_required([:card_id, :card_type, :content, :conversation_id])
   end
 end
