@@ -137,6 +137,7 @@ defmodule AppWeb.Admin.ConversationLive.Show do
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Engine</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contenido</th>
               </tr>
             </thead>
@@ -148,6 +149,15 @@ defmodule AppWeb.Admin.ConversationLive.Show do
                     <span class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">
                       <%= card.card_type %>
                     </span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= if card.engine do %>
+                      <span class="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-medium">
+                        <%= card.engine %>
+                      </span>
+                    <% else %>
+                      <span class="text-gray-400 text-xs">—</span>
+                    <% end %>
                   </td>
                   <td class="px-4 py-3 text-sm text-gray-700 max-w-lg">
                     <p class="truncate"><%= card.content %></p>

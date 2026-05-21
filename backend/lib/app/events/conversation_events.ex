@@ -22,7 +22,8 @@ defmodule App.Events.AIPredictionReceived do
     :predicted_codes,
     :reasoning,
     :confidence_scores,
-    :received_at
+    :received_at,
+    :engine
   ]
 end
 

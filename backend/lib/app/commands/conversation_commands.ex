@@ -17,7 +17,8 @@ defmodule App.Commands.ReceiveAIPrediction do
     :cards,
     :predicted_codes,
     :reasoning,
-    :confidence_scores
+    :confidence_scores,
+    :engine
   ]
 end
 

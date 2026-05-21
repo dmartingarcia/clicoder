@@ -73,7 +73,8 @@ defmodule App.Projections.ConversationProjector do
           content: content,
           position: idx,
           message_id: evt.message_id,
-          conversation_id: conversation.id
+          conversation_id: conversation.id,
+          engine: evt.engine
         }
         |> repo.insert()
       end)
