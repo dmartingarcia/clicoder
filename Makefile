@@ -94,6 +94,7 @@ mailpit: ## Abrir Mailpit en el navegador (fake email inbox)
 	open http://localhost:8025 2>/dev/null || xdg-open http://localhost:8025 2>/dev/null || echo "Abre manualmente: http://localhost:8025"
 
 setup: ## Setup completo desde cero: down -v + build + seed (sin levantar). Luego usa `make up`
+	@[ -f .env ] || cp .env.example .env
 	$(COMPOSE_CPU) down -v --remove-orphans
 	$(COMPOSE_CPU) build --progress=plain backend
 	$(COMPOSE_CPU) build --progress=plain frontend
