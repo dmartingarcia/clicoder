@@ -1,4 +1,4 @@
-.PHONY: help build build-base build-backend build-frontend build-ai build-training up down logs clean clean-all setup reset shell backend-migrate backend-rollback backend-seed backend-reset backend-test backend-install backend-format frontend-test frontend-install frontend-format frontend-lint ai-install db-backup db-reset mailpit training-setup training-dataset training-jupyter-cpu training-jupyter-gpu training-clean cpu-build cpu-up cpu-down mock-build mock-up mock-down tfg-pdf tfg-clean
+.PHONY: help build build-base build-backend build-frontend build-ai build-training up down logs clean clean-all setup reset shell backend-migrate backend-rollback backend-seed backend-reset backend-test backend-install backend-format frontend-test frontend-install frontend-format frontend-lint ai-install ai-lint ai-format db-backup db-reset mailpit training-setup training-dataset training-jupyter-cpu training-jupyter-gpu training-clean cpu-build cpu-up cpu-down mock-build mock-up mock-down tfg-pdf tfg-clean
 
 # Variables
 COMPOSE      = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
@@ -48,7 +48,7 @@ build-training: build-base ## Construir solo training
 
 up: frontend-install ## Levantar todos los servicios
 	@echo "$(GREEN)Levantando servicios...$(NC)"
-	$(COMPOSE) up -d
+	$(COMPOSE_CPU) up -d
 	@echo "$(GREEN)Servicios levantados:$(NC)"
 	@echo "  - Frontend:      http://localhost:3000"
 	@echo "  - Backend API:   http://localhost:4000"
@@ -61,7 +61,7 @@ up: frontend-install ## Levantar todos los servicios
 
 down: ## Detener todos los servicios
 	@echo "$(YELLOW)Deteniendo servicios...$(NC)"
-	$(COMPOSE) down
+	$(COMPOSE_CPU) down
 
 logs: ## Ver logs (pregunta por servicio o todos)
 	@echo "$(GREEN)Servicios disponibles:$(NC)"
@@ -73,12 +73,12 @@ logs: ## Ver logs (pregunta por servicio o todos)
 	@echo "  6) mailpit"
 	@read -p "Servicio [1]: " c; \
 	case $${c:-1} in \
-		1|todos)    docker compose logs -f ;; \
-		2|backend)  docker compose logs -f backend ;; \
-		3|frontend) docker compose logs -f frontend ;; \
-		4|ai_engine) docker compose logs -f ai_engine ;; \
-		5|db)       docker compose logs -f db ;; \
-		6|mailpit)  docker compose logs -f mailpit ;; \
+		1|todos)    $(COMPOSE_CPU) logs -f ;; \
+		2|backend)  $(COMPOSE_CPU) logs -f backend ;; \
+		3|frontend) $(COMPOSE_CPU) logs -f frontend ;; \
+		4|ai_engine) $(COMPOSE_CPU) logs -f ai_engine ;; \
+		5|db)       $(COMPOSE_CPU) logs -f db ;; \
+		6|mailpit)  $(COMPOSE_CPU) logs -f mailpit ;; \
 		*) echo "Opción no válida" ;; \
 	esac
 
@@ -87,20 +87,20 @@ mailpit: ## Abrir Mailpit en el navegador (fake email inbox)
 	open http://localhost:8025 2>/dev/null || xdg-open http://localhost:8025 2>/dev/null || echo "Abre manualmente: http://localhost:8025"
 
 setup: ## Setup completo desde cero: down -v + build + seed (sin levantar). Luego usa `make up`
-	$(COMPOSE) down -v --remove-orphans
-	$(COMPOSE) build --progress=plain backend
-	$(COMPOSE) build --progress=plain frontend
+	$(COMPOSE_CPU) down -v --remove-orphans
+	$(COMPOSE_CPU) build --progress=plain backend
+	$(COMPOSE_CPU) build --progress=plain frontend
 	$(MAKE) backend-seed
 	@echo "$(GREEN)Setup completado. Usa 'make up' para levantar los servicios.$(NC)"
 
 clean: ## Limpiar contenedores, volúmenes e imágenes
 	@echo "$(YELLOW)Limpiando todo...$(NC)"
-	$(COMPOSE) down -v --remove-orphans
+	$(COMPOSE_CPU) down -v --remove-orphans
 	docker system prune -f
 
 clean-all: ## Limpieza profunda (incluye imágenes)
 	@echo "$(YELLOW)Limpieza profunda...$(NC)"
-	$(COMPOSE) down -v --rmi all --remove-orphans
+	$(COMPOSE_CPU) down -v --rmi all --remove-orphans
 	docker system prune -af
 
 # Shells interactivos
@@ -112,35 +112,35 @@ shell: ## Abrir shell interactivo (pregunta por contenedor)
 	@echo "  4) db"
 	@read -p "Contenedor: " c; \
 	case $$c in \
-		1|backend)    docker exec -it elixir_backend sh ;; \
-		2|frontend)   docker exec -it nextjs_frontend sh ;; \
-		3|ai_engine)  docker exec -it ai_engine sh ;; \
-		4|db)         docker exec -it cie10_db psql -U postgres -d cie10_app ;; \
+		1|backend)    $(COMPOSE_CPU) exec -it backend sh ;; \
+		2|frontend)   $(COMPOSE_CPU) exec -it frontend sh ;; \
+		3|ai_engine)  $(COMPOSE_CPU) exec -it ai_engine sh ;; \
+		4|db)         $(COMPOSE_CPU) exec -it db psql -U postgres -d cie10_app ;; \
 		*) echo "Opción no válida" ;; \
 	esac
 
 # Comandos de base de datos
 backend-migrate: ## Ejecutar migraciones de Ecto
-	$(COMPOSE) up -d db
-	$(COMPOSE) run --rm --no-deps backend mix ecto.migrate
+	$(COMPOSE_CPU) up -d db
+	$(COMPOSE_CPU) run --rm --no-deps backend mix ecto.migrate
 
 backend-rollback: ## Rollback última migración
-	$(COMPOSE) up -d db
-	$(COMPOSE) run --rm --no-deps backend mix ecto.rollback
+	$(COMPOSE_CPU) up -d db
+	$(COMPOSE_CPU) run --rm --no-deps backend mix ecto.rollback
 
 backend-seed: backend-install ## Primera vez: create + migrate + eventstore + seeds + CIE-10
-	$(COMPOSE) up -d db
-	$(COMPOSE) run --rm --no-deps backend mix ecto.create || true
-	$(COMPOSE) run --rm --no-deps backend mix ecto.migrate
-	$(COMPOSE) run --rm --no-deps backend mix event_store.create || true
-	$(COMPOSE) run --rm --no-deps backend mix event_store.init || true
-	$(COMPOSE) run --rm --no-deps backend mix run priv/repo/seeds.exs
-	$(COMPOSE) run --rm --no-deps backend mix cie10.import
+	$(COMPOSE_CPU) up -d db
+	$(COMPOSE_CPU) run --rm --no-deps backend mix ecto.create || true
+	$(COMPOSE_CPU) run --rm --no-deps backend mix ecto.migrate
+	$(COMPOSE_CPU) run --rm --no-deps backend mix event_store.create || true
+	$(COMPOSE_CPU) run --rm --no-deps backend mix event_store.init || true
+	$(COMPOSE_CPU) run --rm --no-deps backend mix run priv/repo/seeds.exs
+	$(COMPOSE_CPU) run --rm --no-deps backend mix cie10.import
 	@echo "$(GREEN)Usuario de prueba: admin@test.com / password123$(NC)"
 
 db-reset: ## Reset completo: drop + backend-seed
-	$(COMPOSE) up -d db
-	$(COMPOSE) run --rm --no-deps backend mix ecto.drop || true
+	$(COMPOSE_CPU) up -d db
+	$(COMPOSE_CPU) run --rm --no-deps backend mix ecto.drop || true
 	$(MAKE) backend-seed
 
 # Testing
@@ -150,16 +150,16 @@ backend-test: ## Ejecutar tests del backend
 
 frontend-test: ## Ejecutar tests del frontend
 	@echo "$(GREEN)Ejecutando tests del frontend...$(NC)"
-	$(COMPOSE) run --rm --no-deps frontend npm test
+	$(COMPOSE_CPU) run --rm --no-deps frontend npm test
 
 # Comandos útiles
 # Producción
 # Instalación de dependencias
 backend-install: ## Instalar dependencias del backend
-	$(COMPOSE) run --rm --no-deps backend mix deps.get
+	$(COMPOSE_CPU) run --rm --no-deps backend mix deps.get
 
 frontend-install: ## Instalar dependencias del frontend
-	$(COMPOSE) run --rm --no-deps frontend npm install
+	$(COMPOSE_CPU) run --rm --no-deps frontend npm install
 
 ai-install: ## Instalar dependencias del AI engine
 	$(AI) pip install -r requirements.txt
@@ -178,15 +178,20 @@ backend-dialyzer: ## Análisis estático de tipos del backend (Dialyzer)
 	$(BACKEND) mix deps.get
 	$(BACKEND) mix dialyzer --format dialyxir
 
-ai-lint: ## Lint del AI engine (ruff)
+ai-lint: ## Lint del AI engine (ruff check + format check)
 	$(AI) pip install -q ruff
 	$(AI) ruff check .
+	$(AI) ruff format --check .
+
+ai-format: ## Formatear código del AI engine (ruff format)
+	$(AI) pip install -q ruff
+	$(AI) ruff format .
 
 frontend-format: ## Formatear código del frontend
-	$(COMPOSE) run --rm --no-deps frontend npm format
+	$(COMPOSE_CPU) run --rm --no-deps frontend npm format
 
 frontend-lint: ## Lint del frontend
-	$(COMPOSE) run --rm --no-deps frontend npm run lint
+	$(COMPOSE_CPU) run --rm --no-deps frontend npm run lint
 
 # Backup y restore
 db-backup: ## Backup de la base de datos
@@ -197,24 +202,24 @@ db-backup: ## Backup de la base de datos
 # Training y ML con prefijo training-
 training-setup: ## Configurar entorno de entrenamiento
 	@echo "$(YELLOW)Configurando entorno de entrenamiento (Docker)...$(NC)"
-	$(COMPOSE) run --rm training bash -c 'cd bert-classifier && python3 -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install torch transformers scikit-learn pandas tqdm jupyter ipykernel && .venv/bin/python -m ipykernel install --user --name=cie10-training'
+	$(COMPOSE_CPU) run --rm training bash -c 'cd bert-classifier && python3 -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install torch transformers scikit-learn pandas tqdm jupyter ipykernel && .venv/bin/python -m ipykernel install --user --name=cie10-training'
 	@echo "$(GREEN)Entorno configurado correctamente$(NC)"
 
 training-dataset: ## Descargar dataset CODIESP
 	@echo "$(YELLOW)Descargando dataset CODIESP (Docker)...$(NC)"
-	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && python3 collect_codiesp_dataset.py'
+	$(COMPOSE_CPU) run --rm training bash -c 'cd csv_import_scripts && python3 collect_codiesp_dataset.py'
 
 training-collect-chemicals: ## Descargar tabla de químicos
 	@echo "$(YELLOW)Descargando tabla de químicos (Docker)...$(NC)"
-	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && python3 collect_chemicals.py'
+	$(COMPOSE_CPU) run --rm training bash -c 'cd csv_import_scripts && python3 collect_chemicals.py'
 
 training-collect-diagnoses: ## Descargar diagnósticos
 	@echo "$(YELLOW)Descargando diagnósticos (Docker)...$(NC)"
-	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && python3 collect_diagnoses.py'
+	$(COMPOSE_CPU) run --rm training bash -c 'cd csv_import_scripts && python3 collect_diagnoses.py'
 
 training-collect-procedures: ## Descargar procedimientos
 	@echo "$(YELLOW)Descargando procedimientos (Docker)...$(NC)"
-	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && python3 collect_procedures.py'
+	$(COMPOSE_CPU) run --rm training bash -c 'cd csv_import_scripts && python3 collect_procedures.py'
 
 training-jupyter-cpu: ## Abrir Jupyter (CPU)
 	@echo "$(YELLOW)Abriendo Jupyter Notebook (CPU)...$(NC)"
@@ -234,7 +239,7 @@ training-jupyter-gpu: ## Abrir Jupyter (GPU)
 
 training-clean: ## Limpiar entornos de entrenamiento
 	@echo "$(YELLOW)Limpiando entorno de entrenamiento (Docker)...$(NC)"
-	$(COMPOSE) run --rm training bash -c 'cd csv_import_scripts && make clean || true; cd ../bert-classifier && rm -rf .venv __pycache__ .ipynb_checkpoints'
+	$(COMPOSE_CPU) run --rm training bash -c 'cd csv_import_scripts && make clean || true; cd ../bert-classifier && rm -rf .venv __pycache__ .ipynb_checkpoints'
 	@echo "$(GREEN)Limpieza completada$(NC)"
 
 # Entrenamiento del clasificador (ai_engine/train.py)

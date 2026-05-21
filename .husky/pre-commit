@@ -15,8 +15,8 @@ if echo "$STAGED" | grep -q "^backend/"; then
   (cd backend && mix format --check-formatted && mix credo)
 fi
 
-# AI Engine — ruff
+# AI Engine — ruff check + format
 if echo "$STAGED" | grep -q "^ai_engine/"; then
   echo "→ Lint ai_engine..."
-  (cd ai_engine && ruff check .)
+  ruff check ai_engine/ && ruff format --check ai_engine/
 fi

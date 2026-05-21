@@ -10,6 +10,7 @@ Uso:
 """
 
 import argparse
+
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -27,43 +28,49 @@ def parse_labels(label_str: str):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_file",
-        default="/data/codiesp_csvs/codiesp_D_source_train.csv")
-    parser.add_argument("--val_file",
-        default="/data/codiesp_csvs/codiesp_D_source_validation.csv")
+    parser.add_argument("--train_file", default="/data/codiesp_csvs/codiesp_D_source_train.csv")
+    parser.add_argument("--val_file", default="/data/codiesp_csvs/codiesp_D_source_validation.csv")
     parser.add_argument("--threshold", type=float, default=0.5)
     args = parser.parse_args()
 
     print("[data] Cargando datos...")
     train_df = pd.read_csv(args.train_file)
-    val_df   = pd.read_csv(args.val_file)
+    val_df = pd.read_csv(args.val_file)
     for df in (train_df, val_df):
         df.columns = df.columns.str.strip()
         df.dropna(subset=["text", "labels"], inplace=True)
     print(f"[data] train={len(train_df)}  val={len(val_df)}")
 
     train_labels = [parse_labels(lbl) for lbl in train_df["labels"]]
-    val_labels   = [parse_labels(lbl) for lbl in val_df["labels"]]
+    val_labels = [parse_labels(lbl) for lbl in val_df["labels"]]
 
     mlb = MultiLabelBinarizer()
     Y_train = mlb.fit_transform(train_labels)
-    Y_val   = mlb.transform(val_labels)
+    Y_val = mlb.transform(val_labels)
     print(f"[data] {len(mlb.classes_)} códigos únicos en train")
 
     print("\n[model] Entrenando TF-IDF + Logistic Regression (binary relevance)...")
-    pipeline = Pipeline([
-        ("tfidf", TfidfVectorizer(
-            analyzer="word",
-            ngram_range=(1, 2),
-            min_df=2,
-            max_features=50_000,
-            sublinear_tf=True,
-        )),
-        ("clf", OneVsRestClassifier(
-            LogisticRegression(C=1.0, max_iter=10000, solver="saga"),
-            n_jobs=-1,
-        )),
-    ])
+    pipeline = Pipeline(
+        [
+            (
+                "tfidf",
+                TfidfVectorizer(
+                    analyzer="word",
+                    ngram_range=(1, 2),
+                    min_df=2,
+                    max_features=50_000,
+                    sublinear_tf=True,
+                ),
+            ),
+            (
+                "clf",
+                OneVsRestClassifier(
+                    LogisticRegression(C=1.0, max_iter=10000, solver="saga"),
+                    n_jobs=-1,
+                ),
+            ),
+        ]
+    )
     pipeline.fit(train_df["text"].tolist(), Y_train)
 
     print(f"[eval] Evaluando en validación (threshold={args.threshold})...")
@@ -71,8 +78,8 @@ def main():
     Y_pred = (Y_prob >= args.threshold).astype(int)
 
     f1_micro = f1_score(Y_val, Y_pred, average="micro", zero_division=0)
-    p_micro  = precision_score(Y_val, Y_pred, average="micro", zero_division=0)
-    r_micro  = recall_score(Y_val, Y_pred, average="micro", zero_division=0)
+    p_micro = precision_score(Y_val, Y_pred, average="micro", zero_division=0)
+    r_micro = recall_score(Y_val, Y_pred, average="micro", zero_division=0)
     f1_macro = f1_score(Y_val, Y_pred, average="macro", zero_division=0)
 
     print(f"\n[result] TF-IDF baseline  threshold={args.threshold}")

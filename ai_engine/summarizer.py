@@ -13,7 +13,6 @@ import logging
 import os
 import threading
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger("cie10_engine")
 
@@ -23,22 +22,22 @@ logger = logging.getLogger("cie10_engine")
 
 MODELS = {
     "gemma3": {
-        "repo":     "bartowski/gemma-3-4b-it-GGUF",
+        "repo": "bartowski/gemma-3-4b-it-GGUF",
         "filename": "gemma-3-4b-it-Q4_K_M.gguf",
-        "display":  "Gemma 3 4B IT",
-        "size_gb":  2.5,
+        "display": "Gemma 3 4B IT",
+        "size_gb": 2.5,
     },
     "phi4": {
-        "repo":     "bartowski/Phi-4-mini-instruct-GGUF",
+        "repo": "bartowski/Phi-4-mini-instruct-GGUF",
         "filename": "Phi-4-mini-instruct-Q4_K_M.gguf",
-        "display":  "Phi-4 Mini Instruct",
-        "size_gb":  2.4,
+        "display": "Phi-4 Mini Instruct",
+        "size_gb": 2.4,
     },
     "qwen": {
-        "repo":     "Qwen/Qwen2.5-3B-Instruct-GGUF",
+        "repo": "Qwen/Qwen2.5-3B-Instruct-GGUF",
         "filename": "qwen2.5-3b-instruct-q4_k_m.gguf",
-        "display":  "Qwen 2.5 3B Instruct",
-        "size_gb":  2.0,
+        "display": "Qwen 2.5 3B Instruct",
+        "size_gb": 2.0,
     },
 }
 
@@ -67,15 +66,12 @@ class MedicalSummarizer:
 
     def __init__(self, model_key: str):
         if model_key not in MODELS:
-            raise ValueError(
-                f"Modelo desconocido: '{model_key}'. "
-                f"Opciones: {list(MODELS.keys())}"
-            )
-        self._model_key  = model_key
-        self._cfg        = MODELS[model_key]
-        self._llm        = None
-        self._n_threads  = int(os.environ.get("SUMMARIZER_THREADS", "4"))
-        self._n_ctx      = int(os.environ.get("SUMMARIZER_CTX", "4096"))
+            raise ValueError(f"Modelo desconocido: '{model_key}'. Opciones: {list(MODELS.keys())}")
+        self._model_key = model_key
+        self._cfg = MODELS[model_key]
+        self._llm = None
+        self._n_threads = int(os.environ.get("SUMMARIZER_THREADS", "4"))
+        self._n_ctx = int(os.environ.get("SUMMARIZER_CTX", "4096"))
 
     # ── Propiedades públicas ───────────────────────────────────────────────
 
@@ -94,14 +90,15 @@ class MedicalSummarizer:
         model_path = self._ensure_downloaded()
         logger.info(
             "Cargando %s (%s) con %d hilos …",
-            self._cfg["display"], model_path.name, self._n_threads,
+            self._cfg["display"],
+            model_path.name,
+            self._n_threads,
         )
         try:
             from llama_cpp import Llama
         except ImportError as exc:
             raise RuntimeError(
-                "llama-cpp-python no está instalado. "
-                "Instálalo con: pip install llama-cpp-python"
+                "llama-cpp-python no está instalado. Instálalo con: pip install llama-cpp-python"
             ) from exc
 
         self._llm = Llama(
@@ -115,39 +112,47 @@ class MedicalSummarizer:
     def _ensure_downloaded(self) -> Path:
         """Devuelve la ruta local del GGUF, descargándolo si no existe."""
         try:
-            from huggingface_hub import hf_hub_download, constants as hf_c
+            from huggingface_hub import constants as hf_c
+            from huggingface_hub import hf_hub_download
         except ImportError as exc:
             raise RuntimeError(
-                "huggingface-hub no está instalado. "
-                "Instálalo con: pip install huggingface-hub"
+                "huggingface-hub no está instalado. Instálalo con: pip install huggingface-hub"
             ) from exc
 
         cache_root = Path(hf_c.HF_HUB_CACHE)
-        repo       = self._cfg["repo"]
-        filename   = self._cfg["filename"]
-        size_gb    = self._cfg["size_gb"]
-        size_mb    = size_gb * 1024
+        repo = self._cfg["repo"]
+        filename = self._cfg["filename"]
+        size_gb = self._cfg["size_gb"]
+        size_mb = size_gb * 1024
 
         logger.info(
             "Resumidor: preparando %s — %s (~%.1f GB) …",
-            self._cfg["display"], filename, size_gb,
+            self._cfg["display"],
+            filename,
+            size_gb,
         )
 
         # Comprobamos si ya está en caché antes de lanzar el watcher
-        safe_repo  = repo.replace("/", "--")
+        safe_repo = repo.replace("/", "--")
         model_blob_dir = cache_root / f"models--{safe_repo}" / "blobs"
-        already_cached = model_blob_dir.exists() and any(
-            f.stat().st_size > size_mb * 0.9 * 1024 * 1024
-            for f in model_blob_dir.iterdir()
-            if f.is_file() and not f.name.endswith(".incomplete")
-        ) if model_blob_dir.exists() else False
+        already_cached = (
+            model_blob_dir.exists()
+            and any(
+                f.stat().st_size > size_mb * 0.9 * 1024 * 1024
+                for f in model_blob_dir.iterdir()
+                if f.is_file() and not f.name.endswith(".incomplete")
+            )
+            if model_blob_dir.exists()
+            else False
+        )
 
         if already_cached:
             logger.info("Resumidor: %s encontrado en caché.", filename)
         else:
             logger.info(
                 "Resumidor: descargando %s (~%.1f GB) — esto puede tardar varios minutos …",
-                filename, size_gb,
+                filename,
+                size_gb,
             )
             stop_event = threading.Event()
             watcher = threading.Thread(
@@ -204,7 +209,7 @@ class MedicalSummarizer:
         # Limpiar artefactos frecuentes de algunos modelos
         for prefix in ("Resumen médico:", "Resumen:", "**Resumen médico:**"):
             if summary.startswith(prefix):
-                summary = summary[len(prefix):].strip()
+                summary = summary[len(prefix) :].strip()
 
         return summary or _fallback_summary(text)
 
@@ -212,6 +217,7 @@ class MedicalSummarizer:
 # ─────────────────────────────────────────────
 # Helpers internos
 # ─────────────────────────────────────────────
+
 
 def _watch_gguf_download(
     repo: str,
@@ -221,9 +227,8 @@ def _watch_gguf_download(
     stop_event: threading.Event,
 ) -> None:
     """Hilo que reporta el progreso de descarga del GGUF cada 15 s."""
-    safe_repo      = repo.replace("/", "--")
-    blob_dir       = cache_root / f"models--{safe_repo}" / "blobs"
-    incomplete_ext = ".incomplete"
+    safe_repo = repo.replace("/", "--")
+    blob_dir = cache_root / f"models--{safe_repo}" / "blobs"
 
     while not stop_event.is_set():
         downloaded_mb = 0.0
@@ -240,11 +245,16 @@ def _watch_gguf_download(
                 pct = min(100, downloaded_mb / total_mb * 100)
                 logger.info(
                     "Descargando %s … %.0f MB / %.0f MB (%.1f%%)",
-                    filename, downloaded_mb, total_mb, pct,
+                    filename,
+                    downloaded_mb,
+                    total_mb,
+                    pct,
                 )
             else:
                 logger.info(
-                    "Descargando %s … %.0f MB descargados", filename, downloaded_mb,
+                    "Descargando %s … %.0f MB descargados",
+                    filename,
+                    downloaded_mb,
                 )
 
         stop_event.wait(15)
@@ -287,7 +297,8 @@ def _fallback_summary(text: str) -> str:
 # Factory
 # ─────────────────────────────────────────────
 
-def create_summarizer() -> Optional["MedicalSummarizer"]:
+
+def create_summarizer() -> "MedicalSummarizer | None":
     """Lee SUMMARIZER_MODEL y devuelve un MedicalSummarizer o None si está desactivado."""
     model_key = os.environ.get("SUMMARIZER_MODEL", "none").strip().lower()
     if model_key == "none" or not model_key:
@@ -296,7 +307,8 @@ def create_summarizer() -> Optional["MedicalSummarizer"]:
     if model_key not in MODELS:
         logger.warning(
             "SUMMARIZER_MODEL='%s' no reconocido. Opciones: %s. Resumidor desactivado.",
-            model_key, list(MODELS.keys()),
+            model_key,
+            list(MODELS.keys()),
         )
         return None
     return MedicalSummarizer(model_key)

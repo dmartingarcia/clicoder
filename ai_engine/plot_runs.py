@@ -12,8 +12,9 @@ import argparse
 import csv
 import json
 import pathlib
-import matplotlib.pyplot as plt
+
 import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
 import numpy as np
 
 STEP_LABELS = {
@@ -50,13 +51,13 @@ def main():
     labels = [STEP_LABELS.get(ts, ts[-6:]) for ts in timestamps]
     x = np.arange(len(rows))
 
-    f1_micro  = [float(r["val_f1_micro"])  for r in rows]
-    p_micro   = [float(r["val_p_micro"])   for r in rows]
-    r_micro   = [float(r["val_r_micro"])   for r in rows]
-    f1_macro  = [float(r["val_f1_macro"])  for r in rows]
-    epochs    = [int(r["epochs_run"])      for r in rows]
-    threshold = [float(r["threshold"])     for r in rows]
-    max_len   = [int(r["max_length"])      for r in rows]
+    f1_micro = [float(r["val_f1_micro"]) for r in rows]
+    p_micro = [float(r["val_p_micro"]) for r in rows]
+    r_micro = [float(r["val_r_micro"]) for r in rows]
+    f1_macro = [float(r["val_f1_macro"]) for r in rows]
+    epochs = [int(r["epochs_run"]) for r in rows]
+    threshold = [float(r["threshold"]) for r in rows]
+    max_len = [int(r["max_length"]) for r in rows]
 
     # ── colours by threshold ──────────────────────────────────────────────────
     thr_colours = {0.2: "#4e79a7", 0.3: "#f28e2b", 0.5: "#59a14f"}
@@ -66,17 +67,26 @@ def main():
     fig.suptitle(
         "CIE-10 mmBERT-base — Comparativa de runs\n"
         "CodiESP  |  ~500 train / 250 val  |  809 códigos (bloque)",
-        fontsize=13, fontweight="bold",
+        fontsize=13,
+        fontweight="bold",
     )
 
     # ── panel 1: F1-micro + P + R ──────────────────────────────────────────────
     ax = axes[0]
     w = 0.25
     ax.bar(x - w, f1_micro, width=w, color=bar_colours, label="F1-micro", alpha=0.9)
-    ax.bar(x,     p_micro,  width=w, color=bar_colours, label="P-micro",  alpha=0.5)
-    ax.bar(x + w, r_micro,  width=w, color=bar_colours, label="R-micro",  alpha=0.3)
+    ax.bar(x, p_micro, width=w, color=bar_colours, label="P-micro", alpha=0.5)
+    ax.bar(x + w, r_micro, width=w, color=bar_colours, label="R-micro", alpha=0.3)
     for i, v in enumerate(f1_micro):
-        ax.text(x[i] - w, v + 0.003, f"{v:.3f}", ha="center", va="bottom", fontsize=7.5, fontweight="bold")
+        ax.text(
+            x[i] - w,
+            v + 0.003,
+            f"{v:.3f}",
+            ha="center",
+            va="bottom",
+            fontsize=7.5,
+            fontweight="bold",
+        )
     ax.set_ylabel("Score (micro)")
     ax.set_ylim(0, max(max(f1_micro), max(p_micro), max(r_micro)) * 1.20 + 0.02)
     ax.set_title("F1-micro / Precision / Recall  (micro-averaged)", fontsize=10)
@@ -97,7 +107,7 @@ def main():
     ax2.set_title("F1-macro  (per-class average)", fontsize=10)
     ax2.grid(axis="y", linestyle="--", alpha=0.4)
 
-    # ── panel 3: epochs run + max_length ─────────────────────────────────────
+    # ── panel 3: epochs run + max_length ─────────────────────────────────
     ax3 = axes[2]
     ax3b = ax3.twinx()
     ax3.bar(x - 0.15, epochs, width=0.3, color="#76b7b2", alpha=0.85, label="Epochs run")
@@ -105,8 +115,10 @@ def main():
     ax3.set_ylabel("Epochs run", color="#76b7b2")
     ax3b.set_ylabel("max_length", color="#edc948")
     ax3.set_title("Epochs run  /  max_length per run", fontsize=10)
-    lines = [mpatches.Patch(color="#76b7b2", label="Epochs run"),
-             mpatches.Patch(color="#edc948", label="max_length")]
+    lines = [
+        mpatches.Patch(color="#76b7b2", label="Epochs run"),
+        mpatches.Patch(color="#edc948", label="max_length"),
+    ]
     ax3.legend(handles=lines, fontsize=8)
     ax3.grid(axis="y", linestyle="--", alpha=0.4)
 
@@ -129,8 +141,14 @@ def main():
 def _plot_epochs(history_files: list, out_path: pathlib.Path):
     """Line chart: F1-micro and train loss per epoch, one line per run."""
     COLOURS = [
-        "#4e79a7", "#f28e2b", "#59a14f", "#e15759",
-        "#76b7b2", "#edc948", "#b07aa1", "#ff9da7",
+        "#4e79a7",
+        "#f28e2b",
+        "#59a14f",
+        "#e15759",
+        "#76b7b2",
+        "#edc948",
+        "#b07aa1",
+        "#ff9da7",
     ]
 
     # Collect unique models for subtitle
@@ -146,25 +164,30 @@ def _plot_epochs(history_files: list, out_path: pathlib.Path):
     fig.suptitle(
         f"CIE-10 — Curvas de entrenamiento por época (todos los runs)\n"
         f"{models_str}  |  CodiESP  |  ~500 train / 250 val",
-        fontsize=12, fontweight="bold",
+        fontsize=12,
+        fontweight="bold",
     )
 
     for i, path in enumerate(history_files):
         with open(path) as f:
             data = json.load(f)
-        ts      = data["timestamp"]
-        model   = data.get("model_name", "").split("/")[-1]  # short name
-        thr     = data.get("threshold", "?")
-        mx      = data.get("max_length", "?")
-        label   = f"{STEP_LABELS.get(ts, ts[-6:]).replace(chr(10), ' ')}  [{model} thr={thr} max={mx}]"
-        colour  = COLOURS[i % len(COLOURS)]
+        ts = data["timestamp"]
+        model = data.get("model_name", "").split("/")[-1]  # short name
+        thr = data.get("threshold", "?")
+        mx = data.get("max_length", "?")
+        label = (
+            f"{STEP_LABELS.get(ts, ts[-6:]).replace(chr(10), ' ')}  [{model} thr={thr} max={mx}]"
+        )
+        colour = COLOURS[i % len(COLOURS)]
         history = data["history"]
-        epochs  = [h["epoch"]        for h in history]
-        f1      = [h["val_f1_micro"] for h in history]
-        loss    = [h["train_loss"]   for h in history]
+        epochs = [h["epoch"] for h in history]
+        f1 = [h["val_f1_micro"] for h in history]
+        loss = [h["train_loss"] for h in history]
 
-        ax_f1.plot(epochs, f1,   color=colour, linewidth=1.8, marker="o", markersize=3, label=label)
-        ax_loss.plot(epochs, loss, color=colour, linewidth=1.8, marker="o", markersize=3, label=label)
+        ax_f1.plot(epochs, f1, color=colour, linewidth=1.8, marker="o", markersize=3, label=label)
+        ax_loss.plot(
+            epochs, loss, color=colour, linewidth=1.8, marker="o", markersize=3, label=label
+        )
 
     ax_f1.set_ylabel("Val F1-micro")
     ax_f1.set_title("Val F1-micro por época", fontsize=10)

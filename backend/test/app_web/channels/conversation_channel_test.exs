@@ -243,5 +243,4 @@ defmodule AppWeb.ConversationChannelTest do
       assert_reply ref, :ok, %{suggestion_id: _}
     end
   end
-
 end
