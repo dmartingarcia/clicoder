@@ -25,7 +25,6 @@ defmodule AppWeb.ConversationChannel do
   }
 
   require Logger
-  import Ecto.Query, only: [from: 2]
 
   @impl true
   def join("conversation:" <> conversation_id, _payload, socket) do

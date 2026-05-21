@@ -16,10 +16,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import main as main_module
 
-
 # =============================================================================
 # Helpers
 # =============================================================================
+
 
 def _no_model_client():
     """
@@ -44,11 +44,24 @@ def _no_model_client():
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_bert_predictions():
     return [
-        {"code": "I10", "probability": 0.92, "chapter": "IX", "chapter_name": "Enfermedades del sistema circulatorio", "description": "Hipertensión esencial"},
-        {"code": "E11", "probability": 0.81, "chapter": "IV", "chapter_name": "Enfermedades endocrinas", "description": "Diabetes tipo 2"},
+        {
+            "code": "I10",
+            "probability": 0.92,
+            "chapter": "IX",
+            "chapter_name": "Enfermedades del sistema circulatorio",
+            "description": "Hipertensión esencial",
+        },
+        {
+            "code": "E11",
+            "probability": 0.81,
+            "chapter": "IV",
+            "chapter_name": "Enfermedades endocrinas",
+            "description": "Diabetes tipo 2",
+        },
     ]
 
 
@@ -131,6 +144,7 @@ def client_no_model():
 # GET /  — health check
 # =============================================================================
 
+
 class TestHealthCheck:
     def test_returns_online_status(self, client_no_model):
         resp = client_no_model.get("/")
@@ -160,21 +174,28 @@ class TestHealthCheck:
 # POST /predict  — BERT engine
 # =============================================================================
 
+
 class TestPredictBert:
     def test_returns_cards_list(self, client_with_bert):
-        resp = client_with_bert.post("/predict", json={"text": "Paciente con hipertensión arterial"})
+        resp = client_with_bert.post(
+            "/predict", json={"text": "Paciente con hipertensión arterial"}
+        )
         assert resp.status_code == 200
         assert isinstance(resp.json()["cards"], list)
 
     def test_returns_summary_codes_recommendations_cards(self, client_with_bert):
-        resp = client_with_bert.post("/predict", json={"text": "Paciente con hipertensión arterial"})
+        resp = client_with_bert.post(
+            "/predict", json={"text": "Paciente con hipertensión arterial"}
+        )
         card_types = [c["type"] for c in resp.json()["cards"]]
         assert "summary" in card_types
         assert "codes" in card_types
         assert "recommendations" in card_types
 
     def test_codes_card_contains_required_fields(self, client_with_bert):
-        resp = client_with_bert.post("/predict", json={"text": "Paciente con hipertensión arterial"})
+        resp = client_with_bert.post(
+            "/predict", json={"text": "Paciente con hipertensión arterial"}
+        )
         codes_card = next(c for c in resp.json()["cards"] if c["type"] == "codes")
         for entry in codes_card["content"]:
             assert "code" in entry
@@ -210,20 +231,27 @@ class TestPredictBert:
 # POST /predict  — dict engine
 # =============================================================================
 
+
 class TestPredictDict:
     def test_returns_cards_list(self, client_with_dict):
-        resp = client_with_dict.post("/predict", json={"text": "Paciente con hipertensión", "engine": "dict"})
+        resp = client_with_dict.post(
+            "/predict", json={"text": "Paciente con hipertensión", "engine": "dict"}
+        )
         assert resp.status_code == 200
         assert "cards" in resp.json()
 
     def test_codes_card_engine_is_dict(self, client_with_dict):
-        resp = client_with_dict.post("/predict", json={"text": "Paciente con hipertensión", "engine": "dict"})
+        resp = client_with_dict.post(
+            "/predict", json={"text": "Paciente con hipertensión", "engine": "dict"}
+        )
         codes_card = next(c for c in resp.json()["cards"] if c["type"] == "codes")
         for entry in codes_card["content"]:
             assert entry["engine"] == "dict"
 
     def test_codes_card_includes_matched_terms(self, client_with_dict):
-        resp = client_with_dict.post("/predict", json={"text": "Paciente con hipertensión", "engine": "dict"})
+        resp = client_with_dict.post(
+            "/predict", json={"text": "Paciente con hipertensión", "engine": "dict"}
+        )
         codes_card = next(c for c in resp.json()["cards"] if c["type"] == "codes")
         for entry in codes_card["content"]:
             assert "matched_terms" in entry
@@ -237,7 +265,9 @@ class TestPredictDict:
         assert resp.status_code == 422
 
     def test_reason_mentions_matched_terms(self, client_with_dict):
-        resp = client_with_dict.post("/predict", json={"text": "Paciente con hipertensión", "engine": "dict"})
+        resp = client_with_dict.post(
+            "/predict", json={"text": "Paciente con hipertensión", "engine": "dict"}
+        )
         codes_card = next(c for c in resp.json()["cards"] if c["type"] == "codes")
         for entry in codes_card["content"]:
             assert "Términos encontrados" in entry["reason"]

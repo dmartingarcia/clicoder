@@ -49,7 +49,7 @@ defmodule AppWeb.Admin.ConversationLive.Show do
         ← Volver a conversaciones
       </.link>
 
-      <%# Cabecera de la conversación %>
+      <%!-- Cabecera de la conversación --%>
       <div class="bg-white rounded-lg shadow p-6 mb-6">
         <h1 class="text-lg font-bold text-gray-800 font-mono mb-3"><%= @conv.conversation_id %></h1>
         <dl class="grid grid-cols-2 gap-4 text-sm">
@@ -93,7 +93,7 @@ defmodule AppWeb.Admin.ConversationLive.Show do
         </dl>
       </div>
 
-      <%# Mensajes %>
+      <%!-- Mensajes --%>
       <h2 class="text-lg font-semibold text-gray-700 mb-3">
         Mensajes (<%= length(@messages) %>)
       </h2>
@@ -123,7 +123,7 @@ defmodule AppWeb.Admin.ConversationLive.Show do
         </div>
       <% end %>
 
-      <%# Analysis Cards %>
+      <%!-- Analysis Cards --%>
       <h2 class="text-lg font-semibold text-gray-700 mb-3">
         Analysis Cards (<%= length(@cards) %>)
       </h2>

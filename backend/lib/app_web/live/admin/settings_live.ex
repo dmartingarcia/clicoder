@@ -4,8 +4,10 @@ defmodule AppWeb.Admin.SettingsLive do
   alias App.AIEngineSettings
 
   @engines [
-    {"bert", "BERT (RigoBERTa)", "Clasificador neuronal multi-label. Requiere GPU/CPU con modelo entrenado."},
-    {"dict", "Diccionario", "Reglas deterministas por términos clínicos. Sin GPU, siempre disponible."},
+    {"bert", "BERT (RigoBERTa)",
+     "Clasificador neuronal multi-label. Requiere GPU/CPU con modelo entrenado."},
+    {"dict", "Diccionario",
+     "Reglas deterministas por términos clínicos. Sin GPU, siempre disponible."},
     {"both", "Ambos", "BERT y diccionario en paralelo. Muestra predicciones de los dos motores."}
   ]
 

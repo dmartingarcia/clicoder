@@ -19,7 +19,7 @@ import os
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Dict, Literal
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -32,6 +32,7 @@ def _watch_download(model_name: str, stop_event: threading.Event) -> None:
     """Hilo que reporta progreso de descarga del modelo cada 15 s."""
     try:
         from huggingface_hub import constants as hf_c
+
         cache_root = Path(hf_c.HF_HUB_CACHE)
     except Exception:
         cache_root = Path.home() / ".cache" / "huggingface" / "hub"
@@ -43,6 +44,7 @@ def _watch_download(model_name: str, stop_event: threading.Event) -> None:
     total_mb: float = 0.0
     try:
         from huggingface_hub import model_info as hf_model_info
+
         info = hf_model_info(model_name)
         if getattr(info, "safetensors", None) and info.safetensors.total:
             total_mb = info.safetensors.total / (1024 * 1024)
@@ -51,34 +53,39 @@ def _watch_download(model_name: str, stop_event: threading.Event) -> None:
 
     while not stop_event.is_set():
         if model_cache.exists():
-            size_mb = sum(
-                f.stat().st_size for f in model_cache.rglob("*") if f.is_file()
-            ) / (1024 * 1024)
+            size_mb = sum(f.stat().st_size for f in model_cache.rglob("*") if f.is_file()) / (
+                1024 * 1024
+            )
             if total_mb:
                 pct = min(100, size_mb / total_mb * 100)
                 logger.info(
                     "Descargando %s … %.0f MB / %.0f MB (%.1f%%)",
-                    model_name, size_mb, total_mb, pct,
+                    model_name,
+                    size_mb,
+                    total_mb,
+                    pct,
                 )
             else:
                 logger.info("Descargando %s … %.0f MB descargados", model_name, size_mb)
         stop_event.wait(15)
 
+
 # Globals poblados en startup
-classifier        = None   # CIE10Classifier (BERT)
-dict_classifier   = None   # DictClassifier (diccionario)
-summarizer        = None   # MedicalSummarizer (LLM local, opcional)
-code_descriptions: Dict[str, str] = {}
+classifier = None  # CIE10Classifier (BERT)
+dict_classifier = None  # DictClassifier (diccionario)
+summarizer = None  # MedicalSummarizer (LLM local, opcional)
+code_descriptions: dict[str, str] = {}
 
 
 # ==================== LIFESPAN ====================
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global classifier, dict_classifier, summarizer, code_descriptions
 
     model_dir = os.environ.get("MODEL_DIR", "./model")
-    device    = os.environ.get("DEVICE", "cpu")
+    device = os.environ.get("DEVICE", "cpu")
 
     if not os.path.isdir(model_dir):
         logger.warning(
@@ -89,8 +96,9 @@ async def lifespan(app: FastAPI):
     else:
         # ── BERT classifier ──────────────────────────────────────────────────
         try:
-            from classifier import CIE10Classifier, load_code_descriptions
             import json as _json
+
+            from classifier import CIE10Classifier, load_code_descriptions
 
             # Detectar model_name para el monitor de descarga
             _cfg_path = Path(model_dir) / "config.json"
@@ -106,18 +114,21 @@ async def lifespan(app: FastAPI):
             _watcher.start()
             logger.info("Cargando modelo BERT desde '%s' en device='%s' …", model_dir, device)
 
-            classifier        = CIE10Classifier(model_dir=model_dir, device=device)
+            classifier = CIE10Classifier(model_dir=model_dir, device=device)
             code_descriptions = load_code_descriptions(model_dir)
 
             _stop.set()
             import torch as _torch
+
             if _torch.cuda.is_available():
                 gpu_name = _torch.cuda.get_device_name(0)
-                gpu_mem  = _torch.cuda.get_device_properties(0).total_memory // (1024 ** 2)
+                gpu_mem = _torch.cuda.get_device_properties(0).total_memory // (1024**2)
                 logger.info("Ejecutando en GPU: %s (%d MB VRAM)", gpu_name, gpu_mem)
             else:
                 logger.info("Ejecutando en CPU (sin GPU disponible)")
-            logger.info("Modelo BERT cargado. %d descripciones disponibles.", len(code_descriptions))
+            logger.info(
+                "Modelo BERT cargado. %d descripciones disponibles.", len(code_descriptions)
+            )
         except Exception as exc:
             logger.warning("No se pudo cargar el modelo BERT: %s", exc)
             classifier = None
@@ -127,6 +138,7 @@ async def lifespan(app: FastAPI):
         if os.path.isfile(dict_path):
             try:
                 from baseline_dict import DictClassifier
+
                 logger.info("Cargando clasificador de diccionario desde '%s' …", dict_path)
                 dict_classifier = DictClassifier(dict_path)
                 n_blocks = len(dict_classifier._patterns)
@@ -139,12 +151,14 @@ async def lifespan(app: FastAPI):
             logger.info(
                 "baseline_dict.json no encontrado en '%s' — engine=dict no disponible. "
                 "Genera el fichero con: python baseline_dict.py --save_dict %s",
-                model_dir, dict_path,
+                model_dir,
+                dict_path,
             )
 
     # ── Summarizer (LLM local, opcional) ─────────────────────────────────
     try:
         from summarizer import create_summarizer
+
         summarizer = create_summarizer()
         if summarizer is not None:
             # Carga en hilo para no bloquear el arranque
@@ -168,6 +182,7 @@ app = FastAPI(
 
 # ==================== SCHEMAS ====================
 
+
 class AnalysisRequest(BaseModel):
     """Petición de análisis de un informe clínico.
 
@@ -185,14 +200,15 @@ class AnalysisRequest(BaseModel):
 
 # ==================== ENDPOINTS ====================
 
+
 @app.get("/", summary="Health check")
 def health_check():
     return {
-        "status":            "online",
-        "model":             "rigoberta-cie10-flat",
-        "model_loaded":      classifier is not None,
-        "dict_loaded":       dict_classifier is not None,
-        "summarizer_model":  summarizer.model_name if summarizer else "none",
+        "status": "online",
+        "model": "rigoberta-cie10-flat",
+        "model_loaded": classifier is not None,
+        "dict_loaded": dict_classifier is not None,
+        "summarizer_model": summarizer.model_name if summarizer else "none",
         "summarizer_loaded": summarizer.is_loaded if summarizer else False,
     }
 
@@ -230,32 +246,34 @@ async def _predict_bert(text: str):
         _generate_summary(text),
     )
 
-    return {"cards": [
-        {"type": "summary", "content": summary_text},
-        {
-            "type": "codes",
-            "content": [
-                {
-                    "code":        p["code"],
-                    "description": p.get("description") or p.get("chapter_name", ""),
-                    "reason":      (
-                        f"{p.get('chapter_name') or ('Capítulo ' + p.get('chapter',''))} "
-                        f"— confianza {round(p['probability'] * 100, 1)}%"
-                    ).strip(" —"),
-                    "confidence":  round(p["probability"], 4),
-                    "engine":      "bert",
-                }
-                for p in predictions
-            ],
-        },
-        {
-            "type": "recommendations",
-            "content": (
-                "Revisar y confirmar los códigos asignados con el equipo médico "
-                "antes de registrar el alta."
-            ),
-        },
-    ]}
+    return {
+        "cards": [
+            {"type": "summary", "content": summary_text},
+            {
+                "type": "codes",
+                "content": [
+                    {
+                        "code": p["code"],
+                        "description": p.get("description") or p.get("chapter_name", ""),
+                        "reason": (
+                            f"{p.get('chapter_name') or ('Capítulo ' + p.get('chapter', ''))} "
+                            f"— confianza {round(p['probability'] * 100, 1)}%"
+                        ).strip(" —"),
+                        "confidence": round(p["probability"], 4),
+                        "engine": "bert",
+                    }
+                    for p in predictions
+                ],
+            },
+            {
+                "type": "recommendations",
+                "content": (
+                    "Revisar y confirmar los códigos asignados con el equipo médico "
+                    "antes de registrar el alta."
+                ),
+            },
+        ]
+    }
 
 
 async def _predict_dict(text: str):  # noqa: E302
@@ -264,9 +282,9 @@ async def _predict_dict(text: str):  # noqa: E302
             status_code=503,
             detail={
                 "error": "Clasificador de diccionario no disponible. "
-                         "Genera baseline_dict.json con: "
-                         "python baseline_dict.py --sources clinical corpus combined "
-                         "--corpus_selective --only_combined --save_dict model/baseline_dict.json"
+                "Genera baseline_dict.json con: "
+                "python baseline_dict.py --sources clinical corpus combined "
+                "--corpus_selective --only_combined --save_dict model/baseline_dict.json"
             },
         )
 
@@ -275,30 +293,32 @@ async def _predict_dict(text: str):  # noqa: E302
         _generate_summary(text),
     )
 
-    return {"cards": [
-        {"type": "summary", "content": summary_text},
-        {
-            "type": "codes",
-            "content": [
-                {
-                    "code":          p["code"],
-                    "description":   code_descriptions.get(p["code"], ""),
-                    "reason":        "Términos encontrados: " + ", ".join(p["matched_terms"]),
-                    "confidence":    p["confidence"],
-                    "matched_terms": p["matched_terms"],
-                    "engine":        "dict",
-                }
-                for p in predictions
-            ],
-        },
-        {
-            "type": "recommendations",
-            "content": (
-                "Revisar y confirmar los códigos asignados con el equipo médico "
-                "antes de registrar el alta."
-            ),
-        },
-    ]}
+    return {
+        "cards": [
+            {"type": "summary", "content": summary_text},
+            {
+                "type": "codes",
+                "content": [
+                    {
+                        "code": p["code"],
+                        "description": code_descriptions.get(p["code"], ""),
+                        "reason": "Términos encontrados: " + ", ".join(p["matched_terms"]),
+                        "confidence": p["confidence"],
+                        "matched_terms": p["matched_terms"],
+                        "engine": "dict",
+                    }
+                    for p in predictions
+                ],
+            },
+            {
+                "type": "recommendations",
+                "content": (
+                    "Revisar y confirmar los códigos asignados con el equipo médico "
+                    "antes de registrar el alta."
+                ),
+            },
+        ]
+    }
 
 
 async def _predict_both(text: str):
@@ -315,27 +335,30 @@ async def _predict_both(text: str):
 
     bert_codes = bert_result["cards"][1]["content"]
     dict_codes = dict_result["cards"][1]["content"]
-    all_codes  = bert_codes + dict_codes
+    all_codes = bert_codes + dict_codes
 
     # El resumen ya viene generado en bert_result (se calculó en paralelo)
     summary_card = bert_result["cards"][0]
 
-    return {"cards": [
-        summary_card,
-        {"type": "codes", "content": all_codes},
-        {
-            "type": "recommendations",
-            "content": (
-                "Revisar y confirmar los códigos asignados con el equipo médico "
-                "antes de registrar el alta."
-            ),
-        },
-    ]}
+    return {
+        "cards": [
+            summary_card,
+            {"type": "codes", "content": all_codes},
+            {
+                "type": "recommendations",
+                "content": (
+                    "Revisar y confirmar los códigos asignados con el equipo médico "
+                    "antes de registrar el alta."
+                ),
+            },
+        ]
+    }
 
 
 # ─────────────────────────────────────────────
 # Helper: generación de resumen
 # ─────────────────────────────────────────────
+
 
 async def _generate_summary(text: str) -> str:
     """Genera un resumen médico real si el summarizer está activo, o uno básico si no."""

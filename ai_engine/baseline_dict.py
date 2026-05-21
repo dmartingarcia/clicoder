@@ -41,7 +41,6 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 from sklearn.preprocessing import MultiLabelBinarizer
 from tqdm import tqdm
 
-
 # ---------------------------------------------------------------------------
 # Versión de lematización — incrementar cuando cambie el comportamiento de
 # lemmatize() para invalidar automáticamente los caches en disco.
@@ -60,84 +59,86 @@ LEMMA_VERSION = 2  # v2: añadida expansión de abreviaturas clínicas
 
 MEDICAL_ABBREVIATIONS: dict[str, str] = {
     # — Cardiovascular —
-    "HTA":     "hipertensión arterial",
-    "ICC":     "insuficiencia cardíaca congestiva",
-    "IAM":     "infarto agudo de miocardio",
-    "SCA":     "síndrome coronario agudo",
+    "HTA": "hipertensión arterial",
+    "ICC": "insuficiencia cardíaca congestiva",
+    "IAM": "infarto agudo de miocardio",
+    "SCA": "síndrome coronario agudo",
     "SCASEST": "síndrome coronario agudo sin elevación ST",
     "SCACEST": "síndrome coronario agudo con elevación ST",
-    "ACV":     "accidente cerebrovascular",
-    "ACVA":    "accidente cerebrovascular agudo",
-    "AIT":     "accidente isquémico transitorio",
-    "TVP":     "trombosis venosa profunda",
-    "TEP":     "tromboembolismo pulmonar",
-    "TEV":     "tromboembolismo venoso",
-    "HAP":     "hipertensión arterial pulmonar",
-    "HVI":     "hipertrofia ventricular izquierda",
-    "HVD":     "hipertrofia ventricular derecha",
-    "BRIHH":   "bloqueo de rama izquierda del haz de His",
-    "BRDHH":   "bloqueo de rama derecha del haz de His",
-    "CID":     "coagulación intravascular diseminada",
+    "ACV": "accidente cerebrovascular",
+    "ACVA": "accidente cerebrovascular agudo",
+    "AIT": "accidente isquémico transitorio",
+    "TVP": "trombosis venosa profunda",
+    "TEP": "tromboembolismo pulmonar",
+    "TEV": "tromboembolismo venoso",
+    "HAP": "hipertensión arterial pulmonar",
+    "HVI": "hipertrofia ventricular izquierda",
+    "HVD": "hipertrofia ventricular derecha",
+    "BRIHH": "bloqueo de rama izquierda del haz de His",
+    "BRDHH": "bloqueo de rama derecha del haz de His",
+    "CID": "coagulación intravascular diseminada",
     # — Metabólico / Endocrino —
-    "DM":      "diabetes mellitus",
-    "DM1":     "diabetes mellitus tipo 1",
-    "DM2":     "diabetes mellitus tipo 2",
-    "DMID":    "diabetes mellitus insulinodependiente",
-    "DMNID":   "diabetes mellitus no insulinodependiente",
-    "DLP":     "dislipidemia",
-    "HbA1c":   "hemoglobina glucosilada",
+    "DM": "diabetes mellitus",
+    "DM1": "diabetes mellitus tipo 1",
+    "DM2": "diabetes mellitus tipo 2",
+    "DMID": "diabetes mellitus insulinodependiente",
+    "DMNID": "diabetes mellitus no insulinodependiente",
+    "DLP": "dislipidemia",
+    "HbA1c": "hemoglobina glucosilada",
     # — Respiratorio —
-    "EPOC":    "enfermedad pulmonar obstructiva crónica",
-    "NAC":     "neumonía adquirida en la comunidad",
-    "SDRA":    "síndrome de dificultad respiratoria aguda",
-    "SAHS":    "síndrome de apnea hipopnea del sueño",
+    "EPOC": "enfermedad pulmonar obstructiva crónica",
+    "NAC": "neumonía adquirida en la comunidad",
+    "SDRA": "síndrome de dificultad respiratoria aguda",
+    "SAHS": "síndrome de apnea hipopnea del sueño",
     # — Renal —
-    "ERC":     "enfermedad renal crónica",
-    "IRC":     "insuficiencia renal crónica",
-    "ITU":     "infección del tracto urinario",
-    "IVU":     "infección vías urinarias",
+    "ERC": "enfermedad renal crónica",
+    "IRC": "insuficiencia renal crónica",
+    "ITU": "infección del tracto urinario",
+    "IVU": "infección vías urinarias",
     # — Neurológico —
-    "TCE":     "traumatismo craneoencefálico",
-    "HIC":     "hipertensión intracraneal",
-    "ELA":     "esclerosis lateral amiotrófica",
-    "SGB":     "síndrome de Guillain-Barré",
+    "TCE": "traumatismo craneoencefálico",
+    "HIC": "hipertensión intracraneal",
+    "ELA": "esclerosis lateral amiotrófica",
+    "SGB": "síndrome de Guillain-Barré",
     # — Digestivo / Hepático —
-    "HDA":     "hemorragia digestiva alta",
-    "HDB":     "hemorragia digestiva baja",
-    "EII":     "enfermedad inflamatoria intestinal",
-    "CHC":     "carcinoma hepatocelular",
-    "HCC":     "carcinoma hepatocelular",
-    "PBE":     "peritonitis bacteriana espontánea",
-    "CPRE":    "colangiopancreatografía retrógrada endoscópica",
+    "HDA": "hemorragia digestiva alta",
+    "HDB": "hemorragia digestiva baja",
+    "EII": "enfermedad inflamatoria intestinal",
+    "CHC": "carcinoma hepatocelular",
+    "HCC": "carcinoma hepatocelular",
+    "PBE": "peritonitis bacteriana espontánea",
+    "CPRE": "colangiopancreatografía retrógrada endoscópica",
     # — Reumatológico / Inmunológico —
-    "AR":      "artritis reumatoide",
-    "LES":     "lupus eritematoso sistémico",
-    "SAF":     "síndrome antifosfolípido",
+    "AR": "artritis reumatoide",
+    "LES": "lupus eritematoso sistémico",
+    "SAF": "síndrome antifosfolípido",
     # — Infeccioso —
-    "VIH":     "virus de la inmunodeficiencia humana",
-    "SIDA":    "síndrome de inmunodeficiencia adquirida",
-    "VHC":     "virus de la hepatitis C",
-    "VHB":     "virus de la hepatitis B",
+    "VIH": "virus de la inmunodeficiencia humana",
+    "SIDA": "síndrome de inmunodeficiencia adquirida",
+    "VHC": "virus de la hepatitis C",
+    "VHB": "virus de la hepatitis B",
     # — Oncohematológico —
-    "LH":      "linfoma de Hodgkin",
-    "LNH":     "linfoma no Hodgkin",
-    "LLA":     "leucemia linfoblástica aguda",
-    "LMA":     "leucemia mieloide aguda",
-    "LLC":     "leucemia linfocítica crónica",
-    "LMC":     "leucemia mieloide crónica",
+    "LH": "linfoma de Hodgkin",
+    "LNH": "linfoma no Hodgkin",
+    "LLA": "leucemia linfoblástica aguda",
+    "LMA": "leucemia mieloide aguda",
+    "LLC": "leucemia linfocítica crónica",
+    "LMC": "leucemia mieloide crónica",
     # — Traumatológico —
-    "LCA":     "ligamento cruzado anterior",
-    "LCP":     "ligamento cruzado posterior",
-    "PTR":     "prótesis total de rodilla",
-    "PTC":     "prótesis total de cadera",
+    "LCA": "ligamento cruzado anterior",
+    "LCP": "ligamento cruzado posterior",
+    "PTR": "prótesis total de rodilla",
+    "PTC": "prótesis total de cadera",
     # — Fármacos / Mecanismos —
-    "IECA":    "inhibidor de la enzima convertidora de angiotensina",
-    "ARAII":   "antagonista del receptor de angiotensina II",
+    "IECA": "inhibidor de la enzima convertidora de angiotensina",
+    "ARAII": "antagonista del receptor de angiotensina II",
 }
 
 # Compilar una sola regex (más largas primero para que ganen sobre substrings)
 _ABBREV_RE = re.compile(
-    r"\b(" + "|".join(re.escape(k) for k in sorted(MEDICAL_ABBREVIATIONS, key=len, reverse=True)) + r")\b"
+    r"\b("
+    + "|".join(re.escape(k) for k in sorted(MEDICAL_ABBREVIATIONS, key=len, reverse=True))
+    + r")\b"
 )
 
 
@@ -159,6 +160,7 @@ def expand_abbreviations(text: str) -> str:
 # Normalización y lematización
 # ---------------------------------------------------------------------------
 
+
 def _strip_accents(text: str) -> str:
     text = unicodedata.normalize("NFD", text)
     return "".join(c for c in text if unicodedata.category(c) != "Mn")
@@ -169,8 +171,8 @@ def build_pattern(phrase: str) -> re.Pattern:
     return re.compile(r"\b" + re.escape(phrase) + r"\b")
 
 
-_nlp_trf = None   # es_dep_news_trf  — lematización contextual (transformer)
-_nlp_lg  = None   # es_core_news_lg  — word vectors para synonym expansion
+_nlp_trf = None  # es_dep_news_trf  — lematización contextual (transformer)
+_nlp_lg = None  # es_core_news_lg  — word vectors para synonym expansion
 
 
 def _get_nlp():
@@ -183,6 +185,7 @@ def _get_nlp():
     global _nlp_trf
     if _nlp_trf is None:
         import spacy
+
         spacy.prefer_gpu()
         _nlp_trf = spacy.load("es_dep_news_trf", disable=["ner"])
     return _nlp_trf
@@ -197,6 +200,7 @@ def _get_nlp_vectors():
     global _nlp_lg
     if _nlp_lg is None:
         import spacy
+
         _nlp_lg = spacy.load("es_core_news_lg", disable=["parser", "ner"])
     return _nlp_lg
 
@@ -251,6 +255,7 @@ def lemmatize(text: str) -> str:
 # Caché en disco
 # ---------------------------------------------------------------------------
 
+
 def _cache_key(*parts) -> str:
     raw = ":".join(str(p) for p in parts)
     return hashlib.md5(raw.encode()).hexdigest()
@@ -277,6 +282,7 @@ def _save_cache(path: str, data):
 # Expansión de sinónimos con spaCy word vectors
 # ---------------------------------------------------------------------------
 
+
 def find_similar_words(word: str, min_sim: float = 0.65, max_n: int = 5) -> list[str]:
     """
     Encuentra palabras similares usando los word vectors de es_core_news_lg.
@@ -290,12 +296,14 @@ def find_similar_words(word: str, min_sim: float = 0.65, max_n: int = 5) -> list
         queries = np.asarray([lex.vector], dtype=np.float32)
         keys, _rows, scores = nlp_vec.vocab.vectors.most_similar(queries, n=max_n + 5)
         result = []
-        for key, score in zip(keys[0], scores[0]):
+        for key, score in zip(keys[0], scores[0], strict=False):
             candidate = nlp_vec.vocab.strings[key].lower()
-            if (candidate != word.lower()
-                    and float(score) >= min_sim
-                    and len(candidate) >= 4
-                    and candidate.isalpha()):
+            if (
+                candidate != word.lower()
+                and float(score) >= min_sim
+                and len(candidate) >= 4
+                and candidate.isalpha()
+            ):
                 result.append(candidate)
                 if len(result) >= max_n:
                     break
@@ -356,7 +364,7 @@ def expand_term(raw_term: str, syn_map: dict[str, list[str]]) -> list[str]:
     variants: list[str] = [lemma]
     for i, tok in enumerate(tokens):
         for syn in syn_map.get(tok, []):
-            variant_tokens = tokens[:i] + [syn] + tokens[i+1:]
+            variant_tokens = tokens[:i] + [syn] + tokens[i + 1 :]
             variants.append(" ".join(variant_tokens))
     return list(dict.fromkeys(variants))  # deduplicar preservando orden
 
@@ -364,6 +372,7 @@ def expand_term(raw_term: str, syn_map: dict[str, list[str]]) -> list[str]:
 # ---------------------------------------------------------------------------
 # Carga de diccionarios
 # ---------------------------------------------------------------------------
+
 
 def parse_labels(label_str: str) -> list[str]:
     if pd.isna(label_str) or not str(label_str).strip():
@@ -463,16 +472,24 @@ def load_diagnoses(path: str, min_len: int, cache_dir: str | None) -> dict[str, 
         block = str(row["code"]).strip().upper()[:3]
         for variant in expand_description(str(row.get("description", ""))):
             pairs.append((block, variant))
-    return _build_block_patterns(pairs, "diagnoses", min_len, cache_dir,
-                                  [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION])
+    return _build_block_patterns(
+        pairs,
+        "diagnoses",
+        min_len,
+        cache_dir,
+        [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION],
+    )
 
 
 def load_procedures(path: str, min_len: int, cache_dir: str | None) -> dict[str, list[re.Pattern]]:
     df = pd.read_csv(path)
     df.columns = df.columns.str.strip()
     stat = os.stat(path)
-    desc_cols = [c for c in ["description", "procedure", "procedure_definition",
-                              "class_name", "subclass_name"] if c in df.columns]
+    desc_cols = [
+        c
+        for c in ["description", "procedure", "procedure_definition", "class_name", "subclass_name"]
+        if c in df.columns
+    ]
     pairs = []
     for _, row in df.iterrows():
         block = str(row["code"]).strip().upper()[:3]
@@ -481,8 +498,13 @@ def load_procedures(path: str, min_len: int, cache_dir: str | None) -> dict[str,
             if val and val.lower() != "nan":
                 for variant in expand_description(val):
                     pairs.append((block, variant))
-    return _build_block_patterns(pairs, "procedures", min_len, cache_dir,
-                                  [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION])
+    return _build_block_patterns(
+        pairs,
+        "procedures",
+        min_len,
+        cache_dir,
+        [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION],
+    )
 
 
 def load_chemicals(path: str, min_len: int, cache_dir: str | None) -> dict[str, list[re.Pattern]]:
@@ -496,8 +518,13 @@ def load_chemicals(path: str, min_len: int, cache_dir: str | None) -> dict[str, 
             continue
         for variant in expand_description(str(row.get("description", ""))):
             pairs.append((raw_code[:3], variant))
-    return _build_block_patterns(pairs, "chemicals", min_len, cache_dir,
-                                  [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION])
+    return _build_block_patterns(
+        pairs,
+        "chemicals",
+        min_len,
+        cache_dir,
+        [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION],
+    )
 
 
 def extract_ngrams(lemma_text: str, min_n: int = 2, max_n: int = 5) -> list[str]:
@@ -543,9 +570,18 @@ def load_corpus(
     es un dict {block: [top-5 patrones más frecuentes]} para el reporte.
     """
     stat = os.stat(train_path)
-    cache_key_parts = [train_path, stat.st_size, stat.st_mtime,
-                       min_len, min_freq, min_precision, ngram_max, exclusive,
-                       max_patterns, LEMMA_VERSION]
+    cache_key_parts = [
+        train_path,
+        stat.st_size,
+        stat.st_mtime,
+        min_len,
+        min_freq,
+        min_precision,
+        ngram_max,
+        exclusive,
+        max_patterns,
+        LEMMA_VERSION,
+    ]
     patterns_cache_file = None
     if cache_dir:
         key = _cache_key(*cache_key_parts)
@@ -568,8 +604,7 @@ def load_corpus(
     if lemma_texts is None:
         print(f"  [lemma] lematizando {len(df)} notas de entrenamiento...")
         lemma_texts = [
-            lemmatize(t) for t in tqdm(df["text"].tolist(),
-                                        desc="  corpus notes", unit="nota")
+            lemmatize(t) for t in tqdm(df["text"].tolist(), desc="  corpus notes", unit="nota")
         ]
         if lemma_note_cache_file:
             _save_cache(lemma_note_cache_file, lemma_texts)
@@ -579,9 +614,7 @@ def load_corpus(
     labels_list = [parse_labels(lbl) for lbl in df["labels"]]
 
     # Índice nota → conjunto de n-gramas únicos
-    note_ngrams: list[set[str]] = [
-        set(extract_ngrams(lt, max_n=ngram_max)) for lt in lemma_texts
-    ]
+    note_ngrams: list[set[str]] = [set(extract_ngrams(lt, max_n=ngram_max)) for lt in lemma_texts]
 
     # Recuento global: cuántas notas contienen cada n-grama
     ngram_total: dict[str, int] = {}
@@ -687,8 +720,9 @@ def load_clinical(
     if cache_dir:
         syn_key = _cache_key(*stats, syn_similarity, syn_max, LEMMA_VERSION)
         syn_cache_file = _cache_path(cache_dir, "synonyms_clinical", syn_key)
-    syn_map = build_synonym_map(all_terms, min_sim=syn_similarity,
-                                max_n=syn_max, cache_file=syn_cache_file)
+    syn_map = build_synonym_map(
+        all_terms, min_sim=syn_similarity, max_n=syn_max, cache_file=syn_cache_file
+    )
 
     # Lematizar términos + expandir con sinónimos (con caché)
     patterns_cache_file = None
@@ -755,15 +789,16 @@ def predict(
 # Métricas — formato idéntico a train.py
 # ---------------------------------------------------------------------------
 
+
 def print_metrics(Y_true, Y_pred, split: str, source: str, n_ignored: int = 0):
-    p_micro  = precision_score(Y_true, Y_pred, average="micro", zero_division=0)
-    r_micro  = recall_score   (Y_true, Y_pred, average="micro", zero_division=0)
-    f1_micro = f1_score       (Y_true, Y_pred, average="micro", zero_division=0)
-    p_macro  = precision_score(Y_true, Y_pred, average="macro", zero_division=0)
-    r_macro  = recall_score   (Y_true, Y_pred, average="macro", zero_division=0)
-    f1_macro = f1_score       (Y_true, Y_pred, average="macro", zero_division=0)
-    n_pred   = int(Y_pred.sum())
-    n_true   = int(Y_true.sum())
+    p_micro = precision_score(Y_true, Y_pred, average="micro", zero_division=0)
+    r_micro = recall_score(Y_true, Y_pred, average="micro", zero_division=0)
+    f1_micro = f1_score(Y_true, Y_pred, average="micro", zero_division=0)
+    p_macro = precision_score(Y_true, Y_pred, average="macro", zero_division=0)
+    r_macro = recall_score(Y_true, Y_pred, average="macro", zero_division=0)
+    f1_macro = f1_score(Y_true, Y_pred, average="macro", zero_division=0)
+    n_pred = int(Y_pred.sum())
+    n_true = int(Y_true.sum())
 
     print(f"\n[result] dict/{source}  split={split}")
     print(f"  micro — P={p_micro:.3f}  R={r_micro:.3f}  F1={f1_micro:.3f}")
@@ -778,54 +813,90 @@ def print_metrics(Y_true, Y_pred, split: str, source: str, n_ignored: int = 0):
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_file",
-        default="/data/codiesp_csvs/codiesp_D_source_train.csv")
-    parser.add_argument("--val_file",
-        default="/data/codiesp_csvs/codiesp_D_source_validation.csv")
-    parser.add_argument("--diagnoses_file",
-        default="/data/cie10-csvs/cie10-es-diagnoses.csv")
-    parser.add_argument("--procedures_file",
-        default="/data/cie10-csvs/cie10-es-procedures.csv")
-    parser.add_argument("--chemicals_file",
-        default="/data/cie10-csvs/cie10-es-chemicals.csv")
-    parser.add_argument("--task_x_train",
-        default="/data/codiesp_csvs/codiesp_X_source_train.csv")
-    parser.add_argument("--task_x_val",
+    parser.add_argument("--train_file", default="/data/codiesp_csvs/codiesp_D_source_train.csv")
+    parser.add_argument("--val_file", default="/data/codiesp_csvs/codiesp_D_source_validation.csv")
+    parser.add_argument("--diagnoses_file", default="/data/cie10-csvs/cie10-es-diagnoses.csv")
+    parser.add_argument("--procedures_file", default="/data/cie10-csvs/cie10-es-procedures.csv")
+    parser.add_argument("--chemicals_file", default="/data/cie10-csvs/cie10-es-chemicals.csv")
+    parser.add_argument("--task_x_train", default="/data/codiesp_csvs/codiesp_X_source_train.csv")
+    parser.add_argument(
+        "--task_x_val",
         default="/data/codiesp_csvs/codiesp_X_source_validation.csv",
-        help="Anotaciones de val (usa etiquetas de val → semi-supervisado)")
-    parser.add_argument("--sources", nargs="+",
+        help="Anotaciones de val (usa etiquetas de val → semi-supervisado)",
+    )
+    parser.add_argument(
+        "--sources",
+        nargs="+",
         choices=["diagnoses", "procedures", "chemicals", "clinical", "corpus", "combined"],
-        default=["diagnoses", "procedures", "chemicals", "clinical", "corpus", "combined"])
-    parser.add_argument("--only_combined", action="store_true",
-        help="Carga todas las fuentes en silencio y solo evalúa combined")
+        default=["diagnoses", "procedures", "chemicals", "clinical", "corpus", "combined"],
+    )
+    parser.add_argument(
+        "--only_combined",
+        action="store_true",
+        help="Carga todas las fuentes en silencio y solo evalúa combined",
+    )
     parser.add_argument("--min_phrase_len", type=int, default=5)
-    parser.add_argument("--syn_similarity", type=float, default=0.65,
-        help="Similitud mínima para expansión de sinónimos (0–1, default 0.65)")
-    parser.add_argument("--syn_max", type=int, default=5,
-        help="Número máximo de sinónimos por token (default 5)")
-    parser.add_argument("--corpus_min_freq", type=int, default=2,
-        help="Frecuencia mínima de un n-grama en notas con su bloque (default 2)")
-    parser.add_argument("--corpus_min_precision", type=float, default=0.5,
-        help="Fracción mínima de apariciones del n-grama en notas de su bloque (default 0.5)")
-    parser.add_argument("--corpus_ngram_max", type=int, default=5,
-        help="Máximo número de palabras por n-grama (default 5)")
-    parser.add_argument("--corpus_exclusive", action="store_true",
-        help="Asigna cada n-grama solo al bloque con mayor precision (reduce falsos positivos)")
-    parser.add_argument("--corpus_max_patterns", type=int, default=0,
-        help="Límite de patrones por bloque, ordenados por frecuencia (0=sin límite)")
-    parser.add_argument("--corpus_selective", action="store_true",
-        help="En combined, corpus solo cubre bloques que clinical no tiene (relleno del recall faltante)")
-    parser.add_argument("--report_file",
+    parser.add_argument(
+        "--syn_similarity",
+        type=float,
+        default=0.65,
+        help="Similitud mínima para expansión de sinónimos (0–1, default 0.65)",
+    )
+    parser.add_argument(
+        "--syn_max", type=int, default=5, help="Número máximo de sinónimos por token (default 5)"
+    )
+    parser.add_argument(
+        "--corpus_min_freq",
+        type=int,
+        default=2,
+        help="Frecuencia mínima de un n-grama en notas con su bloque (default 2)",
+    )
+    parser.add_argument(
+        "--corpus_min_precision",
+        type=float,
+        default=0.5,
+        help="Fracción mínima de apariciones del n-grama en notas de su bloque (default 0.5)",
+    )
+    parser.add_argument(
+        "--corpus_ngram_max",
+        type=int,
+        default=5,
+        help="Máximo número de palabras por n-grama (default 5)",
+    )
+    parser.add_argument(
+        "--corpus_exclusive",
+        action="store_true",
+        help="Asigna cada n-grama solo al bloque con mayor precision (reduce falsos positivos)",
+    )
+    parser.add_argument(
+        "--corpus_max_patterns",
+        type=int,
+        default=0,
+        help="Límite de patrones por bloque, ordenados por frecuencia (0=sin límite)",
+    )
+    parser.add_argument(
+        "--corpus_selective",
+        action="store_true",
+        help="En combined, corpus solo cubre bloques que clinical no tiene (relleno del recall faltante)",
+    )
+    parser.add_argument(
+        "--report_file",
         default="/app/model/baseline_report.csv",
-        help="CSV con tabla bloque→top patrones por fuente (default: /app/model/baseline_report.csv)")
+        help="CSV con tabla bloque→top patrones por fuente (default: /app/model/baseline_report.csv)",
+    )
     parser.add_argument("--cache_dir", default="/app/model/baseline_cache")
     parser.add_argument("--no_cache", action="store_true")
-    parser.add_argument("--no_expand_abbrevs", action="store_true",
-        help="Desactiva la expansión de abreviaturas clínicas (para comparar vs baseline)")
-    parser.add_argument("--save_dict",
-        help="Guarda los patrones combined como JSON en esta ruta (para usar en API)")
+    parser.add_argument(
+        "--no_expand_abbrevs",
+        action="store_true",
+        help="Desactiva la expansión de abreviaturas clínicas (para comparar vs baseline)",
+    )
+    parser.add_argument(
+        "--save_dict", help="Guarda los patrones combined como JSON en esta ruta (para usar en API)"
+    )
     args = parser.parse_args()
 
     # Expansión de abreviaturas: activa por defecto, desactivable con --no_expand_abbrevs
@@ -862,17 +933,30 @@ def main():
     print("[nlp] Modelos cargados")
 
     source_loaders = {
-        "diagnoses":  lambda: (load_diagnoses(args.diagnoses_file, args.min_phrase_len, cache_dir), {}),
-        "procedures": lambda: (load_procedures(args.procedures_file, args.min_phrase_len, cache_dir), {}),
-        "chemicals":  lambda: (load_chemicals(args.chemicals_file, args.min_phrase_len, cache_dir), {}),
-        "clinical":   lambda: (load_clinical(
-            task_x_paths=[p for p in [args.task_x_train, args.task_x_val]
-                          if p and os.path.exists(p)],
-            min_len=args.min_phrase_len,
-            cache_dir=cache_dir,
-            syn_similarity=args.syn_similarity,
-            syn_max=args.syn_max,
-        ), {}),
+        "diagnoses": lambda: (
+            load_diagnoses(args.diagnoses_file, args.min_phrase_len, cache_dir),
+            {},
+        ),
+        "procedures": lambda: (
+            load_procedures(args.procedures_file, args.min_phrase_len, cache_dir),
+            {},
+        ),
+        "chemicals": lambda: (
+            load_chemicals(args.chemicals_file, args.min_phrase_len, cache_dir),
+            {},
+        ),
+        "clinical": lambda: (
+            load_clinical(
+                task_x_paths=[
+                    p for p in [args.task_x_train, args.task_x_val] if p and os.path.exists(p)
+                ],
+                min_len=args.min_phrase_len,
+                cache_dir=cache_dir,
+                syn_similarity=args.syn_similarity,
+                syn_max=args.syn_max,
+            ),
+            {},
+        ),
         "corpus": lambda: load_corpus(
             args.train_file,
             args.min_phrase_len,
@@ -908,9 +992,11 @@ def main():
             print("  NOTA: usa etiquetas de val → resultados semi-supervisados")
         elif source == "corpus":
             print(f"\n[corpus] n-gramas discriminativos de {args.train_file}")
-            print(f"  min_freq={args.corpus_min_freq}  "
-                  f"min_precision={args.corpus_min_precision}  "
-                  f"ngram_max={args.corpus_ngram_max}")
+            print(
+                f"  min_freq={args.corpus_min_freq}  "
+                f"min_precision={args.corpus_min_precision}  "
+                f"ngram_max={args.corpus_ngram_max}"
+            )
         else:
             path = getattr(args, f"{source}_file")
             print(f"\n[{source}] {path}")
@@ -921,7 +1007,7 @@ def main():
             print(f"  SKIP — archivo no encontrado: {e}")
             continue
 
-        n_blocks  = len(block_patterns)
+        n_blocks = len(block_patterns)
         n_phrases = sum(len(v) for v in block_patterns.values())
         print(f"  {n_blocks} bloques, {n_phrases} patrones")
 
@@ -929,12 +1015,14 @@ def main():
 
         # Acumular para reporte
         for block, phrases in top_patterns.items():
-            report_rows.append({
-                "fuente": source,
-                "bloque": block,
-                "n_patrones": len(block_patterns.get(block, [])),
-                "top_patrones": " | ".join(phrases),
-            })
+            report_rows.append(
+                {
+                    "fuente": source,
+                    "bloque": block,
+                    "n_patrones": len(block_patterns.get(block, [])),
+                    "top_patrones": " | ".join(phrases),
+                }
+            )
 
         if not eval_individual:
             continue
@@ -942,11 +1030,9 @@ def main():
         for split_name, df in splits.items():
             labels = [parse_labels(lbl) for lbl in df["labels"]]
             Y_true = mlb.transform(labels)
-            preds, n_ignored = predict(df["text"].tolist(), block_patterns,
-                                       split_name, mlb_classes)
+            preds, n_ignored = predict(df["text"].tolist(), block_patterns, split_name, mlb_classes)
             Y_pred = mlb.transform(preds)
-            print_metrics(Y_true, Y_pred, split=split_name, source=source,
-                          n_ignored=n_ignored)
+            print_metrics(Y_true, Y_pred, split=split_name, source=source, n_ignored=n_ignored)
 
     # Fuente combinada: unión de todos los patrones cargados
     if run_combined and all_loaded:
@@ -954,11 +1040,15 @@ def main():
         # para bloques que clinical NO cubre. Así corpus actúa de relleno del 14%
         # de recall que clinical no alcanza sin contaminar los bloques que clinical
         # ya resuelve bien.
-        corpus_selective = args.corpus_selective and "corpus" in all_loaded and "clinical" in all_loaded
+        corpus_selective = (
+            args.corpus_selective and "corpus" in all_loaded and "clinical" in all_loaded
+        )
         clinical_blocks = set(all_loaded["clinical"].keys()) if corpus_selective else set()
         if corpus_selective:
             n_filtered = sum(1 for b in all_loaded["corpus"] if b in clinical_blocks)
-            print(f"\n[combined] corpus selectivo — filtrando {n_filtered} bloques ya cubiertos por clinical")
+            print(
+                f"\n[combined] corpus selectivo — filtrando {n_filtered} bloques ya cubiertos por clinical"
+            )
 
         print(f"\n[combined] unión de {list(all_loaded.keys())}")
         combined: dict[str, list[re.Pattern]] = {}
@@ -967,17 +1057,15 @@ def main():
                 if corpus_selective and src == "corpus" and block in clinical_blocks:
                     continue
                 combined.setdefault(block, []).extend(patterns)
-        n_blocks  = len(combined)
+        n_blocks = len(combined)
         n_phrases = sum(len(v) for v in combined.values())
         print(f"  {n_blocks} bloques, {n_phrases} patrones")
         for split_name, df in splits.items():
             labels = [parse_labels(lbl) for lbl in df["labels"]]
             Y_true = mlb.transform(labels)
-            preds, n_ignored = predict(df["text"].tolist(), combined,
-                                       split_name, mlb_classes)
+            preds, n_ignored = predict(df["text"].tolist(), combined, split_name, mlb_classes)
             Y_pred = mlb.transform(preds)
-            print_metrics(Y_true, Y_pred, split=split_name, source="combined",
-                          n_ignored=n_ignored)
+            print_metrics(Y_true, Y_pred, split=split_name, source="combined", n_ignored=n_ignored)
 
     # Guardar patrones combined como JSON para uso en API
     if args.save_dict and run_combined and all_loaded:
@@ -989,8 +1077,7 @@ def main():
             return re.sub(r"\\(.)", r"\1", inner)
 
         phrases_map = {
-            block: [_pat_to_phrase(p) for p in patterns]
-            for block, patterns in combined.items()
+            block: [_pat_to_phrase(p) for p in patterns] for block, patterns in combined.items()
         }
         os.makedirs(os.path.dirname(os.path.abspath(args.save_dict)), exist_ok=True)
         with open(args.save_dict, "w") as f:
@@ -1020,13 +1107,13 @@ class DictClassifier:
 
     def __init__(self, patterns_path: str):
         import json
+
         with open(patterns_path) as f:
             data: dict[str, list[str]] = json.load(f)
         # Recompilar las frases como patrones regex con word boundaries
         self._phrases: dict[str, list[str]] = data
         self._patterns: dict[str, list[re.Pattern]] = {
-            block: [build_pattern(p) for p in phrases]
-            for block, phrases in data.items()
+            block: [build_pattern(p) for p in phrases] for block, phrases in data.items()
         }
 
     def predict(self, text: str) -> list[dict]:
@@ -1041,16 +1128,16 @@ class DictClassifier:
         results = []
         for block, patterns in self._patterns.items():
             matched = [
-                self._phrases[block][i]
-                for i, pat in enumerate(patterns)
-                if pat.search(ltext)
+                self._phrases[block][i] for i, pat in enumerate(patterns) if pat.search(ltext)
             ]
             if matched:
-                results.append({
-                    "code":          block,
-                    "confidence":    1.0,
-                    "matched_terms": matched[:3],
-                })
+                results.append(
+                    {
+                        "code": block,
+                        "confidence": 1.0,
+                        "matched_terms": matched[:3],
+                    }
+                )
         results.sort(key=lambda x: x["code"])
         return results
 

@@ -4,24 +4,23 @@ No model weights or spaCy needed — only tests deterministic logic.
 """
 
 import json
-import re
 import sys
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 # ── Add ai_engine root to import path ────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from classifier import CHAPTER_MAP, _extract_chapter, load_code_descriptions
-from baseline_dict import _strip_accents, build_pattern, DictClassifier
+from baseline_dict import DictClassifier, _strip_accents, build_pattern
 
+from classifier import _extract_chapter, load_code_descriptions
 
 # =============================================================================
 # _extract_chapter
 # =============================================================================
+
 
 class TestExtractChapter:
     def test_uppercase_letter(self):
@@ -58,6 +57,7 @@ class TestExtractChapter:
 # load_code_descriptions
 # =============================================================================
 
+
 class TestLoadCodeDescriptions:
     def test_loads_valid_json(self, tmp_path):
         data = {"I10": "Hipertensión esencial", "J45.0": "Asma alérgica"}
@@ -81,6 +81,7 @@ class TestLoadCodeDescriptions:
 # _strip_accents
 # =============================================================================
 
+
 class TestStripAccents:
     def test_removes_tilde(self):
         assert _strip_accents("hipertensión") == "hipertension"
@@ -101,6 +102,7 @@ class TestStripAccents:
 # =============================================================================
 # build_pattern
 # =============================================================================
+
 
 class TestBuildPattern:
     def test_matches_whole_word(self):
@@ -128,6 +130,7 @@ class TestBuildPattern:
 # =============================================================================
 # DictClassifier
 # =============================================================================
+
 
 class TestDictClassifier:
     @pytest.fixture
