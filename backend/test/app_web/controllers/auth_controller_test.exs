@@ -206,4 +206,27 @@ defmodule AppWeb.AuthControllerTest do
       assert %{"error" => _msg} = json_response(conn, 404)
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # PUT /api/users/locale
+  # ---------------------------------------------------------------------------
+
+  describe "update_locale/2" do
+    test "updates locale and returns the new locale", %{conn: conn} do
+      user = user_fixture()
+      {auth_key, auth_value} = auth_header(user)
+
+      conn =
+        conn
+        |> put_req_header(auth_key, auth_value)
+        |> put(~p"/api/users/locale", %{"locale" => "en"})
+
+      assert %{"locale" => "en"} = json_response(conn, 200)
+    end
+
+    test "returns 401 when not authenticated", %{conn: conn} do
+      conn = put(conn, ~p"/api/users/locale", %{"locale" => "en"})
+      assert conn.status == 401
+    end
+  end
 end
