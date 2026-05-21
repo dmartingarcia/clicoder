@@ -1,4 +1,4 @@
-.PHONY: help build build-base build-backend build-frontend build-ai build-training up down logs clean clean-all setup reset shell backend-migrate backend-rollback backend-seed backend-reset backend-test backend-install backend-format frontend-test frontend-install frontend-format frontend-lint ai-install ai-lint ai-format db-backup db-reset mailpit training-setup training-dataset training-jupyter-cpu training-jupyter-gpu training-clean cpu-build cpu-up cpu-down mock-build mock-up mock-down tfg-pdf tfg-clean
+.PHONY: help build build-base build-backend build-frontend build-ai build-training up down logs clean clean-all setup reset shell backend-migrate backend-rollback backend-seed backend-reset backend-test backend-install backend-format frontend-test frontend-install frontend-format frontend-lint ai-install ai-lint ai-format db-backup db-reset mailpit training-setup training-dataset training-jupyter-cpu training-jupyter-gpu training-clean cpu-build cpu-up cpu-down mock-build mock-up mock-down tfg-pdf tfg-clean model-upload model-download
 
 # Variables
 COMPOSE      = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
@@ -8,6 +8,13 @@ BACKEND = $(COMPOSE) exec backend
 FRONTEND = $(COMPOSE) exec frontend
 AI = $(COMPOSE) exec ai_engine
 DB = $(COMPOSE) exec db
+
+# Modelo Hugging Face
+HF_REPO      = dmartingarcia/cie10-rigoberta-classifier
+MODEL_DIR    = ai_engine/model
+BEST_PT      = classifier_20260326T045031Z_f1=0.4888.pt
+BEST_THR     = thresholds_20260326T045031Z.json
+AI_MODEL_DIR = /app/model
 
 # Colores para output
 GREEN = \033[0;32m
@@ -91,6 +98,7 @@ setup: ## Setup completo desde cero: down -v + build + seed (sin levantar). Lueg
 	$(COMPOSE_CPU) build --progress=plain backend
 	$(COMPOSE_CPU) build --progress=plain frontend
 	$(MAKE) backend-seed
+	@[ -f $(MODEL_DIR)/$(BEST_PT) ] || $(MAKE) model-download
 	@echo "$(GREEN)Setup completado. Usa 'make up' para levantar los servicios.$(NC)"
 
 clean: ## Limpiar contenedores, volúmenes e imágenes
@@ -177,6 +185,30 @@ backend-lint: ## Lint del backend (format check + credo)
 backend-dialyzer: ## Análisis estático de tipos del backend (Dialyzer)
 	$(BACKEND) mix deps.get
 	$(BACKEND) mix dialyzer --format dialyxir
+
+
+model-upload: ## Subir mejor modelo a Hugging Face (lee HF_TOKEN de .env)
+	@echo "$(BLUE)Subiendo modelo a HF: $(HF_REPO)$(NC)"
+	cp $(MODEL_DIR)/$(BEST_PT)  $(MODEL_DIR)/classifier.pt
+	cp $(MODEL_DIR)/$(BEST_THR) $(MODEL_DIR)/thresholds.json
+	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
+		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/classifier.pt        classifier.pt && \
+		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/thresholds.json      thresholds.json && \
+		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/config.json          config.json && \
+		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/code_descriptions.json code_descriptions.json && \
+		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/baseline_dict.json   baseline_dict.json'
+	rm -f $(MODEL_DIR)/classifier.pt $(MODEL_DIR)/thresholds.json
+	@echo "$(GREEN)Modelo subido: https://huggingface.co/$(HF_REPO)$(NC)"
+
+model-download: ## Descargar modelo desde Hugging Face a ai_engine/model/
+	@echo "$(BLUE)Descargando modelo desde HF: $(HF_REPO)$(NC)"
+	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
+		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) classifier.pt          --local-dir $(AI_MODEL_DIR) && \
+		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) thresholds.json        --local-dir $(AI_MODEL_DIR) && \
+		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) config.json            --local-dir $(AI_MODEL_DIR) && \
+		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) code_descriptions.json --local-dir $(AI_MODEL_DIR) && \
+		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) baseline_dict.json     --local-dir $(AI_MODEL_DIR)'
+	@echo "$(GREEN)Modelo descargado en $(MODEL_DIR)/$(NC)"
 
 ai-lint: ## Lint del AI engine (ruff check + format check)
 	$(AI) pip install -q ruff
