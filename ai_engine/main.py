@@ -153,8 +153,18 @@ app = FastAPI(
 # ==================== SCHEMAS ====================
 
 class AnalysisRequest(BaseModel):
+    """Petición de análisis de un informe clínico.
+
+    - ``text``: texto del informe (obligatorio, no vacío).
+    - ``engine``:
+        - ``"bert"``  — clasificador RigoBERTa multi-label (default).
+        - ``"dict"``  — reglas por diccionario (determinista, sin GPU).
+        - ``"both"``  — ambos motores en paralelo; los resultados se devuelven
+          juntos con el campo ``engine`` identificando el origen de cada código.
+    """
+
     text: str
-    engine: Literal["bert", "dict"] = "bert"
+    engine: Literal["bert", "dict", "both"] = "bert"
 
 
 # ==================== ENDPOINTS ====================
@@ -169,7 +179,15 @@ def health_check():
     }
 
 
-@app.post("/predict", summary="Predecir códigos CIE-10")
+@app.post(
+    "/predict",
+    summary="Predecir códigos CIE-10",
+    description=(
+        "Analiza el texto de un informe clínico y devuelve códigos CIE-10 candidatos. "
+        "El parámetro ``engine`` selecciona el motor de predicción: "
+        "``bert`` (default), ``dict`` (diccionario determinista) o ``both`` (ambos en paralelo)."
+    ),
+)
 async def predict_codes(request: AnalysisRequest):
     text = request.text.strip()
     if not text:
@@ -177,6 +195,8 @@ async def predict_codes(request: AnalysisRequest):
 
     if request.engine == "dict":
         return await _predict_dict(text)
+    if request.engine == "both":
+        return await _predict_both(text)
     return await _predict_bert(text)
 
 
@@ -229,7 +249,7 @@ async def _predict_bert(text: str):
     ]}
 
 
-async def _predict_dict(text: str):
+async def _predict_dict(text: str):  # noqa: E302
     if dict_classifier is None:
         raise HTTPException(
             status_code=503,
@@ -269,6 +289,45 @@ async def _predict_dict(text: str):
                 for p in predictions
             ],
         },
+        {
+            "type": "recommendations",
+            "content": (
+                "Revisar y confirmar los códigos asignados con el equipo médico "
+                "antes de registrar el alta."
+            ),
+        },
+    ]}
+
+
+async def _predict_both(text: str):
+    """Llama a BERT y al diccionario en paralelo y devuelve sus predicciones juntas.
+
+    Cada código conserva su campo ``engine`` ("bert" o "dict") para que el
+    frontend pueda distinguir el origen. No se deduplicaan: un código puede
+    aparecer dos veces si ambos motores lo detectan.
+    """
+    bert_result, dict_result = await asyncio.gather(
+        _predict_bert(text),
+        _predict_dict(text),
+    )
+
+    bert_codes = bert_result["cards"][1]["content"]
+    dict_codes = dict_result["cards"][1]["content"]
+    all_codes  = bert_codes + dict_codes
+
+    word_count = len(text.split())
+    n_bert     = len(bert_codes)
+    n_dict     = len(dict_codes)
+
+    return {"cards": [
+        {
+            "type": "summary",
+            "content": (
+                f"Informe clínico analizado ({word_count} palabras). "
+                f"BERT: {n_bert} código(s). Diccionario: {n_dict} código(s)."
+            ),
+        },
+        {"type": "codes", "content": all_codes},
         {
             "type": "recommendations",
             "content": (

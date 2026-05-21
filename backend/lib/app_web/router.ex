@@ -72,6 +72,7 @@ defmodule AppWeb.Router do
       live "/users/:id", UserLive.Show, :show
       live "/conversations", ConversationLive.Index, :index
       live "/conversations/:id", ConversationLive.Show, :show
+      live "/settings", SettingsLive, :index
     end
   end
 

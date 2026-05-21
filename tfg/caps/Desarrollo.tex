@@ -83,7 +83,7 @@ El diccionario oficial CIE-10-ES no está disponible en ningún formato de desca
 \begin{itemize}
     \item \texttt{collect\_diagnoses.py}: itera sobre las 260 combinaciones letra–dígito del \emph{endpoint} de diagnósticos mediante peticiones asíncronas con \texttt{grequests}. Genera \texttt{cie10-es-diagnoses.csv} con \textbf{101.246 registros}.
     \item \texttt{collect\_procedures.py}: recorre la jerarquía de tres niveles de procedimientos (secciones, subsecciones y tablas). Genera \texttt{cie10-es-procedures.csv} con \textbf{78.496 registros}.
-    \item \texttt{collect\_chemicals.py}: recorre las 27 letras del índice de fármacos. Genera \texttt{cie10-es-chemicals.csv} con \textbf{5.050 registros}.
+    \item \texttt{collect\_chemicals.py}: recorre las 27 letras del índice de fármacos. Genera \texttt{cie10-es-\allowbreak{}chemicals.csv} con \textbf{5.050 registros}.
 \end{itemize}
 
 Tres factores técnicos fueron determinantes para el éxito de la extracción: la simulación de cabeceras HTTP de navegador (\texttt{User-Agent}, \texttt{Accept}, \texttt{Referer}) para evitar respuestas 403, el paralelismo con reintentos automáticos para garantizar la integridad del catálogo, y el procesamiento por lotes para evitar el agotamiento de memoria en el volumen de procedimientos. Cada entrada incluye el código, la descripción en español y metadatos clínicos (restricciones de sexo, edad perinatal/pediátrica/materna/adulta, exención de POA y prohibición como diagnóstico principal).
@@ -255,6 +255,25 @@ El servicio de inferencia (\texttt{ai\_engine/main.py}) es una aplicación FastA
 
 Si el directorio del modelo no existe al arrancar, el servicio se inicia igualmente y devuelve un error 503 en las peticiones de predicción, lo que facilita el desarrollo sin necesidad de tener el modelo entrenado.
 
+\subsubsection{Selección del motor de IA mediante \emph{feature toggle}}
+\label{sec:feature-toggle}
+
+El parámetro \texttt{engine} del endpoint \texttt{POST /predict} actúa como un \textbf{\emph{feature toggle}} o \emph{feature flag}: permite seleccionar en tiempo de ejecución, sin modificar ni desplegar código, qué motor de predicción utiliza el sistema. Los valores admitidos son \texttt{"bert"} (clasificador neuronal RigoBERTa, valor por defecto), \texttt{"dict"} (clasificador de diccionario determinista) y \texttt{"both"} (ambos motores en paralelo, devolviendo las predicciones de cada uno con su campo \texttt{"engine"} identificando el origen).
+
+Un \emph{feature toggle}~\cite{Fowler17} es una técnica de ingeniería del software que separa la \emph{activación} de una funcionalidad de su \emph{despliegue}. El código de la funcionalidad llega a producción desactivado —o activable dinámicamente— y se habilita o conmuta sin necesidad de relanzar el servicio. En contraste con los \emph{feature branches}, que retrasan la integración del código, los \emph{feature toggles} permiten integración continua: la rama principal contiene siempre el código más actualizado y son los toggles quienes determinan qué comportamiento observan los usuarios en cada momento.
+
+En este proyecto, el toggle se implementa en dos capas:
+
+\begin{itemize}
+    \item \textbf{Motor de IA (Python / FastAPI)}: el parámetro \texttt{engine} del cuerpo JSON de \texttt{POST /predict} determina qué función interna se invoca —\texttt{\_predict\_bert}, \texttt{\_predict\_dict} o \texttt{\_predict\_both}—. Cuando se elige \texttt{"both"}, ambas funciones se ejecutan en paralelo con \texttt{asyncio.gather} y sus resultados se concatenan, preservando el campo \texttt{"engine"} de cada predicción para que la interfaz pueda distinguir el origen de cada código.
+
+    \item \textbf{Backend (Elixir / Phoenix)}: el módulo \texttt{App.AIEngineSettings} es un proceso \texttt{Agent} de OTP que mantiene el valor activo del toggle en memoria. Al arrancar el nodo BEAM, el agente se inicializa con \texttt{"bert"} como valor por defecto. El canal WebSocket \texttt{ConversationChannel} consulta \texttt{AIEngineSettings.get\_engine/0} en cada análisis y envía el valor al motor de IA como parte del cuerpo de la petición HTTP.
+\end{itemize}
+
+El toggle se expone en el \emph{backoffice} de administración (\texttt{/admin/settings}), implementado como una página LiveView interactiva. Al hacer clic en una de las tres opciones, el evento se envía mediante WebSocket al servidor sin recargar la página, y el backend actualiza el \texttt{Agent} de forma inmediata. El cambio es \textbf{volátil}: si el servidor se reinicia, el valor vuelve al valor por defecto (\texttt{"bert"}), comportamiento intencionado dado que el toggle sirve para comparar motores durante la evaluación del sistema, no como configuración permanente.
+
+Esta arquitectura sigue el principio de diseño \emph{«separación de responsabilidades»}: el motor de IA no sabe nada del mecanismo de selección —simplemente atiende la petición que recibe—; el backend actúa como orquestador y centraliza la decisión de qué motor invocar; y la interfaz de administración proporciona el punto de control sin acoplarse a la lógica de predicción.
+
 \subsection{Autenticación y seguridad}
 
 El sistema implementa autenticación mediante registro con confirmación por email. Al registrarse, el usuario recibe un email con un enlace de confirmación generado con \texttt{Phoenix.Token}. Una vez confirmada la cuenta, el inicio de sesión devuelve un token Bearer que el frontend almacena en \texttt{localStorage} y envía en la cabecera \texttt{Authorization} de cada petición REST y en el \emph{handshake} del WebSocket. El \emph{plug} \texttt{RequireAuth} verifica el token en todas las rutas protegidas.
@@ -358,7 +377,7 @@ Las pruebas de sistema verifican el flujo completo de uso: registro, inicio de s
 
 El proyecto distingue dos entornos con herramientas de orquestación distintas según sus necesidades.
 
-\textbf{Desarrollo y pruebas.} Cada componente reside en su propio contenedor con su \texttt{Dockerfile} específico, orquestados mediante Docker Compose. La configuración base (\texttt{docker-compose.yml}) define los servicios y sus dependencias; las variantes \texttt{docker-compose.gpu.yml} y \texttt{docker-compose.cpu.yml} permiten configurar el motor de IA con o sin aceleración por GPU. El Makefile centraliza las operaciones habituales del ciclo de desarrollo: levantar el sistema, aplicar migraciones, lanzar los tests o reconstruir el motor de IA tras un nuevo entrenamiento.
+\textbf{Desarrollo y pruebas.} Cada componente reside en su propio contenedor con su \texttt{Dockerfile} específico, orquestados mediante Docker Compose. La configuración base (\texttt{docker-compose.yml}) define los servicios y sus dependencias; las variantes \texttt{docker-compose.\allowbreak{}gpu.yml} y \texttt{docker-compose.\allowbreak{}cpu.yml} permiten configurar el motor de IA con o sin aceleración por GPU. El Makefile centraliza las operaciones habituales del ciclo de desarrollo: levantar el sistema, aplicar migraciones, lanzar los tests o reconstruir el motor de IA tras un nuevo entrenamiento.
 
 Los servicios y sus puertos de escucha en el entorno local son los que se indican en la tabla~\ref{tab:servicios-puertos}.
 
