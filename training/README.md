@@ -150,8 +150,7 @@ El dataset se descarga automáticamente con `make train-dataset` o `make train-s
 | Hardware | Tiempo Estimado |
 |----------|-----------------|
 | CPU (8 cores) | 12-24 horas |
-| GPU (RTX 3080) | 2-4 horas |
-| GPU (RTX 4090) | 1-2 horas |
+| GPU (RTX 4080) | 2-4 horas |
 
 ### Consumo de Recursos
 
