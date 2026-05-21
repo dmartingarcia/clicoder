@@ -204,6 +204,77 @@ Las 46 corridas identificaron los factores de mayor impacto en F1-micro. La Tabl
 
 Tres técnicas mostraron impacto relevante: (1) el \emph{preentrenamiento débil} sobre las descripciones CIE-10-ES y los fragmentos clínicos del task\_X de CodiEsp, que aportó entre 5 y 8 puntos de F1-micro; (2) el \emph{scheduler plateau}, que solo reduce el LR cuando el F1 se estanca en validación, evitando la convergencia prematura del schedule cosine; y (3) el \textbf{descarte de la ventana deslizante}, cuya fragmentación destruye la coherencia clínica (caída de F1-micro de 0,484 a 0,412). La mejor corrida alcanzó F1-micro = 0,551 con umbrales por clase optimizados; la configuración de producción ofrece un mejor equilibrio micro/macro, como se detalla en el Anexo~\ref{cap:AnexoH}.
 
+\subsubsection{Aprendizaje continuo a partir del feedback de usuarios}
+\label{sec:continuous-learning}
+
+Una limitación estructural del entrenamiento sobre CodiESP es que los datos proceden de
+un benchmark con distribución fija. En un entorno clínico real, el modelo encontrará
+patrones de redacción, abreviaturas y combinaciones de códigos que difieren del corpus de
+entrenamiento. Para cerrar esta brecha, el sistema está diseñado para capturar señal de
+retroalimentación de los propios codificadores y reutilizarla en ciclos de reentrenamiento
+posteriores.
+
+\paragraph{Datos capturados por el sistema.}
+Cada sesión de análisis genera un registro inmutable de eventos en el \emph{event store}
+del backend (véase la sección~\ref{sec:calidad}). Las proyecciones relacionales derivadas
+de estos eventos contienen los elementos necesarios para construir muestras de
+entrenamiento supervisado:
+
+\begin{itemize}
+    \item \textbf{Texto clínico} (\texttt{messages.content}): el informe enviado por el
+    codificador, que actúa como entrada $x$ del clasificador.
+    \item \textbf{Validaciones} (\texttt{predicted\_codes.status = "validated"}): códigos
+    que el codificador ha confirmado como correctos. Constituyen etiquetas positivas
+    $(y = 1)$ con respaldo humano.
+    \item \textbf{Rechazos} (\texttt{predicted\_codes.status = "rejected"}): códigos que el
+    modelo predijo pero el codificador descartó. Señalan errores sistemáticos del modelo
+    sobre textos reales de dominio.
+    \item \textbf{Sugerencias manuales} (\texttt{code\_suggestions.suggested\_code}): códigos
+    que el codificador añade manualmente cuando no aparecen entre las predicciones del
+    modelo. Son la señal más valiosa del ciclo: representan \emph{falsos negativos} que el
+    modelo no habría detectado de otro modo.
+\end{itemize}
+
+\paragraph{Limitación: sesgo de confirmación.}
+El mecanismo de retroalimentación presenta una asimetría inherente. El codificador solo
+valida o rechaza los códigos que el modelo ya ha sugerido; los códigos correctos que no
+aparecen en el top-$k$ de predicciones permanecen invisibles salvo que el codificador los
+añada explícitamente mediante la función de sugerencia manual. Esto implica que el
+feedback de validación/rechazo refuerza las predicciones existentes, pero no corrige los
+falsos negativos estructurales del modelo. Por este motivo, las sugerencias manuales tienen
+mayor peso informativo que las validaciones: cada sugerencia manual identifica un caso que
+el modelo no cubrió.
+
+\paragraph{Transformación al formato de entrenamiento.}
+Para incorporar el feedback al ciclo de entrenamiento, los datos de las proyecciones se
+transforman al mismo formato CSV que CodiESP: una fila por informe con el texto clínico
+como campo \texttt{text} y la lista de códigos confirmados —validaciones más sugerencias
+manuales— como campo \texttt{labels} separados por punto y coma. El conjunto resultante
+se combina con el corpus CodiESP original antes de lanzar el entrenamiento:
+
+\begin{equation*}
+    \mathcal{D}_{\text{combined}} = \mathcal{D}_{\text{CodiESP}} \cup \mathcal{D}_{\text{feedback}}
+\end{equation*}
+
+\paragraph{Estrategia de incorporación recomendada.}
+En lugar de entrenar desde cero con el conjunto combinado, se recomienda partir del
+\emph{checkpoint} del modelo en producción y realizar un \emph{fine-tuning} de pocas
+épocas (5--10) sobre $\mathcal{D}_{\text{combined}}$. Este enfoque tiene tres ventajas:
+hereda el conocimiento adquirido durante el entrenamiento completo sobre CodiESP, reduce
+el tiempo de cómputo, y minimiza el riesgo de \emph{catastrophic forgetting} mediante una
+tasa de aprendizaje reducida ($\eta \approx 2 \times 10^{-5}$). Antes de sustituir el
+modelo en producción, el nuevo \emph{checkpoint} debe evaluarse sobre el split de
+validación de CodiESP; si el F1-micro decrece más de un punto porcentual respecto al
+modelo en producción, el ciclo se descarta.
+
+\paragraph{Requisito de volumen mínimo.}
+Con menos de 100 muestras nuevas, la relación señal/ruido del feedback no compensa
+el coste del reentrenamiento. El ciclo de mejora continua se activa cuando se acumulan
+al menos 100--200 informes con al menos un código validado o sugerido manualmente.
+Este umbral garantiza que el conjunto de feedback tenga diversidad suficiente para
+generalizar y no sobreajustar a patrones específicos de un único codificador o servicio
+hospitalario.
+
 \subsection{Diseño del backend}
 
 El backend es el orquestador central del sistema. Desarrollado en Elixir 1.15 con el \emph{framework} Phoenix 1.8, asume tres responsabilidades: gestionar la autenticación y el ciclo de vida de los usuarios, coordinar el flujo de análisis clínico entre el frontend y el motor de IA, y garantizar la trazabilidad completa de todas las acciones sobre cada caso.
