@@ -5,7 +5,9 @@ defmodule AppWeb.Admin.SessionController do
   alias App.Accounts.User
 
   def new(conn, _params) do
-    render(conn, :new)
+    conn
+    |> put_layout(false)
+    |> render(:new)
   end
 
   def create(conn, %{"session" => %{"email" => email, "password" => password}}) do
@@ -18,6 +20,7 @@ defmodule AppWeb.Admin.SessionController do
     else
       conn
       |> put_flash(:error, "Credenciales incorrectas")
+      |> put_layout(false)
       |> render(:new)
     end
   end

@@ -30,6 +30,16 @@ defmodule AppWeb.Endpoint do
     gzip: not code_reloading?,
     only: AppWeb.static_paths()
 
+  plug Plug.Static,
+    at: "/js/phoenix",
+    from: {:phoenix, "priv/static"},
+    gzip: false
+
+  plug Plug.Static,
+    at: "/js/lv",
+    from: {:phoenix_live_view, "priv/static"},
+    gzip: false
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
