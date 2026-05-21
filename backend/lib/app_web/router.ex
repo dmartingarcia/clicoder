@@ -88,7 +88,7 @@ defmodule AppWeb.Router do
     scope "/dev" do
       pipe_through [:browser]
 
-      live_dashboard "/dashboard", metrics: AppWeb.Telemetry
+      live_dashboard "/dashboard", metrics: AppWeb.Telemetry, ecto_repos: [App.Repo]
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
