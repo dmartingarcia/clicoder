@@ -19,6 +19,7 @@ defmodule AppWeb.Admin.AdminLayout do
             <span class="font-bold text-lg">CIE-10 Backoffice</span>
             <a href="/admin/users" class="text-indigo-200 hover:text-white text-sm">Usuarios</a>
             <a href="/admin/conversations" class="text-indigo-200 hover:text-white text-sm">Conversaciones</a>
+            <a href="/admin/settings" class="text-indigo-200 hover:text-white text-sm">Configuración</a>
           </div>
           <a href="/admin/logout" data-method="delete" class="text-indigo-200 hover:text-white text-sm">
             Cerrar sesión

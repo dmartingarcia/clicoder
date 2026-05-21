@@ -14,6 +14,7 @@ defmodule App.Application do
       {Phoenix.PubSub, name: App.PubSub},
       {Finch, name: App.Finch},
       App.Translations,
+      App.AIEngineSettings,
       App.CommandedApplication,
       App.Projections.ConversationProjector,
       # Start to serve requests, typically the last entry

@@ -325,7 +325,12 @@ defmodule AppWeb.ConversationChannel do
   defp call_ai_engine(conversation_id, message_id, report_text, socket) do
     ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
 
-    case Req.post("#{ai_url}/predict", json: %{text: report_text}, receive_timeout: 60_000) do
+    engine = App.AIEngineSettings.get_engine()
+
+    case Req.post("#{ai_url}/predict",
+           json: %{text: report_text, engine: engine},
+           receive_timeout: 60_000
+         ) do
       {:ok, %{status: 200, body: body}} ->
         cards = body["cards"] || []
 
@@ -335,7 +340,8 @@ defmodule AppWeb.ConversationChannel do
           cards: cards,
           predicted_codes: [],
           reasoning: "Análisis automático",
-          confidence_scores: []
+          confidence_scores: [],
+          engine: engine
         }
 
         case CommandedApplication.dispatch(cmd) do
