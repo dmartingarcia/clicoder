@@ -2393,3 +2393,155 @@ Para el TFG, tener ambos motores en la misma API permite una comparación direct
 producción: dado el mismo texto, ¿qué predice el diccionario y qué predice BERT? Las
 diferencias revelan qué está aprendiendo BERT más allá del matching léxico superficial
 — exactamente la hipótesis central del trabajo.
+
+---
+
+## Aprendizaje continuo a partir del feedback de usuarios
+
+### Qué datos captura el sistema en producción
+
+El backend almacena un log inmutable de eventos (Event Sourcing) y proyecciones
+relacionales que constituyen un conjunto de entrenamiento implícito. Por cada informe
+clínico analizado se registra:
+
+| Tabla / Evento | Campo clave | Señal de entrenamiento |
+|---|---|---|
+| `messages` | `content` | Texto clínico de entrada (X) |
+| `predicted_codes` | `cie10_code`, `confidence_score` | Predicción del modelo |
+| `predicted_codes` | `status = "validated"`, `validated_by` | **Positivo confirmado** (Y=1) |
+| `predicted_codes` | `status = "rejected"`, `rejection_reason` | **Negativo explícito** (Y=0) |
+| `code_suggestions` | `suggested_code`, `selected_text` | **Etiqueta manual** (Y=1 fuera del top-k) |
+
+Esto significa que cada sesión de un médico usando la aplicación genera muestras
+etiquetadas con señal real de dominio, algo que CodiESP no puede proporcionar.
+
+### Flujo de datos para reentrenamiento
+
+```
+PostgreSQL (predicted_codes + messages + code_suggestions)
+    ↓  [SQL export / Ecto query]
+raw_feedback.csv
+    ↓  [script de transformación]
+feedback_train.csv  (formato CodiESP: text, labels)
+    ↓  [mezcla con CodiESP original]
+combined_train.csv
+    ↓  make ai-train-gpu
+nuevo modelo
+```
+
+### Cómo construir el CSV de feedback
+
+Consulta SQL base para extraer muestras etiquetadas desde la proyección relacional:
+
+```sql
+-- Por cada informe: texto + lista de códigos validados + sugerencias manuales
+SELECT
+    m.content                                       AS text,
+    string_agg(DISTINCT pc.cie10_code, ';')
+        FILTER (WHERE pc.status = 'validated')      AS validated_codes,
+    string_agg(DISTINCT cs.suggested_code, ';')     AS suggested_codes
+FROM messages m
+LEFT JOIN predicted_codes pc
+    ON pc.conversation_id = m.conversation_id
+LEFT JOIN code_suggestions cs
+    ON cs.conversation_id = m.conversation_id
+WHERE m.message_type = 'user_message'
+  AND (pc.status = 'validated' OR cs.suggested_code IS NOT NULL)
+GROUP BY m.id, m.content
+HAVING count(DISTINCT pc.cie10_code) FILTER (WHERE pc.status = 'validated') > 0
+    OR count(DISTINCT cs.suggested_code) > 0;
+```
+
+La columna `labels` para el CSV se construye concatenando `validated_codes` y
+`suggested_codes` (eliminando duplicados y normalizando a minúsculas, igual que CodiESP).
+
+### Script de transformación (ejemplo Python)
+
+```python
+import pandas as pd
+
+def build_feedback_csv(raw_df: pd.DataFrame, output_path: str):
+    """
+    raw_df: resultado de la query SQL anterior con columnas
+            text, validated_codes, suggested_codes
+    """
+    rows = []
+    for _, row in raw_df.iterrows():
+        codes = set()
+        if pd.notna(row["validated_codes"]):
+            codes.update(row["validated_codes"].lower().split(";"))
+        if pd.notna(row["suggested_codes"]):
+            codes.update(row["suggested_codes"].lower().split(";"))
+        codes.discard("")
+        if codes:
+            rows.append({"text": row["text"], "labels": ";".join(sorted(codes))})
+    pd.DataFrame(rows).to_csv(output_path, index=False)
+```
+
+Después se mezcla con CodiESP:
+
+```python
+train_orig = pd.read_csv("codiesp_D_source_train.csv")
+feedback   = pd.read_csv("feedback_train.csv")
+combined   = pd.concat([train_orig, feedback]).sample(frac=1, random_state=42)
+combined.to_csv("combined_train.csv", index=False)
+```
+
+### Estrategias de incorporación
+
+**Opción A — Fine-tuning sobre el modelo actual (recomendada)**
+
+Partir del checkpoint existente (`classifier_<ts>.pt`) y entrenar sobre
+`combined_train.csv`. Ventajas: hereda todo lo aprendido de CodiESP; pocas épocas
+necesarias (5-10 en vez de 20). Añadir al comando:
+
+```bash
+make ai-train-gpu EXTRA_ARGS="--resume_from /app/model/classifier_<ts>.pt --epochs 10 --lr 2e-5"
+```
+
+> Requiere añadir `--resume_from` a `train.py` si no existe aún (carga el estado del
+> modelo antes de empezar el bucle de entrenamiento).
+
+**Opción B — Entrenamiento desde cero con datos combinados**
+
+Solo recomendable cuando el volumen de feedback supera ~200 muestras nuevas. Usa el
+mismo comando estándar con `combined_train.csv` como `--train_file`.
+
+**Opción C — Replay buffer ponderado**
+
+Dar más peso a las muestras de feedback (datos reales de dominio) que a CodiESP
+(datos de benchmark). Implementable con `--sample_weights` si se añade soporte en
+`train.py`, o duplicando filas de feedback en el CSV antes de combinar.
+
+### Consideraciones críticas
+
+**Sesgo de confirmación**: el médico solo valida/rechaza los códigos que el modelo ya
+sugirió. Los códigos correctos pero fuera del top-k nunca aparecen como positivos a
+menos que el médico los sugiera manualmente vía `suggest_code`. Esto implica que el
+feedback solo refuerza predicciones existentes, no corrige los falsos negativos que
+el modelo no vio.
+
+**Solución parcial**: usar las sugerencias manuales (`code_suggestions`) como
+etiquetas positivas adicionales. Si el médico sugiere `J18.9` y el modelo no lo
+predijo, eso es un falso negativo valioso para el entrenamiento.
+
+**Ruido en rechazos**: un código rechazado (`status = "rejected"`) significa que el
+modelo lo predijo incorrectamente para ese informe. No significa que el código sea
+incorrecto en general. Úsalos solo como señal implícita (ausencia en labels), no como
+etiqueta negativa explícita (el BCE con multi-label ya trata la ausencia como negativo).
+
+**Volumen mínimo necesario**: con menos de ~50 muestras nuevas, el ruido supera la
+señal. Esperar a acumular al menos 100-200 informes con feedback antes de un ciclo de
+reentrenamiento.
+
+**Validación antes de desplegar**: siempre evaluar el nuevo modelo sobre el split de
+validación de CodiESP antes de sustituir el modelo en producción. Si el F1 baja más
+de 1 pp respecto al baseline, descartar el ciclo.
+
+### Estado actual
+
+A fecha de escritura de esta sección, el sistema está capturando datos en producción
+pero no se ha realizado ningún ciclo de reentrenamiento con feedback real. La
+infraestructura de extracción (query SQL + script de transformación) está descrita
+aquí pero no implementada como script autónomo. El primer ciclo debería realizarse
+cuando se acumulen ≥100 informes con al menos un código validado o sugerido.
