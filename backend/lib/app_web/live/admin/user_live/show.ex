@@ -85,7 +85,11 @@ defmodule AppWeb.Admin.UserLive.Show do
             <tbody class="divide-y divide-gray-100">
               <%= for conv <- @conversations do %>
                 <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-xs font-mono text-gray-600"><%= conv.conversation_id %></td>
+                  <td class="px-4 py-3 text-xs font-mono text-gray-600">
+                    <.link navigate={~p"/admin/conversations/#{conv.conversation_id}"} class="text-indigo-600 hover:text-indigo-800">
+                      <%= String.slice(conv.conversation_id, 0, 8) %>…
+                    </.link>
+                  </td>
                   <td class="px-4 py-3">
                     <span class={[
                       "px-2 py-1 rounded text-xs font-medium",
