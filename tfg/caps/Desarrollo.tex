@@ -105,6 +105,11 @@ El coeficiente de Jaccard entre particiones se sitúa entre 0,31 y 0,33. El dato
 \paragraph{Características del catálogo CIE-10-ES.}
 El catálogo contiene 101.246 entradas en 21 capítulos. Las categorías más representadas son R (síntomas y signos), S (traumatismos), T (envenenamientos) e I (enfermedades circulatorias). Esta distribución, unida a que solo una fracción de los códigos aparece en CodiEsp, justifica el uso de \emph{block codes} de tres caracteres (1.767 categorías) en lugar de los códigos completos, reduciendo el espacio de clases a un nivel manejable para 500 documentos de entrenamiento.
 
+\paragraph{Brecha léxica entre catálogo oficial y lenguaje clínico real.}
+El análisis lingüístico realizado con SpaCy (modelo \texttt{es\_core\_news\_lg}) sobre las descripciones del catálogo CIE-10-ES reveló que el vocabulario oficial emplea 10.874 lemas únicos, dominado por sustantivos técnicos (47,3\,\%) y adjetivos específicos (29,6\,\%). La validación cruzada de este vocabulario con los informes clínicos del corpus CodiEsp, documentada en el \emph{notebook} \texttt{cie10\_spacy\_word\_analysis.ipynb}, arrojó un resultado clínicamente significativo: \textbf{solo el 38,3\,\% de los lemas del catálogo oficial aparece en los textos de los informes hospitalarios}. Los 6.708 lemas restantes pertenecen a la nomenclatura estandarizada, pero no forman parte del lenguaje habitual con que los médicos redactan sus informes de alta.
+
+Esta brecha tiene una causa directa en la práctica clínica: el catálogo CIE-10 emplea denominaciones largas y normalizadas («infarto agudo de miocardio de cara anterior de transmisión transmural»), mientras que el médico redacta con abreviaturas frecuentes (\texttt{IAM}, \texttt{EPOC}, \texttt{HTA}, \texttt{DM2}), epónimos y expresiones propias del entorno hospitalario. El análisis identificó además un 44,4\,\% de lemas con especificidad máxima —asociados a un único código CIE-10— frente a términos de alta dispersión como «contacto», «fractura» o «especificado», que aparecen en miles de códigos diferentes. Esta estructura léxica justifica dos decisiones de diseño que se desarrollan en las secciones siguientes: (1) la elección de un codificador preentrenado en texto clínico en español (RigoBERTa-Clinical), que ha aprendido a relacionar las expresiones del lenguaje médico real con las denominaciones de los diagnósticos sin depender de coincidencia léxica exacta; y (2) la expansión de abreviaturas clínicas implementada en el clasificador de diccionario, que normaliza expresiones habituales antes de la búsqueda en el catálogo. El análisis detallado del vocabulario se recoge en el Anexo~\ref{cap:AnexoG}.
+
 \subsubsection{Selección del modelo base}
 
 Se evaluaron nueve modelos candidatos para la codificación del texto clínico. La comparativa, recogida en el Anexo~\ref{cap:AnexoA}, consideró rendimiento en CodiEsp, especialización en español médico, velocidad de inferencia y coste computacional de entrenamiento. Los modelos evaluados fueron:
@@ -282,7 +287,9 @@ Las contraseñas se almacenan hasheadas con bcrypt. El servicio de email se impl
 
 \subsection{Internacionalización}
 
-La interfaz soporta español e inglés. Las traducciones del backend se almacenan en ficheros YAML (\texttt{priv/\allowbreak{}translations/\allowbreak{}es.yml} y \texttt{en.yml}) y se sirven a través del \emph{endpoint} \texttt{GET\allowbreak\ /api/translations/:locale}. El frontend las carga al arrancar mediante \texttt{I18nContext} y las aplica con la función \texttt{t(key, vars)}, que soporta interpolación de variables. La preferencia de idioma se almacena en la base de datos del usuario y se sincroniza con el backend al cambiar de idioma.
+\begin{sloppypar}
+La interfaz soporta español e inglés. Las traducciones del backend se almacenan en ficheros YAML (\texttt{priv/translations/es.yml} y \texttt{en.yml}) y se sirven a través del \emph{endpoint} \texttt{GET /api/translations/:locale}. El frontend las carga al arrancar mediante \texttt{I18nContext} y las aplica con la función \texttt{t(key, vars)}, que soporta interpolación de variables. La preferencia de idioma se almacena en la base de datos del usuario y se sincroniza con el backend al cambiar de idioma.
+\end{sloppypar}
 
 \subsection{Calidad del código y buenas prácticas}
 \label{sec:calidad}

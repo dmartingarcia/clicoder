@@ -123,3 +123,127 @@ Test vs. Validation  & 1.143 & 1.158 & 551 & 0{,}315 \\
 \hline
 \end{tabular}
 \end{table}
+
+\section{Análisis lingüístico del catálogo CIE-10-ES}
+\label{sec:analisis-linguistico}
+
+El análisis lingüístico realizado con SpaCy (modelo \texttt{es\_core\_news\_lg}) sobre las 101.246 entradas del catálogo de diagnósticos CIE-10-ES (\emph{notebook} \texttt{cie10\_spacy\_word\_analysis.ipynb}) proporciona una caracterización del vocabulario médico formal empleado en las descripciones oficiales.
+
+\subsection{Estadísticas generales del vocabulario}
+
+\begin{table}[h]
+\centering
+\caption{Estadísticas generales del vocabulario del catálogo CIE-10-ES.}
+\label{tab:vocab-stats}
+\begin{tabular}{lr}
+\hline
+\textbf{Métrica} & \textbf{Valor} \\
+\hline
+Lemas únicos (sin \emph{stopwords})                   & 10.874 \\
+Media de códigos por lema                             & 68{,}76 \\
+Lemas de especificidad máxima (un único código)       & 4.823 (44{,}4\,\%) \\
+Lemas transversales (aparecen en múltiples códigos)   & 6.051 (55{,}6\,\%) \\
+\hline
+\end{tabular}
+\end{table}
+
+El hecho de que casi la mitad de los lemas (44,4\,\%) esté asociada a un único código CIE-10 indica que el catálogo contiene una gran proporción de terminología altamente diagnóstica: si ese término aparece en un informe, la asignación del código correspondiente es casi unívoca. El problema es que, como se analiza más adelante, muchos de estos términos de alta especificidad no aparecen en el lenguaje clínico real.
+
+\subsection{Distribución por categoría gramatical}
+
+Las descripciones oficiales de CIE-10-ES presentan un vocabulario dominado por terminología técnica formal. Los sustantivos y adjetivos suman más del 75\,\% del léxico total (Tabla~\ref{tab:pos-dist}).
+
+\begin{table}[h]
+\centering
+\caption{Distribución del vocabulario CIE-10-ES por categoría gramatical.}
+\label{tab:pos-dist}
+\begin{tabular}{lrr}
+\hline
+\textbf{Categoría gramatical} & \textbf{Lemas} & \textbf{Porcentaje} \\
+\hline
+Sustantivo    & 5.145 & 47{,}3\,\% \\
+Adjetivo      & 3.214 & 29{,}6\,\% \\
+Nombre propio & 1.658 & 15{,}2\,\% \\
+Verbo         &   484 &  4{,}5\,\% \\
+Numeral       &   139 &  1{,}3\,\% \\
+Otros         &   234 &  2{,}1\,\% \\
+\hline
+\end{tabular}
+\end{table}
+
+Los nombres propios (15,2\,\%) corresponden principalmente a epónimos y topónimos clínicos (síndrome de Marfan, enfermedad de Crohn, fiebre del Nilo Occidental), que son marcadores diagnósticos muy específicos pero cuya presencia en el texto clínico real depende de que el médico emplee el epónimo exacto y no una descripción funcional equivalente.
+
+\subsection{Términos de alta especificidad y alta dispersión}
+
+El análisis de asociación entre lemas y códigos permite distinguir dos tipos de términos con distinta utilidad para la clasificación automática.
+
+Los \textbf{términos de alta especificidad} (Tabla~\ref{tab:high-spec}) aparecen asociados a un único código CIE-10. Actúan como marcadores casi exclusivos de un diagnóstico concreto y son los más valiosos para el clasificador de diccionario: su presencia en el texto prácticamente determina la asignación. Sin embargo, corresponden en su mayoría a patologías poco frecuentes cuyo nombre técnico rara vez aparece en la redacción habitual de los informes.
+
+\begin{table}[h]
+\centering
+\caption{Ejemplos de lemas con especificidad máxima (asociados a un único código CIE-10).}
+\label{tab:high-spec}
+\begin{tabular}{lrr}
+\hline
+\textbf{Lema} & \textbf{Frecuencia en catálogo} & \textbf{Códigos distintos} \\
+\hline
+leucemoide       & 7 & 1 \\
+crioglobulinemia & 6 & 1 \\
+acumulación      & 7 & 1 \\
+\hline
+\end{tabular}
+\end{table}
+
+Los \textbf{términos de alta dispersión} (Tabla~\ref{tab:high-disp}) aparecen en miles de códigos diferentes; funcionan como modificadores estructurales de las descripciones (lateralidad, temporalidad, tipo de lesión) y no aportan capacidad discriminativa por sí solos.
+
+\begin{table}[h]
+\centering
+\caption{Lemas con mayor dispersión en el catálogo CIE-10-ES.}
+\label{tab:high-disp}
+\begin{tabular}{lrr}
+\hline
+\textbf{Lema} & \textbf{Frecuencia total} & \textbf{Códigos distintos} \\
+\hline
+contacto     & 38.306 & 37.687 \\
+especificado & 35.482 & 31.322 \\
+sucesivo     & 22.039 & 22.039 \\
+fractura     & 36.297 & 20.481 \\
+izquierdo    & 15.396 & 15.310 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Brecha léxica entre catálogo oficial y lenguaje clínico real}
+\label{sec:brecha-lexica}
+
+La validación cruzada del vocabulario del catálogo CIE-10-ES con el corpus CodiEsp revela una diferencia estructural entre el lenguaje de las descripciones oficiales y el lenguaje empleado por los médicos en sus informes hospitalarios (Tabla~\ref{tab:vocab-gap}).
+
+\begin{table}[h]
+\centering
+\caption{Comparativa de vocabulario entre catálogo CIE-10-ES y corpus CodiEsp.}
+\label{tab:vocab-gap}
+\begin{tabular}{lr}
+\hline
+\textbf{Métrica} & \textbf{Valor} \\
+\hline
+Lemas únicos en CIE-10-ES                             & 10.874 \\
+Lemas únicos en CodiEsp                               & 13.642 \\
+Lemas comunes                                         &  4.166 \\
+Solapamiento (fracción de CIE-10-ES presente en CodiEsp) & 38{,}3\,\% \\
+Lemas exclusivos de CIE-10-ES                         &  6.708 \\
+Lemas exclusivos de CodiEsp                           &  9.476 \\
+\hline
+\end{tabular}
+\end{table}
+
+Solo el 38,3\,\% de los lemas del catálogo oficial aparece también en los textos clínicos reales. Los 6.708 lemas restantes —nomenclatura estandarizada— no forman parte del lenguaje habitual de los informes. Inversamente, los 9.476 lemas exclusivos de CodiEsp corresponden a abreviaturas, epónimos coloquiales, jerga clínica y variantes morfológicas propias del entorno hospitalario que no figuran en las descripciones oficiales.
+
+La distribución gramatical amplía este contraste: el catálogo CIE-10-ES presenta mayor densidad de sustantivos técnicos y adjetivos específicos, mientras que los informes de CodiEsp muestran mayor presencia de verbos de acción y adverbios de temporalidad, propios de la narración clínica («el paciente ingresa», «se evidencia», «previamente diagnosticado de»).
+
+Esta asimetría léxica tiene consecuencias directas para el diseño del sistema:
+
+\begin{enumerate}
+    \item Un clasificador basado exclusivamente en coincidencia léxica con el catálogo (como el clasificador de diccionario) solo puede actuar sobre el 38,3\,\% del vocabulario oficial que efectivamente aparece en los informes, y queda ciego ante los términos de la jerga clínica real que no tienen correspondencia directa en el catálogo.
+    \item La expansión explícita de abreviaturas clínicas (\texttt{HTA} → «hipertensión arterial», \texttt{DM2} → «diabetes mellitus tipo 2», \texttt{EPOC} → «enfermedad pulmonar obstructiva crónica») implementada en el clasificador de diccionario actúa como puente parcial entre los dos vocabularios.
+    \item El clasificador neuronal basado en RigoBERTa-Clinical supera esta limitación estructural porque su preentrenamiento sobre grandes corpus de texto clínico en español le permite relacionar las expresiones del lenguaje médico real con los diagnósticos correspondientes sin depender de coincidencia léxica exacta con las descripciones oficiales.
+\end{enumerate}
