@@ -78,6 +78,8 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - MODEL_NAME=${MODEL_NAME}
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+      - SUMMARIZER_MODEL=${SUMMARIZER_MODEL:-none}
+      - SUMMARIZER_THREADS=${SUMMARIZER_THREADS:-4}
       - PYTHONUNBUFFERED=1
     volumes:
       - ./ai_engine:/app

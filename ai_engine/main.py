@@ -3,10 +3,14 @@ main.py — FastAPI service for the CIE-10 AI Engine.
 
 Variables de entorno
 --------------------
-MODEL_DIR   Directorio con los artefactos del modelo.
-            Default: ./model
-DEVICE      Dispositivo torch ('cpu', 'cuda', 'mps', …).
-            Default: cpu
+MODEL_DIR          Directorio con los artefactos del modelo.
+                   Default: ./model
+DEVICE             Dispositivo torch ('cpu', 'cuda', 'mps', …).
+                   Default: cpu
+SUMMARIZER_MODEL   Modelo LLM para resúmenes médicos: "gemma3" | "phi4" | "qwen" | "none".
+                   Default: none  (resumen estadístico básico)
+SUMMARIZER_THREADS Hilos CPU para llama-cpp. Default: 4
+SUMMARIZER_CTX     Contexto en tokens para llama-cpp. Default: 4096
 """
 
 import asyncio
@@ -63,6 +67,7 @@ def _watch_download(model_name: str, stop_event: threading.Event) -> None:
 # Globals poblados en startup
 classifier        = None   # CIE10Classifier (BERT)
 dict_classifier   = None   # DictClassifier (diccionario)
+summarizer        = None   # MedicalSummarizer (LLM local, opcional)
 code_descriptions: Dict[str, str] = {}
 
 
@@ -70,7 +75,7 @@ code_descriptions: Dict[str, str] = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global classifier, dict_classifier, code_descriptions
+    global classifier, dict_classifier, summarizer, code_descriptions
 
     model_dir = os.environ.get("MODEL_DIR", "./model")
     device    = os.environ.get("DEVICE", "cpu")
@@ -137,6 +142,17 @@ async def lifespan(app: FastAPI):
                 model_dir, dict_path,
             )
 
+    # ── Summarizer (LLM local, opcional) ─────────────────────────────────
+    try:
+        from summarizer import create_summarizer
+        summarizer = create_summarizer()
+        if summarizer is not None:
+            # Carga en hilo para no bloquear el arranque
+            await asyncio.to_thread(summarizer.load)
+    except Exception as exc:
+        logger.warning("No se pudo inicializar el resumidor: %s", exc)
+        summarizer = None
+
     yield
 
 
@@ -172,10 +188,12 @@ class AnalysisRequest(BaseModel):
 @app.get("/", summary="Health check")
 def health_check():
     return {
-        "status":       "online",
-        "model":        "rigoberta-cie10-flat",
-        "model_loaded": classifier is not None,
-        "dict_loaded":  dict_classifier is not None,
+        "status":            "online",
+        "model":             "rigoberta-cie10-flat",
+        "model_loaded":      classifier is not None,
+        "dict_loaded":       dict_classifier is not None,
+        "summarizer_model":  summarizer.model_name if summarizer else "none",
+        "summarizer_loaded": summarizer.is_loaded if summarizer else False,
     }
 
 
@@ -207,22 +225,13 @@ async def _predict_bert(text: str):
             detail={"error": "Modelo BERT no cargado. Entrena con train.py y monta model/."},
         )
 
-    predictions = await asyncio.to_thread(
-        classifier.predict, text, 10, code_descriptions or None,
+    predictions, summary_text = await asyncio.gather(
+        asyncio.to_thread(classifier.predict, text, 10, code_descriptions or None),
+        _generate_summary(text),
     )
 
-    word_count = len(text.split())
-    n_codes    = len(predictions)
-    codes_str  = ", ".join(p["code"] for p in predictions) if predictions else "ninguno"
-
     return {"cards": [
-        {
-            "type": "summary",
-            "content": (
-                f"Informe clínico analizado ({word_count} palabras). "
-                f"{n_codes} código(s) CIE-10 identificado(s): {codes_str}."
-            ),
-        },
+        {"type": "summary", "content": summary_text},
         {
             "type": "codes",
             "content": [
@@ -261,20 +270,13 @@ async def _predict_dict(text: str):  # noqa: E302
             },
         )
 
-    predictions = await asyncio.to_thread(dict_classifier.predict, text)
-
-    word_count = len(text.split())
-    n_codes    = len(predictions)
-    codes_str  = ", ".join(p["code"] for p in predictions) if predictions else "ninguno"
+    predictions, summary_text = await asyncio.gather(
+        asyncio.to_thread(dict_classifier.predict, text),
+        _generate_summary(text),
+    )
 
     return {"cards": [
-        {
-            "type": "summary",
-            "content": (
-                f"Informe clínico analizado ({word_count} palabras). "
-                f"{n_codes} código(s) CIE-10 identificado(s) por diccionario: {codes_str}."
-            ),
-        },
+        {"type": "summary", "content": summary_text},
         {
             "type": "codes",
             "content": [
@@ -315,18 +317,11 @@ async def _predict_both(text: str):
     dict_codes = dict_result["cards"][1]["content"]
     all_codes  = bert_codes + dict_codes
 
-    word_count = len(text.split())
-    n_bert     = len(bert_codes)
-    n_dict     = len(dict_codes)
+    # El resumen ya viene generado en bert_result (se calculó en paralelo)
+    summary_card = bert_result["cards"][0]
 
     return {"cards": [
-        {
-            "type": "summary",
-            "content": (
-                f"Informe clínico analizado ({word_count} palabras). "
-                f"BERT: {n_bert} código(s). Diccionario: {n_dict} código(s)."
-            ),
-        },
+        summary_card,
         {"type": "codes", "content": all_codes},
         {
             "type": "recommendations",
@@ -336,3 +331,20 @@ async def _predict_both(text: str):
             ),
         },
     ]}
+
+
+# ─────────────────────────────────────────────
+# Helper: generación de resumen
+# ─────────────────────────────────────────────
+
+async def _generate_summary(text: str) -> str:
+    """Genera un resumen médico real si el summarizer está activo, o uno básico si no."""
+    if summarizer is not None:
+        try:
+            return await asyncio.to_thread(summarizer.summarize, text)
+        except Exception as exc:
+            logger.warning("Error al generar resumen con LLM: %s — usando resumen básico.", exc)
+
+    # Fallback: resumen estadístico básico
+    word_count = len(text.split())
+    return f"Informe clínico de {word_count} palabras procesado."
