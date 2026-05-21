@@ -3,6 +3,8 @@ defmodule AppWeb.ConversationChannelTest do
 
   import Phoenix.ChannelTest
   import App.Fixtures
+  # Remove Plug.Conn.push/3 from scope to avoid ambiguity with Phoenix.ChannelTest.push/3
+  import Plug.Conn, except: [push: 3]
 
   @endpoint AppWeb.Endpoint
 
@@ -199,4 +201,47 @@ defmodule AppWeb.ConversationChannelTest do
       assert reply.status == "conversation_started"
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # handle_in("suggest_code", ...)
+  # ---------------------------------------------------------------------------
+
+  describe "handle_in suggest_code" do
+    setup do
+      user = user_fixture()
+      conv = conversation_fixture(user)
+      socket = connect_socket(user)
+
+      {:ok, _reply, joined_socket} =
+        subscribe_and_join(
+          socket,
+          AppWeb.ConversationChannel,
+          "conversation:#{conv.conversation_id}"
+        )
+
+      %{socket: joined_socket, conv: conv, user: user}
+    end
+
+    test "returns ok with a suggestion_id", %{socket: socket} do
+      ref =
+        push(socket, "suggest_code", %{
+          "selected_text" => "hipertensión arterial",
+          "suggested_code" => "I10"
+        })
+
+      assert_reply ref, :ok, %{suggestion_id: suggestion_id}
+      assert is_binary(suggestion_id)
+    end
+
+    test "stores the suggested code in uppercase", %{socket: socket} do
+      ref =
+        push(socket, "suggest_code", %{
+          "selected_text" => "diabetes",
+          "suggested_code" => "e11"
+        })
+
+      assert_reply ref, :ok, %{suggestion_id: _}
+    end
+  end
+
 end

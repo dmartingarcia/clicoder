@@ -170,4 +170,58 @@ defmodule AppWeb.Cie10ControllerTest do
       assert "T51.3X1" in result["metadata"]["all_codes"]
     end
   end
+
+  # ── GET /api/cie10/codes/:code/children ───────────────────────────────────
+
+  describe "children/2" do
+    test "returns children of a parent code", %{conn: conn} do
+      conn = get(conn, "/api/cie10/codes/A00/children")
+      %{"children" => children, "is_leaf" => is_leaf} = json_response(conn, 200)
+
+      assert is_list(children)
+      assert is_leaf == false
+      codes = Enum.map(children, & &1["code"])
+      assert "A00.0" in codes
+    end
+
+    test "returns is_leaf=true when code has no children", %{conn: conn} do
+      conn = get(conn, "/api/cie10/codes/A00.0/children")
+      %{"children" => children, "is_leaf" => is_leaf} = json_response(conn, 200)
+
+      assert children == []
+      assert is_leaf == true
+    end
+
+    test "returns is_leaf=true for completely unknown code", %{conn: conn} do
+      conn = get(conn, "/api/cie10/codes/ZZZZ99/children")
+      %{"children" => children, "is_leaf" => is_leaf} = json_response(conn, 200)
+
+      assert children == []
+      assert is_leaf == true
+    end
+
+    test "lookup is case-insensitive", %{conn: conn} do
+      conn = get(conn, "/api/cie10/codes/a00/children")
+      %{"children" => children} = json_response(conn, 200)
+
+      codes = Enum.map(children, & &1["code"])
+      assert "A00.0" in codes
+    end
+
+    test "children include is_virtual flag", %{conn: conn} do
+      conn = get(conn, "/api/cie10/codes/A00/children")
+      %{"children" => children} = json_response(conn, 200)
+
+      assert Enum.all?(children, &Map.has_key?(&1, "is_virtual"))
+    end
+
+    test "existing child code has is_virtual=false", %{conn: conn} do
+      conn = get(conn, "/api/cie10/codes/A00/children")
+      %{"children" => children} = json_response(conn, 200)
+
+      a000 = Enum.find(children, &(&1["code"] == "A00.0"))
+      assert a000 != nil
+      assert a000["is_virtual"] == false
+    end
+  end
 end
