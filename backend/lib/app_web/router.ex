@@ -31,6 +31,8 @@ defmodule AppWeb.Router do
 
     get "/translations/:locale", TranslationController, :show
 
+    post "/ai/count-tokens", AiController, :count_tokens
+
     # CIE-10 reference (public — read-only catalogue)
     get "/cie10/search", Cie10Controller, :search
     get "/cie10/codes/:code/children", Cie10Controller, :children

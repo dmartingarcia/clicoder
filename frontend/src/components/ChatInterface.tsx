@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { searchCie10, Cie10Result, getAncestors } from '@/lib/cie10';
+import { config } from '@/lib/config';
 import {
   Loader2, FileText, Stethoscope, CheckCircle2, XCircle,
   AlertCircle, ClipboardList, Lightbulb, Activity, Tag, ExternalLink,
@@ -432,9 +433,33 @@ function ChatItemView({
 export function ChatInterface() {
   const { activeConversationId, pendingConversation, chatItems, predictedCodes, isAnalyzing, engine, analyzeReport, validateCode, rejectCode, createConversation } = useConversation();
   const { t } = useI18n();
-  const MAX_WORDS = 1024;
+  const MAX_TOKENS = 1024;
   const [reportText, setReportText] = useState('');
-  const wordCount = reportText.trim() ? reportText.trim().split(/\s+/).length : 0;
+  const [serverTokenCount, setServerTokenCount] = useState<number | null>(null);
+  // approxTokenCount is computed synchronously; serverTokenCount refines it after 300ms
+  const approxTokenCount = Math.ceil(reportText.length / 4);
+  const tokenCount = serverTokenCount ?? approxTokenCount;
+
+  useEffect(() => {
+    setServerTokenCount(null);
+    if (!reportText) return;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${config.apiUrl}/ai/count-tokens`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: reportText }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setServerTokenCount(data.token_count);
+        }
+      } catch {
+        // keep approxTokenCount
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [reportText]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -445,7 +470,7 @@ export function ChatInterface() {
 
   const handleAnalyze = () => {
     const text = reportText.trim();
-    if (!text || text.length < 20 || wordCount > MAX_WORDS) return;
+    if (!text || text.length < 20 || tokenCount > MAX_TOKENS) return;
     analyzeReport(text);
     setReportText('');
   };
@@ -559,18 +584,18 @@ export function ChatInterface() {
                   {t('chat.min_chars', { min: 20, remaining: 20 - reportText.trim().length })}
                 </p>
               )}
-              {wordCount > MAX_WORDS && (
+              {tokenCount > MAX_TOKENS && (
                 <p className="text-xs text-red-600 mt-1">
-                  {t('chat.max_words_error', { max: MAX_WORDS })}
+                  {t('chat.max_words_error', { max: MAX_TOKENS })}
                 </p>
               )}
               <div className="flex items-center justify-between mt-2">
-                <span className={`text-xs ${wordCount > MAX_WORDS ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
-                  {t('chat.word_count', { count: wordCount, max: MAX_WORDS })}
+                <span className={`text-xs ${tokenCount > MAX_TOKENS ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
+                  {t('chat.word_count', { count: tokenCount, max: MAX_TOKENS })}
                 </span>
                 <Button
                   onClick={handleAnalyze}
-                  disabled={isAnalyzing || reportText.trim().length < 20 || wordCount > MAX_WORDS}
+                  disabled={isAnalyzing || reportText.trim().length < 20 || tokenCount > MAX_TOKENS}
                   className="bg-blue-600 hover:bg-blue-700 gap-2"
                   size="sm"
                 >

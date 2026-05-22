@@ -50,8 +50,8 @@ chat:
   report_label: "Referto clinico"
   report_placeholder: "Incolla qui il referto clinico del paziente…"
   char_count: "{count} caratteri · Ctrl+Invio per analizzare"
-  word_count: "{count} / {max} parole · Ctrl+Invio per analizzare"
-  max_words_error: "Il referto supera il limite di {max} parole del modello. Accorciarlo prima di inviare."
+  word_count: "{count} / {max} token · Ctrl+Invio per analizzare"
+  max_words_error: "Il referto supera il limite di {max} token del modello. Accorciarlo prima di inviare."
   analyze_button: "Analizza referto"
   min_chars: "Minimo {min} caratteri richiesti (mancano {remaining})"
 
