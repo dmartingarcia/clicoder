@@ -50,8 +50,8 @@ chat:
   report_label: "Informe clínico"
   report_placeholder: "Pega aquí el informe clínico del paciente…"
   char_count: "{count} caracteres · Ctrl+Enter para analizar"
-  word_count: "{count} / {max} palabras · Ctrl+Enter para analizar"
-  max_words_error: "El informe supera el límite de {max} palabras del modelo. Redúcelo antes de enviar."
+  word_count: "{count} / {max} tokens · Ctrl+Enter para analizar"
+  max_words_error: "El informe supera el límite de {max} tokens del modelo. Redúcelo antes de enviar."
   analyze_button: "Analizar informe"
   min_chars: "Mínimo {min} caracteres requeridos (faltan {remaining})"
 

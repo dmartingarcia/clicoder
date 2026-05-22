@@ -273,29 +273,30 @@ describe('ChatInterface', () => {
     });
   });
 
-  describe('max words warning', () => {
-    it('shows max_words_error when word count exceeds 1024', () => {
+  describe('max tokens warning', () => {
+    it('shows max_words_error when token count exceeds 1024', () => {
       render(<ChatInterface />);
       const textarea = screen.getByPlaceholderText('chat.report_placeholder');
-      // Generate a string with 1025 words
-      const longText = Array(1025).fill('word').join(' ');
+      // 4097 chars → ceil(4097/4) = 1025 tokens
+      const longText = 'a'.repeat(4097);
       fireEvent.change(textarea, { target: { value: longText } });
       expect(screen.getByText(/chat\.max_words_error/)).toBeInTheDocument();
     });
 
-    it('disables analyze button when word count exceeds 1024', () => {
+    it('disables analyze button when token count exceeds 1024', () => {
       render(<ChatInterface />);
       const textarea = screen.getByPlaceholderText('chat.report_placeholder');
-      const longText = Array(1025).fill('word').join(' ');
+      const longText = 'a'.repeat(4097);
       fireEvent.change(textarea, { target: { value: longText } });
       const btn = screen.getByRole('button', { name: /chat\.analyze_button/i });
       expect(btn).toBeDisabled();
     });
 
-    it('does NOT show max_words_error when word count is exactly 1024', () => {
+    it('does NOT show max_words_error when token count is exactly 1024', () => {
       render(<ChatInterface />);
       const textarea = screen.getByPlaceholderText('chat.report_placeholder');
-      const text = Array(1024).fill('word').join(' ');
+      // 4096 chars → ceil(4096/4) = 1024 tokens, not exceeding
+      const text = 'a'.repeat(4096);
       fireEvent.change(textarea, { target: { value: text } });
       expect(screen.queryByText(/chat\.max_words_error/)).not.toBeInTheDocument();
     });

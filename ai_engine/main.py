@@ -198,6 +198,10 @@ class AnalysisRequest(BaseModel):
     engine: Literal["bert", "dict", "both"] = "bert"
 
 
+class TokenCountRequest(BaseModel):
+    text: str
+
+
 # ==================== ENDPOINTS ====================
 
 
@@ -211,6 +215,19 @@ def health_check():
         "summarizer_model": summarizer.model_name if summarizer else "none",
         "summarizer_loaded": summarizer.is_loaded if summarizer else False,
     }
+
+
+@app.post("/count-tokens", summary="Contar tokens del tokenizador")
+async def count_tokens(request: TokenCountRequest):
+    if classifier is None:
+        raise HTTPException(status_code=503, detail="Modelo no cargado.")
+    enc = await asyncio.to_thread(
+        classifier.tokenizer,
+        request.text,
+        add_special_tokens=True,
+        truncation=False,
+    )
+    return {"token_count": len(enc["input_ids"])}
 
 
 @app.post(
