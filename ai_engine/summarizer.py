@@ -22,14 +22,14 @@ logger = logging.getLogger("cie10_engine")
 
 MODELS = {
     "gemma3": {
-        "repo": "bartowski/gemma-3-4b-it-GGUF",
+        "repo": "ggml-org/gemma-3-4b-it-GGUF",
         "filename": "gemma-3-4b-it-Q4_K_M.gguf",
         "display": "Gemma 3 4B IT",
         "size_gb": 2.5,
     },
     "phi4": {
-        "repo": "bartowski/Phi-4-mini-instruct-GGUF",
-        "filename": "Phi-4-mini-instruct-Q4_K_M.gguf",
+        "repo": "bartowski/microsoft_Phi-4-mini-instruct-GGUF",
+        "filename": "microsoft_Phi-4-mini-instruct-Q4_K_M.gguf",
         "display": "Phi-4 Mini Instruct",
         "size_gb": 2.4,
     },
