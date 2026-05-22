@@ -136,7 +136,20 @@ Sobre el codificador BERT se añade una cabeza de clasificación compuesta por u
 
 La selección de los códigos predichos se realiza mediante un umbral por defecto de 0,5 sobre la probabilidad. Si ningún código supera el umbral, el sistema devuelve los \(k\) códigos con mayor probabilidad para garantizar siempre una respuesta al usuario. Tanto el umbral como el valor de \(k\) son configurables en el fichero \texttt{config.json} generado durante el entrenamiento.
 
-Además del clasificador BERT, el motor incluye un clasificador de diccionario (\texttt{baseline\_dict.py}) basado en coincidencia de términos con las descripciones oficiales de los códigos CIE-10-ES, que actúa como \emph{baseline} de referencia y como fallback cuando el modelo BERT no está disponible.
+\paragraph{Clasificador de diccionario (\texttt{baseline\_dict.py}).}
+El motor de IA incluye un clasificador de diccionario que actúa como \textbf{complemento determinista} de RigoBERTa-Clinical, no como alternativa. Su función es triple: sirve de \emph{baseline} de referencia para evaluar el valor añadido del modelo neuronal, actúa de \emph{fallback} cuando el modelo BERT no está disponible en producción, y puede combinarse con las predicciones neurales a través del parámetro \texttt{engine="both"} del endpoint \texttt{POST /predict}, que devuelve las predicciones de cada motor de forma independiente con su campo identificador.
+
+El clasificador opera mediante coincidencia de patrones lematizados sobre cinco fuentes de conocimiento complementarias:
+
+\begin{enumerate}
+    \item \textbf{Descripciones oficiales CIE-10-ES} (\emph{diagnoses}): cada código y sus variantes (separadas por \texttt{|} en el catálogo) se lematiza y se compila como expresión regular con delimitadores de palabra para evitar falsos positivos por subcadena.
+    \item \textbf{Diccionario de procedimientos CIE-10-PCS} (\emph{procedures}): ídem sobre las descripciones de procedimientos, cuya co-ocurrencia con diagnósticos aporta señal correlada.
+    \item \textbf{Diccionario de sustancias y fármacos} (\emph{chemicals}): nombres de fármacos y sustancias del catálogo CIE-10-MC.
+    \item \textbf{Términos clínicos reales} (\emph{clinical}): fragmentos de texto extraídos de las anotaciones de explainabilidad del task\_X de CodiESP (el texto literal que el anotador señaló como evidencia de cada código), expandidos con sinónimos léxicos mediante los word vectors de \texttt{es\_core\_news\_lg}. Esta fuente es \emph{semi-supervisada} porque usa anotaciones del conjunto de validación.
+    \item \textbf{N-gramas discriminativos del corpus} (\emph{corpus}): secuencias de 2--5 palabras extraídas de las notas de entrenamiento con frecuencia mínima 2 y precisión mínima 0,5 respecto al bloque que las contiene.
+\end{enumerate}
+
+Antes de cualquier comparación, el texto del informe se lematiza con \texttt{es\_dep\_news\_trf} (transformer contextual) y se expanden las abreviaturas clínicas más frecuentes (\texttt{HTA} → \emph{hipertensión arterial}, \texttt{IAM} → \emph{infarto agudo de miocardio}, \texttt{EPOC} → \emph{enfermedad pulmonar obstructiva crónica}, etc.) para maximizar la cobertura léxica sin introducir falsos positivos. El resultado combinado de las cinco fuentes cubre los códigos frecuentes con recall razonable, pero con una precisión sensiblemente inferior a la del clasificador neuronal: RigoBERTa-Clinical captura relaciones semánticas y de contexto que escapan a la coincidencia léxica. Por este motivo el clasificador de diccionario es un complemento, no un sustituto del modelo neuronal.
 
 \subsubsection{Proceso de entrenamiento experimental}
 \label{sec:entrenamiento}
@@ -203,6 +216,56 @@ Las 46 corridas identificaron los factores de mayor impacto en F1-micro. La Tabl
 \end{table}
 
 Tres técnicas mostraron impacto relevante: (1) el \emph{preentrenamiento débil} sobre las descripciones CIE-10-ES y los fragmentos clínicos del task\_X de CodiEsp, que aportó entre 5 y 8 puntos de F1-micro; (2) el \emph{scheduler plateau}, que solo reduce el LR cuando el F1 se estanca en validación, evitando la convergencia prematura del schedule cosine; y (3) el \textbf{descarte de la ventana deslizante}, cuya fragmentación destruye la coherencia clínica (caída de F1-micro de 0,484 a 0,412). La mejor corrida alcanzó F1-micro = 0,551 con umbrales por clase optimizados; la configuración de producción ofrece un mejor equilibrio micro/macro, como se detalla en el Anexo~\ref{cap:AnexoH}.
+
+\paragraph{Determinación del límite de congelación y barrido de umbrales (pasos 11--18).}
+La búsqueda del número óptimo de capas a congelar estableció que freeze=20 —solo las 4 capas superiores del encoder más la cabeza clasificadora, $\sim$5\,M parámetros entrenables— es el único punto de equilibrio estable con 500 muestras. Los intentos con freeze=16 (8 capas libres, $\sim$102\,M parámetros) colapsaron de forma sistemática con todas las tasas de aprendizaje probadas ($10^{-4}$, $3\times10^{-4}$, $5\times10^{-4}$). El ratio datos/parámetros ($\sim$$5\times10^{-6}$) es demasiado bajo para estabilizar el gradiente: el modelo tiene más grados de libertad que restricciones. Esta asimetría establece un \emph{techo duro} estructural —el número de capas entrenables está limitado por el tamaño del corpus, no por la capacidad del modelo— que resultó determinante para el diseño del descongelado progresivo posterior. La combinación óptima dentro del régimen de freeze=20 fue LR\,=\,$10^{-4}$ (frente al $3\times10^{-5}$ inicial), que con pocos parámetros libres converge más rápido sin colapso.
+
+Un barrido de umbrales de decisión sobre el conjunto de validación (threshold \{0,5; 0,4; 0,3; 0,2\}) reveló que threshold=0,3 maximiza el F1-micro (0,430) porque el modelo, con BCE y pos\_weight, aprende probabilidades sistemáticamente bajas para la mayoría de códigos: un threshold conservador de 0,5 descarta demasiados positivos reales. El threshold=0,2 da el mejor F1-macro (0,124), preferible cuando el objetivo es cobertura de códigos raros a costa de precisión.
+
+\paragraph{Modelos alternativos y granularidad de código (pasos 19--20).}
+El modelo Longformer BSC-Medical (ventana 2048 tokens) fue evaluado como alternativa para eliminar la truncación del 50\,\% de los documentos. Pese a un recall superior (+5,8\,pp), el F1-micro cayó 1,4\,pp respecto a RigoBERTa-Clinical y el tiempo de entrenamiento aumentó 6,4× (70\,s/época frente a 11\,s). Los diagnósticos clave aparecen mayoritariamente en los primeros 512 tokens del informe; el contexto adicional introduce más falsos positivos que verdaderos positivos. RigoBERTa-Clinical con 512 tokens se confirmó como la mejor opción.
+
+El paso al nivel de \emph{código completo} (1767 clases, frente a 809 bloques de tres caracteres) conllevó una caída de 10\,pp en F1-micro: con 500 documentos de entrenamiento, la ratio datos/clase cae de $\sim$0,62 a $\sim$0,28. La degradación fue especialmente severa en F1-macro (0,118 → 0,050, $-$58\,\%), ya que códigos que aparecían 3 veces en train a nivel de bloque pasan a tener 1 aparición al subdividirse por subtipo. La elección de código completo para producción es correcta —el sistema clínico lo requiere— pero expone que el camino para recuperar esos 10\,pp pasa por aumentar los datos de entrenamiento, no por simplificar los objetivos.
+
+\paragraph{Pre-entrenamiento débil (pasos 21--23).}
+La escasez de datos para 1767 clases motivó un pre-entrenamiento supervisado previo al fine-tuning sobre CodiESP. El pre-entrenamiento sobre las $\sim$3.200 variantes de descripciones oficiales del diccionario CIE-10-ES aportó +10,4\,pp de F1-micro (0,327 → 0,431): el encoder aprende a asociar terminología clínica oficial con cada código antes de ver las notas reales. Añadir los 10.072 snippets clínicos del task\_X de CodiESP (fragmentos de texto real del médico anotados con su código) sumó 3,9\,pp adicionales (F1-micro=0,470) y una mejora del 51\,\% en F1-macro, porque esos snippets enseñan la jerga real (\texttt{IAM}, \texttt{SCA}, \emph{dolor centrotorácico irradiado}) que el diccionario oficial no recoge. Un experimento de ablación mostró que introducir muestras negativas en el pre-entrenamiento es contraproducente: el modelo aprende a inhibir activaciones justo cuando necesita maximizar el reconocimiento de terminología.
+
+\paragraph{Experimentos con la función de pérdida (pasos 24 y 26).}
+La Asymmetric Loss (ASL) —que reduce o elimina la contribución de los negativos fáciles al gradiente— fue evaluada con $\gamma^- \in \{2, 4\}$. Con $\gamma^-=4$ el modelo colapsó al modo \emph{predecir todo} (F1-micro\,=\,0,375 frente a 0,470 de referencia). Con $\gamma^-=2$ el resultado fue prácticamente equivalente a BCE+pos\_weight ($-$1\,pp), sin beneficio neto. Subir el cap de pos\_weight de 10 a 30 solo añadió inestabilidad en el entrenamiento inicial. La conclusión fue que el cuello de botella no es la ponderación de la función de pérdida sino la escasez de datos: con $\sim$140 códigos completamente ausentes en entrenamiento y otros $\sim$400 con 1--2 apariciones, ninguna ponderación puede compensar la falta de ejemplos.
+
+\paragraph{Técnicas de entrenamiento avanzadas y resultado final (pasos 28--32).}
+Los últimos pasos introdujeron cuatro mejoras ortogonales que se acumularon en la configuración de producción:
+
+\begin{itemize}
+    \item \textbf{ReduceLROnPlateau} (paso 28b, +0,5\,pp): el \emph{schedule} coseno reducía el LR al 9\,\% del máximo en la época 60, cuando el modelo aún mejoraba. ReduceLROnPlateau mantiene el LR alto mientras hay mejora real y solo lo reduce cuando el F1 se estanca, permitiendo al modelo alcanzar su óptimo en la época 102.
+
+    \item \textbf{Label smoothing one-sided} ($\varepsilon$=0,1, paso 29a, +0,68\,pp sobre 28b): suaviza los targets positivos de 1,0 a 0,9 pero mantiene los negativos en 0. El smoothing simétrico (0 → 0,05) colapsó el modelo al interaccionar con pos\_weight: el gradiente espúreo de los negativos suavizados superó 13× al gradiente real de los positivos. La variante one-sided elimina esa interacción y reduce el sobreajuste de confianza en épocas tardías.
+
+    \item \textbf{Progressive unfreezing} (paso 30b, unfreeze\_every=30, +0,23\,pp): a partir de la época 30 se descongelan 4 capas del encoder cada 30 épocas con LR reducido ($10^{-5}$). Las capas 16--23 —semánticas, las más próximas a la tarea clínica— aportaron +4,1\,pp tras el primer descongelado; las capas por debajo de la capa 12 contribuyeron menos de 0,2\,pp acumulados, confirmando que las representaciones de bajo nivel (sintaxis, morfología) no requieren adaptación al dominio médico.
+
+    \item \textbf{Regularizador de consistencia jerárquica} ($\lambda$=0,5, paso 32b, +0,46\,pp): CIE-10 tiene estructura de árbol explícita —el código \texttt{J18.0} implica \texttt{J18}— que el clasificador plano ignora. Se añade el término $\ell_\text{hier} = \text{ReLU}(\text{logit}_\text{hijo} - \text{logit}_\text{padre})$ a la loss BCE con factor $\lambda=0{,}5$. La penalización es asimétrica: solo actúa cuando el hijo tiene logit superior al padre, sin interferir cuando el modelo ya es consistente. Con $\lambda=0{,}5$ se obtiene la mejor F1-micro del proceso; con $\lambda=0{,}1$ el mejor F1-macro por clase (+1,44\,pp respecto a la referencia), preferible cuando el objetivo es detección de códigos raros.
+\end{itemize}
+
+La Tabla~\ref{tab:progreso_pasos} recoge la evolución acumulada desde el clasificador plano sobre códigos completos hasta la configuración final.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Progreso acumulado del clasificador (F1 en validación CodiESP, umbral global 0,3).}
+\label{tab:progreso_pasos}
+\begin{tabular}{p{0.5cm}p{7.5cm}rr}
+\hline
+\textbf{Paso} & \textbf{Técnica incorporada} & \textbf{F1-micro} & \textbf{F1-macro} \\
+\hline
+20 & Código completo sin pretrain & 0,327 & 0,050 \\
+21 & + Pretrain CIE-10 (3k descripciones) & 0,431 & 0,092 \\
+23 & + Snippets clínicos task\_X (10k) & 0,470 & 0,139 \\
+28b & + ReduceLROnPlateau & 0,475 & 0,116 \\
+30b & + Label smoothing + progressive unfreezing & 0,484 & 0,149 \\
+\textbf{32b} & \textbf{+ Consistencia jerárquica ($\lambda$=0,5)} & \textbf{0,489} & \textbf{0,152} \\
+\hline
+\end{tabular}
+\end{table}
 
 \subsubsection{Aprendizaje continuo a partir del feedback de usuarios}
 \label{sec:continuous-learning}

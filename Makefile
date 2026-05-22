@@ -131,25 +131,25 @@ shell: ## Abrir shell interactivo (pregunta por contenedor)
 # Comandos de base de datos
 backend-migrate: ## Ejecutar migraciones de Ecto
 	$(COMPOSE_CPU) up -d db
-	$(COMPOSE_CPU) run --rm --no-deps backend mix ecto.migrate
+	$(COMPOSE_CPU) run --rm backend mix ecto.migrate
 
 backend-rollback: ## Rollback última migración
 	$(COMPOSE_CPU) up -d db
-	$(COMPOSE_CPU) run --rm --no-deps backend mix ecto.rollback
+	$(COMPOSE_CPU) run --rm backend mix ecto.rollback
 
 backend-seed: backend-install ## Primera vez: create + migrate + eventstore + seeds + CIE-10
 	$(COMPOSE_CPU) up -d db
-	$(COMPOSE_CPU) run --rm --no-deps backend mix ecto.create || true
-	$(COMPOSE_CPU) run --rm --no-deps backend mix ecto.migrate
-	$(COMPOSE_CPU) run --rm --no-deps backend mix event_store.create || true
-	$(COMPOSE_CPU) run --rm --no-deps backend mix event_store.init || true
-	$(COMPOSE_CPU) run --rm --no-deps backend mix run priv/repo/seeds.exs
-	$(COMPOSE_CPU) run --rm --no-deps backend mix cie10.import
+	$(COMPOSE_CPU) run --rm backend mix ecto.create || true
+	$(COMPOSE_CPU) run --rm backend mix ecto.migrate
+	$(COMPOSE_CPU) run --rm backend mix event_store.create || true
+	$(COMPOSE_CPU) run --rm backend mix event_store.init || true
+	$(COMPOSE_CPU) run --rm backend mix run priv/repo/seeds.exs
+	$(COMPOSE_CPU) run --rm backend mix cie10.import
 	@echo "$(GREEN)Usuario de prueba: admin@test.com / password123$(NC)"
 
 db-reset: ## Reset completo: drop + backend-seed
 	$(COMPOSE_CPU) up -d db
-	$(COMPOSE_CPU) run --rm --no-deps backend mix ecto.drop || true
+	$(COMPOSE_CPU) run --rm backend mix ecto.drop || true
 	$(MAKE) backend-seed
 
 # Testing
@@ -165,10 +165,10 @@ frontend-test: ## Ejecutar tests del frontend
 # Producción
 # Instalación de dependencias
 backend-install: ## Instalar dependencias del backend
-	$(COMPOSE_CPU) run --rm --no-deps backend mix deps.get
+	$(COMPOSE_CPU) run --rm backend mix deps.get
 
 frontend-install: ## Instalar dependencias del frontend
-	$(COMPOSE_CPU) run --rm --no-deps frontend npm install
+	$(COMPOSE_CPU) run --rm frontend npm install
 
 ai-install: ## Instalar dependencias del AI engine
 	$(AI) pip install -r requirements.txt
@@ -295,6 +295,22 @@ ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 (clinical+corpus+comb
 		$(if $(SOURCES),--sources $(SOURCES),) \
 		$(if $(MIN_LEN),--min_phrase_len $(MIN_LEN),) \
 		$(if $(NO_ABBREVS),--no_expand_abbrevs,)
+
+ai-augment: ## Back-translation. Vars: BACKEND=azure|nllb PIVOT_LANGS="EN FR" DRY_RUN=1 RESUME=1
+	@echo "$(BLUE)Aumentando datos con back-translation (backend: $(or $(BACKEND),nllb))...$(NC)"
+	$(COMPOSE) run --rm \
+		-e AZURE_TRANSLATOR_KEY=$${AZURE_TRANSLATOR_KEY} \
+		-e AZURE_TRANSLATOR_REGION=$${AZURE_TRANSLATOR_REGION:-global} \
+		ai_engine python augment.py \
+		--backend     $(or $(BACKEND),nllb) \
+		--input_file  /data/codiesp_csvs/codiesp_D_source_train.csv \
+		--output_file /data/codiesp_csvs/codiesp_D_source_train_augmented.csv \
+		--pivot_langs $(or $(PIVOT_LANGS),EN) \
+		$(if $(NLLB_MODEL),--nllb_model $(NLLB_MODEL),) \
+		$(if $(NLLB_BATCH),--nllb_batch $(NLLB_BATCH),) \
+		$(if $(DRY_RUN),--dry_run,) \
+		$(if $(RESUME),--resume,)
+	@echo "$(GREEN)Datos guardados en /data/codiesp_csvs/codiesp_D_source_train_augmented.csv$(NC)"
 
 ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requiere HF_TOKEN en .env)
 	@echo "$(BLUE)Entrenando clasificador CIE-10$(NC)"
