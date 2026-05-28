@@ -12,6 +12,9 @@
 **/.pytest_cache
 .env
 
+# Logs y temporales del proyecto
+/tmp/*.log
+
 # Training artifacts
 training/bert-classifier/aclImdb*
 training/bert-classifier/data

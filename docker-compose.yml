@@ -82,7 +82,7 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - ./ai_engine:/app
-      - ./training/csv_import_scripts:/data:ro
+      - ./training/csv_import_scripts:/data
       - ./.huggingface_cache:/root/.cache/huggingface
 
   # Backend: Elixir Phoenix + Commanded
