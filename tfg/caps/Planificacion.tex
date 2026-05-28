@@ -93,7 +93,9 @@ Las herramientas y tecnologías empleadas en el proyecto se agrupan en las sigui
 
 \subsection{Control de versiones}
 
-El repositorio Git del proyecto~\cite{cie10repo2026} sigue el esquema de ramas habitual para este tipo de proyectos: una rama principal (\texttt{main}) que siempre contiene código funcional, además de las ramas de trabajo (\texttt{feature branches}) para el desarrollo de cada funcionalidad, que se van integrando en la rama principal una vez estan acabadas y validadas.
+El repositorio Git del proyecto~\cite{cie10repo2026} sigue el esquema de ramas habitual para este tipo de proyectos: una rama principal (\texttt{main}) que siempre contiene código funcional, además de las ramas de trabajo (\texttt{feature branches}) para el desarrollo de cada funcionalidad, que se van integrando en la rama principal una vez están acabadas y validadas.
+
+Al tratarse de un proyecto unipersonal, la integración de las ramas de trabajo se realiza mediante \textbf{fast-forward merge} —sin \emph{pull requests} ni \emph{merge commits}—. Este flujo simplificado es apropiado para un único desarrollador por varias razones: el historial resultante es lineal y fácil de leer (\texttt{git log} muestra los cambios en orden cronológico sin bifurcaciones artificiales), se evita el ruido de los commits de fusión automáticos (\texttt{Merge branch 'feature/X' into main}) que no aportan información, y la revisión de código —necesaria en equipos para coordinar el trabajo— se realiza directamente durante el desarrollo. El uso de \emph{pull requests} en un proyecto unipersonal añadiría fricción sin beneficio real, ya que su función principal es facilitar la revisión entre pares, el control de acceso a la rama principal y la discusión asíncrona en equipos distribuidos.
 
 Los mensajes de commit siguen el estándar \emph{Conventional Commits}, validado automáticamente mediante el \emph{hook} de pre-commit de Husky y commitlint. Este estándar impone un formato estructurado (\texttt{tipo(ámbito): descripción}) que facilita la lectura del historial y la generación automática de notas de versión.
 
