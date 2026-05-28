@@ -267,6 +267,27 @@ La Tabla~\ref{tab:progreso_pasos} recoge la evolución acumulada desde el clasif
 \end{tabular}
 \end{table}
 
+\subsubsection{Aumentación de datos mediante retrotraducción}
+\label{sec:backtranslation}
+
+El análisis de los experimentos anteriores reveló que la limitación principal no es la arquitectura ni la función de pérdida, sino la escasez de datos: con 500 documentos y 1767 clases, unos 140 códigos no aparecen en ningún ejemplo de entrenamiento y otros 400 cuentan con una o dos apariciones. Ninguna técnica de regularización puede compensar la ausencia total de señal de entrenamiento para una clase.
+
+La solución natural es generar datos sintéticos adicionales sin necesidad de anotación manual. La técnica empleada es la \textbf{retrotraducción} (\emph{back-translation})~\cite{sennrich2016improving}: cada nota clínica se traduce del español a un idioma pivote (inglés) y el resultado se vuelve a traducir al español. El texto final es semánticamente equivalente al original pero con diferente elección léxica y estructura sintáctica, actuando como una paráfrasis automática. Las etiquetas CIE-10 permanecen inalteradas porque la semántica clínica se conserva a través del pivote.
+
+\paragraph{Impacto esperado.}
+Con un único pivote EN, el corpus de entrenamiento pasa de 500 a 1000 documentos. La mejora se espera principalmente en:
+
+\begin{itemize}
+  \item \textbf{Códigos raros} (1--2 apariciones): se duplican sus ejemplos de entrenamiento, reduciendo el sobreajuste por clase.
+  \item \textbf{Robustez léxica}: el modelo deja de depender de formulaciones concretas del corpus, ya que aprende la misma etiqueta asociada a múltiples expresiones distintas.
+  \item \textbf{F1-macro}: la métrica más sensible a las clases raras es la que más debería beneficiarse.
+\end{itemize}
+
+\paragraph{Implementación.}
+Se diseñó el script \texttt{ai\_engine/augment.py} con dos \emph{backends} intercambiables: NLLB-200~\cite{costa-jussa2022nllb200} (modelo local de código abierto de Meta, sin coste externo) y Azure Translator (servicio cloud con nivel gratuito de 2M caracteres/mes sin tarjeta de crédito). El script incluye checkpoint incremental para reanudar traducciones interrumpidas. La integración con el flujo de entrenamiento se realiza mediante el target \texttt{make ai-augment} del \texttt{Makefile} y el parámetro \texttt{--train\_file} de \texttt{train.py}.
+
+El proceso de configuración, los límites del servicio gratuito y los comandos de uso se documentan en el Anexo~\ref{cap:AnexoL}.
+
 \subsubsection{Aprendizaje continuo a partir del feedback de usuarios}
 \label{sec:continuous-learning}
 
