@@ -1,0 +1,204 @@
+\chapter{Aumentación de datos mediante retrotraducción}
+\label{cap:AnexoL}
+
+Este anexo describe la técnica de \emph{back-translation} (retrotraducción) aplicada al corpus CodiEsp para paliar la escasez de datos de entrenamiento, la motivación estadística que la justifica, el servicio externo empleado y los comandos necesarios para reproducirla.
+
+% ---------------------------------------------------------------------------
+\section{Motivación: el problema de la escasez de datos}
+% ---------------------------------------------------------------------------
+
+El clasificador CIE-10 del proyecto debe asignar etiquetas de un vocabulario de \textbf{1767 códigos} a notas clínicas en español. El conjunto de entrenamiento de CodiEsp cuenta únicamente con \textbf{500 documentos}. La ratio documentos/clases es de $\approx 0{,}28$, lo que significa que la mayoría de códigos aparece en muy pocas notas de entrenamiento.
+
+Esta situación genera dos patologías complementarias:
+
+\begin{itemize}
+  \item \textbf{Subajuste por clase minoritaria.} Los códigos que aparecen en dos o tres documentos no proporcionan señal estadística suficiente para que el modelo aprenda sus representaciones.
+  \item \textbf{Sobreajuste global.} Con 500 ejemplos y un codificador de 24 capas (560 M de parámetros), el modelo tiende a memorizar el corpus en lugar de generalizar.
+\end{itemize}
+
+La técnica habitual para abordar la escasez de datos en NLP cuando no se dispone de más datos anotados es la \textbf{aumentación de datos}: generar nuevas muestras sintéticas que preserven la etiqueta original pero aporten variedad léxica y sintáctica.
+
+% ---------------------------------------------------------------------------
+\section{Back-translation como aumentación}
+% ---------------------------------------------------------------------------
+
+La retrotraducción es el método de aumentación más consolidado en NLP~\cite{sennrich2016improving}. El procedimiento es:
+
+\begin{enumerate}
+  \item Traducir el texto original del español a un idioma pivote (p.~ej., inglés).
+  \item Traducir el resultado de vuelta al español.
+\end{enumerate}
+
+El texto obtenido es semánticamente equivalente al original, pero con diferente elección de palabras, orden de constituyentes y estructuras sintácticas. Las etiquetas CIE-10 permanecen inalteradas porque la semántica clínica se conserva a través del pivote.
+
+\subsection{Por qué funciona}
+
+Desde la perspectiva del aprendizaje estadístico, añadir ejemplos retrotraducidos equivale a aplicar una forma de \emph{data augmentation} que:
+
+\begin{itemize}
+  \item \textbf{Amplía la distribución de entrada.} El modelo ve la misma nota expresada con diferentes frases, reduciendo la dependencia hacia formulaciones concretas presentes solo en el entrenamiento.
+  \item \textbf{Reduce el sobreajuste.} Al duplicar el tamaño del dataset con variantes distintas, la ratio parámetros/ejemplos mejora sin necesidad de reducir la capacidad del modelo.
+  \item \textbf{Beneficia especialmente a las clases minoritarias.} Cada código raro que aparece en un documento pasa a aparecer también en su versión retrotraducida, duplicando la señal de entrenamiento para esa clase.
+\end{itemize}
+
+Con pivot EN el corpus de entrenamiento pasa de \textbf{500 a 1000 documentos} sin coste de anotación.
+
+% ---------------------------------------------------------------------------
+\section{Servicio empleado: Azure Translator}
+% ---------------------------------------------------------------------------
+
+Se evaluaron tres alternativas para la traducción:
+
+\begin{description}
+  \item[NLLB-200 (local).] Modelo de código abierto de Meta con soporte para 200 idiomas. No requiere API ni coste externo; puede ejecutarse directamente en la GPU del entorno de entrenamiento. Desventaja: calidad inferior a los servicios cloud en textos técnicos y médicos.
+  \item[DeepL.] API de alta calidad para lenguas europeas. Inconveniente: el nivel gratuito exige tarjeta de crédito como garantía, lo que lo descarta para entornos donde no se quiere vincular un método de pago.
+  \item[Azure Translator.] Servicio de Microsoft Cognitive Services. El nivel \textbf{F0 (Free)} ofrece 2 millones de caracteres al mes \emph{sin tarjeta de crédito} y sin compromiso de permanencia. Cuando se supera el límite mensual el servicio bloquea las peticiones hasta el siguiente ciclo; no genera cargo adicional.
+\end{description}
+
+Se eligió Azure Translator por la combinación de calidad y ausencia de requisito de pago.
+
+\subsection{Límites del nivel gratuito F0}
+
+\begin{table}[h]
+\centering
+\caption{Características del nivel gratuito F0 de Azure Translator.}
+\label{tab:azure-f0}
+\begin{tabular}{ll}
+\hline
+\textbf{Parámetro} & \textbf{Valor} \\
+\hline
+Caracteres por mes         & 2.000.000 \\
+Tarjeta de crédito         & No requerida \\
+Comportamiento al agotar   & Bloqueo hasta el siguiente mes \\
+Cargo por exceso           & Ninguno \\
+Idiomas disponibles        & 130+ \\
+Latencia típica            & 200--800 ms por lote \\
+\hline
+\end{tabular}
+\end{table}
+
+El corpus CodiEsp de entrenamiento contiene \textbf{1.158.623 caracteres}. Con pivot EN (ES→EN→ES), cada carácter se traduce dos veces, lo que produce un consumo estimado de \textbf{2.317.246 caracteres}: un 16\,\% por encima del límite mensual. Las dos estrategias para gestionarlo son:
+
+\begin{itemize}
+  \item \textbf{Dos meses, con checkpoint.} El script guarda automáticamente el progreso en un fichero \texttt{.ckpt.json}; se lanza en el primer mes, se detiene al agotarse el crédito, y se reanuda el siguiente mes con \texttt{--resume}.
+  \item \textbf{Segundo recurso F0.} Azure permite crear múltiples recursos Translator F0 en diferentes regiones bajo la misma cuenta, cada uno con su cuota independiente.
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+\section{Implementación técnica}
+% ---------------------------------------------------------------------------
+
+El script \texttt{ai\_engine/augment.py} encapsula la lógica completa de aumentación con dos \emph{backends} intercambiables:
+
+\begin{description}
+  \item[\texttt{NLLBTranslator}] Carga el modelo \texttt{facebook/nllb-200-distilled-1.3B} en GPU con precisión FP16. Traduce en lotes de hasta \texttt{nllb\_batch} textos.
+  \item[\texttt{AzureTranslator}] Llama a la API REST \texttt{api.cognitive.microsofttranslator.com} en lotes de hasta 100 textos. Lee la clave y la región desde las variables de entorno \texttt{AZURE\_TRANSLATOR\_KEY} y \texttt{AZURE\_TRANSLATOR\_REGION}.
+\end{description}
+
+El flujo de retrotraducción divide los textos largos en párrafos si superan el límite del modelo (\textasciitilde 1800 caracteres para NLLB), traduce hacia el pivote y de vuelta, y une los fragmentos con saltos de línea. El resultado se añade al CSV original con el sufijo \texttt{\_bt\_en} en el identificador de documento.
+
+El checkpoint incremental persiste en \texttt{.ckpt.json} junto al fichero de salida y se elimina automáticamente al completar la ejecución. Esto permite interrumpir y reanudar la augmentación sin retraducir notas ya procesadas.
+
+% ---------------------------------------------------------------------------
+\section{Configuración y uso}
+% ---------------------------------------------------------------------------
+
+La documentación oficial de Azure Translator, que incluye referencia completa de la API REST, lista de idiomas soportados y guías de inicio rápido, está disponible en:
+
+\begin{center}
+\url{https://learn.microsoft.com/es-es/azure/ai-services/translator/text-translation/overview}
+\end{center}
+
+\subsection{Obtención de la clave Azure}
+
+\begin{enumerate}
+  \item Crear una cuenta gratuita en \url{https://portal.azure.com} (no requiere tarjeta de crédito).
+  \item En la barra de búsqueda del portal, escribir \textbf{Translator} y seleccionar el servicio.
+  \item Hacer clic en \textbf{Create} y rellenar el formulario:
+    \begin{itemize}
+      \item \textit{Resource group}: crear uno nuevo, p.~ej. \texttt{cie10-rg}.
+      \item \textit{Region}: la más cercana geográficamente, p.~ej. \texttt{West Europe}.
+      \item \textit{Name}: nombre libre, p.~ej. \texttt{cie10-translator}.
+      \item \textit{Pricing tier}: seleccionar \textbf{F0 (Free: 2M chars/month)}.
+    \end{itemize}
+  \item Hacer clic en \textbf{Review + create} $\rightarrow$ \textbf{Create} y esperar $\sim$30 segundos.
+  \item Navegar al recurso creado $\rightarrow$ sidebar \textbf{Keys and Endpoint}.
+  \item Copiar \textbf{KEY 1} y anotar el valor del campo \textbf{Location/Region} (código en minúsculas, p.~ej. \texttt{westeurope}).
+\end{enumerate}
+
+\subsection{Variables de entorno}
+
+Añadir al fichero \texttt{.env} del proyecto:
+
+\begin{lstlisting}[language=bash]
+AZURE_TRANSLATOR_KEY=<clave_obtenida_en_el_portal>
+AZURE_TRANSLATOR_REGION=westeurope   # West Europe; ajustar segun la region elegida al crear el recurso
+PIVOT_LANGS=EN
+\end{lstlisting}
+
+\subsection{Comandos}
+
+Antes de lanzar cualquier traducción, verificar el consumo estimado con \texttt{--dry\_run}:
+
+\begin{lstlisting}[language=bash]
+set -a && source .env && set +a && TRANS_BACKEND=azure make ai-augment DRY_RUN=1
+\end{lstlisting}
+
+El comando completo de producción carga las variables del fichero \texttt{.env}, lanza la aumentación con Azure y guarda el log en \texttt{/tmp/augment\_azure.log} para poder consultarlo si el proceso corre en segundo plano:
+
+\begin{lstlisting}[language=bash]
+set -a && source .env && set +a && \
+  TRANS_BACKEND=azure make ai-augment RESUME=1 2>&1 | tee -a tmp/augment_azure.log
+\end{lstlisting}
+
+La flag \texttt{RESUME=1} activa el checkpoint incremental desde el inicio. Si el proceso se interrumpe (corte de red, agotamiento del free tier, reinicio del sistema), basta con relanzar exactamente el mismo comando: el script cuenta las filas ya guardadas en el CSV de salida y retoma desde donde lo dejó sin retraducir nada.
+
+\begin{lstlisting}[language=bash]
+# Usar NLLB-200 local si no se dispone de clave Azure
+make ai-augment RESUME=1 2>&1 | tee -a tmp/augment_nllb.log
+\end{lstlisting}
+
+El progreso puede seguirse en tiempo real con:
+
+\begin{lstlisting}[language=bash]
+tail -f tmp/augment_azure.log
+\end{lstlisting}
+
+\subsection{Ficheros de salida}
+
+Cada combinación de backend y lengua pivote genera un fichero CSV independiente, derivado del nombre base especificado en \texttt{--output\_file}:
+
+\begin{center}
+\texttt{<base>\_<backend>\_<pivot>.csv}
+\end{center}
+
+Por ejemplo, con el fichero base \texttt{codiesp\_D\_source\_train\_augmented.csv}:
+
+\begin{table}[h]
+\centering
+\caption{Ficheros generados por combinación de backend y pivote.}
+\label{tab:augment-files}
+\begin{tabular}{lll}
+\hline
+\textbf{Fichero} & \textbf{Backend} & \textbf{Pivote} \\
+\hline
+\texttt{..\_azure\_en.csv} & Azure Translator & Inglés \\
+\texttt{..\_azure\_fr.csv} & Azure Translator & Francés \\
+\texttt{..\_azure\_de.csv} & Azure Translator & Alemán \\
+\texttt{..\_nllb\_en.csv}  & NLLB-200 local   & Inglés \\
+\hline
+\end{tabular}
+\end{table}
+
+Cada fichero contiene las 500 notas originales más las 500 variantes retrotraducidas con ese pivote concreto, lo que permite combinarlos de forma modular. El resume funciona de forma independiente por fichero: si se interrumpe la generación de \texttt{azure\_en}, el reinicio no afecta al estado de \texttt{azure\_fr}.
+
+\subsection{Entrenamiento con datos aumentados}
+
+Una vez generado el CSV aumentado, entrenar con él requiere únicamente cambiar el parámetro \texttt{--train\_file}:
+
+\begin{lstlisting}[language=bash]
+TRAIN_FILE=/data/codiesp_csvs/codiesp_D_source_train_augmented_azure_en.csv \
+  make ai-train-gpu
+\end{lstlisting}
+
+El tamaño de dataset se dobla (500 → 1000 documentos) sin modificar ningún otro hiperparámetro. Se espera que la mejora sea más pronunciada en los códigos con menos de cinco apariciones en el corpus original, que son los que más sufren la escasez de datos.
