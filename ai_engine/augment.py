@@ -20,7 +20,6 @@ Uso:
 
 import argparse
 import csv
-import json
 import os
 import sys
 from pathlib import Path
@@ -105,28 +104,39 @@ class AzureTranslator:
         self.region = region
         print(f"[azure] Translator listo (region: {region})")
 
+    def _post(self, body: list[dict], src_lang: str, tgt_lang: str):
+        import time
+        params  = {"api-version": "3.0", "from": src_lang, "to": tgt_lang}
+        headers = {
+            "Ocp-Apim-Subscription-Key":    self.key,
+            "Ocp-Apim-Subscription-Region": self.region,
+            "Content-Type": "application/json",
+        }
+        retries = 0
+        while True:
+            resp = self._requests.post(
+                AZURE_ENDPOINT, params=params, headers=headers,
+                json=body, timeout=60,
+            )
+            if resp.status_code == 429:
+                retry_after = int(resp.headers.get("Retry-After", 0))
+                wait = retry_after if retry_after > 0 else 10
+                retries += 1
+                for remaining in range(wait, 0, -1):
+                    print(f"\r[azure] 429 rate-limit (retry #{retries}) — {remaining:2d}s…  ", end="", flush=True)
+                    time.sleep(1)
+                print(f"\r[azure] 429 rate-limit (retry #{retries}) — reintentando…          ")
+                continue
+            retries = 0
+            resp.raise_for_status()
+            return resp.json()
+
     def translate(self, texts: list[str], src_lang: str, tgt_lang: str) -> list[str]:
         results = []
         for i in range(0, len(texts), AZURE_BATCH):
             batch = texts[i : i + AZURE_BATCH]
             body  = [{"text": t} for t in batch]
-            resp  = self._requests.post(
-                AZURE_ENDPOINT,
-                params={
-                    "api-version": "3.0",
-                    "from": src_lang,
-                    "to":   tgt_lang,
-                },
-                headers={
-                    "Ocp-Apim-Subscription-Key":    self.key,
-                    "Ocp-Apim-Subscription-Region": self.region,
-                    "Content-Type": "application/json",
-                },
-                json=body,
-                timeout=60,
-            )
-            resp.raise_for_status()
-            for item in resp.json():
+            for item in self._post(body, src_lang, tgt_lang):
                 results.append(item["translations"][0]["text"])
         return results
 
@@ -177,12 +187,6 @@ def _read_csv(path: str) -> tuple[list[str], list[dict]]:
     return list(reader.fieldnames or []), rows
 
 
-def _id_col(fieldnames: list[str]) -> str:
-    for c in ("filename", "doc_id", "id", "file"):
-        if c in fieldnames:
-            return c
-    return fieldnames[0]
-
 
 def _write_csv(path: str, fieldnames: list[str], rows: list[dict]) -> None:
     with open(path, "w", newline="", encoding="utf-8") as f:
@@ -191,12 +195,14 @@ def _write_csv(path: str, fieldnames: list[str], rows: list[dict]) -> None:
         w.writerows(rows)
 
 
-def _load_ckpt(path: Path) -> dict:
-    return json.loads(path.read_text()) if path.exists() else {}
+def _append_row(path: str, fieldnames: list[str], row: dict) -> None:
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        csv.DictWriter(f, fieldnames=fieldnames).writerow(row)
 
 
-def _save_ckpt(path: Path, data: dict) -> None:
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+def _count_rows(path: str) -> int:
+    _, rows = _read_csv(path)
+    return len(rows)
 
 
 # ---------------------------------------------------------------------------
@@ -228,7 +234,6 @@ def main() -> None:
     args = parser.parse_args()
 
     fieldnames, rows = _read_csv(args.input_file)
-    id_col = _id_col(fieldnames)
     total_chars = sum(len(r.get("text", "")) for r in rows)
 
     print(f"[augment] backend: {args.backend} | {len(rows)} notas | {total_chars:,} chars | pivots: {args.pivot_langs}")
@@ -236,9 +241,8 @@ def main() -> None:
           f"→ dataset total: {len(rows) * (1 + len(args.pivot_langs))} notas")
 
     if args.backend == "azure":
-        azure_chars = total_chars * len(args.pivot_langs) * 2  # fwd + bwd
-        print(f"[augment] Azure chars estimados: {azure_chars:,} "
-              f"(free tier: 2,000,000/mes)")
+        azure_chars = total_chars * len(args.pivot_langs) * 2
+        print(f"[augment] Azure chars estimados: {azure_chars:,} (free tier: 2,000,000/mes)")
 
     if args.dry_run:
         print("[augment] --dry_run: sin traducción. Saliendo.")
@@ -246,52 +250,71 @@ def main() -> None:
 
     # Inicializar backend
     if args.backend == "nllb":
-        translator   = NLLBTranslator(args.nllb_model, batch_size=args.nllb_batch)
+        translator     = NLLBTranslator(args.nllb_model, batch_size=args.nllb_batch)
         back_translate = lambda text, pivot: back_translate_nllb(translator, text, pivot)
     else:
-        translator   = AzureTranslator(args.azure_key, args.azure_region)
+        translator     = AzureTranslator(args.azure_key, args.azure_region)
         back_translate = lambda text, pivot: back_translate_azure(translator, text, pivot)
 
-    ckpt_path  = Path(args.output_file).with_suffix(".ckpt.json")
-    checkpoint = _load_ckpt(ckpt_path) if args.resume else {}
+    base   = Path(args.output_file)
+    stem   = base.stem   # e.g. codiesp_D_source_train_augmented
+    suffix = base.suffix  # .csv
+    parent = base.parent
 
-    augmented: list[dict] = []
     total = len(rows)
 
-    for i, row in enumerate(rows, 1):
-        doc_id = row.get(id_col, f"row_{i}")
-        text   = row.get("text", "")
-        if not text.strip():
-            continue
+    for pivot in args.pivot_langs:
+        out_path = parent / f"{stem}_{args.backend}_{pivot.lower()}{suffix}"
 
-        for pivot in args.pivot_langs:
-            aug_id = f"{doc_id}_bt_{pivot.lower()}"
+        if args.resume and out_path.exists():
+            already_done = _count_rows(str(out_path)) - len(rows)
+            print(f"\n[augment] pivot={pivot} → {out_path.name} | resume: {already_done} traducciones ya guardadas")
+        else:
+            _write_csv(str(out_path), fieldnames, rows)
+            already_done = 0
+            print(f"\n[augment] pivot={pivot} → {out_path.name}")
 
-            if aug_id in checkpoint:
-                aug_text = checkpoint[aug_id]
-                print(f"[{i}/{total}] {aug_id} (checkpoint)")
-            else:
-                try:
-                    aug_text = back_translate(text, pivot)
-                except Exception as e:
-                    print(f"[{i}/{total}] {aug_id} ERROR: {e}", file=sys.stderr)
-                    continue
+        n_done    = 0
+        char_diffs: list[int] = []
+        word_diffs: list[int] = []
 
-                checkpoint[aug_id] = aug_text
-                _save_ckpt(ckpt_path, checkpoint)
-                print(f"[{i}/{total}] {aug_id} ({len(text)} → {len(aug_text)} chars)")
+        for i, row in enumerate(rows, 1):
+            text = row.get("text", "")
+            if not text.strip():
+                continue
+
+            if n_done < already_done:
+                n_done += 1
+                print(f"[{i}/{total}] (ya procesado)")
+                continue
+
+            try:
+                aug_text = back_translate(text, pivot)
+            except Exception as e:
+                print(f"[{i}/{total}] ERROR: {e}", file=sys.stderr)
+                continue
 
             aug_row         = dict(row)
-            aug_row[id_col] = aug_id
             aug_row["text"] = aug_text
-            augmented.append(aug_row)
+            _append_row(str(out_path), fieldnames, aug_row)
+            n_done += 1
 
-    _write_csv(args.output_file, fieldnames, rows + augmented)
-    print(f"\n[augment] {len(rows)} originales + {len(augmented)} aumentadas "
-          f"= {len(rows) + len(augmented)} filas → {args.output_file}")
+            delta_c = len(aug_text) - len(text)
+            delta_w = len(aug_text.split()) - len(text.split())
+            char_diffs.append(delta_c)
+            word_diffs.append(delta_w)
+            print(f"[{i}/{total}] chars: {len(text)}→{len(aug_text)} ({delta_c:+d})  "
+                  f"palabras: {len(text.split())}→{len(aug_text.split())} ({delta_w:+d})")
 
-    if ckpt_path.exists():
-        ckpt_path.unlink()
+        print(f"[augment] {len(rows)} originales + {n_done} aumentadas "
+              f"= {len(rows) + n_done} filas → {out_path.name}")
+
+        if char_diffs:
+            avg_dc = sum(char_diffs) / len(char_diffs)
+            avg_dw = sum(word_diffs) / len(word_diffs)
+            changed = sum(1 for d in char_diffs if d != 0)
+            print(f"[augment] Δchars media: {avg_dc:+.1f}  |  Δpalabras media: {avg_dw:+.1f}  |  "
+                  f"notas con cambio: {changed}/{len(char_diffs)} ({100*changed/len(char_diffs):.1f}%)")
 
 
 if __name__ == "__main__":

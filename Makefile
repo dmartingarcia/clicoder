@@ -296,13 +296,13 @@ ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 (clinical+corpus+comb
 		$(if $(MIN_LEN),--min_phrase_len $(MIN_LEN),) \
 		$(if $(NO_ABBREVS),--no_expand_abbrevs,)
 
-ai-augment: ## Back-translation. Vars: BACKEND=azure|nllb PIVOT_LANGS="EN FR" DRY_RUN=1 RESUME=1
-	@echo "$(BLUE)Aumentando datos con back-translation (backend: $(or $(BACKEND),nllb))...$(NC)"
+ai-augment: ## Back-translation. Vars: TRANS_BACKEND=azure|nllb PIVOT_LANGS="EN FR" DRY_RUN=1 RESUME=1
+	@echo "$(BLUE)Aumentando datos con back-translation (backend: $(or $(TRANS_BACKEND),nllb))...$(NC)"
 	$(COMPOSE) run --rm \
 		-e AZURE_TRANSLATOR_KEY=$${AZURE_TRANSLATOR_KEY} \
 		-e AZURE_TRANSLATOR_REGION=$${AZURE_TRANSLATOR_REGION:-global} \
 		ai_engine python augment.py \
-		--backend     $(or $(BACKEND),nllb) \
+		--backend     $(or $(TRANS_BACKEND),nllb) \
 		--input_file  /data/codiesp_csvs/codiesp_D_source_train.csv \
 		--output_file /data/codiesp_csvs/codiesp_D_source_train_augmented.csv \
 		--pivot_langs $(or $(PIVOT_LANGS),EN) \
