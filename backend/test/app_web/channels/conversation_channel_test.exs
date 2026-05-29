@@ -240,5 +240,174 @@ defmodule AppWeb.ConversationChannelTest do
 
       assert_reply ref, :ok, %{suggestion_id: _}
     end
+
+    test "returns error when conversation does not exist" do
+      user = user_fixture()
+      socket = connect_socket(user)
+      phantom_id = UUID.uuid4()
+
+      # Join with a UUID that has no ConversationProjection row yet, so Commanded
+      # creates it. We then manually remove the projection row to simulate a
+      # missing conversation for the suggest_code handler.
+      {:ok, _reply, joined_socket} =
+        subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{phantom_id}")
+
+      # Delete the projection row so the handler cannot find it.
+      import Ecto.Query, only: [from: 2]
+
+      App.Repo.delete_all(
+        from(c in App.Projections.ConversationProjection,
+          where: c.conversation_id == ^phantom_id
+        )
+      )
+
+      ref =
+        push(joined_socket, "suggest_code", %{
+          "selected_text" => "diabetes",
+          "suggested_code" => "E11"
+        })
+
+      assert_reply ref, :error, %{reason: "conversation not found"}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # handle_in("send_message", ...)
+  # ---------------------------------------------------------------------------
+
+  describe "handle_in send_message" do
+    setup do
+      user = user_fixture()
+      # Join with a fresh UUID so StartConversation is dispatched and the
+      # Commanded aggregate is initialised before we push commands to it.
+      new_id = UUID.uuid4()
+      socket = connect_socket(user)
+
+      {:ok, _reply, joined_socket} =
+        subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{new_id}")
+
+      %{socket: joined_socket, user: user}
+    end
+
+    test "returns {:ok, %{message_id: _}} with a binary message_id", %{socket: socket} do
+      ref = push(socket, "send_message", %{"content" => "Hola, tengo fiebre."})
+
+      assert_reply ref, :ok, %{message_id: message_id}
+      assert is_binary(message_id)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # handle_in("analyze_report", ...)
+  # ---------------------------------------------------------------------------
+
+  describe "handle_in analyze_report" do
+    setup do
+      user = user_fixture()
+      new_id = UUID.uuid4()
+      socket = connect_socket(user)
+
+      {:ok, _reply, joined_socket} =
+        subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{new_id}")
+
+      %{socket: joined_socket, user: user}
+    end
+
+    test "returns {:ok, %{status: 'analysis_started'}}", %{socket: socket} do
+      ref =
+        push(socket, "analyze_report", %{
+          "report_text" => "Paciente con hipertensión arterial y diabetes tipo 2."
+        })
+
+      assert_reply ref, :ok, %{status: "analysis_started"}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # handle_in("validate_code", ...)
+  # ---------------------------------------------------------------------------
+
+  # Poll until the ConversationProjection row exists (the Commanded projector
+  # writes it asynchronously after join). Gives up after ~500 ms.
+  defp await_conversation_projection(conversation_id, retries \\ 10) do
+    case App.Repo.get_by(App.Projections.ConversationProjection, conversation_id: conversation_id) do
+      nil when retries > 0 ->
+        Process.sleep(50)
+        await_conversation_projection(conversation_id, retries - 1)
+
+      nil ->
+        raise "ConversationProjection never appeared for #{conversation_id}"
+
+      conv ->
+        conv
+    end
+  end
+
+  # Start a conversation via the channel (which initialises the Commanded
+  # aggregate), wait for the projection row to appear, insert a predicted code,
+  # then RE-join using the *existing* conversation path (no extra command
+  # dispatch). Returns {joined_socket, code}.
+  defp setup_conversation_with_code(user, code_attrs \\ %{}) do
+    new_id = UUID.uuid4()
+    socket = connect_socket(user)
+
+    # First join: triggers StartConversation, initialises the aggregate.
+    {:ok, _reply, _tmp_socket} =
+      subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{new_id}")
+
+    # Wait for projector to write the ConversationProjection row.
+    conv = await_conversation_projection(new_id)
+
+    # Insert predicted code directly so the projector can find it later.
+    code = predicted_code_fixture(conv, Map.merge(%{status: "pending"}, code_attrs))
+
+    # Second join: existing conversation path, no extra command dispatched.
+    socket2 = connect_socket(user)
+
+    {:ok, _reply2, joined_socket} =
+      subscribe_and_join(socket2, AppWeb.ConversationChannel, "conversation:#{new_id}")
+
+    {joined_socket, code}
+  end
+
+  describe "handle_in validate_code" do
+    setup do
+      user = user_fixture()
+      {socket, code} = setup_conversation_with_code(user, %{cie10_code: "I10"})
+      %{socket: socket, user: user, code: code}
+    end
+
+    test "returns {:ok, %{status: 'validated'}}", %{socket: socket, code: code} do
+      ref =
+        push(socket, "validate_code", %{
+          "code_id" => code.code_id,
+          "cie10_code" => code.cie10_code
+        })
+
+      assert_reply ref, :ok, %{status: "validated"}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # handle_in("reject_code", ...)
+  # ---------------------------------------------------------------------------
+
+  describe "handle_in reject_code" do
+    setup do
+      user = user_fixture()
+      {socket, code} = setup_conversation_with_code(user, %{cie10_code: "J45.0"})
+      %{socket: socket, user: user, code: code}
+    end
+
+    test "returns {:ok, %{status: 'rejected'}}", %{socket: socket, code: code} do
+      ref =
+        push(socket, "reject_code", %{
+          "code_id" => code.code_id,
+          "cie10_code" => code.cie10_code,
+          "reason" => "Código no corresponde al diagnóstico principal"
+        })
+
+      assert_reply ref, :ok, %{status: "rejected"}
+    end
   end
 end

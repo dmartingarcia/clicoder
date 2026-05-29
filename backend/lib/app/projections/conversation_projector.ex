@@ -127,7 +127,7 @@ defmodule App.Projections.ConversationProjector do
     require Logger
 
     Logger.warning(
-      "ConversationProjector skipping event #{inspect(event.event_type)} due to: #{inspect(reason)}"
+      "ConversationProjector skipping event #{inspect(event.__struct__)} due to: #{inspect(reason)}"
     )
 
     :skip

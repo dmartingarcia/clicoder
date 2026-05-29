@@ -224,4 +224,22 @@ defmodule AppWeb.Cie10ControllerTest do
       assert a000["is_virtual"] == false
     end
   end
+
+  # ── Cie10Code.changeset/2 ─────────────────────────────────────────────────
+
+  describe "Cie10Code.changeset/2" do
+    test "rejects invalid type" do
+      cs = Cie10Code.changeset(%Cie10Code{}, %{code: "Z99", description: "Test", type: "invalid"})
+      refute cs.valid?
+      assert cs.errors[:type] != nil
+    end
+
+    test "rejects missing required fields" do
+      cs = Cie10Code.changeset(%Cie10Code{}, %{})
+      refute cs.valid?
+      assert cs.errors[:code] != nil
+      assert cs.errors[:description] != nil
+      assert cs.errors[:type] != nil
+    end
+  end
 end
