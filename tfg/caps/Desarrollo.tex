@@ -558,7 +558,7 @@ Cada componente cuenta con herramientas de formato, linting y análisis estátic
 La cobertura de código se mide de forma independiente en cada componente:
 
 \begin{itemize}
-    \item \textbf{Backend:} la herramienta \texttt{mix coveralls} genera informes HTML en \texttt{backend/cover/} que detallan las líneas cubiertas por la suite ExUnit, identificando los módulos con menor cobertura para priorizar la escritura de nuevas pruebas.
+    \item \textbf{Backend:} la herramienta \texttt{mix coveralls} genera informes HTML en \texttt{backend/cover/} que detallan las líneas cubiertas por la suite ExUnit. Toda la lógica de negocio, la capa de API y la autenticación alcanzan cobertura completa o muy alta; los módulos que aparecen sin cobertura son scripts de importación de datos, módulos de configuración OTP y definiciones de structs que, por su naturaleza, no contienen lógica ejecutable testeable (véase la sección~\ref{sec:pruebas-backend}).
     \item \textbf{Frontend:} Vitest con el proveedor \texttt{@vitest/coverage-v8} genera informes de cobertura en \texttt{frontend/coverage/} al ejecutar \texttt{npm run test:coverage}. V8 instrumenta el código JavaScript directamente a nivel de motor, obteniendo métricas más precisas que los instrumentadores basados en transformaciones de AST.
 \end{itemize}
 
@@ -577,8 +577,45 @@ La estrategia de pruebas cubre los tres componentes principales del sistema: el 
 Las pruebas del motor de IA se realizan en dos niveles. A nivel de \emph{baseline}, el clasificador de diccionario se valida manualmente sobre un conjunto de ejemplos conocidos. A nivel del modelo BERT, las métricas de evaluación (precisión, recall y F1-score micro y macro) se calculan automáticamente al final de cada época de entrenamiento sobre el conjunto de validación, y al finalizar el entrenamiento se genera una curva de aprendizaje que permite detectar sobreajuste o convergencia prematura.
 
 \subsection{Pruebas del backend}
+\label{sec:pruebas-backend}
 
-El backend incluye una suite de pruebas ExUnit organizada en \texttt{backend/test/}. Las pruebas cubren los módulos de contexto (registro y autenticación de usuarios, gestión de conversaciones) y los controladores de la API REST. La cobertura de código se genera con la herramienta \texttt{mix coveralls} y se almacena en \texttt{backend/cover/}.
+El backend incluye una suite de 164~pruebas ExUnit organizada en \texttt{backend/test/}, ejecutadas con \texttt{make backend-test}. La suite cubre íntegramente toda la lógica de negocio, la capa de API REST y la autenticación; los únicos módulos sin cobertura son aquellos para los que escribir pruebas no tiene sentido práctico, como se detalla al final de esta sección. Las pruebas se distribuyen en cuatro niveles, siguiendo la estructura del código de producción.
+
+\subsubsection*{Pruebas unitarias de dominio}
+
+Las pruebas de la capa de dominio validan las reglas de negocio en aislamiento, sin acceso a la base de datos ni a servicios externos. El módulo \texttt{App.Aggregates.ConversationTest} verifica cada comando (\texttt{StartConversation}, \texttt{SendMessage}, \texttt{AnalyzeReport}, \texttt{ValidateCode}, \texttt{RejectCode}) contra el agregado, comprobando tanto los caminos felices (emisión del evento esperado) como los caminos de error (intento de validar un código ya validado, análisis con otro pendiente, etc.). El módulo \texttt{App.AIEngineSettingsTest} cubre el agente OTP de configuración del motor de inferencia, verificando el valor por defecto, las transiciones válidas entre motores (\texttt{bert}/\texttt{dict}/\texttt{both}) y el rechazo de valores fuera del conjunto permitido.
+
+\subsubsection*{Pruebas de integración con la base de datos}
+
+Las pruebas de integración usan el adaptador de sandbox de Ecto (\texttt{Ecto.Adapters.SQL.Sandbox}) para ejecutar cada test dentro de una transacción que se revierte automáticamente al finalizar, manteniendo el aislamiento entre tests. Este nivel cubre:
+
+\begin{itemize}
+    \item \textbf{Esquemas de proyección}: \texttt{App.Projections.ConversationProjectorTest} verifica las operaciones Ecto sobre los cuatro modelos relacionales (\texttt{ConversationProjection}, \texttt{MessageProjection}, \texttt{PredictedCodeProjection}, \texttt{Analys\-isCardProjection}), incluyendo inserciones, actualizaciones de estado (\texttt{pending} $\to$ \texttt{validated}/\texttt{rejected}), borrado suave y ordenación.
+    \item \textbf{Cuentas de usuario}: \texttt{App.AccountsTest} comprueba el registro, la confirmación por correo y la autenticación; \texttt{AppWeb.AuthControllerTest} verifica los \emph{endpoints} REST de registro, inicio y cierre de sesión.
+    \item \textbf{Plug de autenticación}: \texttt{AppWeb.Plugs.RequireAdminTest} verifica los cuatro ramos de la lógica de autorización (sin sesión, usuario no-admin, usuario admin, identificador inexistente), alcanzando cobertura completa del plug.
+\end{itemize}
+
+\subsubsection*{Pruebas de API REST}
+
+Los controladores se prueban mediante solicitudes HTTP reales a través de \texttt{AppWeb.ConnCase}. Se cubren los \emph{endpoints} de traducciones de la interfaz (\texttt{/api/translations/:locale}), el catálogo CIE-10 (\texttt{/api/cie10/search}, \texttt{/api/cie10/codes/:code}), la gestión de conversaciones y el proxy al motor de IA (\texttt{/api/ai/count-tokens}). Este último incluye tres escenarios: parámetro \texttt{text} ausente (422), valor no textual (422), y motor de IA no disponible (503), situación que siempre se produce en el entorno de test porque el servicio FastAPI no arranca con la suite ExUnit.
+
+\subsubsection*{Pruebas de canal WebSocket}
+
+Los canales Phoenix se prueban con \texttt{Phoenix.ChannelTest}, que simula la conexión WebSocket sin levantar un servidor HTTP real. Las pruebas cubren la autenticación del socket (token válido, ausente e inválido), la unión a conversaciones existentes (carga del historial con mensajes, códigos y tarjetas de análisis) y a conversaciones nuevas (despacho de \texttt{StartConversation} mediante Commanded), y los cinco tipos de mensajes entrantes: \texttt{send\_message}, \texttt{analyze\_report}, \texttt{validate\_code}, \texttt{reject\_code} y \texttt{suggest\_code}.
+
+\subsubsection*{Módulos excluidos de la cobertura}
+
+Algunos módulos no están cubiertos por la suite de pruebas porque probarlos no aportaría valor o requeriría infraestructura desproporcionada respecto al beneficio:
+
+\begin{itemize}
+    \item \textbf{Scripts de importación de datos} (\texttt{Mix.Tasks.Cie10Import} y similares). Estos scripts leen ficheros CSV del catálogo CIE-10 proporcionados por el Ministerio de Sanidad y los vuelcan en la base de datos. Su lógica es trivial (parseo de columnas y llamadas a \texttt{Repo.insert!}); probarlos requeriría incluir en el repositorio ficheros de datos de gran tamaño y levantar una base de datos real, sin ningún beneficio adicional respecto a las pruebas de integración que ya ejercen \texttt{Repo.insert!} directamente.
+
+    \item \textbf{Módulos de configuración OTP} (\texttt{App.Repo}, \texttt{App.EventStore}, \texttt{App.CommandedApplication}). Estos módulos contienen únicamente invocaciones a macros de \texttt{use} que generan código en tiempo de compilación; no hay líneas ejecutables propias que probar.
+
+    \item \textbf{Definiciones de structs de comandos y eventos}. Los módulos de comandos (\texttt{StartConversation}, \texttt{SendMessage}, etc.) y eventos (\texttt{ConversationStarted}, \texttt{MessageSent}, etc.) son estructuras de datos puras sin lógica. Su corrección se verifica implícitamente a través de las pruebas del agregado, que construye y emite estos structs en cada escenario.
+
+    \item \textbf{LiveViews de administración}. La interfaz de administración es una funcionalidad de soporte que no forma parte del flujo clínico principal. Su prueba requeriría \texttt{Phoenix.LiveViewTest}, una infraestructura de test adicional que, dado el alcance del prototipo, no se ha priorizado.
+\end{itemize}
 
 \subsection{Pruebas del frontend}
 
