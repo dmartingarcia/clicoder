@@ -293,13 +293,23 @@ Por ejemplo, con el fichero base \texttt{codiesp\_D\_source\_train\_augmented.cs
 
 Cada fichero contiene las 500 notas originales más las 500 variantes retrotraducidas con ese pivote concreto, lo que permite combinarlos de forma modular. El resume funciona de forma independiente por fichero: si se interrumpe la generación de \texttt{azure\_en}, el reinicio no afecta al estado de \texttt{azure\_fr}.
 
-\subsection{Entrenamiento con datos aumentados}
+\subsection{Combinación de pivotes y entrenamiento}
 
-Una vez generado el CSV aumentado, entrenar con él requiere únicamente cambiar el parámetro \texttt{--train\_file}:
+Cada pivote genera un fichero independiente con 500 notas originales + 500 aumentadas. Para aprovechar los tres pivotes simultáneamente, el script \texttt{ai\_engine/combine\_augmented.py} los fusiona en un único CSV de entrenamiento:
 
 \begin{lstlisting}[language=bash]
-TRAIN_FILE=/data/codiesp_csvs/codiesp_D_source_train_augmented_azure_en.csv \
-  make ai-train-gpu
+make ai-combine
 \end{lstlisting}
 
-El tamaño de dataset se dobla (500 → 1000 documentos) sin modificar ningún otro hiperparámetro. Se espera que la mejora sea más pronunciada en los códigos con menos de cinco apariciones en el corpus original, que son los que más sufren la escasez de datos.
+El script toma el corpus original y añade las variantes aumentadas de cada pivote (EN, DE, FR), produciendo \texttt{codiesp\_D\_source\_train\_augmented\_all.csv} con \textbf{2000 documentos} (500 originales + 1500 aumentados). A continuación, entrenar con el corpus completo requiere únicamente pasar el fichero combinado como \texttt{TRAIN\_FILE}:
+
+\begin{lstlisting}[language=bash]
+make ai-train-gpu \
+  TRAIN_FILE=/data/codiesp_csvs/codiesp_D_source_train_augmented_all.csv \
+  FREEZE_LAYERS=20 LR=1e-4 BATCH_SIZE=8 EPOCHS=150 PATIENCE=20 \
+  FULL_CODES=1 LABEL_SMOOTHING=0.1 LR_SCHEDULE=plateau \
+  UNFREEZE_EVERY=30 UNFREEZE_LAYERS=4 UNFREEZE_LR_RATIO=0.1 \
+  2>&1 | tee -a /tmp/train_paso32.log
+\end{lstlisting}
+
+El corpus de entrenamiento crece de 500 a 2000 documentos (4×) sin modificar la arquitectura ni los hiperparámetros. Se espera que la mejora sea más pronunciada en F1-macro, que es la métrica más sensible a los códigos raros.
