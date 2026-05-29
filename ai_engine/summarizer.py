@@ -66,7 +66,9 @@ class MedicalSummarizer:
 
     def __init__(self, model_key: str):
         if model_key not in MODELS:
-            raise ValueError(f"Modelo desconocido: '{model_key}'. Opciones: {list(MODELS.keys())}")
+            raise ValueError(
+                f"Modelo desconocido: '{model_key}'. Opciones: {list(MODELS.keys())}"
+            )
         self._model_key = model_key
         self._cfg = MODELS[model_key]
         self._llm = None

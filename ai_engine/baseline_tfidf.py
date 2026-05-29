@@ -28,8 +28,12 @@ def parse_labels(label_str: str):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_file", default="/data/codiesp_csvs/codiesp_D_source_train.csv")
-    parser.add_argument("--val_file", default="/data/codiesp_csvs/codiesp_D_source_validation.csv")
+    parser.add_argument(
+        "--train_file", default="/data/codiesp_csvs/codiesp_D_source_train.csv"
+    )
+    parser.add_argument(
+        "--val_file", default="/data/codiesp_csvs/codiesp_D_source_validation.csv"
+    )
     parser.add_argument("--threshold", type=float, default=0.5)
     args = parser.parse_args()
 

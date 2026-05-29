@@ -137,7 +137,9 @@ MEDICAL_ABBREVIATIONS: dict[str, str] = {
 # Compilar una sola regex (más largas primero para que ganen sobre substrings)
 _ABBREV_RE = re.compile(
     r"\b("
-    + "|".join(re.escape(k) for k in sorted(MEDICAL_ABBREVIATIONS, key=len, reverse=True))
+    + "|".join(
+        re.escape(k) for k in sorted(MEDICAL_ABBREVIATIONS, key=len, reverse=True)
+    )
     + r")\b"
 )
 
@@ -463,7 +465,9 @@ def _build_block_patterns(
     return block_patterns
 
 
-def load_diagnoses(path: str, min_len: int, cache_dir: str | None) -> dict[str, list[re.Pattern]]:
+def load_diagnoses(
+    path: str, min_len: int, cache_dir: str | None
+) -> dict[str, list[re.Pattern]]:
     df = pd.read_csv(path)
     df.columns = df.columns.str.strip()
     stat = os.stat(path)
@@ -481,13 +485,21 @@ def load_diagnoses(path: str, min_len: int, cache_dir: str | None) -> dict[str, 
     )
 
 
-def load_procedures(path: str, min_len: int, cache_dir: str | None) -> dict[str, list[re.Pattern]]:
+def load_procedures(
+    path: str, min_len: int, cache_dir: str | None
+) -> dict[str, list[re.Pattern]]:
     df = pd.read_csv(path)
     df.columns = df.columns.str.strip()
     stat = os.stat(path)
     desc_cols = [
         c
-        for c in ["description", "procedure", "procedure_definition", "class_name", "subclass_name"]
+        for c in [
+            "description",
+            "procedure",
+            "procedure_definition",
+            "class_name",
+            "subclass_name",
+        ]
         if c in df.columns
     ]
     pairs = []
@@ -507,7 +519,9 @@ def load_procedures(path: str, min_len: int, cache_dir: str | None) -> dict[str,
     )
 
 
-def load_chemicals(path: str, min_len: int, cache_dir: str | None) -> dict[str, list[re.Pattern]]:
+def load_chemicals(
+    path: str, min_len: int, cache_dir: str | None
+) -> dict[str, list[re.Pattern]]:
     df = pd.read_csv(path)
     df.columns = df.columns.str.strip()
     stat = os.stat(path)
@@ -604,7 +618,8 @@ def load_corpus(
     if lemma_texts is None:
         print(f"  [lemma] lematizando {len(df)} notas de entrenamiento...")
         lemma_texts = [
-            lemmatize(t) for t in tqdm(df["text"].tolist(), desc="  corpus notes", unit="nota")
+            lemmatize(t)
+            for t in tqdm(df["text"].tolist(), desc="  corpus notes", unit="nota")
         ]
         if lemma_note_cache_file:
             _save_cache(lemma_note_cache_file, lemma_texts)
@@ -614,7 +629,9 @@ def load_corpus(
     labels_list = [parse_labels(lbl) for lbl in df["labels"]]
 
     # Índice nota → conjunto de n-gramas únicos
-    note_ngrams: list[set[str]] = [set(extract_ngrams(lt, max_n=ngram_max)) for lt in lemma_texts]
+    note_ngrams: list[set[str]] = [
+        set(extract_ngrams(lt, max_n=ngram_max)) for lt in lemma_texts
+    ]
 
     # Recuento global: cuántas notas contienen cada n-grama
     ngram_total: dict[str, int] = {}
@@ -737,7 +754,9 @@ def load_clinical(
     # Generar patrones expandidos
     block_patterns: dict[str, list[re.Pattern]] = {}
     all_blocks_terms = list(block_terms.items())
-    for block, terms in tqdm(all_blocks_terms, desc="  clinical patterns", unit="block"):
+    for block, terms in tqdm(
+        all_blocks_terms, desc="  clinical patterns", unit="block"
+    ):
         patterns = []
         seen_phrases: set[str] = set()
         for term in terms:
@@ -816,12 +835,24 @@ def print_metrics(Y_true, Y_pred, split: str, source: str, n_ignored: int = 0):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_file", default="/data/codiesp_csvs/codiesp_D_source_train.csv")
-    parser.add_argument("--val_file", default="/data/codiesp_csvs/codiesp_D_source_validation.csv")
-    parser.add_argument("--diagnoses_file", default="/data/cie10-csvs/cie10-es-diagnoses.csv")
-    parser.add_argument("--procedures_file", default="/data/cie10-csvs/cie10-es-procedures.csv")
-    parser.add_argument("--chemicals_file", default="/data/cie10-csvs/cie10-es-chemicals.csv")
-    parser.add_argument("--task_x_train", default="/data/codiesp_csvs/codiesp_X_source_train.csv")
+    parser.add_argument(
+        "--train_file", default="/data/codiesp_csvs/codiesp_D_source_train.csv"
+    )
+    parser.add_argument(
+        "--val_file", default="/data/codiesp_csvs/codiesp_D_source_validation.csv"
+    )
+    parser.add_argument(
+        "--diagnoses_file", default="/data/cie10-csvs/cie10-es-diagnoses.csv"
+    )
+    parser.add_argument(
+        "--procedures_file", default="/data/cie10-csvs/cie10-es-procedures.csv"
+    )
+    parser.add_argument(
+        "--chemicals_file", default="/data/cie10-csvs/cie10-es-chemicals.csv"
+    )
+    parser.add_argument(
+        "--task_x_train", default="/data/codiesp_csvs/codiesp_X_source_train.csv"
+    )
     parser.add_argument(
         "--task_x_val",
         default="/data/codiesp_csvs/codiesp_X_source_validation.csv",
@@ -830,8 +861,22 @@ def main():
     parser.add_argument(
         "--sources",
         nargs="+",
-        choices=["diagnoses", "procedures", "chemicals", "clinical", "corpus", "combined"],
-        default=["diagnoses", "procedures", "chemicals", "clinical", "corpus", "combined"],
+        choices=[
+            "diagnoses",
+            "procedures",
+            "chemicals",
+            "clinical",
+            "corpus",
+            "combined",
+        ],
+        default=[
+            "diagnoses",
+            "procedures",
+            "chemicals",
+            "clinical",
+            "corpus",
+            "combined",
+        ],
     )
     parser.add_argument(
         "--only_combined",
@@ -846,7 +891,10 @@ def main():
         help="Similitud mínima para expansión de sinónimos (0–1, default 0.65)",
     )
     parser.add_argument(
-        "--syn_max", type=int, default=5, help="Número máximo de sinónimos por token (default 5)"
+        "--syn_max",
+        type=int,
+        default=5,
+        help="Número máximo de sinónimos por token (default 5)",
     )
     parser.add_argument(
         "--corpus_min_freq",
@@ -895,7 +943,8 @@ def main():
         help="Desactiva la expansión de abreviaturas clínicas (para comparar vs baseline)",
     )
     parser.add_argument(
-        "--save_dict", help="Guarda los patrones combined como JSON en esta ruta (para usar en API)"
+        "--save_dict",
+        help="Guarda los patrones combined como JSON en esta ruta (para usar en API)",
     )
     args = parser.parse_args()
 
@@ -905,7 +954,9 @@ def main():
         _ABBREV_RE = re.compile(r"(?!)")  # regex que nunca hace match → no-op
         print("[abbrev] expansión de abreviaturas DESACTIVADA")
     else:
-        print(f"[abbrev] expansión activa — {len(MEDICAL_ABBREVIATIONS)} abreviaturas registradas")
+        print(
+            f"[abbrev] expansión activa — {len(MEDICAL_ABBREVIATIONS)} abreviaturas registradas"
+        )
 
     cache_dir = None if args.no_cache else args.cache_dir
 
@@ -948,7 +999,9 @@ def main():
         "clinical": lambda: (
             load_clinical(
                 task_x_paths=[
-                    p for p in [args.task_x_train, args.task_x_val] if p and os.path.exists(p)
+                    p
+                    for p in [args.task_x_train, args.task_x_val]
+                    if p and os.path.exists(p)
                 ],
                 min_len=args.min_phrase_len,
                 cache_dir=cache_dir,
@@ -1030,9 +1083,13 @@ def main():
         for split_name, df in splits.items():
             labels = [parse_labels(lbl) for lbl in df["labels"]]
             Y_true = mlb.transform(labels)
-            preds, n_ignored = predict(df["text"].tolist(), block_patterns, split_name, mlb_classes)
+            preds, n_ignored = predict(
+                df["text"].tolist(), block_patterns, split_name, mlb_classes
+            )
             Y_pred = mlb.transform(preds)
-            print_metrics(Y_true, Y_pred, split=split_name, source=source, n_ignored=n_ignored)
+            print_metrics(
+                Y_true, Y_pred, split=split_name, source=source, n_ignored=n_ignored
+            )
 
     # Fuente combinada: unión de todos los patrones cargados
     if run_combined and all_loaded:
@@ -1041,9 +1098,13 @@ def main():
         # de recall que clinical no alcanza sin contaminar los bloques que clinical
         # ya resuelve bien.
         corpus_selective = (
-            args.corpus_selective and "corpus" in all_loaded and "clinical" in all_loaded
+            args.corpus_selective
+            and "corpus" in all_loaded
+            and "clinical" in all_loaded
         )
-        clinical_blocks = set(all_loaded["clinical"].keys()) if corpus_selective else set()
+        clinical_blocks = (
+            set(all_loaded["clinical"].keys()) if corpus_selective else set()
+        )
         if corpus_selective:
             n_filtered = sum(1 for b in all_loaded["corpus"] if b in clinical_blocks)
             print(
@@ -1063,9 +1124,13 @@ def main():
         for split_name, df in splits.items():
             labels = [parse_labels(lbl) for lbl in df["labels"]]
             Y_true = mlb.transform(labels)
-            preds, n_ignored = predict(df["text"].tolist(), combined, split_name, mlb_classes)
+            preds, n_ignored = predict(
+                df["text"].tolist(), combined, split_name, mlb_classes
+            )
             Y_pred = mlb.transform(preds)
-            print_metrics(Y_true, Y_pred, split=split_name, source="combined", n_ignored=n_ignored)
+            print_metrics(
+                Y_true, Y_pred, split=split_name, source="combined", n_ignored=n_ignored
+            )
 
     # Guardar patrones combined como JSON para uso en API
     if args.save_dict and run_combined and all_loaded:
@@ -1077,13 +1142,16 @@ def main():
             return re.sub(r"\\(.)", r"\1", inner)
 
         phrases_map = {
-            block: [_pat_to_phrase(p) for p in patterns] for block, patterns in combined.items()
+            block: [_pat_to_phrase(p) for p in patterns]
+            for block, patterns in combined.items()
         }
         os.makedirs(os.path.dirname(os.path.abspath(args.save_dict)), exist_ok=True)
         with open(args.save_dict, "w") as f:
             json.dump(phrases_map, f, ensure_ascii=False, indent=2)
         n_phrases = sum(len(v) for v in phrases_map.values())
-        print(f"\n[save_dict] {len(phrases_map)} bloques, {n_phrases} frases → {args.save_dict}")
+        print(
+            f"\n[save_dict] {len(phrases_map)} bloques, {n_phrases} frases → {args.save_dict}"
+        )
 
     # Escribir reporte CSV
     if report_rows and args.report_file:
@@ -1113,7 +1181,8 @@ class DictClassifier:
         # Recompilar las frases como patrones regex con word boundaries
         self._phrases: dict[str, list[str]] = data
         self._patterns: dict[str, list[re.Pattern]] = {
-            block: [build_pattern(p) for p in phrases] for block, phrases in data.items()
+            block: [build_pattern(p) for p in phrases]
+            for block, phrases in data.items()
         }
 
     def predict(self, text: str) -> list[dict]:
@@ -1128,7 +1197,9 @@ class DictClassifier:
         results = []
         for block, patterns in self._patterns.items():
             matched = [
-                self._phrases[block][i] for i, pat in enumerate(patterns) if pat.search(ltext)
+                self._phrases[block][i]
+                for i, pat in enumerate(patterns)
+                if pat.search(ltext)
             ]
             if matched:
                 results.append(

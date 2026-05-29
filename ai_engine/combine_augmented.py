@@ -63,7 +63,9 @@ def main() -> None:
         w.writeheader()
         w.writerows(all_rows)
 
-    print(f"[combine] {n_orig} originales + {len(all_rows) - n_orig} aumentadas = {len(all_rows)} filas → {out_path.name}")
+    print(
+        f"[combine] {n_orig} originales + {len(all_rows) - n_orig} aumentadas = {len(all_rows)} filas → {out_path.name}"
+    )
 
 
 if __name__ == "__main__":

@@ -53,9 +53,9 @@ def _watch_download(model_name: str, stop_event: threading.Event) -> None:
 
     while not stop_event.is_set():
         if model_cache.exists():
-            size_mb = sum(f.stat().st_size for f in model_cache.rglob("*") if f.is_file()) / (
-                1024 * 1024
-            )
+            size_mb = sum(
+                f.stat().st_size for f in model_cache.rglob("*") if f.is_file()
+            ) / (1024 * 1024)
             if total_mb:
                 pct = min(100, size_mb / total_mb * 100)
                 logger.info(
@@ -112,7 +112,9 @@ async def lifespan(app: FastAPI):
                 target=_watch_download, args=(_model_name, _stop), daemon=True
             )
             _watcher.start()
-            logger.info("Cargando modelo BERT desde '%s' en device='%s' …", model_dir, device)
+            logger.info(
+                "Cargando modelo BERT desde '%s' en device='%s' …", model_dir, device
+            )
 
             classifier = CIE10Classifier(model_dir=model_dir, device=device)
             code_descriptions = load_code_descriptions(model_dir)
@@ -127,7 +129,8 @@ async def lifespan(app: FastAPI):
             else:
                 logger.info("Ejecutando en CPU (sin GPU disponible)")
             logger.info(
-                "Modelo BERT cargado. %d descripciones disponibles.", len(code_descriptions)
+                "Modelo BERT cargado. %d descripciones disponibles.",
+                len(code_descriptions),
             )
         except Exception as exc:
             logger.warning("No se pudo cargar el modelo BERT: %s", exc)
@@ -139,13 +142,21 @@ async def lifespan(app: FastAPI):
             try:
                 from baseline_dict import DictClassifier
 
-                logger.info("Cargando clasificador de diccionario desde '%s' …", dict_path)
+                logger.info(
+                    "Cargando clasificador de diccionario desde '%s' …", dict_path
+                )
                 dict_classifier = DictClassifier(dict_path)
                 n_blocks = len(dict_classifier._patterns)
                 n_patterns = sum(len(v) for v in dict_classifier._patterns.values())
-                logger.info("Diccionario cargado: %d bloques, %d patrones.", n_blocks, n_patterns)
+                logger.info(
+                    "Diccionario cargado: %d bloques, %d patrones.",
+                    n_blocks,
+                    n_patterns,
+                )
             except Exception as exc:
-                logger.warning("No se pudo cargar el clasificador de diccionario: %s", exc)
+                logger.warning(
+                    "No se pudo cargar el clasificador de diccionario: %s", exc
+                )
                 dict_classifier = None
         else:
             logger.info(
@@ -255,7 +266,9 @@ async def _predict_bert(text: str):
     if classifier is None:
         raise HTTPException(
             status_code=503,
-            detail={"error": "Modelo BERT no cargado. Entrena con train.py y monta model/."},
+            detail={
+                "error": "Modelo BERT no cargado. Entrena con train.py y monta model/."
+            },
         )
 
     predictions, summary_text = await asyncio.gather(
@@ -271,7 +284,8 @@ async def _predict_bert(text: str):
                 "content": [
                     {
                         "code": p["code"],
-                        "description": p.get("description") or p.get("chapter_name", ""),
+                        "description": p.get("description")
+                        or p.get("chapter_name", ""),
                         "reason": (
                             f"{p.get('chapter_name') or ('Capítulo ' + p.get('chapter', ''))} "
                             f"— confianza {round(p['probability'] * 100, 1)}%"
@@ -319,7 +333,8 @@ async def _predict_dict(text: str):  # noqa: E302
                     {
                         "code": p["code"],
                         "description": code_descriptions.get(p["code"], ""),
-                        "reason": "Términos encontrados: " + ", ".join(p["matched_terms"]),
+                        "reason": "Términos encontrados: "
+                        + ", ".join(p["matched_terms"]),
                         "confidence": p["confidence"],
                         "matched_terms": p["matched_terms"],
                         "engine": "dict",
@@ -383,7 +398,9 @@ async def _generate_summary(text: str) -> str:
         try:
             return await asyncio.to_thread(summarizer.summarize, text)
         except Exception as exc:
-            logger.warning("Error al generar resumen con LLM: %s — usando resumen básico.", exc)
+            logger.warning(
+                "Error al generar resumen con LLM: %s — usando resumen básico.", exc
+            )
 
     # Fallback: resumen estadístico básico
     word_count = len(text.split())
