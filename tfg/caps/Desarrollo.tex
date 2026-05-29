@@ -295,6 +295,11 @@ La lección es que al escalar el dataset hay que reescalar los hitos de unfreezi
 
 Durante el mismo experimento se observó además que el pre-entrenamiento estaba sobreajustado: el loss de pretrain cae de 0,76 en el primer paso a 0,0038 al final de la época~1 y llega a 0,0008 en la época~6, esencialmente cero. Las épocas 7--10 no añaden información nueva al modelo, solo refuerzan la memorización de las descripciones oficiales. El experimento de corrección (\emph{paso~33b}) aplica dos ajustes simultáneos: \texttt{UNFREEZE\_EVERY=8} y \texttt{PRETRAIN\_EPOCHS=3}, recortando $\sim$28~minutos de pre-entrenamiento inútil y partiendo de una inicialización menos sobreajustada.
 
+\paragraph{Paso 33b — schedule corregido (resultado).}
+El ajuste de schedule funcionó mecánicamente: se produjeron cinco descongelados progresivos en las épocas 8, 16, 24, 32 y 40, llegando a desbloquear las 24 capas del encoder (303,4\,M parámetros entrenables). El mejor F1-micro fue \textbf{0,4572}, alcanzado tras el tercer descongelado ($\sim$época~30, capas~8--11 activas). Las dos descongelaciones siguientes —que elevan los parámetros libres a 253\,M y 303\,M respectivamente— no aportaron mejora adicional y el early~stop disparó en la época~60.
+
+El resultado sigue siendo una regresión respecto a la referencia: $-0{,}032$ frente a 32b y $-0{,}010$ frente al propio paso~33. La conclusión es que el problema no era solo el schedule: el modelo entrena sobre texto back-translated pero valida sobre español original, y ese desfase de distribución limita la generalización. Los datos sintéticos incrementan la variedad léxica del entrenamiento pero no reducen el dominio \emph{out-of-distribution} al que se enfrenta el modelo en validación. La línea de aumentación se descarta temporalmente; la prioridad pasa a otras estrategias de mejora con los 500 documentos originales.
+
 \subsubsection{Aprendizaje continuo a partir del feedback de usuarios}
 \label{sec:continuous-learning}
 
