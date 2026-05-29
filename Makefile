@@ -313,10 +313,15 @@ ai-augment: ## Back-translation. Vars: TRANS_BACKEND=azure|nllb PIVOT_LANGS="EN 
 		$(if $(ONLY_ROW),--only_row $(ONLY_ROW),)
 	@echo "$(GREEN)Datos guardados en /data/codiesp_csvs/codiesp_D_source_train_augmented.csv$(NC)"
 
+ai-combine: ## Combina los CSV aumentados (EN+DE+FR) en un único fichero de entrenamiento
+	@echo "$(BLUE)Combinando CSV aumentados...$(NC)"
+	$(COMPOSE) run --rm ai_engine python combine_augmented.py
+	@echo "$(GREEN)Combinado en /data/codiesp_csvs/codiesp_D_source_train_augmented_all.csv$(NC)"
+
 ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requiere HF_TOKEN en .env)
 	@echo "$(BLUE)Entrenando clasificador CIE-10$(NC)"
 	$(COMPOSE_CPU) run --rm ai_engine python train.py \
-		--train_file /data/codiesp_csvs/codiesp_D_source_train.csv \
+		--train_file $(or $(TRAIN_FILE),/data/codiesp_csvs/codiesp_D_source_train.csv) \
 		--val_file   /data/codiesp_csvs/codiesp_D_source_validation.csv \
 		--cie10_file /data/cie10-csvs/cie10-es-diagnoses.csv \
 		--output_dir /app/model \
@@ -335,7 +340,7 @@ ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requier
 ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
 	@echo "$(BLUE)Entrenando con GPU...$(NC)"
 	$(COMPOSE) run --rm ai_engine python train.py \
-		--train_file /data/codiesp_csvs/codiesp_D_source_train.csv \
+		--train_file $(or $(TRAIN_FILE),/data/codiesp_csvs/codiesp_D_source_train.csv) \
 		--val_file   /data/codiesp_csvs/codiesp_D_source_validation.csv \
 		--cie10_file /data/cie10-csvs/cie10-es-diagnoses.csv \
 		--output_dir /app/model \
