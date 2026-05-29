@@ -395,7 +395,7 @@ describe('ChatInterface', () => {
       vi.spyOn(window, 'getSelection').mockReturnValue(mockSel as unknown as Selection);
       fireEvent.mouseUp(textDiv);
 
-      const input = screen.getByPlaceholderText('cards.suggest_code_placeholder');
+      screen.getByPlaceholderText('cards.suggest_code_placeholder');
       await user.keyboard('{Escape}');
       expect(screen.queryByPlaceholderText('cards.suggest_code_placeholder')).not.toBeInTheDocument();
     });
