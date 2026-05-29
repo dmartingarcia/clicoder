@@ -19,7 +19,7 @@
 
 **Notebook**: `codiesp_analisis_estadistico.ipynb`
 
-❌ Error: Error ejecutando codiesp_analisis_estadistico.ipynb
+Error: Error ejecutando codiesp_analisis_estadistico.ipynb
 
 ---
 
@@ -27,7 +27,7 @@
 
 **Notebook**: `cie10_analisis_estadistico.ipynb`
 
-❌ Error: Error ejecutando cie10_analisis_estadistico.ipynb
+Error: Error ejecutando cie10_analisis_estadistico.ipynb
 
 ---
 
@@ -35,7 +35,7 @@
 
 **Notebook**: `cie10_spacy_word_analysis.ipynb`
 
-❌ Error: Error ejecutando cie10_spacy_word_analysis.ipynb
+Error: Error ejecutando cie10_spacy_word_analysis.ipynb
 
 ---
 
@@ -43,7 +43,7 @@
 
 **Notebook**: `analisis_linguistico_jerarquico.ipynb`
 
-❌ Error: Error ejecutando analisis_linguistico_jerarquico.ipynb
+Error: Error ejecutando analisis_linguistico_jerarquico.ipynb
 
 ---
 
