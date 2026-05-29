@@ -231,6 +231,8 @@ def main() -> None:
                         help="Muestra estadísticas y sale sin traducir")
     parser.add_argument("--resume",       action="store_true",
                         help="Retoma desde el checkpoint existente")
+    parser.add_argument("--only_row",     type=int, default=None,
+                        help="Traduce solo la fila N (1-indexed) y la añade al CSV de salida existente")
     args = parser.parse_args()
 
     fieldnames, rows = _read_csv(args.input_file)
@@ -266,7 +268,12 @@ def main() -> None:
     for pivot in args.pivot_langs:
         out_path = parent / f"{stem}_{args.backend}_{pivot.lower()}{suffix}"
 
-        if args.resume and out_path.exists():
+        if args.only_row is not None:
+            if not out_path.exists():
+                print(f"[augment] ERROR: {out_path.name} no existe; lanza sin --only_row primero.", file=sys.stderr)
+                continue
+            print(f"\n[augment] pivot={pivot} → {out_path.name} | solo fila {args.only_row}")
+        elif args.resume and out_path.exists():
             already_done = _count_rows(str(out_path)) - len(rows)
             print(f"\n[augment] pivot={pivot} → {out_path.name} | resume: {already_done} traducciones ya guardadas")
         else:
@@ -283,16 +290,24 @@ def main() -> None:
             if not text.strip():
                 continue
 
-            if n_done < already_done:
+            if args.only_row is not None:
+                if i != args.only_row:
+                    continue
+            elif n_done < already_done:
                 n_done += 1
                 print(f"[{i}/{total}] (ya procesado)")
                 continue
 
-            try:
-                aug_text = back_translate(text, pivot)
-            except Exception as e:
-                print(f"[{i}/{total}] ERROR: {e}", file=sys.stderr)
-                continue
+            retry = 0
+            while True:
+                try:
+                    aug_text = back_translate(text, pivot)
+                    break
+                except Exception as e:
+                    retry += 1
+                    wait = min(10 * retry, 120)
+                    print(f"[{i}/{total}] ERROR (intento #{retry}): {e} — reintentando en {wait}s…", file=sys.stderr)
+                    import time; time.sleep(wait)
 
             aug_row         = dict(row)
             aug_row["text"] = aug_text

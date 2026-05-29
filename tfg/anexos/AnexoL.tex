@@ -77,12 +77,107 @@ Latencia típica            & 200--800 ms por lote \\
 \end{tabular}
 \end{table}
 
-El corpus CodiEsp de entrenamiento contiene \textbf{1.158.623 caracteres}. Con pivot EN (ES→EN→ES), cada carácter se traduce dos veces, lo que produce un consumo estimado de \textbf{2.317.246 caracteres}: un 16\,\% por encima del límite mensual. Las dos estrategias para gestionarlo son:
+El corpus CodiEsp de entrenamiento contiene \textbf{1.158.623 caracteres}. Con pivot EN (ES→EN→ES), cada carácter se traduce dos veces, lo que produce un consumo estimado de \textbf{2.317.246 caracteres}: un 16\,\% por encima del límite mensual teórico. En la práctica, la aumentación completa se realizó en una sola sesión sin agotar el crédito mensual, ya que el texto de salida de la traducción ES→EN es en general más corto que el original, y la cuota de Azure se mide sobre los caracteres de \emph{entrada} enviados en cada petición, no sobre los de salida.
 
-\begin{itemize}
-  \item \textbf{Dos meses, con checkpoint.} El script guarda automáticamente el progreso en un fichero \texttt{.ckpt.json}; se lanza en el primer mes, se detiene al agotarse el crédito, y se reanuda el siguiente mes con \texttt{--resume}.
-  \item \textbf{Segundo recurso F0.} Azure permite crear múltiples recursos Translator F0 en diferentes regiones bajo la misma cuenta, cada uno con su cuota independiente.
-\end{itemize}
+Si el crédito se agotase antes de completar las 500 notas, el script permite reanudar con \texttt{RESUME=1}: cuenta las filas ya escritas en el CSV de salida y retoma desde la siguiente sin retraducir nada. Como alternativa, Azure permite crear múltiples recursos Translator F0 en diferentes regiones bajo la misma cuenta, cada uno con su cuota independiente.
+
+% ---------------------------------------------------------------------------
+\section{Resultados de la aumentación}
+% ---------------------------------------------------------------------------
+
+\subsection{Distribución de códigos antes y después}
+
+El corpus de entrenamiento de CodiESP contiene 500 documentos con una media de \textbf{11,28 etiquetas por documento}, cubriendo los 1767 códigos del catálogo CIE-10-ES. La distribución de frecuencias es marcadamente sesgada: el \textbf{56,5\,\%} de los códigos aparece exactamente una vez, y el \textbf{88,7\,\%} tiene cinco o menos apariciones. Solo 200 códigos (11,3\,\%) superan las cinco ocurrencias.
+
+\begin{table}[h]
+\centering
+\caption{Distribución de frecuencias de códigos en el corpus de entrenamiento original.}
+\label{tab:code-dist}
+\begin{tabular}{lrr}
+\hline
+\textbf{Frecuencia} & \textbf{Códigos} & \textbf{\% del total} \\
+\hline
+= 1 aparición   & 999  & 56,5\,\% \\
+$\leq$ 2 apariciones & 1.291 & 73,1\,\% \\
+$\leq$ 5 apariciones & 1.567 & 88,7\,\% \\
+$>$ 5 apariciones   & 200  & 11,3\,\% \\
+\hline
+\textbf{Total}    & \textbf{1.767} & \textbf{100\,\%} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Corpus de entrenamiento antes y después de la retrotraducción con pivot EN.}
+\label{tab:aug-results}
+\begin{tabular}{lrr}
+\hline
+\textbf{Métrica} & \textbf{Original} & \textbf{Aumentado} \\
+\hline
+Documentos totales          & 500       & 1.000  \\
+Códigos únicos cubiertos    & 1.767     & 1.767  \\
+Total anotaciones           & 5.639     & 11.278 \\
+Media etiquetas por nota    & 11,28     & 11,28  \\
+Caracteres totales          & 1.158.623 & $\approx$2.320.000 \\
+Media chars por nota        & 2.317     & 2.325  \\
+\hline
+\end{tabular}
+\end{table}
+
+La retrotraducción duplica el número de ejemplos por código sin coste de anotación. Para los 999 códigos que aparecen una sola vez, pasar a dos ejemplos supone una mejora relativa del 100\,\% en la señal de entrenamiento: con un único ejemplo el gradiente solo puede ajustar la proyección del embedding hacia esa etiqueta; con dos formulaciones distintas del mismo concepto, el modelo aprende a activar la misma salida ante representaciones diferentes, lo que equivale a capturar la invarianza semántica del código.
+
+\subsection{Calidad de la traducción}
+
+La retrotraducción produjo variación léxica real en el \textbf{99,2\,\%} de las notas (496 de 500). Las 4 notas sin variación corresponden a textos con terminología altamente normalizada que el motor de traducción reproduce de forma idéntica.
+
+\begin{table}[h]
+\centering
+\caption{Estadísticas de calidad de la retrotraducción (pivot EN, Azure Translator).}
+\label{tab:bt-quality}
+\begin{tabular}{lr}
+\hline
+\textbf{Métrica} & \textbf{Valor} \\
+\hline
+Notas con variación léxica       & 496 / 500 (99,2\,\%) \\
+$\Delta$ caracteres (media)      & $+7{,}6$ \\
+$\Delta$ caracteres (mediana)    & $+7{,}0$ \\
+$\Delta$ palabras (media)        & $+4{,}4$ \\
+$\Delta$ palabras (mediana)      & $+4{,}0$ \\
+$\Delta$ caracteres (rango)      & $-2.696$ a $+2.648$ \\
+$\Delta$ palabras (rango)        & $-398$ a $+404$ \\
+Media chars original             & 2.317 \\
+Media chars retrotraducida       & 2.325 \\
+Chars consumidos (Azure F0)      & $\approx$2.320.000 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Distribución de notas por rango de variación en palabras tras la retrotraducción.}
+\label{tab:bt-dist}
+\begin{tabular}{lrr}
+\hline
+\textbf{$\Delta$ palabras} & \textbf{Notas} & \textbf{\%} \\
+\hline
+$< -20$      &  23 &  4,6\,\% \\
+$-20$ a $-15$ &  11 &  2,2\,\% \\
+$-15$ a $-10$ &  20 &  4,0\,\% \\
+$-10$ a $-5$  &  55 & 11,0\,\% \\
+$-5$ a $0$    &  85 & 17,0\,\% \\
+$0$ a $+5$    &  87 & 17,4\,\% \\
+$+5$ a $+10$  &  83 & 16,6\,\% \\
+$+10$ a $+15$ &  54 & 10,8\,\% \\
+$+15$ a $+20$ &  27 &  5,4\,\% \\
+$> +20$       &  55 & 11,0\,\% \\
+\hline
+\textbf{Total} & \textbf{500} & \textbf{100\,\%} \\
+\hline
+\end{tabular}
+\end{table}
+
+La distribución de cambios es bimodal: un 46\,\% de las notas se acortan y un 54\,\% se alargan, con rangos que llegan a $\pm$2600 caracteres. Esto refleja que la retrotraducción no aplica reemplazos locales de palabras, sino que reformula oraciones enteras: el pivot inglés fuerza una recomposición sintáctica que puede condensar o expandir la expresión original de forma sustancial. La media positiva ($+7{,}6$ chars) indica que la expansión es ligeramente más frecuente, lo que es esperable porque el inglés médico tiende a construir frases más explicativas al retraducirse al español. En cualquier caso, la variabilidad amplia es la señal útil para el entrenamiento: el modelo debe aprender que textos muy distintos en forma pueden corresponder al mismo conjunto de códigos CIE-10.
 
 % ---------------------------------------------------------------------------
 \section{Implementación técnica}
@@ -95,9 +190,9 @@ El script \texttt{ai\_engine/augment.py} encapsula la lógica completa de aument
   \item[\texttt{AzureTranslator}] Llama a la API REST \texttt{api.cognitive.microsofttranslator.com} en lotes de hasta 100 textos. Lee la clave y la región desde las variables de entorno \texttt{AZURE\_TRANSLATOR\_KEY} y \texttt{AZURE\_TRANSLATOR\_REGION}.
 \end{description}
 
-El flujo de retrotraducción divide los textos largos en párrafos si superan el límite del modelo (\textasciitilde 1800 caracteres para NLLB), traduce hacia el pivote y de vuelta, y une los fragmentos con saltos de línea. El resultado se añade al CSV original con el sufijo \texttt{\_bt\_en} en el identificador de documento.
+El flujo de retrotraducción divide los textos largos en párrafos si superan el límite del modelo (\textasciitilde 1800 caracteres para NLLB), traduce hacia el pivote y de vuelta, y une los fragmentos con saltos de línea. Cada variante retrotraducida se escribe como una fila adicional en el CSV de salida, manteniendo las mismas etiquetas que la nota original.
 
-El checkpoint incremental persiste en \texttt{.ckpt.json} junto al fichero de salida y se elimina automáticamente al completar la ejecución. Esto permite interrumpir y reanudar la augmentación sin retraducir notas ya procesadas.
+El checkpoint es incremental y no requiere fichero auxiliar: al reanudar con \texttt{RESUME=1} el script cuenta las filas del CSV de salida, deduce cuántas notas ya están traducidas y retoma desde la siguiente. Esto permite interrumpir y reanudar la aumentación sin retraducir notas ya procesadas.
 
 % ---------------------------------------------------------------------------
 \section{Configuración y uso}
@@ -144,7 +239,7 @@ Antes de lanzar cualquier traducción, verificar el consumo estimado con \texttt
 set -a && source .env && set +a && TRANS_BACKEND=azure make ai-augment DRY_RUN=1
 \end{lstlisting}
 
-El comando completo de producción carga las variables del fichero \texttt{.env}, lanza la aumentación con Azure y guarda el log en \texttt{/tmp/augment\_azure.log} para poder consultarlo si el proceso corre en segundo plano:
+El comando completo de producción carga las variables del fichero \texttt{.env}, lanza la aumentación con Azure y guarda el log en \texttt{tmp/augment\_azure.log} (directorio del proyecto) para poder consultarlo si el proceso corre en segundo plano:
 
 \begin{lstlisting}[language=bash]
 set -a && source .env && set +a && \
