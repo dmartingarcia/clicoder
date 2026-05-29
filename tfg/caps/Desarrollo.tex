@@ -270,16 +270,16 @@ La Tabla~\ref{tab:progreso_pasos} recoge la evolución acumulada desde el clasif
 \subsubsection{Aumentación de datos mediante retrotraducción}
 \label{sec:backtranslation}
 
-El análisis de los experimentos anteriores reveló que la limitación principal no es la arquitectura ni la función de pérdida, sino la escasez de datos: con 500 documentos y 1767 clases, unos 140 códigos no aparecen en ningún ejemplo de entrenamiento y otros 400 cuentan con una o dos apariciones. Ninguna técnica de regularización puede compensar la ausencia total de señal de entrenamiento para una clase.
+El análisis de los experimentos anteriores reveló que la limitación principal no es la arquitectura ni la función de pérdida, sino la escasez de datos. El corpus de entrenamiento de CodiESP contiene 500 documentos con una media de 11,28 etiquetas por nota, cubriendo los 1767 códigos del catálogo CIE-10-ES. La distribución de frecuencias es muy sesgada: el 56,5\,\% de los códigos aparece exactamente una vez y el 88,7\,\% no supera las cinco apariciones. Ninguna técnica de regularización puede compensar la escasez de señal de entrenamiento para las clases más raras.
 
 La solución natural es generar datos sintéticos adicionales sin necesidad de anotación manual. La técnica empleada es la \textbf{retrotraducción} (\emph{back-translation})~\cite{sennrich2016improving}: cada nota clínica se traduce del español a un idioma pivote (inglés) y el resultado se vuelve a traducir al español. El texto final es semánticamente equivalente al original pero con diferente elección léxica y estructura sintáctica, actuando como una paráfrasis automática. Las etiquetas CIE-10 permanecen inalteradas porque la semántica clínica se conserva a través del pivote.
 
-\paragraph{Impacto esperado.}
-Con un único pivote EN, el corpus de entrenamiento pasa de 500 a 1000 documentos. La mejora se espera principalmente en:
+\paragraph{Impacto medido.}
+Con pivot EN se generaron 500 variantes retrotraducidas de las 500 notas originales, duplicando el corpus a 1000 documentos. La calidad de la traducción fue alta: el 99,2\,\% de las notas presentaron variación léxica efectiva, con un incremento medio de $+4{,}4$ palabras por nota (detalles en el Anexo~\ref{cap:AnexoL}). Para los 999 códigos que aparecían una sola vez, duplicar el número de ejemplos supone una mejora relativa del 100\,\% en la señal de entrenamiento. Las mejoras esperadas son:
 
 \begin{itemize}
-  \item \textbf{Códigos raros} (1--2 apariciones): se duplican sus ejemplos de entrenamiento, reduciendo el sobreajuste por clase.
-  \item \textbf{Robustez léxica}: el modelo deja de depender de formulaciones concretas del corpus, ya que aprende la misma etiqueta asociada a múltiples expresiones distintas.
+  \item \textbf{Códigos raros} (56,5\,\% del catálogo con una sola aparición): pasan a tener dos formulaciones distintas del mismo concepto, permitiendo al modelo aprender la invarianza semántica de cada código.
+  \item \textbf{Robustez léxica}: el modelo deja de depender de formulaciones concretas del corpus original, ya que aprende la misma etiqueta asociada a expresiones diferentes.
   \item \textbf{F1-macro}: la métrica más sensible a las clases raras es la que más debería beneficiarse.
 \end{itemize}
 

@@ -296,7 +296,7 @@ ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 (clinical+corpus+comb
 		$(if $(MIN_LEN),--min_phrase_len $(MIN_LEN),) \
 		$(if $(NO_ABBREVS),--no_expand_abbrevs,)
 
-ai-augment: ## Back-translation. Vars: TRANS_BACKEND=azure|nllb PIVOT_LANGS="EN FR" DRY_RUN=1 RESUME=1
+ai-augment: ## Back-translation. Vars: TRANS_BACKEND=azure|nllb PIVOT_LANGS="EN FR" DRY_RUN=1 RESUME=1 ONLY_ROW=N
 	@echo "$(BLUE)Aumentando datos con back-translation (backend: $(or $(TRANS_BACKEND),nllb))...$(NC)"
 	$(COMPOSE) run --rm \
 		-e AZURE_TRANSLATOR_KEY=$${AZURE_TRANSLATOR_KEY} \
@@ -309,7 +309,8 @@ ai-augment: ## Back-translation. Vars: TRANS_BACKEND=azure|nllb PIVOT_LANGS="EN 
 		$(if $(NLLB_MODEL),--nllb_model $(NLLB_MODEL),) \
 		$(if $(NLLB_BATCH),--nllb_batch $(NLLB_BATCH),) \
 		$(if $(DRY_RUN),--dry_run,) \
-		$(if $(RESUME),--resume,)
+		$(if $(RESUME),--resume,) \
+		$(if $(ONLY_ROW),--only_row $(ONLY_ROW),)
 	@echo "$(GREEN)Datos guardados en /data/codiesp_csvs/codiesp_D_source_train_augmented.csv$(NC)"
 
 ai-train: ## Entrenar clasificador CIE-10 (MODEL=IIC/RigoBERTa-Clinical, requiere HF_TOKEN en .env)
