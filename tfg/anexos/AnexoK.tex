@@ -36,6 +36,7 @@ Los valores por defecto son válidos para un entorno local de desarrollo. Las va
 \texttt{BACKEND\_PORT}      & \texttt{4000}       & Puerto del backend Elixir \\
 \texttt{FRONTEND\_PORT}     & \texttt{3000}       & Puerto del frontend Next.js \\
 \texttt{AI\_ENGINE\_PORT}   & \texttt{8000}       & Puerto del motor de IA \\
+\texttt{GRAFANA\_PASSWORD} & \texttt{changeme}   & Contraseña del usuario \texttt{admin} de Grafana \\
 \hline
 \end{tabular}
 \end{table}
@@ -78,6 +79,8 @@ Backend API (Phoenix) & \url{http://localhost:4000} \\
 Motor de IA (FastAPI) & \url{http://localhost:8000} \\
 Backoffice admin (Phoenix) & \url{http://localhost:4000/admin} \\
 Mailpit (bandeja SMTP de pruebas) & \url{http://localhost:8025} \\
+Prometheus            & \url{http://localhost:9090} \\
+Grafana               & \url{http://localhost:3030} \\
 PostgreSQL            & \texttt{localhost:5432} \\
 \hline
 \end{tabular}
@@ -178,3 +181,68 @@ make ai-train-gpu 2>&1 | tee /tmp/train.log
 \end{lstlisting}
 
 Cada \emph{run} guarda un checkpoint con el mejor F1-micro de validación, los umbrales por clase optimizados y un registro de métricas por época en \texttt{model/training\_runs.csv}. El proceso completo dura entre 2 y 4~horas en una GPU de la familia Ampere, dependiendo del número de épocas configurado.
+
+\section{Monitorización con Prometheus y Grafana}
+
+El sistema incluye una pila de observabilidad compuesta por Prometheus y Grafana, levantada automáticamente junto con el resto de servicios al ejecutar \texttt{make up}.
+
+\subsection{URLs y credenciales}
+
+\begin{table}[h]
+\centering
+\caption{Acceso a las herramientas de monitorización en entorno local.}
+\label{tab:monitoring-urls}
+\begin{tabular}{lll}
+\hline
+\textbf{Herramienta} & \textbf{URL} & \textbf{Credenciales} \\
+\hline
+Prometheus  & \url{http://localhost:9090} & Sin autenticación \\
+Grafana     & \url{http://localhost:3030} & \texttt{admin} / \texttt{GRAFANA\_PASSWORD} \\
+\hline
+\end{tabular}
+\end{table}
+
+La contraseña de Grafana se configura mediante la variable \texttt{GRAFANA\_PASSWORD} del fichero \texttt{.env} (valor por defecto: \texttt{changeme}). El datasource de Prometheus queda provisionado automáticamente al arrancar: no es necesario configurarlo manualmente en la interfaz de Grafana.
+
+\subsection{Métricas expuestas}
+
+Prometheus recoge métricas de tres \emph{jobs} con un intervalo de scraping de 15 segundos (tabla~\ref{tab:prometheus-jobs}).
+
+\begin{table}[h]
+\centering
+\caption{Jobs de scraping configurados en Prometheus.}
+\label{tab:prometheus-jobs}
+\begin{tabular}{lll}
+\hline
+\textbf{Job} & \textbf{Endpoint} & \textbf{Métricas principales} \\
+\hline
+\texttt{backend}    & \texttt{:9568/metrics}  & Latencia HTTP (Phoenix), tiempos de query Ecto, memoria BEAM, colas de schedulers \\
+\texttt{ai\_engine} & \texttt{:8000/metrics}  & Latencia de inferencia, peticiones totales, estado del modelo \\
+\texttt{prometheus}  & \texttt{:9090/metrics}  & Métricas internas de Prometheus \\
+\hline
+\end{tabular}
+\end{table}
+
+El backend Elixir utiliza \texttt{telemetry\_metrics\_prometheus} para exponer las métricas en el puerto \texttt{9568}. Las métricas de VM BEAM configuradas son \texttt{vm.memory.total} (memoria total del runtime) y \texttt{vm.total\_run\_queue\_lengths} (longitud de las colas de schedulers CPU e IO), útiles para detectar saturación en el procesamiento concurrente de WebSockets. El motor de IA expone las suyas en el endpoint \texttt{/metrics} del puerto \texttt{8000} mediante \texttt{prometheus\_fastapi\_instrumentator} (métricas HTTP automáticas) más dos métricas propias: \texttt{cie10\_inference\_duration\_seconds} (histograma de latencia de inferencia) y los gauges \texttt{cie10\_model\_loaded} y \texttt{cie10\_dict\_loaded} (estado de carga del modelo BERT y del clasificador de diccionario).
+
+\subsection{Retención de datos}
+
+Prometheus almacena los datos de series temporales durante \textbf{15 días} (configurado con \texttt{--storage.tsdb.retention.time=15d}). Los datos persisten entre reinicios del contenedor gracias al volumen Docker \texttt{prometheus\_data}. Los paneles de Grafana persisten en el volumen \texttt{grafana\_data}.
+
+\subsection{Exploración de métricas}
+
+Para explorar las métricas disponibles sin necesidad de construir un panel en Grafana, se puede usar directamente la interfaz web de Prometheus en \url{http://localhost:9090/graph}. Ejemplos de consultas PromQL útiles:
+
+\begin{lstlisting}[language=bash]
+# Latencia de inferencia del motor de IA (percentil 95)
+histogram_quantile(0.95, rate(cie10_inference_duration_seconds_bucket[5m]))
+
+# Estado de carga del modelo BERT (1 = cargado, 0 = no cargado)
+cie10_model_loaded
+
+# Memoria total de la VM BEAM en kilobytes
+vm_memory_total_kilobytes
+
+# Longitud de la cola de schedulers CPU del runtime Elixir
+vm_total_run_queue_lengths_cpu
+\end{lstlisting}
