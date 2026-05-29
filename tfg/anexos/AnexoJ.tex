@@ -28,6 +28,7 @@ T-08 & Modelo & Configuración del pipeline de entrenamiento (BCE con ponderaci�
 T-09 & Modelo & Implementación del clasificador de diccionario como \emph{baseline} & Media \\
 T-10 & Modelo & Entrenamiento y selección del mejor \emph{checkpoint} por F1-micro en validación & Alta \\
 T-11 & Modelo & Evaluación sobre el conjunto de test con métricas de precisión, \emph{recall} y F1 & Media \\
+T-46 & Modelo & Activación de FlashAttention~2 como implementación eficiente del mecanismo de atención: integrada en la imagen base GPU (\texttt{cie10-ml-base}) con fallback automático a SDPA; activa en todos los \emph{runs} de entrenamiento & Media \\
 \hline
 T-12 & AI Engine & Implementación del servicio FastAPI con entorno virtualizado & Alta \\
 T-13 & AI Engine & Endpoint \texttt{POST /predict} y \texttt{GET /health} & Alta \\
@@ -60,7 +61,7 @@ T-36 & Infraestructura & Despliegue en clúster Kubernetes con Traefik como prox
 T-37 & Infraestructura & Monitorización con Prometheus y Grafana & Baja \\
 T-38 & Infraestructura & Gestión de errores y excepciones con Sentry & Baja \\
 T-47 & Infraestructura & Configuración del servidor de email en producción con registros SPF, DKIM y política DMARC para garantizar la entregabilidad y autenticidad de los emails transaccionales & Media \\
-T-48 & Datos & Aumentación del corpus CodiEsp mediante retrotraducción ES→EN→ES con Azure Translator (F0 free tier, 2M chars/mes) para doblar el dataset de entrenamiento de 500 a 1000 documentos. Estimación: 1 día & Media \\
+T-48 & Datos & Aumentación del corpus CodiEsp mediante retrotraducción con Azure Translator (F0 free tier) usando tres pivotes (EN, DE, FR), cuadruplicando el dataset de 500 a 2000 documentos & Media \\
 \hline
 T-39 & Modelo & Bucle de aprendizaje activo: reentrenamiento incremental con códigos validados por el codificador & Descartada \\
 T-40 & Modelo & Soporte de codificación de procedimientos CIE-10-ES (ICD-10-PCS) además de diagnósticos & Descartada \\
@@ -69,7 +70,6 @@ T-42 & Backend & Integración con el estándar HL7 FHIR para importación de inf
 T-43 & Backend & Autenticación federada mediante OAuth~2.0 / SSO hospitalario & Descartada \\
 T-44 & Frontend & Procesamiento por lotes: envío y codificación de múltiples informes de forma simultánea & Descartada \\
 T-45 & Modelo & Motor de codificación por búsqueda inversa: indexación del catálogo CIE-10-ES con BM25/TF-IDF y recuperación de códigos por similitud léxica con el informe & Descartada \\
-T-46 & Modelo & Flash Attention como optimización del mecanismo de atención durante el entrenamiento: evaluado pero descartado por incompatibilidad con el modelo base seleccionado & Descartada \\
 \hline
 \caption{Listado completo de tareas del tablero Kanban con prioridad por épica.}
 \label{tab:kanban}

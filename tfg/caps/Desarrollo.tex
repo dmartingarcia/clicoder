@@ -1,7 +1,7 @@
 \chapter{Desarrollo}
 \label{cap:Desarrollo}
 
-En este capítulo se describe el proceso de desarrollo del sistema de codificación clínica automática, siguiendo las fases definidas en el plan de gestión del capítulo~\ref{cap:Planificacion}. El sistema se organiza en cuatro componentes principales que se comunican entre sí: el motor de inteligencia artificial (\emph{AI Engine}), el backend, el frontend y la infraestructura de datos. Cada uno de estos componentes se ha desarrollado de forma independiente, con interfaces bien definidas, lo que permite su sustitución o actualización sin afectar al resto del sistema.
+En este capítulo se describe el proceso de desarrollo del sistema de codificación clínica automática, siguiendo las fases definidas en el plan de gestión del capítulo~\ref{cap:Planificacion}. El sistema se organiza en cuatro componentes principales que se comunican entre sí: el motor de inteligencia artificial (\emph{AI Engine}), el backend, el frontend y la infraestructura de datos. Cada componente tiene interfaces bien definidas y puede sustituirse o actualizarse de forma independiente.
 
 \section{Requisitos y análisis del sistema}
 
@@ -44,7 +44,7 @@ El sistema sigue una arquitectura orientada a servicios con cuatro capas bien di
 
 El \textbf{frontend} (Next.js, React 19) se comunica con el \textbf{backend} (Elixir, Phoenix 1.8) mediante dos canales: una API REST para operaciones de autenticación y consulta, y un canal WebSocket para la recepción de tarjetas de análisis en tiempo real. El backend actúa como orquestador central: recibe los informes clínicos del usuario, los envía al \textbf{motor de IA} (Python, FastAPI) a través de una llamada HTTP síncrona, y retransmite las predicciones resultantes al cliente a medida que se generan. La \textbf{base de datos} PostgreSQL almacena tanto el registro de eventos inmutable del \emph{event store} como las proyecciones de lectura actualizadas por los proyectores del backend.
 
-Dos decisiones arquitectónicas de peso vertebran el diseño. Por un lado, el patrón CQRS/\emph{Event Sourcing} en el backend proporciona trazabilidad completa de todas las acciones clínicas sobre cada análisis. Por otro lado, el motor de IA se mantiene como servicio independiente, lo que permite actualizar el modelo BERT sin recompilar ni reiniciar el resto del sistema. Para describir la arquitectura en detalle se emplea el modelo C4~\cite{Brown22}. La topología completa de contenedores, puertos y variables de entorno se amplía en el Anexo~\ref{cap:AnexoB}; los contratos de comunicación entre servicios, en el Anexo~\ref{cap:AnexoC}; el esquema de base de datos, en el Anexo~\ref{cap:AnexoD}; y las decisiones de diseño que justifican las elecciones tecnológicas, en el Anexo~\ref{cap:AnexoE}.
+Dos decisiones arquitectónicas clave vertebran el diseño. Por un lado, el patrón CQRS/\emph{Event Sourcing} en el backend proporciona trazabilidad completa de todas las acciones clínicas sobre cada análisis. Por otro lado, el motor de IA se mantiene como servicio independiente, lo que permite actualizar el modelo BERT sin recompilar ni reiniciar el resto del sistema. Para describir la arquitectura en detalle se emplea el modelo C4~\cite{Brown22}. La topología completa de contenedores, puertos y variables de entorno se amplía en el Anexo~\ref{cap:AnexoB}; los contratos de comunicación entre servicios, en el Anexo~\ref{cap:AnexoC}; el esquema de base de datos, en el Anexo~\ref{cap:AnexoD}; y las decisiones de diseño que justifican las elecciones tecnológicas, en el Anexo~\ref{cap:AnexoE}.
 
 \textbf{Nivel de contexto.} El sistema recibe informes clínicos en texto libre de parte del codificador clínico y devuelve propuestas de codificación CIE-10-ES. Se comunica con el portal eCIE-maps del Ministerio de Sanidad como fuente de datos externa (en la fase de adquisición de datos).
 
@@ -103,7 +103,7 @@ Cada documento tiene una media de 11,3 códigos CIE-10-ES asignados (mediana: 10
 El coeficiente de Jaccard entre particiones se sitúa entre 0,31 y 0,33. El dato más relevante para la evaluación es que \textbf{el 38\,\% de los códigos presentes en test no aparece en ningún documento de entrenamiento}, lo que impone un techo teórico al F1-macro independiente de la arquitectura elegida.
 
 \paragraph{Características del catálogo CIE-10-ES.}
-El catálogo contiene 101.246 entradas en 21 capítulos. Las categorías más representadas son R (síntomas y signos), S (traumatismos), T (envenenamientos) e I (enfermedades circulatorias). Esta distribución, unida a que solo una fracción de los códigos aparece en CodiEsp, justifica el uso de \emph{block codes} de tres caracteres (1.767 categorías) en lugar de los códigos completos, reduciendo el espacio de clases a un nivel manejable para 500 documentos de entrenamiento.
+El catálogo contiene 101.246 entradas en 21 capítulos. Las categorías más representadas son R (síntomas y signos), S (traumatismos), T (envenenamientos) e I (enfermedades circulatorias). Esta distribución, unida a que solo una fracción de los códigos aparece en CodiEsp, explica que el espacio de clases del clasificador se limite a los 1.767 códigos completos (p.\,ej.\ \texttt{E11.9}) únicos del conjunto de entrenamiento, frente a los más de 100.000 del catálogo CIE-10-ES.
 
 \paragraph{Brecha léxica entre catálogo oficial y lenguaje clínico real.}
 El análisis lingüístico realizado con SpaCy (modelo \texttt{es\_core\_news\_lg}) sobre las descripciones del catálogo CIE-10-ES reveló que el vocabulario oficial emplea 10.874 lemas únicos, dominado por sustantivos técnicos (47,3\,\%) y adjetivos específicos (29,6\,\%). La validación cruzada de este vocabulario con los informes clínicos del corpus CodiEsp, documentada en el \emph{notebook} \texttt{cie10\_spacy\_word\_analysis.ipynb}, arrojó un resultado clínicamente significativo: \textbf{solo el 38,3\,\% de los lemas del catálogo oficial aparece en los textos de los informes hospitalarios}. Los 6.708 lemas restantes pertenecen a la nomenclatura estandarizada, pero no forman parte del lenguaje habitual con que los médicos redactan sus informes de alta.
@@ -132,12 +132,15 @@ El modelo seleccionado como base fue \texttt{IIC/RigoBERTa-Clinical} para el ent
 
 El clasificador sigue una arquitectura plana (\emph{flat}) de clasificación multilabel. La entrada es el texto del informe clínico codificado por el tokenizador del modelo base; la salida es un vector de probabilidades de dimensión igual al número de códigos presentes en el corpus de entrenamiento (aproximadamente 1.767 códigos únicos en la partición de diagnósticos de CodiEsp).
 
-Sobre el codificador BERT se añade una cabeza de clasificación compuesta por una capa de \emph{dropout} (p\,=\,0,1) y una capa lineal que proyecta la representación del token \texttt{[CLS]} al espacio de códigos. La activación utilizada en inferencia es una sigmoide por código, de modo que cada predicción es independiente del resto y el modelo puede asignar simultáneamente cualquier subconjunto de códigos. Durante el entrenamiento se utiliza \emph{Binary Cross-Entropy} como función de pérdida, con la planificación de la tasa de aprendizaje mediante \emph{cosine schedule with warmup}.
+Sobre el codificador BERT se añade una cabeza de clasificación compuesta por una capa de \emph{dropout} (p\,=\,0,3 en producción) y una capa lineal que proyecta la representación del token \texttt{[CLS]} al espacio de códigos. La activación utilizada en inferencia es una sigmoide por código, de modo que cada predicción es independiente del resto y el modelo puede asignar simultáneamente cualquier subconjunto de códigos. Durante el entrenamiento se utiliza \emph{Binary Cross-Entropy} como función de pérdida, con la planificación de la tasa de aprendizaje mediante \emph{cosine schedule with warmup}.
 
 La selección de los códigos predichos se realiza mediante un umbral por defecto de 0,5 sobre la probabilidad. Si ningún código supera el umbral, el sistema devuelve los \(k\) códigos con mayor probabilidad para garantizar siempre una respuesta al usuario. Tanto el umbral como el valor de \(k\) son configurables en el fichero \texttt{config.json} generado durante el entrenamiento.
 
+\paragraph{FlashAttention~2: implementación eficiente del mecanismo de atención.}
+El codificador de RigoBERTa-Clinical utiliza FlashAttention~2~\cite{dao2023flashattention2} en lugar de la implementación estándar de auto-atención de PyTorch. FlashAttention~2 reordena el cómputo de la atención para reducir el consumo de memoria y acelerar cada paso, lo que se traduce en épocas de entrenamiento entre 2× y 4× más rápidas, sin alterar el resultado matemático. En este proyecto ese ahorro hizo viable el ciclo de 46 experimentos en un presupuesto de tiempo razonable, aunque introduce una fuente menor de no-determinismo en los gradientes que se discute en la nota sobre reproducibilidad al final de esta sección.
+
 \paragraph{Clasificador de diccionario (\texttt{baseline\_dict.py}).}
-El motor de IA incluye un clasificador de diccionario que actúa como \textbf{complemento determinista} de RigoBERTa-Clinical, no como alternativa. Su función es triple: sirve de \emph{baseline} de referencia para evaluar el valor añadido del modelo neuronal, actúa de \emph{fallback} cuando el modelo BERT no está disponible en producción, y puede combinarse con las predicciones neurales a través del parámetro \texttt{engine="both"} del endpoint \texttt{POST /predict}, que devuelve las predicciones de cada motor de forma independiente con su campo identificador.
+El motor de IA incluye un clasificador de diccionario que actúa como \textbf{complemento determinista} de RigoBERTa-Clinical, no como alternativa. Su función es triple: sirve de \emph{baseline} de referencia para evaluar el valor añadido del modelo neuronal, actúa de \emph{fallback} cuando el modelo BERT no está disponible en producción, y puede combinarse con las predicciones neurales a través del parámetro \texttt{engine=\textquotedbl{}both\textquotedbl{}} del endpoint \texttt{POST /predict}, que devuelve las predicciones de cada motor de forma independiente con su campo identificador.
 
 El clasificador opera mediante coincidencia de patrones lematizados sobre cinco fuentes de conocimiento complementarias:
 
@@ -145,11 +148,11 @@ El clasificador opera mediante coincidencia de patrones lematizados sobre cinco 
     \item \textbf{Descripciones oficiales CIE-10-ES} (\emph{diagnoses}): cada código y sus variantes (separadas por \texttt{|} en el catálogo) se lematiza y se compila como expresión regular con delimitadores de palabra para evitar falsos positivos por subcadena.
     \item \textbf{Diccionario de procedimientos CIE-10-PCS} (\emph{procedures}): ídem sobre las descripciones de procedimientos, cuya co-ocurrencia con diagnósticos aporta señal correlada.
     \item \textbf{Diccionario de sustancias y fármacos} (\emph{chemicals}): nombres de fármacos y sustancias del catálogo CIE-10-MC.
-    \item \textbf{Términos clínicos reales} (\emph{clinical}): fragmentos de texto extraídos de las anotaciones de explainabilidad del task\_X de CodiESP (el texto literal que el anotador señaló como evidencia de cada código), expandidos con sinónimos léxicos mediante los word vectors de \texttt{es\_core\_news\_lg}. Esta fuente es \emph{semi-supervisada} porque usa anotaciones del conjunto de validación.
+    \item \textbf{Términos clínicos reales} (\emph{clinical}): fragmentos de texto extraídos de las anotaciones de explainabilidad del task\_X de CodiEsp (el texto literal que el anotador señaló como evidencia de cada código), expandidos con sinónimos léxicos mediante los word vectors de \texttt{es\_core\_news\_lg}. Esta fuente es \emph{semi-supervisada} porque usa anotaciones del conjunto de validación.
     \item \textbf{N-gramas discriminativos del corpus} (\emph{corpus}): secuencias de 2--5 palabras extraídas de las notas de entrenamiento con frecuencia mínima 2 y precisión mínima 0,5 respecto al bloque que las contiene.
 \end{enumerate}
 
-Antes de cualquier comparación, el texto del informe se lematiza con \texttt{es\_dep\_news\_trf} (transformer contextual) y se expanden las abreviaturas clínicas más frecuentes (\texttt{HTA} → \emph{hipertensión arterial}, \texttt{IAM} → \emph{infarto agudo de miocardio}, \texttt{EPOC} → \emph{enfermedad pulmonar obstructiva crónica}, etc.) para maximizar la cobertura léxica sin introducir falsos positivos. El resultado combinado de las cinco fuentes cubre los códigos frecuentes con recall razonable, pero con una precisión sensiblemente inferior a la del clasificador neuronal: RigoBERTa-Clinical captura relaciones semánticas y de contexto que escapan a la coincidencia léxica. Por este motivo el clasificador de diccionario es un complemento, no un sustituto del modelo neuronal.
+Antes de cualquier comparación, el texto del informe se lematiza con \texttt{es\_dep\_news\_trf} (transformer contextual) y se expanden las abreviaturas clínicas más frecuentes (\texttt{HTA} → \emph{hipertensión arterial}, \texttt{IAM} → \emph{infarto agudo de miocardio}, \texttt{EPOC} → \emph{enfermedad pulmonar obstructiva crónica}, etc.) para maximizar la cobertura léxica sin introducir falsos positivos. El resultado combinado de las cinco fuentes cubre los códigos frecuentes con recall razonable, pero con una precisión sensiblemente inferior a la del clasificador neuronal: a diferencia de un diccionario construido a mano como el del equipo IAM-Burdeos —donde la alta precisión se debe a que cada término fue seleccionado manualmente por ser inequívoco—, el uso de n-gramas discriminativos y la expansión léxica por vectores de palabras introduce ruido que reduce la precisión por debajo de la del modelo neuronal. RigoBERTa-Clinical, además, captura relaciones semánticas y de contexto que escapan por completo a la coincidencia léxica. Por este motivo el clasificador de diccionario es un complemento, no un sustituto del modelo neuronal.
 
 \subsubsection{Proceso de entrenamiento experimental}
 \label{sec:entrenamiento}
@@ -157,10 +160,10 @@ Antes de cualquier comparación, el texto del informe se lematiza con \texttt{es
 El proceso de entrenamiento se articuló en cuatro fases experimentales sucesivas, guiadas por los resultados en el conjunto de validación. Se registraron 46 corridas en \texttt{training\_runs.csv}, proporcionando trazabilidad total del proceso. El Anexo~\ref{cap:AnexoF} recoge las curvas de aprendizaje más representativas y el Anexo~\ref{cap:AnexoH} los hiperparámetros y resultados finales.
 
 \paragraph{Decisión arquitectural: clasificación en cascada vs. clasificador plano.}
-La primera decisión de diseño fue la estrategia de clasificación. Se consideró una arquitectura de cascada en dos niveles: un clasificador de capítulos (19–21 clases) seguido de clasificadores especializados por capítulo, que reduciría el espacio de búsqueda en un 95\,\%. Para la implementación final se optó por un clasificador plano sobre los 1.767 \emph{block codes} de tres caracteres, combinando la manejabilidad del segundo nivel con la compatibilidad con un único modelo de producción.
+La primera decisión de diseño fue la estrategia de clasificación. Se consideró una arquitectura de cascada en dos niveles: un clasificador de capítulos (19–21 clases) seguido de clasificadores especializados por capítulo, que reduciría el espacio de búsqueda en un 95\,\%. Para la implementación final se optó por un clasificador plano sobre los 1.767 códigos completos del espacio de entrenamiento, combinando la manejabilidad del segundo nivel con la compatibilidad con un único modelo de producción.
 
 \paragraph{Fase 1: exploración y descarte de modelos candidatos.}
-Se evaluaron cinco arquitecturas atendiendo a la especialización en español médico, longitud de contexto y velocidad de inferencia. Para acelerar la comparación, todos los experimentos de esta fase se realizaron sobre la tarea de clasificación de \textbf{capítulos CIE-10} (21 clases), que actúa como aproximación de primer nivel: menos clases implican ciclos de entrenamiento más rápidos y resultados más interpretables, a la vez que el ranking relativo de modelos se transfiere bien a la tarea final. El clasificador de producción opera sobre los 1.767 \emph{block codes} de tres caracteres, que proporcionan el código CIE-10 completo. La Tabla~\ref{tab:modelos-capitulos} resume los resultados del clasificador de capítulos.
+Se evaluaron cinco arquitecturas atendiendo a la especialización en español médico, longitud de contexto y velocidad de inferencia. Para acelerar la comparación, todos los experimentos de esta fase se realizaron sobre la tarea de clasificación de \textbf{capítulos CIE-10} (21 clases), que actúa como aproximación de primer nivel: menos clases implican ciclos de entrenamiento más rápidos y resultados más interpretables, a la vez que el ranking relativo de modelos se transfiere bien a la tarea final. El clasificador de producción opera sobre los 1.767 códigos CIE-10 completos presentes en el conjunto de entrenamiento de CodiEsp. La Tabla~\ref{tab:modelos-capitulos} resume los resultados del clasificador de capítulos.
 
 \begin{table}[ht]
 \centering
@@ -228,7 +231,7 @@ El modelo Longformer BSC-Medical (ventana 2048 tokens) fue evaluado como alterna
 El paso al nivel de \emph{código completo} (1767 clases, frente a 809 bloques de tres caracteres) conllevó una caída de 10\,pp en F1-micro: con 500 documentos de entrenamiento, la ratio datos/clase cae de $\sim$0,62 a $\sim$0,28. La degradación fue especialmente severa en F1-macro (0,118 → 0,050, $-$58\,\%), ya que códigos que aparecían 3 veces en train a nivel de bloque pasan a tener 1 aparición al subdividirse por subtipo. La elección de código completo para producción es correcta —el sistema clínico lo requiere— pero expone que el camino para recuperar esos 10\,pp pasa por aumentar los datos de entrenamiento, no por simplificar los objetivos.
 
 \paragraph{Pre-entrenamiento débil (pasos 21--23).}
-La escasez de datos para 1767 clases motivó un pre-entrenamiento supervisado previo al fine-tuning sobre CodiESP. El pre-entrenamiento sobre las $\sim$3.200 variantes de descripciones oficiales del diccionario CIE-10-ES aportó +10,4\,pp de F1-micro (0,327 → 0,431): el encoder aprende a asociar terminología clínica oficial con cada código antes de ver las notas reales. Añadir los 10.072 snippets clínicos del task\_X de CodiESP (fragmentos de texto real del médico anotados con su código) sumó 3,9\,pp adicionales (F1-micro=0,470) y una mejora del 51\,\% en F1-macro, porque esos snippets enseñan la jerga real (\texttt{IAM}, \texttt{SCA}, \emph{dolor centrotorácico irradiado}) que el diccionario oficial no recoge. Un experimento de ablación mostró que introducir muestras negativas en el pre-entrenamiento es contraproducente: el modelo aprende a inhibir activaciones justo cuando necesita maximizar el reconocimiento de terminología.
+La escasez de datos para 1767 clases motivó un pre-entrenamiento supervisado previo al fine-tuning sobre CodiEsp. El mecanismo utiliza el catálogo CIE-10-ES como fuente de datos débilmente supervisados: para cada uno de los 1767 códigos del vocabulario objetivo se extrae su descripción oficial (incluyendo variantes separadas por \texttt{|}) y se construye un par (descripción → código) que se usa como muestra de entrenamiento. De este modo el encoder aprende a reconocer las \emph{keywords} clínicas de cada diagnóstico —terminología, siglas y variantes oficiales— antes de exponerse a las notas reales. El pre-entrenamiento sobre las $\sim$3.200 variantes resultantes aportó +10,4\,pp de F1-micro (0,327 → 0,431). Añadir los 10.072 snippets clínicos del task\_X de CodiEsp (fragmentos de texto real del médico anotados con su código) sumó 3,9\,pp adicionales (F1-micro=0,470) y una mejora del 51\,\% en F1-macro, porque esos snippets enseñan la jerga real (\texttt{IAM}, \texttt{SCA}, \emph{dolor centrotorácico irradiado}) que el diccionario oficial no recoge. Un experimento de ablación mostró que introducir muestras negativas en el pre-entrenamiento es contraproducente: el modelo aprende a inhibir activaciones justo cuando necesita maximizar el reconocimiento de terminología.
 
 \paragraph{Experimentos con la función de pérdida (pasos 24 y 26).}
 La Asymmetric Loss (ASL) —que reduce o elimina la contribución de los negativos fáciles al gradiente— fue evaluada con $\gamma^- \in \{2, 4\}$. Con $\gamma^-=4$ el modelo colapsó al modo \emph{predecir todo} (F1-micro\,=\,0,375 frente a 0,470 de referencia). Con $\gamma^-=2$ el resultado fue prácticamente equivalente a BCE+pos\_weight ($-$1\,pp), sin beneficio neto. Subir el cap de pos\_weight de 10 a 30 solo añadió inestabilidad en el entrenamiento inicial. La conclusión fue que el cuello de botella no es la ponderación de la función de pérdida sino la escasez de datos: con $\sim$140 códigos completamente ausentes en entrenamiento y otros $\sim$400 con 1--2 apariciones, ninguna ponderación puede compensar la falta de ejemplos.
@@ -251,7 +254,7 @@ La Tabla~\ref{tab:progreso_pasos} recoge la evolución acumulada desde el clasif
 \begin{table}[h]
 \centering
 \small
-\caption{Progreso acumulado del clasificador (F1 en validación CodiESP, umbral global 0,3).}
+\caption{Progreso acumulado del clasificador (F1 en validación CodiEsp, umbral global 0,3).}
 \label{tab:progreso_pasos}
 \begin{tabular}{p{0.5cm}p{7.5cm}rr}
 \hline
@@ -261,16 +264,17 @@ La Tabla~\ref{tab:progreso_pasos} recoge la evolución acumulada desde el clasif
 21 & + Pretrain CIE-10 (3k descripciones) & 0,431 & 0,092 \\
 23 & + Snippets clínicos task\_X (10k) & 0,470 & 0,139 \\
 28b & + ReduceLROnPlateau & 0,475 & 0,116 \\
-30b & + Label smoothing + progressive unfreezing & 0,484 & 0,149 \\
-\textbf{32b} & \textbf{+ Consistencia jerárquica ($\lambda$=0,5)} & \textbf{0,4888} & \textbf{0,1524} \\
+30b & + Label smoothing + progressive unfreezing & 0,484 & 0,116 \\
+\textbf{32b} & \textbf{+ Consistencia jerárquica ($\lambda$=0,5)} & \textbf{0,4888} & \textbf{0,1524}$^\dagger$ \\
 \hline
 \end{tabular}
+\smallskip\par\footnotesize $^\dagger$ Con umbrales por clase optimizados sobre validación. Con umbral global 0,3: F1-macro~=~0,120.
 \end{table}
 
 \subsubsection{Aumentación de datos mediante retrotraducción}
 \label{sec:backtranslation}
 
-El análisis de los experimentos anteriores reveló que la limitación principal no es la arquitectura ni la función de pérdida, sino la escasez de datos. El corpus de entrenamiento de CodiESP contiene 500 documentos con una media de 11,28 etiquetas por nota, cubriendo los 1767 códigos del catálogo CIE-10-ES. La distribución de frecuencias es muy sesgada: el 56,5\,\% de los códigos aparece exactamente una vez y el 88,7\,\% no supera las cinco apariciones. Ninguna técnica de regularización puede compensar la escasez de señal de entrenamiento para las clases más raras.
+El análisis de los experimentos anteriores reveló que la limitación principal no es la arquitectura ni la función de pérdida, sino la escasez de datos. El corpus de entrenamiento de CodiEsp contiene 500 documentos con una media de 11,28 etiquetas por nota, cubriendo los 1767 códigos del catálogo CIE-10-ES. La distribución de frecuencias es muy sesgada: el 56,5\,\% de los códigos aparece exactamente una vez y el 88,7\,\% no supera las cinco apariciones. Ninguna técnica de regularización puede compensar la escasez de señal de entrenamiento para las clases más raras.
 
 La solución natural es generar datos sintéticos adicionales sin necesidad de anotación manual. La técnica empleada es la \textbf{retrotraducción} (\emph{back-translation})~\cite{sennrich2016improving}: cada nota clínica se traduce del español a un idioma pivote (inglés) y el resultado se vuelve a traducir al español. El texto final es semánticamente equivalente al original pero con diferente elección léxica y estructura sintáctica, actuando como una paráfrasis automática. Las etiquetas CIE-10 permanecen inalteradas porque la semántica clínica se conserva a través del pivote.
 
@@ -289,7 +293,7 @@ Se diseñó el script \texttt{ai\_engine/augment.py} con dos \emph{backends} int
 Se aplicaron tres pivotes independientes (EN, DE, FR), lo que cuadruplica el corpus de entrenamiento hasta 2000 documentos. Las variantes se combinan mediante \texttt{ai\_engine/combine\_augmented.py} en un único CSV de entrenamiento. El proceso de configuración, los límites del servicio gratuito, las estadísticas de calidad por pivote y los comandos de uso se documentan en el Anexo~\ref{cap:AnexoL}.
 
 \paragraph{Resultado del entrenamiento con datos aumentados.}
-El entrenamiento con el corpus 4× duró \textbf{76~minutos} (03:27--04:43~CEST, 29~mayo~2026), frente a los $\sim$90~min del paso 32b con 500~documentos: el early~stop temprano (época~51) compensó el mayor tamaño del dataset. El resultado fue un F1-micro de \textbf{0,4668}, inferior al 0,4888 de referencia ($-0{,}022$). La causa es un desajuste en el schedule de entrenamiento: con 2000 documentos el número de pasos por época pasa de 63 a 250 (4×), pero el parámetro \texttt{UNFREEZE\_EVERY=30} no fue reescalado. Esto provoca que el primer descongelado de capas del encoder ocurra tras 7500 pasos (frente a los 1890 del experimento de referencia), y el modelo converge en el régimen de freeze total antes de que la señal de las capas superiores pueda aprovecharse, disparando el early stopping en la época 51.
+El entrenamiento con el corpus 4× duró \textbf{76~minutos} (03:27--04:43~CEST, 29~mayo~2026), frente a los $\sim$90~min del paso 32b con 500~documentos: el early~stop temprano (época~51) compensó el mayor tamaño del dataset. El resultado fue un F1-micro de \textbf{0,4668}, inferior al 0,4888 de referencia ($-0{,}022$). La causa es un desajuste en el schedule de entrenamiento: con 2000 documentos el número de pasos por época pasa de 63 a 250 (4×), pero el parámetro \texttt{UNFREEZE\_EVERY=30} no fue reescalado. Esto provoca que el primer descongelado de capas del encoder ocurra tras 7500 pasos (frente a los 1890 del experimento de referencia), y el modelo converge en el régimen de freeze total antes de que la señal de las capas superiores pueda aprovecharse, disparando el early~stop en la época 51.
 
 La lección es que al escalar el dataset hay que reescalar los hitos de unfreezing por la inversa del factor de datos: $\texttt{UNFREEZE\_EVERY} = \lfloor 30 / 4 \rfloor = 8$ para mantener el mismo número de pasos entre descongelados.
 
@@ -301,18 +305,24 @@ Con \texttt{UNFREEZE\_EVERY=8} el descongelado progresivo se comportó exactamen
 La mejora de schedule no fue suficiente: el modelo sigue por debajo de la referencia ($-0{,}032$ frente a 32b). El diagnóstico apunta a un problema más profundo que el calendario de descongelados: el corpus de entrenamiento es ahora back-translated, pero el conjunto de validación sigue siendo español original. El modelo aprende una distribución ligeramente diferente —construcciones sintácticas características de texto retraducido— y esa brecha penaliza la evaluación. Los datos sintéticos añaden variedad léxica pero no resuelven la escasez de señal real; en este contexto, introducen más ruido del que aportan.
 
 \paragraph{Pasos 34a y 34b — batch efectivo 64, pretrain reducido y mayor margen de entrenamiento.}
+\begin{sloppypar}
 Descartada la aumentación como vía principal, se diseñó un experimento que acumulaba todos los ajustes identificados a lo largo del proceso pero que aún no habían aparecido juntos: reducción del pre-entrenamiento a 3 épocas (lo suficiente para saturar el loss sin memorizar), mayor batch efectivo (\texttt{GRAD\_ACCUM=8}, batch~64 frente al batch~32 de 32b), más margen de entrenamiento (\texttt{EPOCHS=200}, \texttt{PATIENCE=25}) y una tasa de aprendizaje ligeramente más alta para las capas descongeladas (\texttt{UNFREEZE\_LR\_RATIO=0.2}, es decir $2\times10^{-5}$ frente a $10^{-5}$). Los dos runs se lanzaron en paralelo sobre la misma GPU: el paso~34a sobre los 500 documentos originales (sin aumentación) y el paso~34b sobre el corpus aumentado de 2000, cada uno con \texttt{UNFREEZE\_EVERY} ajustado a su tamaño de dataset (30 y 8 respectivamente).
+\end{sloppypar}
 
-Los resultados fueron F1-micro~\textbf{0,4568} para 34a y \textbf{0,4518} para 34b, ambos por debajo de 32b. El análisis post-hoc apunta a \texttt{GRAD\_ACCUM=8} como el responsable de la regresión en 34a: con 500 documentos y \texttt{BATCH\_SIZE=8} hay exactamente 63 mini-batches por época, de modo que doblar la acumulación deja solo $\lfloor 63/8 \rfloor \approx 8$ actualizaciones reales del optimizador por época. Con esa cadencia tan baja el scheduler plateau apenas recibe señal de mejora por época, el warmup consume proporcionalmente más del presupuesto de entrenamiento y el descongelado progresivo opera con gradientes menos informativos. El paso~32b funcionaba con 63 actualizaciones por época —la granularidad adecuada para ese tamaño de corpus— y ese ajuste resultó ser más crítico de lo esperado. El paso~34b arrastra además el problema de distribución ya identificado en los pasos 33 y 33b.
+Los resultados fueron F1-micro~\textbf{0,4568} para 34a y \textbf{0,4518} para 34b, ambos por debajo de 32b. La causa de la regresión en 34a es \texttt{GRAD\_ACCUM=8}: con \texttt{BATCH\_SIZE=8} y 500 documentos hay 63~mini-batches por época, de modo que la acumulación doble deja solo $\lfloor 63/8 \rfloor \approx 8$ actualizaciones reales del optimizador por época. Con esa cadencia tan baja el scheduler plateau apenas recibe señal de mejora, el \emph{warmup} consume proporcionalmente más del presupuesto de entrenamiento y el descongelado progresivo opera con gradientes menos informativos. El paso~32b funcionaba con 63 actualizaciones por época —la granularidad adecuada para ese tamaño de corpus— y ese ajuste resultó ser más crítico de lo esperado. El paso~34b arrastra además el problema de distribución ya identificado en los pasos 33 y 33b.
 
+\begin{sloppypar}
 La lección transversal de los pasos 33--34 es que los hiperparámetros de schedule (\texttt{GRAD\_ACCUM}, \texttt{UNFREEZE\_EVERY}, \texttt{PATIENCE}) no son independientes del tamaño del corpus: todos ellos fijan una cadencia de señal por época y deben calibrarse conjuntamente cada vez que cambia el número de muestras.
+\end{sloppypar}
 
 \paragraph{Pasos 35a y 35b — replicación de 32b con pretrain reducido y mayor margen (35a: datos originales; 35b: corpus aumentado 4×).}
 El objetivo del paso~35 es verificar si la configuración ganadora (32b, F1-micro~0,4888) es replicable o incluso superable aplicando únicamente los ajustes que no implican riesgo de regresión: reducir el pre-entrenamiento a 3 épocas —suficiente para saturar el loss sin memorizar— y ampliar el presupuesto de entrenamiento a 200 épocas con \texttt{PATIENCE=25}, dado que el paso~32b alcanzó su mejor resultado en la época~135 con un límite de 150. El resto de hiperparámetros es idéntico a 32b, en particular \texttt{GRAD\_ACCUM=4} y \texttt{UNFREEZE\_LR\_RATIO=0.1}. Como en el paso~34, se lanza en paralelo una variante sobre el corpus aumentado (35b) con \texttt{UNFREEZE\_EVERY=8} para mantener la cadencia de descongelado equivalente.
 
 Los resultados fueron F1-micro~\textbf{0,4643} para 35a y \textbf{0,4569} para 35b, ambos por debajo de la referencia. La regresión de 35a respecto a 32b ($-0{,}025$), con todo lo demás idéntico, apunta a \texttt{PRETRAIN\_EPOCHS=3} como causa. Aunque el loss de pre-entrenamiento llegaba a valores próximos a cero ya en la primera época, esto no implica que las representaciones internas estuviesen consolidadas: con 10 épocas el modelo continúa refinando sus pesos aunque la señal de error sea casi nula, y ese refinamiento silencioso resulta beneficioso para el fine-tuning posterior. La aparente saturación del loss no es equivalente a sobreajuste evitable; es convergencia gradual de las representaciones.
 
-El paso~35c repitió la configuración exacta de 32b añadiendo únicamente \texttt{EPOCHS=200} y \texttt{PATIENCE=25} para dar más margen tras el último descongelado. El resultado fue F1-micro~\textbf{0,4888} en la época~124, reproduciendo el valor del paso~32b y confirmando que la configuración es robusta y no dependiente de una inicialización afortunada. Sin embargo, el F1-macro fue 0,1110 frente a 0,1196 de 32b, dentro de la variabilidad esperada entre runs. Dado que F1-micro y F1-macro son ambas métricas relevantes, el modelo de producción es el del paso~32b (\texttt{classifier\_20260326T045031Z}), que mantiene el mejor equilibrio micro/macro observado en todo el proceso.
+\begin{sloppypar}
+El paso~35c repitió la configuración exacta de 32b añadiendo únicamente \texttt{EPOCHS=200} y \texttt{PATIENCE=25} para dar más margen tras el último descongelado. El resultado fue F1-micro~\textbf{0,4888} en la época~124, reproduciendo el valor del paso~32b y confirmando que la configuración es robusta y no dependiente de una inicialización afortunada. Aunque el F1-macro fue 0,1110 frente a 0,1196 de 32b, dentro de la variabilidad esperada entre runs. El modelo de producción es el \emph{run} \texttt{classifier\_20260326T045031Z} del paso~32b, que alcanza F1-micro~0,489 con umbral global de 0,3 y F1-micro~\textbf{0,551} con umbrales por clase optimizados sobre validación; los detalles de evaluación se recogen en el Anexo~\ref{cap:AnexoH}.
+\end{sloppypar}
 
 El paso~35d repitió la misma configuración sobre el corpus aumentado de 2000 documentos, obteniendo F1-micro~\textbf{0,4766} y F1-macro~0,114 en la época~29. Es el mejor resultado obtenido con aumentación en todo el proceso, pero sigue por debajo de 32b. El early~stop temprano (época~29 frente a~124 del 35c) confirma el patrón observado desde el paso~33: con 2000 documentos el modelo converge rápidamente pero no generaliza bien sobre el conjunto de validación en español original.
 
@@ -328,7 +338,7 @@ La configuración ganadora definitiva es, por tanto, \textbf{paso~32b}: F1-micro
 \textbf{Run} & \textbf{Corpus} & \textbf{F1-micro} & \textbf{F1-macro} & \textbf{Best época} \\
 \hline
 \textbf{32b (referencia)} & \textbf{500 docs originales} & \textbf{0,4888} & \textbf{0,1196} & \textbf{135} \\
-35a & 500 docs, pretrain=3 & 0,4643 & 0,1110 & — \\
+35a & 500 docs, pretrain=3 & 0,4643 & 0,0990 & — \\
 35b & 2000 docs (BT), pretrain=3 & 0,4569 & — & — \\
 35c & 500 docs, pretrain=10 & 0,4888 & 0,1110 & 124 \\
 35d & 2000 docs (BT), pretrain=10 & 0,4766 & 0,1140 & 29 \\
@@ -337,7 +347,9 @@ La configuración ganadora definitiva es, por tanto, \textbf{paso~32b}: F1-micro
 \end{table}
 
 \paragraph{Nota sobre reproducibilidad y variabilidad entre runs.}
+\begin{sloppypar}
 El script de entrenamiento no fija ninguna semilla aleatoria (\emph{random seed}). Esta decisión fue deliberada durante la fase exploratoria: fijar la semilla habría requerido activar \texttt{torch.use\_deterministic\_algorithms} y \texttt{CUBLAS\_WORKSPACE\_CONFIG}, lo que deshabilita kernels CUDA optimizados e incrementa el tiempo de entrenamiento de forma apreciable. En un proceso iterativo de más de 35 experimentos, ese sobrecoste habría sido prohibitivo.
+\end{sloppypar}
 
 La contrapartida es que los resultados no son exactamente reproducibles. Las fuentes de no-determinismo son tres: la inicialización aleatoria de la cabeza clasificadora, el orden de los mini-batches en cada época y las operaciones CUDA no deterministas (operaciones de reducción en paralelo, Flash Attention). En la práctica, la variabilidad observada entre runs con configuración idéntica es de $\pm 0{,}01$ en F1-micro, lo que no altera las conclusiones comparativas entre pasos pero sí impide replicar el valor exacto 0,4888 del paso~32b. El modelo entrenado en ese run queda guardado como artefacto definitivo; los experimentos posteriores (pasos 33--35) sirven para confirmar que esa configuración es robusta, no para superarla de forma reproducible.
 
@@ -346,7 +358,7 @@ Para un ciclo de reentrenamiento productivo con datos reales se recomienda añad
 \subsubsection{Aprendizaje continuo a partir del feedback de usuarios}
 \label{sec:continuous-learning}
 
-Una limitación estructural del entrenamiento sobre CodiESP es que los datos proceden de
+Una limitación estructural del entrenamiento sobre CodiEsp es que los datos proceden de
 un benchmark con distribución fija. En un entorno clínico real, el modelo encontrará
 patrones de redacción, abreviaturas y combinaciones de códigos que difieren del corpus de
 entrenamiento. Para cerrar esta brecha, el sistema está diseñado para capturar señal de
@@ -362,10 +374,10 @@ entrenamiento supervisado:
 \begin{itemize}
     \item \textbf{Texto clínico} (\texttt{messages.content}): el informe enviado por el
     codificador, que actúa como entrada $x$ del clasificador.
-    \item \textbf{Validaciones} (\texttt{predicted\_codes.status = "validated"}): códigos
+    \item \textbf{Validaciones} (\texttt{predicted\_codes.status = 'validated'}): códigos
     que el codificador ha confirmado como correctos. Constituyen etiquetas positivas
     $(y = 1)$ con respaldo humano.
-    \item \textbf{Rechazos} (\texttt{predicted\_codes.status = "rejected"}): códigos que el
+    \item \textbf{Rechazos} (\texttt{predicted\_codes.status = 'rejected'}): códigos que el
     modelo predijo pero el codificador descartó. Señalan errores sistemáticos del modelo
     sobre textos reales de dominio.
     \item \textbf{Sugerencias manuales} (\texttt{code\_suggestions.suggested\_code}): códigos
@@ -386,25 +398,25 @@ el modelo no cubrió.
 
 \paragraph{Transformación al formato de entrenamiento.}
 Para incorporar el feedback al ciclo de entrenamiento, los datos de las proyecciones se
-transforman al mismo formato CSV que CodiESP: una fila por informe con el texto clínico
+transforman al mismo formato CSV que CodiEsp: una fila por informe con el texto clínico
 como campo \texttt{text} y la lista de códigos confirmados —validaciones más sugerencias
 manuales— como campo \texttt{labels} separados por punto y coma. El conjunto resultante
-se combina con el corpus CodiESP original antes de lanzar el entrenamiento:
+se combina con el corpus CodiEsp original antes de lanzar el entrenamiento:
 
 \begin{equation*}
-    \mathcal{D}_{\text{combined}} = \mathcal{D}_{\text{CodiESP}} \cup \mathcal{D}_{\text{feedback}}
+    \mathcal{D}_{\text{combined}} = \mathcal{D}_{\text{CodiEsp}} \cup \mathcal{D}_{\text{feedback}}
 \end{equation*}
 
 \paragraph{Estrategia de incorporación recomendada.}
 En lugar de entrenar desde cero con el conjunto combinado, se recomienda partir del
 \emph{checkpoint} del modelo en producción y realizar un \emph{fine-tuning} de pocas
 épocas (5--10) sobre $\mathcal{D}_{\text{combined}}$. Este enfoque tiene tres ventajas:
-hereda el conocimiento adquirido durante el entrenamiento completo sobre CodiESP, reduce
+hereda el conocimiento adquirido durante el entrenamiento completo sobre CodiEsp, reduce
 el tiempo de cómputo, y minimiza el riesgo de \emph{catastrophic forgetting} mediante una
 tasa de aprendizaje reducida ($\eta \approx 2 \times 10^{-5}$). Antes de sustituir el
 modelo en producción, el nuevo \emph{checkpoint} debe evaluarse sobre el split de
-validación de CodiESP; si el F1-micro decrece más de un punto porcentual respecto al
-modelo en producción, el ciclo se descarta.
+validación de CodiEsp; si el F1-micro decrece más de un punto porcentual respecto al
+modelo en producción, ese reentrenamiento se descarta.
 
 \paragraph{Requisito de volumen mínimo.}
 Con menos de 100 muestras nuevas, la relación señal/ruido del feedback no compensa
@@ -428,6 +440,8 @@ Para cumplir el requisito de trazabilidad clínica, el backend se organiza en to
 \end{figure}
 
 El almacenamiento de eventos se implementa sobre PostgreSQL, sin recurrir a una base de datos dedicada para \emph{Event Sourcing} como EventStoreDB o Apache Kafka. Esta decisión (ADR-04, Anexo~\ref{cap:AnexoE}) reduce la complejidad operacional: un único sistema de base de datos para administrar, con soporte nativo y maduro en Commanded. Si el volumen de eventos creciera hasta niveles que saturaran PostgreSQL —lo que en el contexto clínico de un hospital de tamaño medio no se prevé a corto plazo—, la migración a un \emph{broker} de mensajes como Kafka es viable sin cambios estructurales en el dominio. El módulo \texttt{EventStore} de Commanded sigue el principio de inversión de dependencias (SOLID): el dominio depende de una abstracción, no de un adaptador concreto, de modo que sustituir el adaptador PostgreSQL por uno Kafka se limita a cambiar la configuración del supervisor OTP sin tocar los agregados, proyectores ni manejadores de eventos.
+
+En la práctica, la migración se reduciría a tres pasos de infraestructura: añadir la dependencia del adaptador Kafka para Commanded en \texttt{mix.exs}, reemplazar el módulo de adaptador en \texttt{config/config.exs} —de \texttt{EventStore.Adapters.Postgres} al adaptador Kafka correspondiente— y ajustar las credenciales de conexión al \emph{broker}. Los agregados (\texttt{AnalysisAggregate}, \texttt{UserAggregate}), los proyectores, los manejadores de comandos y los gestores de procesos permanecerían intactos, ya que todos interactúan exclusivamente con el comportamiento (\emph{behaviour}) \texttt{Commanded.EventStore} y no con PostgreSQL directamente. Los eventos se serializan como estructuras Elixir independientes del transporte, lo que garantiza su compatibilidad con cualquier backend de almacenamiento. Esta separación es especialmente relevante para un sistema clínico: si en el futuro el hospital requiriera integrar el \emph{event store} con otros sistemas hospitalarios —historia clínica electrónica, sistemas de facturación— a través de un bus de eventos corporativo, el dominio de la aplicación no necesitaría modificarse.
 
 La comunicación en tiempo real entre frontend y backend se realiza mediante canales WebSocket de Phoenix, tecnología que encaja de forma natural con el modelo de actores de la BEAM. El canal \texttt{ConversationChannel} gestiona el envío de informes, la recepción asíncrona de predicciones del motor de IA y la difusión de tarjetas de análisis al cliente a medida que se generan, sin necesidad de \emph{polling}. La especificación completa de los mensajes WebSocket y de la API REST se recoge en el Anexo~\ref{cap:AnexoC}.
 
@@ -473,19 +487,19 @@ Si el directorio del modelo no existe al arrancar, el servicio se inicia igualme
 \subsubsection{Selección del motor de IA mediante \emph{feature toggle}}
 \label{sec:feature-toggle}
 
-El parámetro \texttt{engine} del endpoint \texttt{POST /predict} actúa como un \textbf{\emph{feature toggle}} o \emph{feature flag}: permite seleccionar en tiempo de ejecución, sin modificar ni desplegar código, qué motor de predicción utiliza el sistema. Los valores admitidos son \texttt{"bert"} (clasificador neuronal RigoBERTa, valor por defecto), \texttt{"dict"} (clasificador de diccionario determinista) y \texttt{"both"} (ambos motores en paralelo, devolviendo las predicciones de cada uno con su campo \texttt{"engine"} identificando el origen).
+El parámetro \texttt{engine} del endpoint \texttt{POST /predict} actúa como un \textbf{\emph{feature toggle}} o \emph{feature flag}: permite seleccionar en tiempo de ejecución, sin modificar ni desplegar código, qué motor de predicción utiliza el sistema. Los valores admitidos son \texttt{\textquotedbl{}bert\textquotedbl{}} (clasificador neuronal RigoBERTa, valor por defecto), \texttt{\textquotedbl{}dict\textquotedbl{}} (clasificador de diccionario determinista) y \texttt{\textquotedbl{}both\textquotedbl{}} (ambos motores en paralelo, devolviendo las predicciones de cada uno con su campo \texttt{\textquotedbl{}engine\textquotedbl{}} identificando el origen).
 
 Un \emph{feature toggle}~\cite{Fowler17} es una técnica de ingeniería del software que separa la \emph{activación} de una funcionalidad de su \emph{despliegue}. El código de la funcionalidad llega a producción desactivado —o activable dinámicamente— y se habilita o conmuta sin necesidad de relanzar el servicio. En contraste con los \emph{feature branches}, que retrasan la integración del código, los \emph{feature toggles} permiten integración continua: la rama principal contiene siempre el código más actualizado y son los toggles quienes determinan qué comportamiento observan los usuarios en cada momento.
 
 En este proyecto, el toggle se implementa en dos capas:
 
 \begin{itemize}
-    \item \textbf{Motor de IA (Python / FastAPI)}: el parámetro \texttt{engine} del cuerpo JSON de \texttt{POST /predict} determina qué función interna se invoca —\texttt{\_predict\_bert}, \texttt{\_predict\_dict} o \texttt{\_predict\_both}—. Cuando se elige \texttt{"both"}, ambas funciones se ejecutan en paralelo con \texttt{asyncio.gather} y sus resultados se concatenan, preservando el campo \texttt{"engine"} de cada predicción para que la interfaz pueda distinguir el origen de cada código.
+    \item \textbf{Motor de IA (Python / FastAPI)}: el parámetro \texttt{engine} del cuerpo JSON de \texttt{POST /predict} determina qué función interna se invoca —\texttt{\_predict\_bert}, \texttt{\_predict\_dict} o \texttt{\_predict\_both}—. Cuando se elige \texttt{\textquotedbl{}both\textquotedbl{}}, ambas funciones se ejecutan en paralelo con \texttt{asyncio.gather} y sus resultados se concatenan, preservando el campo \texttt{\textquotedbl{}engine\textquotedbl{}} de cada predicción para que la interfaz pueda distinguir el origen de cada código.
 
-    \item \textbf{Backend (Elixir / Phoenix)}: el módulo \texttt{App.AIEngineSettings} es un proceso \texttt{Agent} de OTP que mantiene el valor activo del toggle en memoria. Al arrancar el nodo BEAM, el agente se inicializa con \texttt{"bert"} como valor por defecto. El canal WebSocket \texttt{ConversationChannel} consulta \texttt{AIEngineSettings.get\_engine/0} en cada análisis y envía el valor al motor de IA como parte del cuerpo de la petición HTTP.
+    \item \textbf{Backend (Elixir / Phoenix)}: el módulo \texttt{App.AIEngineSettings} es un proceso \texttt{Agent} de OTP que mantiene el valor activo del toggle en memoria. Al arrancar el nodo BEAM, el agente se inicializa con \texttt{\textquotedbl{}bert\textquotedbl{}} como valor por defecto. El canal WebSocket \texttt{ConversationChannel} consulta \texttt{AIEngineSettings.get\_engine/0} en cada análisis y envía el valor al motor de IA como parte del cuerpo de la petición HTTP.
 \end{itemize}
 
-El toggle se expone en el \emph{backoffice} de administración (\texttt{/admin/settings}), implementado como una página LiveView interactiva. Al hacer clic en una de las tres opciones, el evento se envía mediante WebSocket al servidor sin recargar la página, y el backend actualiza el \texttt{Agent} de forma inmediata. El cambio es \textbf{volátil}: si el servidor se reinicia, el valor vuelve al valor por defecto (\texttt{"bert"}), comportamiento intencionado dado que el toggle sirve para comparar motores durante la evaluación del sistema, no como configuración permanente.
+El toggle se expone en el \emph{backoffice} de administración (\texttt{/admin/settings}), implementado como una página LiveView interactiva. Al hacer clic en una de las tres opciones, el evento se envía mediante WebSocket al servidor sin recargar la página, y el backend actualiza el \texttt{Agent} de forma inmediata. El cambio es \textbf{volátil}: si el servidor se reinicia, el valor vuelve al valor por defecto (\texttt{\textquotedbl{}bert\textquotedbl{}}), comportamiento intencionado dado que el toggle sirve para comparar motores durante la evaluación del sistema, no como configuración permanente.
 
 Esta arquitectura sigue el principio de diseño \emph{«separación de responsabilidades»}: el motor de IA no sabe nada del mecanismo de selección —simplemente atiende la petición que recibe—; el backend actúa como orquestador y centraliza la decisión de qué motor invocar; y la interfaz de administración proporciona el punto de control sin acoplarse a la lógica de predicción.
 
@@ -590,7 +604,7 @@ Las pruebas de la capa de dominio validan las reglas de negocio en aislamiento, 
 Las pruebas de integración usan el adaptador de sandbox de Ecto (\texttt{Ecto.Adapters.SQL.Sandbox}) para ejecutar cada test dentro de una transacción que se revierte automáticamente al finalizar, manteniendo el aislamiento entre tests. Este nivel cubre:
 
 \begin{itemize}
-    \item \textbf{Esquemas de proyección}: \texttt{App.Projections.ConversationProjectorTest} verifica las operaciones Ecto sobre los cuatro modelos relacionales (\texttt{ConversationProjection}, \texttt{MessageProjection}, \texttt{PredictedCodeProjection}, \texttt{Analys\-isCardProjection}), incluyendo inserciones, actualizaciones de estado (\texttt{pending} $\to$ \texttt{validated}/\texttt{rejected}), borrado suave y ordenación.
+    \item \textbf{Esquemas de proyección}: \begin{sloppypar}\texttt{App.Projections.ConversationProjectorTest} verifica las operaciones Ecto sobre los cuatro modelos relacionales (\texttt{ConversationProjection}, \texttt{MessageProjection}, \texttt{PredictedCodeProjection}, \texttt{Analys\-isCardProjection}), incluyendo inserciones, actualizaciones de estado (\texttt{pending} $\to$ \texttt{validated}/\texttt{rejected}), borrado suave y ordenación.\end{sloppypar}
     \item \textbf{Cuentas de usuario}: \texttt{App.AccountsTest} comprueba el registro, la confirmación por correo y la autenticación; \texttt{AppWeb.AuthControllerTest} verifica los \emph{endpoints} REST de registro, inicio y cierre de sesión.
     \item \textbf{Plug de autenticación}: \texttt{AppWeb.Plugs.RequireAdminTest} verifica los cuatro ramos de la lógica de autorización (sin sesión, usuario no-admin, usuario admin, identificador inexistente), alcanzando cobertura completa del plug.
 \end{itemize}
@@ -612,7 +626,7 @@ Algunos módulos no están cubiertos por la suite de pruebas porque probarlos no
 
     \item \textbf{Módulos de configuración OTP} (\texttt{App.Repo}, \texttt{App.EventStore}, \texttt{App.CommandedApplication}). Estos módulos contienen únicamente invocaciones a macros de \texttt{use} que generan código en tiempo de compilación; no hay líneas ejecutables propias que probar.
 
-    \item \textbf{Definiciones de structs de comandos y eventos}. Los módulos de comandos (\texttt{StartConversation}, \texttt{SendMessage}, etc.) y eventos (\texttt{ConversationStarted}, \texttt{MessageSent}, etc.) son estructuras de datos puras sin lógica. Su corrección se verifica implícitamente a través de las pruebas del agregado, que construye y emite estos structs en cada escenario.
+    \item \textbf{Definiciones de structs de comandos y eventos}. \begin{sloppypar}Los módulos de comandos (\texttt{StartConversation}, \texttt{SendMessage}, etc.) y eventos (\texttt{ConversationStarted}, \texttt{MessageSent}, etc.) son estructuras de datos puras sin lógica.\end{sloppypar} Su corrección se verifica implícitamente a través de las pruebas del agregado, que construye y emite estos structs en cada escenario.
 
     \item \textbf{LiveViews de administración}. La interfaz de administración es una funcionalidad de soporte que no forma parte del flujo clínico principal. Su prueba requeriría \texttt{Phoenix.LiveViewTest}, una infraestructura de test adicional que, dado el alcance del prototipo, no se ha priorizado.
 \end{itemize}

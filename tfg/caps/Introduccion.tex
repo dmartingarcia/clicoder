@@ -1,7 +1,7 @@
 \chapter{Introducción}
 \label{cap:Introduccion}
 
-La codificación clínica representa un proceso crítico en la gestión sanitaria moderna, actuando como interfaz entre la práctica clínica, la administración hospitalaria y la investigación médica mediante el análisis estadístico.
+La codificación clínica es un proceso crítico en la gestión sanitaria moderna: traduce los diagnósticos a códigos estandarizados y sirve de puente entre la práctica clínica, la administración hospitalaria y la investigación médica.
 
 Este trabajo se centra en el desarrollo de soluciones de codificación automática mediante modelos BERT multilabel para CIE-10, abordando tres aspectos fundamentales:
 \begin{itemize}
@@ -12,17 +12,17 @@ Este trabajo se centra en el desarrollo de soluciones de codificación automáti
 
 \section{Motivación}
 
-La motivación de este trabajo surge de varios factores clave identificados:
+La motivación de este trabajo surge de varios problemas concretos:
 \begin{itemize}
-\item Es necesario disponer de conocimientos médicos para la correcta clasificación, haciendo necesario tener personal especializado.
-\item La normativa CIE-10 contiene 68.069 códigos posibles, haciendo que la tarea de clasificar tenga mucha complejidad y aumentando el número de errores en el proceso de clasificación manual.
-\item Desde el 1 de enero de 2016 la CIE-10-ES ha sido implantada en España como clasificación de referencia para la codificación clínica, como indica el Real Decreto 69/2015~\cite{rd692015}, y su obligatoriedad se está implantando de manera gradual.
+\item La correcta clasificación requiere conocimiento médico especializado, lo que limita la escalabilidad del proceso manual.
+\item La normativa CIE-10 contiene 68.069 códigos posibles, lo que dificulta la tarea de clasificación y eleva el número de errores en el proceso manual.
+\item Desde el 1 de enero de 2016 la CIE-10-ES es la clasificación de referencia para la codificación clínica en España, como indica el Real Decreto 69/2015~\cite{rd692015}, aunque su adopción obligatoria se ha extendido de forma gradual.
 \item El tiempo medio de codificación de un alta hospitalaria es de 14 minutos, 10 minutos más en comparación con la CIE-9, tal y como se indica en el informe de implantación de la CIE-10~\cite{sanidad2016cie10}.
 \end{itemize}
 
 La solución propuesta combina técnicas de Deep Learning con conocimiento clínico estructurado, permitiendo:
 \begin{itemize}
-\item La reducción del tiempo de codificación, así como la automatización del proceso, requiere únicamente la posterior revisión humana en el caso de que la certeza sea baja.
+\item Automatización del proceso de codificación, con revisión humana únicamente cuando la certeza sea baja.
 \item La consistencia en la aplicación de normas CIE-10 mediante aprendizaje automático.
 \item La propuesta de códigos con puntuación de confianza asociada, priorizando la revisión de los casos ambiguos.
 \end{itemize}
@@ -32,9 +32,9 @@ La solución propuesta combina técnicas de Deep Learning con conocimiento clín
 
 El análisis de trabajos previos revela tres generaciones tecnológicas:
 
-\textbf{Sistemas basados en reglas} (1990-2010): Utilizan ontologías médicas como SNOMED-CT~\cite{stearns2001snomedct} con lógica booleana. Están muy limitados por su alta rigidez ante la variabilidad lingüística.
+\textbf{Sistemas basados en reglas} (1990--2010): Utilizan ontologías médicas como SNOMED-CT~\cite{stearns2001snomedct} con lógica booleana. Están muy limitados por su alta rigidez ante la variabilidad lingüística.
 
-\textbf{Modelos estadísticos} (2010-2018): Aplicación de SVM y \emph{Random Forests} sobre características léxico-sintácticas. Alcanzan resultados competitivos en ICD-9 pero no consiguen escalar a la mayor granularidad de ICD-10~\cite{perotte2014}.
+\textbf{Modelos estadísticos} (2010--2018): Aplicación de SVM y \emph{Random Forests} sobre características léxico-sintácticas. Alcanzan resultados competitivos en ICD-9 pero no consiguen adaptarse a la mayor granularidad de ICD-10~\cite{perotte2014}.
 
 \textbf{Deep Learning} (2018-actual): Modelos basados en transformers con atención multicabezal, que desplazaron a las arquitecturas BiLSTM previas. En la tarea CodiEsp, los mejores sistemas alcanzan un MAP de 0,48~\cite{miranda2020} en codificación diagnóstica en español.
 
@@ -43,7 +43,7 @@ Un caso ilustrativo en el contexto de CodiEsp es el del equipo IAM del \emph{Ser
 Este resultado evidencia un \emph{trade-off} fundamental: los enfoques por diccionario tienden a superar a los modelos neuronales en precisión cuando el corpus de entrenamiento es reducido —como ocurre en CodiEsp—, ya que si el término está en el léxico, la asignación es directa y casi infalible. Sin embargo, son intrínsecamente rígidos ante formulaciones no previstas o variantes lingüísticas no indexadas. El presente trabajo incluye un clasificador de diccionario como \emph{baseline} de referencia, pero el foco es el clasificador neuronal basado en RigoBERTa-Clinical, cuyo valor añadido reside en la capacidad de generalizar a expresiones no vistas en el diccionario.
 
 \subsection{Avances en transformers médicos}
-Los modelos BERT adaptados al dominio clínico, como ClinicalBERT~\cite{alsentzer2019} y BioBERT~\cite{lee2020}, demuestran una gran superioridad en:
+Los modelos BERT adaptados al dominio clínico, como ClinicalBERT~\cite{alsentzer2019} y BioBERT~\cite{lee2020}, destacan especialmente en:
 
 \begin{itemize}
 \item Capturar relaciones contextuales en narrativas médicas.
@@ -54,16 +54,16 @@ Los modelos BERT adaptados al dominio clínico, como ClinicalBERT~\cite{alsentze
 Este trabajo extiende estos enfoques mediante:
 \begin{enumerate}
 \item Adaptación multilingüe para textos clínicos en español mediante RigoBERTa-Clinical.
-\item Arquitectura de clasificación jerárquica en cascada (capítulos → códigos).
-\item Función de pérdida adaptativa con ponderación asimétrica por frecuencia inversa de clase.
+\item Clasificador multilabel plano sobre el espacio completo de códigos CIE-10.
+\item Función de pérdida BCE ponderada por frecuencia inversa de clase, con límite de peso por clase para mitigar el desequilibrio extremo.
 \item Preentrenamiento débil sobre las descripciones oficiales del catálogo CIE-10-ES.
 \end{enumerate}
 
 \subsection{Retos pendientes}
 La literatura identifica tres desafíos no resueltos:
 \begin{itemize}
-\item \textbf{Multilabel y Multiclass extremo}: La CIE-10 contiene 68.069 códigos posibles, con un promedio de 6,1 códigos de diagnóstico y 2,7 de procedimientos, lo que hace muy complejo el entrenamiento, requiriendo un conjunto de datos muy amplio para poder clasificar de forma consistente cada diagnóstico.
-\item \textbf{Distribución de los códigos en la codificación}: La distribución de los códigos presenta una gran asimetría, tanto en su jerarquía como en la frecuencia en los diagnósticos médicos, habiendo clases y familias de códigos cuya presencia es mayoritaria, y otras cuya presencia es muy baja, como es el caso de enfermedades raras con una incidencia mínima en la población.
-\item \textbf{Evaluación clínica}: Las métricas tradicionales (F1, precisión) no capturan las consecuencias clínicas de los errores ni el grado de relación entre el código obtenido por el clasificador y el código correcto, por lo que es necesario implementar funciones de pérdida específicas para este caso.
+\item \textbf{Multilabel y Multiclass extremo}: La CIE-10 contiene 68.069 códigos posibles, con un promedio de 6,1 códigos de diagnóstico y 2,7 de procedimientos por caso. Esto exige conjuntos de datos muy amplios para clasificar de forma consistente.
+\item \textbf{Distribución de los códigos en la codificación}: La distribución de los códigos es muy asimétrica: hay familias de códigos muy frecuentes y otras con presencia casi nula, como las enfermedades raras.
+\item \textbf{Evaluación clínica}: Las métricas tradicionales (F1, precisión) no capturan las consecuencias clínicas de los errores ni el grado de relación entre el código predicho y el correcto, lo que limita la capacidad de diseñar funciones de pérdida adaptadas al dominio.
 \item \textbf{Explicabilidad}: El Reglamento UE 2017/745~\cite{eu2017745} clasifica el software de apoyo a la decisión clínica como producto sanitario de clase IIa o superior cuando influye en decisiones diagnósticas, exigiendo documentación de la lógica de decisión, trazabilidad de las predicciones y capacidad de auditoría. Para un clasificador automático de códigos CIE-10 esto implica que cada predicción debe acompañarse de una puntuación de confianza interpretable y un registro inmutable del modelo y la versión empleados.
 \end{itemize}

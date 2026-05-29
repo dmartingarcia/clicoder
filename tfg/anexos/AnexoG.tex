@@ -43,7 +43,7 @@ Prueba        & 353  & 163 & 90  & 236 & 330 & 965  \\
 \end{tabular}
 \end{table}
 
-La longitud media de 349 palabras supera el límite de 512 \emph{tokens} de los modelos BERT estándar. Aproximadamente el 25\,\% de los documentos de entrenamiento supera los 435 palabras, lo que justifica el uso de modelos con ventana de contexto extendida como RigoBERTa (4096 \emph{tokens}) o ModernBERT (8192 \emph{tokens}).
+La longitud media de 349 palabras puede superar el límite de 512 \emph{tokens} de RigoBERTa-Clinical, dado que la tokenización subpalabra genera típicamente más tokens que palabras. Una fracción significativa de los documentos excede ese límite, lo que implica truncación del texto al final del informe; los experimentos muestran que los diagnósticos clave aparecen mayoritariamente en los primeros 512 tokens, por lo que el impacto sobre el F1 es limitado.
 
 \section{Estadísticas de las etiquetas}
 
