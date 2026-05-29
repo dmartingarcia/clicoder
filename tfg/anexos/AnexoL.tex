@@ -41,7 +41,15 @@ Desde la perspectiva del aprendizaje estadístico, añadir ejemplos retrotraduci
   \item \textbf{Beneficia especialmente a las clases minoritarias.} Cada código raro que aparece en un documento pasa a aparecer también en su versión retrotraducida, duplicando la señal de entrenamiento para esa clase.
 \end{itemize}
 
-Con pivot EN el corpus de entrenamiento pasa de \textbf{500 a 1000 documentos} sin coste de anotación.
+Con pivot EN el corpus de entrenamiento pasa de \textbf{500 a 1000 documentos} sin coste de anotación. Añadiendo un segundo pivote independiente, el corpus puede crecer a 1500 documentos.
+
+\subsection{Elección del segundo pivote: alemán frente a francés}
+
+Para maximizar la utilidad de un segundo pivote se evaluaron francés (FR) y alemán (DE). El criterio determinante es la \textbf{distancia lingüística} respecto al español: a mayor distancia, mayor recomposición sintáctica durante la retrotraducción y, por tanto, mayor variedad léxica en los ejemplos generados.
+
+El francés es una lengua romance que comparte con el español raíces latinas y una gran parte del vocabulario médico especializado (\emph{hematoma}, \emph{diagnóstico}, \emph{paciente}…). La retrotraducción ES→FR→ES tiende a devolver textos muy similares al original, con variación limitada que apenas aporta información nueva al modelo.
+
+El alemán, en cambio, pertenece a la rama germánica. Sus estructuras sintácticas y su formación de compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) obligan al motor de traducción a reformular las oraciones de forma más profunda al retraducir al español, generando paráfrasis más diversas. Azure Translator dispone de alta calidad para el par ES↔DE en textos clínicos, comparable al par ES↔EN. Por estos motivos se eligió \textbf{alemán (DE)} como segundo pivote.
 
 % ---------------------------------------------------------------------------
 \section{Servicio empleado: Azure Translator}
@@ -77,9 +85,9 @@ Latencia típica            & 200--800 ms por lote \\
 \end{tabular}
 \end{table}
 
-El corpus CodiEsp de entrenamiento contiene \textbf{1.158.623 caracteres}. Con pivot EN (ES→EN→ES), cada carácter se traduce dos veces, lo que produce un consumo estimado de \textbf{2.317.246 caracteres}: un 16\,\% por encima del límite mensual teórico. En la práctica, la aumentación completa se realizó en una sola sesión sin agotar el crédito mensual, ya que el texto de salida de la traducción ES→EN es en general más corto que el original, y la cuota de Azure se mide sobre los caracteres de \emph{entrada} enviados en cada petición, no sobre los de salida.
+El corpus CodiEsp de entrenamiento contiene \textbf{1.158.623 caracteres}. Con pivot EN (ES→EN→ES), cada carácter se traduce dos veces, lo que produce un consumo estimado de \textbf{2.317.246 caracteres}: un 16\,\% por encima del límite mensual del nivel F0. Los primeros 2.000.000 caracteres se consumieron con la cuota gratuita del tier F0; los \textasciitilde317.000 restantes se facturaron en modalidad \emph{pay-as-you-go}, cubiertos por el \textbf{crédito gratuito de 200\,\$} que Azure concede a las cuentas nuevas. Esto permitió completar la aumentación en una sola sesión sin coste real.
 
-Si el crédito se agotase antes de completar las 500 notas, el script permite reanudar con \texttt{RESUME=1}: cuenta las filas ya escritas en el CSV de salida y retoma desde la siguiente sin retraducir nada. Como alternativa, Azure permite crear múltiples recursos Translator F0 en diferentes regiones bajo la misma cuenta, cada uno con su cuota independiente.
+Si el crédito gratuito se agotase antes de completar las notas, el script permite reanudar con \texttt{RESUME=1}: cuenta las filas ya escritas en el CSV de salida y retoma desde la siguiente sin retraducir nada. Como alternativa, Azure permite crear múltiples recursos Translator F0 en diferentes regiones bajo la misma cuenta, cada uno con su cuota independiente.
 
 % ---------------------------------------------------------------------------
 \section{Resultados de la aumentación}
@@ -109,18 +117,17 @@ $>$ 5 apariciones   & 200  & 11,3\,\% \\
 
 \begin{table}[h]
 \centering
-\caption{Corpus de entrenamiento antes y después de la retrotraducción con pivot EN.}
+\caption{Corpus de entrenamiento en cada etapa de aumentación.}
 \label{tab:aug-results}
-\begin{tabular}{lrr}
+\begin{tabular}{lrrr}
 \hline
-\textbf{Métrica} & \textbf{Original} & \textbf{Aumentado} \\
+\textbf{Métrica} & \textbf{Original} & \textbf{+ pivot EN} & \textbf{+ pivot DE} \\
 \hline
-Documentos totales          & 500       & 1.000  \\
-Códigos únicos cubiertos    & 1.767     & 1.767  \\
-Total anotaciones           & 5.639     & 11.278 \\
-Media etiquetas por nota    & 11,28     & 11,28  \\
-Caracteres totales          & 1.158.623 & $\approx$2.320.000 \\
-Media chars por nota        & 2.317     & 2.325  \\
+Documentos totales          & 500       & 1.000   & 1.500   \\
+Códigos únicos cubiertos    & 1.767     & 1.767   & 1.767   \\
+Total anotaciones           & 5.639     & 11.278  & 16.917  \\
+Media etiquetas por nota    & 11,28     & 11,28   & 11,28   \\
+Caracteres totales          & 1.158.623 & $\approx$2.320.000 & $\approx$3.479.000 \\
 \hline
 \end{tabular}
 \end{table}
@@ -129,55 +136,54 @@ La retrotraducción duplica el número de ejemplos por código sin coste de anot
 
 \subsection{Calidad de la traducción}
 
-La retrotraducción produjo variación léxica real en el \textbf{99,2\,\%} de las notas (496 de 500). Las 4 notas sin variación corresponden a textos con terminología altamente normalizada que el motor de traducción reproduce de forma idéntica.
+Se aplicaron dos pivotes independientes: inglés (EN) y alemán (DE). La tabla~\ref{tab:bt-quality} compara las estadísticas de calidad de ambos.
 
 \begin{table}[h]
 \centering
-\caption{Estadísticas de calidad de la retrotraducción (pivot EN, Azure Translator).}
+\caption{Estadísticas de calidad de la retrotraducción por pivote (Azure Translator).}
 \label{tab:bt-quality}
-\begin{tabular}{lr}
-\hline
-\textbf{Métrica} & \textbf{Valor} \\
-\hline
-Notas con variación léxica       & 496 / 500 (99,2\,\%) \\
-$\Delta$ caracteres (media)      & $+7{,}6$ \\
-$\Delta$ caracteres (mediana)    & $+7{,}0$ \\
-$\Delta$ palabras (media)        & $+4{,}4$ \\
-$\Delta$ palabras (mediana)      & $+4{,}0$ \\
-$\Delta$ caracteres (rango)      & $-2.696$ a $+2.648$ \\
-$\Delta$ palabras (rango)        & $-398$ a $+404$ \\
-Media chars original             & 2.317 \\
-Media chars retrotraducida       & 2.325 \\
-Chars consumidos (Azure F0)      & $\approx$2.320.000 \\
-\hline
-\end{tabular}
-\end{table}
-
-\begin{table}[h]
-\centering
-\caption{Distribución de notas por rango de variación en palabras tras la retrotraducción.}
-\label{tab:bt-dist}
 \begin{tabular}{lrr}
 \hline
-\textbf{$\Delta$ palabras} & \textbf{Notas} & \textbf{\%} \\
+\textbf{Métrica} & \textbf{Pivot EN} & \textbf{Pivot DE} \\
 \hline
-$< -20$      &  23 &  4,6\,\% \\
-$-20$ a $-15$ &  11 &  2,2\,\% \\
-$-15$ a $-10$ &  20 &  4,0\,\% \\
-$-10$ a $-5$  &  55 & 11,0\,\% \\
-$-5$ a $0$    &  85 & 17,0\,\% \\
-$0$ a $+5$    &  87 & 17,4\,\% \\
-$+5$ a $+10$  &  83 & 16,6\,\% \\
-$+10$ a $+15$ &  54 & 10,8\,\% \\
-$+15$ a $+20$ &  27 &  5,4\,\% \\
-$> +20$       &  55 & 11,0\,\% \\
-\hline
-\textbf{Total} & \textbf{500} & \textbf{100\,\%} \\
+Notas con variación léxica  & 496 / 500 (99,2\,\%) & 497 / 500 (99,4\,\%) \\
+$\Delta$ chars (media)      & $+7{,}6$  & $-2{,}4$  \\
+$\Delta$ chars (mediana)    & $+7{,}0$  & $-9{,}0$  \\
+$\Delta$ palabras (media)   & $+4{,}4$  & $+5{,}9$  \\
+$\Delta$ palabras (mediana) & $+4{,}0$  & $+4{,}0$  \\
+$\Delta$ chars (rango)      & $-2.696$ a $+2.648$ & $-473$ a $+307$ \\
+$\Delta$ palabras (rango)   & $-398$ a $+404$     & $-74$ a $+96$   \\
 \hline
 \end{tabular}
 \end{table}
 
-La distribución de cambios es bimodal: un 46\,\% de las notas se acortan y un 54\,\% se alargan, con rangos que llegan a $\pm$2600 caracteres. Esto refleja que la retrotraducción no aplica reemplazos locales de palabras, sino que reformula oraciones enteras: el pivot inglés fuerza una recomposición sintáctica que puede condensar o expandir la expresión original de forma sustancial. La media positiva ($+7{,}6$ chars) indica que la expansión es ligeramente más frecuente, lo que es esperable porque el inglés médico tiende a construir frases más explicativas al retraducirse al español. En cualquier caso, la variabilidad amplia es la señal útil para el entrenamiento: el modelo debe aprender que textos muy distintos en forma pueden corresponder al mismo conjunto de códigos CIE-10.
+Los dos pivotes muestran patrones distintos. El inglés produce un leve incremento de caracteres ($+7{,}6$ de media) porque el español recuperado tiende a ser más explícito que el original. El alemán, en cambio, reduce el recuento de caracteres ($-2{,}4$) pero aumenta el de palabras ($+5{,}9$): los compuestos nominales alemanes (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) se descomponen al retraducirse al español en frases de varias palabras, generando una variación de tipo diferente a la del inglés.
+
+\begin{table}[h]
+\centering
+\caption{Distribución de notas por rango de variación en palabras ($\Delta$ palabras, intervalos de 5).}
+\label{tab:bt-dist}
+\begin{tabular}{lrrrr}
+\hline
+\textbf{$\Delta$ palabras} & \textbf{Notas EN} & \textbf{\% EN} & \textbf{Notas DE} & \textbf{\% DE} \\
+\hline
+$< -20$        &  23 &  4,6\,\% &  15 &  3,0\,\% \\
+$-20$ a $-15$  &  11 &  2,2\,\% &  15 &  3,0\,\% \\
+$-15$ a $-10$  &  20 &  4,0\,\% &  29 &  5,8\,\% \\
+$-10$ a $-5$   &  55 & 11,0\,\% &  51 & 10,2\,\% \\
+$-5$ a $0$     &  85 & 17,0\,\% &  76 & 15,2\,\% \\
+$0$ a $+5$     &  87 & 17,4\,\% &  85 & 17,0\,\% \\
+$+5$ a $+10$   &  83 & 16,6\,\% &  69 & 13,8\,\% \\
+$+10$ a $+15$  &  54 & 10,8\,\% &  55 & 11,0\,\% \\
+$+15$ a $+20$  &  27 &  5,4\,\% &  39 &  7,8\,\% \\
+$> +20$        &  55 & 11,0\,\% &  66 & 13,2\,\% \\
+\hline
+\textbf{Total} & \textbf{500} & \textbf{100\,\%} & \textbf{500} & \textbf{100\,\%} \\
+\hline
+\end{tabular}
+\end{table}
+
+Ambas distribuciones son simétricas en torno a cero, con un ligero desplazamiento positivo. El alemán presenta más notas en los extremos superiores ($>+15$: 21\,\% frente al 16\,\% del inglés), lo que confirma que el pivote germánico genera paráfrasis más expansivas en términos de palabras. La variabilidad de ambos pivotes es la señal útil para el entrenamiento: el modelo aprende que textos distintos en forma pueden corresponder al mismo conjunto de códigos CIE-10.
 
 % ---------------------------------------------------------------------------
 \section{Implementación técnica}
