@@ -86,7 +86,10 @@ def client_with_bert(mock_bert_predictions):
         # Inject mock AFTER lifespan has run (lifespan left classifier=None)
         main_module.classifier = mock_clf
         main_module.dict_classifier = None
-        main_module.code_descriptions = {"I10": "Hipertensión esencial", "E11": "Diabetes tipo 2"}
+        main_module.code_descriptions = {
+            "I10": "Hipertensión esencial",
+            "E11": "Diabetes tipo 2",
+        }
         yield client
 
     main_module.classifier = None
@@ -213,7 +216,9 @@ class TestPredictBert:
         assert resp.status_code == 422
 
     def test_missing_model_returns_503(self, client_no_model):
-        resp = client_no_model.post("/predict", json={"text": "Paciente con hipertensión"})
+        resp = client_no_model.post(
+            "/predict", json={"text": "Paciente con hipertensión"}
+        )
         assert resp.status_code == 503
 
     def test_calls_classifier_predict_with_text(self, client_with_bert):
@@ -257,7 +262,9 @@ class TestPredictDict:
             assert "matched_terms" in entry
 
     def test_missing_dict_model_returns_503(self, client_no_model):
-        resp = client_no_model.post("/predict", json={"text": "Paciente", "engine": "dict"})
+        resp = client_no_model.post(
+            "/predict", json={"text": "Paciente", "engine": "dict"}
+        )
         assert resp.status_code == 503
 
     def test_empty_text_returns_422(self, client_with_dict):
