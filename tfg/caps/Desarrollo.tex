@@ -318,6 +318,24 @@ El paso~35d repitió la misma configuración sobre el corpus aumentado de 2000 d
 
 La configuración ganadora definitiva es, por tanto, \textbf{paso~32b}: F1-micro~0,4888, F1-macro~0,1196, 500 documentos originales, \texttt{PRETRAIN\_EPOCHS=10}. Todas las vías de mejora han sido exploradas exhaustivamente y los experimentos de entrenamiento quedan concluidos.
 
+\begin{table}[h]
+\centering
+\small
+\caption{Resumen del paso~35: variantes evaluadas y resultados.}
+\label{tab:paso35}
+\begin{tabular}{llrrr}
+\hline
+\textbf{Run} & \textbf{Corpus} & \textbf{F1-micro} & \textbf{F1-macro} & \textbf{Best época} \\
+\hline
+\textbf{32b (referencia)} & \textbf{500 docs originales} & \textbf{0,4888} & \textbf{0,1196} & \textbf{135} \\
+35a & 500 docs, pretrain=3 & 0,4643 & 0,1110 & — \\
+35b & 2000 docs (BT), pretrain=3 & 0,4569 & — & — \\
+35c & 500 docs, pretrain=10 & 0,4888 & 0,1110 & 124 \\
+35d & 2000 docs (BT), pretrain=10 & 0,4766 & 0,1140 & 29 \\
+\hline
+\end{tabular}
+\end{table}
+
 \paragraph{Nota sobre reproducibilidad y variabilidad entre runs.}
 El script de entrenamiento no fija ninguna semilla aleatoria (\emph{random seed}). Esta decisión fue deliberada durante la fase exploratoria: fijar la semilla habría requerido activar \texttt{torch.use\_deterministic\_algorithms} y \texttt{CUBLAS\_WORKSPACE\_CONFIG}, lo que deshabilita kernels CUDA optimizados e incrementa el tiempo de entrenamiento de forma apreciable. En un proceso iterativo de más de 35 experimentos, ese sobrecoste habría sido prohibitivo.
 
