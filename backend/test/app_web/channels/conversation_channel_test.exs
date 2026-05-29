@@ -3,8 +3,6 @@ defmodule AppWeb.ConversationChannelTest do
 
   import Phoenix.ChannelTest
   import App.Fixtures
-  # Remove Plug.Conn.push/3 from scope to avoid ambiguity with Phoenix.ChannelTest.push/3
-  import Plug.Conn, except: [push: 3]
 
   @endpoint AppWeb.Endpoint
 
