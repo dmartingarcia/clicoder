@@ -35,7 +35,7 @@ logging.basicConfig(level=logging.INFO)
 if _sentry_dsn := os.environ.get("SENTRY_DSN_AI"):
     sentry_sdk.init(
         dsn=_sentry_dsn,
-        environment=os.environ.get("ENVIRONMENT", "production"),
+        environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
         integrations=[StarletteIntegration(), FastApiIntegration()],
         traces_sample_rate=0.1,
     )
