@@ -21,6 +21,14 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
+  if sentry_dsn = System.get_env("SENTRY_DSN") do
+    config :sentry,
+      dsn: sentry_dsn,
+      environment_name: :prod
+  end
+end
+
+if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """
