@@ -286,7 +286,12 @@ Con pivot EN se generaron 500 variantes retrotraducidas de las 500 notas origina
 \paragraph{Implementación.}
 Se diseñó el script \texttt{ai\_engine/augment.py} con dos \emph{backends} intercambiables: NLLB-200~\cite{costa-jussa2022nllb200} (modelo local de código abierto de Meta, sin coste externo) y Azure Translator (servicio cloud con nivel gratuito de 2M caracteres/mes sin tarjeta de crédito). El script incluye checkpoint incremental para reanudar traducciones interrumpidas. La integración con el flujo de entrenamiento se realiza mediante el target \texttt{make ai-augment} del \texttt{Makefile} y el parámetro \texttt{--train\_file} de \texttt{train.py}.
 
-El proceso de configuración, los límites del servicio gratuito y los comandos de uso se documentan en el Anexo~\ref{cap:AnexoL}.
+Se aplicaron tres pivotes independientes (EN, DE, FR), lo que cuadruplica el corpus de entrenamiento hasta 2000 documentos. Las variantes se combinan mediante \texttt{ai\_engine/combine\_augmented.py} en un único CSV de entrenamiento. El proceso de configuración, los límites del servicio gratuito, las estadísticas de calidad por pivote y los comandos de uso se documentan en el Anexo~\ref{cap:AnexoL}.
+
+\paragraph{Resultado del entrenamiento con datos aumentados.}
+El entrenamiento con el corpus 4× (mismo hiperparámetros que la config ganadora, paso 32b) produjo un F1-micro de \textbf{0,4668}, inferior al 0,4888 de referencia ($-0{,}022$). La causa es un desajuste en el schedule de entrenamiento: con 2000 documentos el número de pasos por época pasa de 63 a 250 (4×), pero el parámetro \texttt{UNFREEZE\_EVERY=30} no fue reescalado. Esto provoca que el primer descongelado de capas del encoder ocurra tras 7500 pasos (frente a los 1890 del experimento de referencia), y el modelo converge en el régimen de freeze total antes de que la señal de las capas superiores pueda aprovecharse, disparando el early stopping en la época 51.
+
+La lección es que al escalar el dataset hay que reescalar los hitos de unfreezing por la inversa del factor de datos: $\texttt{UNFREEZE\_EVERY} = \lfloor 30 / 4 \rfloor = 8$ para mantener el mismo número de pasos entre descongelados. El siguiente experimento aplicará este ajuste.
 
 \subsubsection{Aprendizaje continuo a partir del feedback de usuarios}
 \label{sec:continuous-learning}
