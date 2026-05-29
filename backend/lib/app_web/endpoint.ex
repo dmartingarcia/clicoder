@@ -74,5 +74,6 @@ defmodule AppWeb.Endpoint do
     |> String.split(",", trim: true)
   end
 
+  plug Sentry.PlugCapture
   plug AppWeb.Router
 end
