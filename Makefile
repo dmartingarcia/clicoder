@@ -157,9 +157,9 @@ backend-test: ## Ejecutar tests del backend
 	@echo "$(GREEN)Preparando BBDDs de test...$(NC)"
 	$(COMPOSE) exec -e MIX_ENV=test backend mix ecto.create --quiet || true
 	$(COMPOSE) exec -e MIX_ENV=test backend mix ecto.migrate --quiet
-	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.drop --quiet || true
-	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.create --quiet
-	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.init --quiet
+	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.drop --quiet 2>/dev/null || true
+	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.create --quiet 2>/dev/null
+	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.init --quiet 2>/dev/null
 	@echo "$(GREEN)Ejecutando tests...$(NC)"
 	$(COMPOSE) exec -e MIX_ENV=test backend mix test
 
