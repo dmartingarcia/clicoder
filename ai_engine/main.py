@@ -17,18 +17,32 @@ import asyncio
 import logging
 import os
 import threading
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
 
 import sentry_sdk
 from fastapi import FastAPI, HTTPException
+from prometheus_client import Gauge, Histogram
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 logger = logging.getLogger("cie10_engine")
 logging.basicConfig(level=logging.INFO)
+
+# ==================== MÉTRICAS PROMETHEUS ====================
+
+INFERENCE_LATENCY = Histogram(
+    "cie10_inference_duration_seconds",
+    "Latencia de inferencia del clasificador por motor",
+    ["engine"],
+    buckets=[0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0],
+)
+MODEL_LOADED = Gauge("cie10_model_loaded", "1 si el modelo BERT está cargado")
+DICT_LOADED = Gauge("cie10_dict_loaded", "1 si el clasificador de diccionario está cargado")
 
 # ==================== SENTRY ====================
 
@@ -131,6 +145,7 @@ async def lifespan(app: FastAPI):
 
             classifier = CIE10Classifier(model_dir=model_dir, device=device)
             code_descriptions = load_code_descriptions(model_dir)
+            MODEL_LOADED.set(1)
 
             _stop.set()
             import torch as _torch
@@ -159,6 +174,7 @@ async def lifespan(app: FastAPI):
                     "Cargando clasificador de diccionario desde '%s' …", dict_path
                 )
                 dict_classifier = DictClassifier(dict_path)
+                DICT_LOADED.set(1)
                 n_blocks = len(dict_classifier._patterns)
                 n_patterns = sum(len(v) for v in dict_classifier._patterns.values())
                 logger.info(
@@ -203,6 +219,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+Instrumentator().instrument(app).expose(app)
 
 
 # ==================== SCHEMAS ====================
@@ -285,10 +302,12 @@ async def _predict_bert(text: str):
             },
         )
 
+    _t0 = time.perf_counter()
     predictions, summary_text = await asyncio.gather(
         asyncio.to_thread(classifier.predict, text, 10, code_descriptions or None),
         _generate_summary(text),
     )
+    INFERENCE_LATENCY.labels(engine="bert").observe(time.perf_counter() - _t0)
 
     return {
         "cards": [
@@ -333,10 +352,12 @@ async def _predict_dict(text: str):  # noqa: E302
             },
         )
 
+    _t0 = time.perf_counter()
     predictions, summary_text = await asyncio.gather(
         asyncio.to_thread(dict_classifier.predict, text),
         _generate_summary(text),
     )
+    INFERENCE_LATENCY.labels(engine="dict").observe(time.perf_counter() - _t0)
 
     return {
         "cards": [
