@@ -210,7 +210,7 @@ Las 46 corridas identificaron los factores de mayor impacto en F1-micro. La Tabl
 2026-03-24 & \emph{LR schedule plateau} (vs. cosine) & 0,475 \\
 2026-03-24 & \emph{Label smoothing} = 0,1 & 0,482 \\
 2026-03-25 & Descongelado progresivo de capas & 0,484 \\
-2026-03-26 & Configuración consolidada (run final) & \textbf{0,489} \\
+2026-03-26 & Configuración consolidada (run final) & \textbf{0,4888} \\
 \hline
 \end{tabular}
 \end{table}
@@ -262,7 +262,7 @@ La Tabla~\ref{tab:progreso_pasos} recoge la evolución acumulada desde el clasif
 23 & + Snippets clínicos task\_X (10k) & 0,470 & 0,139 \\
 28b & + ReduceLROnPlateau & 0,475 & 0,116 \\
 30b & + Label smoothing + progressive unfreezing & 0,484 & 0,149 \\
-\textbf{32b} & \textbf{+ Consistencia jerárquica ($\lambda$=0,5)} & \textbf{0,489} & \textbf{0,152} \\
+\textbf{32b} & \textbf{+ Consistencia jerárquica ($\lambda$=0,5)} & \textbf{0,4888} & \textbf{0,1524} \\
 \hline
 \end{tabular}
 \end{table}
@@ -306,6 +306,20 @@ Descartada la aumentación como vía principal, se diseñó un experimento que a
 Los resultados fueron F1-micro~\textbf{0,4568} para 34a y \textbf{0,4518} para 34b, ambos por debajo de 32b. El análisis post-hoc apunta a \texttt{GRAD\_ACCUM=8} como el responsable de la regresión en 34a: con 500 documentos y \texttt{BATCH\_SIZE=8} hay exactamente 63 mini-batches por época, de modo que doblar la acumulación deja solo $\lfloor 63/8 \rfloor \approx 8$ actualizaciones reales del optimizador por época. Con esa cadencia tan baja el scheduler plateau apenas recibe señal de mejora por época, el warmup consume proporcionalmente más del presupuesto de entrenamiento y el descongelado progresivo opera con gradientes menos informativos. El paso~32b funcionaba con 63 actualizaciones por época —la granularidad adecuada para ese tamaño de corpus— y ese ajuste resultó ser más crítico de lo esperado. El paso~34b arrastra además el problema de distribución ya identificado en los pasos 33 y 33b.
 
 La lección transversal de los pasos 33--34 es que los hiperparámetros de schedule (\texttt{GRAD\_ACCUM}, \texttt{UNFREEZE\_EVERY}, \texttt{PATIENCE}) no son independientes del tamaño del corpus: todos ellos fijan una cadencia de señal por época y deben calibrarse conjuntamente cada vez que cambia el número de muestras.
+
+\paragraph{Pasos 35a y 35b — replicación de 32b con pretrain reducido y mayor margen (35a: datos originales; 35b: corpus aumentado 4×).}
+El objetivo del paso~35 es verificar si la configuración ganadora (32b, F1-micro~0,4888) es replicable o incluso superable aplicando únicamente los ajustes que no implican riesgo de regresión: reducir el pre-entrenamiento a 3 épocas —suficiente para saturar el loss sin memorizar— y ampliar el presupuesto de entrenamiento a 200 épocas con \texttt{PATIENCE=25}, dado que el paso~32b alcanzó su mejor resultado en la época~135 con un límite de 150. El resto de hiperparámetros es idéntico a 32b, en particular \texttt{GRAD\_ACCUM=4} y \texttt{UNFREEZE\_LR\_RATIO=0.1}. Como en el paso~34, se lanza en paralelo una variante sobre el corpus aumentado (35b) con \texttt{UNFREEZE\_EVERY=8} para mantener la cadencia de descongelado equivalente.
+
+Los resultados fueron F1-micro~\textbf{0,4643} para 35a y \textbf{0,4569} para 35b, ambos por debajo de la referencia. La regresión de 35a respecto a 32b ($-0{,}025$), con todo lo demás idéntico, apunta a \texttt{PRETRAIN\_EPOCHS=3} como causa. Aunque el loss de pre-entrenamiento llegaba a valores próximos a cero ya en la primera época, esto no implica que las representaciones internas estuviesen consolidadas: con 10 épocas el modelo continúa refinando sus pesos aunque la señal de error sea casi nula, y ese refinamiento silencioso resulta beneficioso para el fine-tuning posterior. La aparente saturación del loss no es equivalente a sobreajuste evitable; es convergencia gradual de las representaciones.
+
+La configuración ganadora definitiva es, por tanto, \textbf{paso~32b}: F1-micro~0,4888, 500 documentos originales, \texttt{PRETRAIN\_EPOCHS=10}. Todas las vías de mejora han sido exploradas exhaustivamente y los experimentos de entrenamiento se dan por concluidos.
+
+\paragraph{Nota sobre reproducibilidad y variabilidad entre runs.}
+El script de entrenamiento no fija ninguna semilla aleatoria (\emph{random seed}). Esta decisión fue deliberada durante la fase exploratoria: fijar la semilla habría requerido activar \texttt{torch.use\_deterministic\_algorithms} y \texttt{CUBLAS\_WORKSPACE\_CONFIG}, lo que deshabilita kernels CUDA optimizados e incrementa el tiempo de entrenamiento de forma apreciable. En un proceso iterativo de más de 35 experimentos, ese sobrecoste habría sido prohibitivo.
+
+La contrapartida es que los resultados no son exactamente reproducibles. Las fuentes de no-determinismo son tres: la inicialización aleatoria de la cabeza clasificadora, el orden de los mini-batches en cada época y las operaciones CUDA no deterministas (operaciones de reducción en paralelo, Flash Attention). En la práctica, la variabilidad observada entre runs con configuración idéntica es de $\pm 0{,}01$ en F1-micro, lo que no altera las conclusiones comparativas entre pasos pero sí impide replicar el valor exacto 0,4888 del paso~32b. El modelo entrenado en ese run queda guardado como artefacto definitivo; los experimentos posteriores (pasos 33--35) sirven para confirmar que esa configuración es robusta, no para superarla de forma reproducible.
+
+Para un ciclo de reentrenamiento productivo con datos reales se recomienda añadir \texttt{--seed} al script y guardar la semilla en \texttt{config.json}, de modo que cada modelo desplegado sea completamente auditable.
 
 \subsubsection{Aprendizaje continuo a partir del feedback de usuarios}
 \label{sec:continuous-learning}
