@@ -7,7 +7,6 @@ defmodule App.Aggregates.ConversationTest do
     StartConversation,
     SendMessage,
     AnalyzeReport,
-    ReceiveAIPrediction,
     ValidateCode,
     RejectCode
   }
@@ -57,12 +56,6 @@ defmodule App.Aggregates.ConversationTest do
     end
 
     test "returns error when conversation already started" do
-      cmd = %StartConversation{
-        conversation_id: @conversation_id,
-        user_id: @user_id,
-        started_at: @now
-      }
-
       assert {:error, :conversation_not_started} =
                Conversation.execute(new_conversation(), %SendMessage{})
     end

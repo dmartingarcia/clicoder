@@ -25,7 +25,7 @@ defmodule AppWeb.ConnCase do
       use AppWeb, :verified_routes
 
       # Import conveniences for testing with connections
-      import Plug.Conn
+      import Plug.Conn, except: [push: 3]
       import Phoenix.ConnTest
       import AppWeb.ConnCase
     end
