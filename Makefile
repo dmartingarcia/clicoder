@@ -154,8 +154,14 @@ db-reset: ## Reset completo: drop + backend-seed
 
 # Testing
 backend-test: ## Ejecutar tests del backend
+	@echo "$(GREEN)Preparando BBDDs de test...$(NC)"
+	$(COMPOSE) exec -e MIX_ENV=test backend mix ecto.create --quiet || true
+	$(COMPOSE) exec -e MIX_ENV=test backend mix ecto.migrate --quiet
+	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.drop --quiet || true
+	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.create --quiet
+	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.init --quiet
 	@echo "$(GREEN)Ejecutando tests...$(NC)"
-	$(BACKEND) mix test
+	$(COMPOSE) exec -e MIX_ENV=test backend mix test
 
 frontend-test: ## Ejecutar tests del frontend
 	@echo "$(GREEN)Ejecutando tests del frontend...$(NC)"
