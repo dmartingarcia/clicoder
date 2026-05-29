@@ -58,7 +58,7 @@ defmodule AppWeb.TranslationControllerTest do
     end
 
     test "unknown locale falls back to Spanish (default)", %{conn: conn} do
-      conn = get(conn, "/api/translations/fr")
+      conn = get(conn, "/api/translations/zz")
       body = json_response(conn, 200)
 
       # Falls back to 'es' — verify the Spanish content is served
