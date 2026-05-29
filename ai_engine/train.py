@@ -890,8 +890,9 @@ def train(
         total_eta = avg_epoch_time * epochs_left
         elapsed_total = time.time() - train_start
 
+        current_lr = optimizer.param_groups[0]["lr"]
         print(
-            f"  epoch {epoch}/{epochs}  loss={avg_loss:.4f}"
+            f"  epoch {epoch}/{epochs}  loss={avg_loss:.4f}  lr={current_lr:.2e}"
             f"  P={m['p_micro']:.3f}  R={m['r_micro']:.3f}  F1={m['f1_micro']:.3f} (micro)"
             f"  |  P={m['p_macro']:.3f}  R={m['r_macro']:.3f}  F1={m['f1_macro']:.3f} (macro)"
             f"  [{fmt_seconds(epoch_elapsed)}/epoch  elapsed {fmt_seconds(elapsed_total)}"
