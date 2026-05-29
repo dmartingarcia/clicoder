@@ -1,6 +1,6 @@
-# 🚀 Inicio Rápido - Clasificador Jerárquico CIE-10
+# Inicio Rápido - Clasificador Jerárquico CIE-10
 
-## ⚡ Entrenamiento en 3 Pasos
+## Entrenamiento en 3 Pasos
 
 ### 1. Preparar Entorno
 
@@ -27,55 +27,55 @@ code clasificador_jerarquico_2niveles.ipynb
 ### 3. Ejecutar Todo
 
 En el notebook:
-- **Opción A**: Click en "Run All" (⏩)
+- **Opción A**: Click en "Run All"
 - **Opción B**: Cell → Run All
 - **Opción C**: Ejecutar celda por celda (recomendado para ver progreso)
 
-## ⏱️ Tiempos de Entrenamiento
+## Tiempos de Entrenamiento
 
 | Hardware | Nivel 1 | Nivel 2 | Total |
 |----------|---------|---------|-------|
 | **CPU** (M1 Mac) | ~1.5h | ~2h | ~3.5h |
 | **GPU** (CUDA) | ~20 min | ~40 min | ~1h |
 
-## 📊 Qué Esperar
+## Qué Esperar
 
 ### Durante el Entrenamiento
 
 ```
-🚀 Iniciando entrenamiento Nivel 1: Clasificador de Capítulos
+Iniciando entrenamiento Nivel 1: Clasificador de Capítulos
 
-✅ Datasets creados: 750 train, 250 dev
-📊 Número de capítulos: 21
+Datasets creados: 750 train, 250 dev
+Número de capítulos: 21
 
-📍 Epoch 1/15
+Epoch 1/15
    Training: 100%|████████████| 94/94 [00:45<00:00]
-   📉 Train Loss: 0.1234
-   📊 Dev F1 Micro: 0.8567
-   ✅ Mejor modelo guardado! F1=0.8567
+   Train Loss: 0.1234
+   Dev F1 Micro: 0.8567
+   Mejor modelo guardado! F1=0.8567
 
-📍 Epoch 2/15
+Epoch 2/15
    ...
 ```
 
 ### Al Finalizar
 
 ```
-🎉 Entrenamiento Nivel 1 completado!
-🏆 Mejor F1 Micro: 0.8842
+Entrenamiento Nivel 1 completado!
+Mejor F1 Micro: 0.8842
 
-🎉 Entrenamiento Nivel 2 completado!
-🏆 Mejor F1 Micro: 0.7123
+Entrenamiento Nivel 2 completado!
+Mejor F1 Micro: 0.7123
 
-📦 Exportando modelos para producción...
-✅ Nivel 1 exportado: ../../ai_engine/model/chapter_classifier.pt
-✅ Nivel 2 exportado: ../../ai_engine/model/code_classifier.pt
-✅ Configuración exportada: ../../ai_engine/model/config.json
+Exportando modelos para producción...
+Nivel 1 exportado: ../../ai_engine/model/chapter_classifier.pt
+Nivel 2 exportado: ../../ai_engine/model/code_classifier.pt
+Configuración exportada: ../../ai_engine/model/config.json
 
-🎉 Exportación completada!
+Exportación completada!
 ```
 
-## 🧪 Probar el Modelo
+## Probar el Modelo
 
 ### Desde el Notebook (última celda)
 
@@ -84,7 +84,7 @@ En el notebook:
 # Verás predicciones sobre un ejemplo del dataset
 
 # Salida esperada:
-🔮 Predicciones del modelo jerárquico:
+Predicciones del modelo jerárquico:
 ============================================================
 1. I10 (Cap. IX)
    Probabilidad: 0.9234
@@ -121,7 +121,7 @@ for code, prob, chapter in predicciones:
     print(f"{code} ({prob:.3f}) - Cap. {chapter}")
 ```
 
-## 🎯 Siguiente Paso: Integrar en ai_engine
+## Siguiente Paso: Integrar en ai_engine
 
 Una vez entrenado, los modelos están listos para usar en producción:
 
@@ -136,7 +136,7 @@ ls -lh model/
 # (ver documentación en README_JERARQUICO.md)
 ```
 
-## ⚠️ Troubleshooting
+## Troubleshooting
 
 ### Error: CUDA out of memory
 
@@ -164,7 +164,7 @@ ls -lh ../codiesp/
 # https://zenodo.org/record/3837305
 ```
 
-## 📈 Monitorear Progreso
+## Monitorear Progreso
 
 ### Tensorboard (opcional)
 
@@ -181,20 +181,10 @@ tensorboard --logdir=snapshots/
 tail -f snapshots/nivel1_capitulos/training.log
 ```
 
-## ✅ Checklist Pre-Entrenamiento
+## Checklist Pre-Entrenamiento
 
 - [ ] Entorno virtual activado
 - [ ] Dataset CODIESP descargado (1.2GB)
 - [ ] Dependencias instaladas (torch, transformers, scikit-learn)
 - [ ] Espacio en disco: ~5GB libre
 - [ ] Tiempo disponible: 1-4 horas según hardware
-
-## 🎉 ¡Listo!
-
-Ya puedes comenzar el entrenamiento. Si encuentras algún problema:
-
-1. Revisa [README_JERARQUICO.md](./README_JERARQUICO.md) para detalles
-2. Chequea [ANALISIS_MODELOS.md](./ANALISIS_MODELOS.md) si quieres cambiar el modelo
-3. Ajusta hiperparámetros en la celda #2 del notebook
-
-**¡Buena suerte con el entrenamiento! 🚀**

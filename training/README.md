@@ -1,8 +1,8 @@
-# 🎯 Entrenamiento del Modelo CIE-10
+# Entrenamiento del Modelo CIE-10
 
 Sistema automatizado para entrenar un clasificador jerárquico de códigos CIE-10 usando BERT y el corpus CODIESP.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Opción 1: Pipeline Automático Completo (Recomendado)
 
@@ -13,13 +13,14 @@ make train-all
 ```
 
 Esto ejecutará automáticamente:
-1. ✅ Configuración del entorno Python
-2. ✅ Descarga del dataset CODIESP
-3. ✅ Entrenamiento del modelo
-4. ✅ Exportación a `ai_engine/`
-5. ✅ Rebuild y restart del contenedor
 
-**⚠️ Nota:** El entrenamiento puede tardar **varias horas** dependiendo de tu hardware.
+1. Configuración del entorno Python
+2. Descarga del dataset CODIESP
+3. Entrenamiento del modelo
+4. Exportación a `ai_engine/`
+5. Rebuild y restart del contenedor
+
+**Nota:** El entrenamiento puede tardar **varias horas** dependiendo de tu hardware.
 
 ### Opción 2: Paso a Paso
 
@@ -35,7 +36,7 @@ make train-jupyter
 make train-export
 ```
 
-## 📋 Comandos Disponibles
+## Comandos Disponibles
 
 Desde la **raíz del proyecto**:
 
@@ -74,7 +75,7 @@ make train      # Entrenar modelo
 make export-model  # Exportar a ai_engine
 ```
 
-## 🏗️ Arquitectura
+## Arquitectura
 
 ```
 training/
@@ -90,7 +91,7 @@ training/
 └── bert-classifier/            # Entrenamiento del modelo
     ├── Makefile
     ├── requirements.txt
-    ├── clasificador_jerarquico.ipynb  # 🎓 Notebook principal
+    ├── clasificador_jerarquico.ipynb  # Notebook principal
     └── snapshots/                     # Modelo entrenado
         ├── best_hierarchical_model/
         ├── best_hierarchical_model_state.bin
@@ -98,7 +99,7 @@ training/
         └── cie10_tokenizer/
 ```
 
-## 🎓 Modelo
+## Modelo
 
 **Arquitectura:** BERT jerárquico multietiqueta
 
@@ -116,7 +117,7 @@ EPOCHS = 500
 LEARNING_RATE = 5e-5
 ```
 
-## 📊 Dataset CODIESP
+## Dataset CODIESP
 
 **Fuente:** BigBio/HuggingFace (`bigbio/codiesp`)
 
@@ -129,7 +130,7 @@ LEARNING_RATE = 5e-5
 
 El dataset se descarga automáticamente con `make train-dataset` o `make train-setup`.
 
-## 🔧 Requisitos
+## Requisitos
 
 ### Hardware Recomendado
 - **CPU:** 8+ cores
@@ -143,7 +144,7 @@ El dataset se descarga automáticamente con `make train-dataset` o `make train-s
 - virtualenv
 - make
 
-## 📝 Notas Importantes
+## Notas Importantes
 
 ### Tiempo de Entrenamiento
 
@@ -162,12 +163,12 @@ Durante el entrenamiento:
 ### Callbacks y Checkpoints
 
 El modelo guarda automáticamente:
-- ✅ Checkpoint del mejor modelo (por F1-score)
-- ✅ Tokenizer configurado
-- ✅ MultiLabelBinarizer (mlb) para etiquetas
-- ✅ Estado completo del modelo
+- Checkpoint del mejor modelo (por F1-score)
+- Tokenizer configurado
+- MultiLabelBinarizer (mlb) para etiquetas
+- Estado completo del modelo
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Error: Out of Memory
 ```bash
@@ -187,7 +188,7 @@ El modelo funciona en CPU, pero será más lento. No requiere GPU.
 ### Error: Jupyter kernel died
 Reduce el batch size o cierra otras aplicaciones que consuman RAM.
 
-## 🔄 Actualizar Modelo en Producción
+## Actualizar Modelo en Producción
 
 Después de entrenar:
 
@@ -203,13 +204,13 @@ docker compose up -d ai_engine
 docker compose logs ai_engine
 ```
 
-## 📚 Referencias
+## Referencias
 
 - [CODIESP Dataset](https://huggingface.co/datasets/bigbio/codiesp)
 - [BERT Spanish](https://huggingface.co/dccuchile/bert-base-spanish-wwm-cased)
 - [Transformers Library](https://huggingface.co/docs/transformers)
 
-## 💡 Tips
+## Tips
 
 1. **Primera vez:** Usa `make train-jupyter` para ver el proceso paso a paso
 2. **Producción:** Usa `make train-all` para automatizar todo
@@ -218,10 +219,6 @@ docker compose logs ai_engine
 
 ---
 
-**¿Listo para empezar?**
-
 ```bash
 make train-all
 ```
-
-☕ Ve por un café mientras el modelo entrena...
