@@ -36,7 +36,7 @@ El análisis de trabajos previos revela tres generaciones tecnológicas:
 
 \textbf{Modelos estadísticos} (2010--2018): Aplicación de SVM y \emph{Random Forests} sobre características léxico-sintácticas. Alcanzan resultados competitivos en ICD-9 pero no consiguen adaptarse a la mayor granularidad de ICD-10~\cite{perotte2014}.
 
-\textbf{Deep Learning} (2018-actual): Modelos basados en transformers con atención multicabezal, que desplazaron a las arquitecturas BiLSTM previas. En la tarea CodiEsp, los mejores sistemas alcanzan un MAP de 0,48~\cite{miranda2020} en codificación diagnóstica en español.
+\textbf{Deep Learning} (2018-actual): Modelos basados en transformers con atención multicabezal, que desplazaron a las arquitecturas BiLSTM previas. En la tarea CodiEsp, los mejores sistemas alcanzan un MAP\footnote{\emph{Mean Average Precision} (MAP): media del área bajo la curva precisión-recall calculada por clase. A diferencia del F1-score, MAP evalúa la calidad del \emph{ranking} de predicciones sin depender de un umbral de decisión fijo.} de 0,48~\cite{miranda2020} en codificación diagnóstica en español.
 
 Un caso ilustrativo en el contexto de CodiEsp es el del equipo IAM del \emph{Service d'Information Médicale} de Burdeos, que ganó la tarea de 2020 sin recurrir al Deep Learning~\cite{cossin2020}. Su sistema combinaba un superdiccionario construido a partir del catálogo oficial CIE-10-ES, UMLS y SNOMED-CT, con normalización de texto agresiva (minúsculas, eliminación de acentos y \emph{stopwords}, lematización) y coincidencia de cadenas para mapear directamente fragmentos del texto a códigos. El resultado fue una precisión de 0,82 en diagnósticos procesando todo el corpus en menos de 5 segundos en un portátil convencional.
 
