@@ -41,7 +41,7 @@ Desde la perspectiva del aprendizaje estadístico, añadir ejemplos retrotraduci
   \item \textbf{Beneficia especialmente a las clases minoritarias.} Cada código raro que aparece en un documento pasa a aparecer también en su versión retrotraducida, duplicando la señal de entrenamiento para esa clase.
 \end{itemize}
 
-Con pivot EN el corpus de entrenamiento pasa de \textbf{500 a 1000 documentos} sin coste de anotación. Añadiendo un segundo pivote independiente, el corpus puede crecer a 1500 documentos.
+Con tres pivotes independientes (EN, DE, FR) el corpus de entrenamiento pasa de \textbf{500 a 2000 documentos} sin coste de anotación. Añadiendo un segundo pivote independiente, el corpus puede crecer a 1500 documentos.
 
 \subsection{Elección del segundo pivote: alemán frente a francés}
 
@@ -119,15 +119,15 @@ $>$ 5 apariciones   & 200  & 11,3\,\% \\
 \centering
 \caption{Corpus de entrenamiento en cada etapa de aumentación.}
 \label{tab:aug-results}
-\begin{tabular}{lrrr}
+\begin{tabular}{lrrrr}
 \hline
-\textbf{Métrica} & \textbf{Original} & \textbf{+ pivot EN} & \textbf{+ pivot DE} \\
+\textbf{Métrica} & \textbf{Original} & \textbf{+ pivot EN} & \textbf{+ pivot DE} & \textbf{+ pivot FR} \\
 \hline
-Documentos totales          & 500       & 1.000   & 1.500   \\
-Códigos únicos cubiertos    & 1.767     & 1.767   & 1.767   \\
-Total anotaciones           & 5.639     & 11.278  & 16.917  \\
-Media etiquetas por nota    & 11,28     & 11,28   & 11,28   \\
-Caracteres totales          & 1.158.623 & $\approx$2.320.000 & $\approx$3.479.000 \\
+Documentos (acumulado)      & 500       & 1.000   & 1.500   & 2.000   \\
+Códigos únicos cubiertos    & 1.767     & 1.767   & 1.767   & 1.767   \\
+Total anotaciones           & 5.639     & 11.278  & 16.917  & 22.556  \\
+Media etiquetas por nota    & 11,28     & 11,28   & 11,28   & 11,28   \\
+Caracteres totales          & 1.158.623 & $\approx$2.320.000 & $\approx$3.479.000 & $\approx$4.637.000 \\
 \hline
 \end{tabular}
 \end{table}
@@ -136,54 +136,54 @@ La retrotraducción duplica el número de ejemplos por código sin coste de anot
 
 \subsection{Calidad de la traducción}
 
-Se aplicaron dos pivotes independientes: inglés (EN) y alemán (DE). La tabla~\ref{tab:bt-quality} compara las estadísticas de calidad de ambos.
+Se aplicaron tres pivotes independientes: inglés (EN), alemán (DE) y francés (FR). La tabla~\ref{tab:bt-quality} compara las estadísticas de calidad de los tres.
 
 \begin{table}[h]
 \centering
 \caption{Estadísticas de calidad de la retrotraducción por pivote (Azure Translator).}
 \label{tab:bt-quality}
-\begin{tabular}{lrr}
+\begin{tabular}{lrrr}
 \hline
-\textbf{Métrica} & \textbf{Pivot EN} & \textbf{Pivot DE} \\
+\textbf{Métrica} & \textbf{Pivot EN} & \textbf{Pivot DE} & \textbf{Pivot FR} \\
 \hline
-Notas con variación léxica  & 496 / 500 (99,2\,\%) & 497 / 500 (99,4\,\%) \\
-$\Delta$ chars (media)      & $+7{,}6$  & $-2{,}4$  \\
-$\Delta$ chars (mediana)    & $+7{,}0$  & $-9{,}0$  \\
-$\Delta$ palabras (media)   & $+4{,}4$  & $+5{,}9$  \\
-$\Delta$ palabras (mediana) & $+4{,}0$  & $+4{,}0$  \\
-$\Delta$ chars (rango)      & $-2.696$ a $+2.648$ & $-473$ a $+307$ \\
-$\Delta$ palabras (rango)   & $-398$ a $+404$     & $-74$ a $+96$   \\
+Notas con variación léxica  & 496 / 500 (99,2\,\%) & 497 / 500 (99,4\,\%) & 495 / 500 (99,0\,\%) \\
+$\Delta$ chars (media)      & $+7{,}6$  & $-2{,}4$  & $+3{,}7$  \\
+$\Delta$ chars (mediana)    & $+7{,}0$  & $-9{,}0$  & $0{,}0$   \\
+$\Delta$ palabras (media)   & $+4{,}4$  & $+5{,}9$  & $+4{,}0$  \\
+$\Delta$ palabras (mediana) & $+4{,}0$  & $+4{,}0$  & $+3{,}0$  \\
+$\Delta$ chars (rango)      & $-2.696$ a $+2.648$ & $-473$ a $+307$ & $-305$ a $+305$ \\
+$\Delta$ palabras (rango)   & $-398$ a $+404$     & $-74$ a $+96$   & $-61$ a $+59$   \\
 \hline
 \end{tabular}
 \end{table}
 
-Los dos pivotes muestran patrones distintos. El inglés produce un leve incremento de caracteres ($+7{,}6$ de media) porque el español recuperado tiende a ser más explícito que el original. El alemán, en cambio, reduce el recuento de caracteres ($-2{,}4$) pero aumenta el de palabras ($+5{,}9$): los compuestos nominales alemanes (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) se descomponen al retraducirse al español en frases de varias palabras, generando una variación de tipo diferente a la del inglés.
+Los tres pivotes muestran patrones claramente distintos que se complementan. El inglés produce la mayor variación absoluta en caracteres (rango $\pm$2600), con un sesgo positivo que refleja la tendencia del español recuperado a ser más explícito. El alemán reduce el recuento de caracteres ($-2{,}4$ de media) pero aumenta el de palabras ($+5{,}9$): sus compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) se descomponen al retraducirse al español en frases de varias palabras. El francés es el pivote más conservador, con mediana de variación en chars de $0{,}0$ y el rango más estrecho ($\pm$305 chars, $\pm$61 palabras), lo que era esperado dada su proximidad lingüística al español.
 
 \begin{table}[h]
 \centering
 \caption{Distribución de notas por rango de variación en palabras ($\Delta$ palabras, intervalos de 5).}
 \label{tab:bt-dist}
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrrr}
 \hline
-\textbf{$\Delta$ palabras} & \textbf{Notas EN} & \textbf{\% EN} & \textbf{Notas DE} & \textbf{\% DE} \\
+\textbf{$\Delta$ palabras} & \textbf{EN} & \textbf{\%} & \textbf{DE} & \textbf{\%} & \textbf{FR} & \textbf{\%} \\
 \hline
-$< -20$        &  23 &  4,6\,\% &  15 &  3,0\,\% \\
-$-20$ a $-15$  &  11 &  2,2\,\% &  15 &  3,0\,\% \\
-$-15$ a $-10$  &  20 &  4,0\,\% &  29 &  5,8\,\% \\
-$-10$ a $-5$   &  55 & 11,0\,\% &  51 & 10,2\,\% \\
-$-5$ a $0$     &  85 & 17,0\,\% &  76 & 15,2\,\% \\
-$0$ a $+5$     &  87 & 17,4\,\% &  85 & 17,0\,\% \\
-$+5$ a $+10$   &  83 & 16,6\,\% &  69 & 13,8\,\% \\
-$+10$ a $+15$  &  54 & 10,8\,\% &  55 & 11,0\,\% \\
-$+15$ a $+20$  &  27 &  5,4\,\% &  39 &  7,8\,\% \\
-$> +20$        &  55 & 11,0\,\% &  66 & 13,2\,\% \\
+$< -20$        &  23 &  4,6 &  15 &  3,0 &  17 &  3,4 \\
+$-20$ a $-15$  &  11 &  2,2 &  15 &  3,0 &  20 &  4,0 \\
+$-15$ a $-10$  &  20 &  4,0 &  29 &  5,8 &  39 &  7,8 \\
+$-10$ a $-5$   &  55 & 11,0 &  51 & 10,2 &  56 & 11,2 \\
+$-5$ a $0$     &  85 & 17,0 &  76 & 15,2 &  84 & 16,8 \\
+$0$ a $+5$     &  87 & 17,4 &  85 & 17,0 &  67 & 13,4 \\
+$+5$ a $+10$   &  83 & 16,6 &  69 & 13,8 &  71 & 14,2 \\
+$+10$ a $+15$  &  54 & 10,8 &  55 & 11,0 &  57 & 11,4 \\
+$+15$ a $+20$  &  27 &  5,4 &  39 &  7,8 &  30 &  6,0 \\
+$> +20$        &  55 & 11,0 &  66 & 13,2 &  59 & 11,8 \\
 \hline
-\textbf{Total} & \textbf{500} & \textbf{100\,\%} & \textbf{500} & \textbf{100\,\%} \\
+\textbf{Total} & \textbf{500} & \textbf{100} & \textbf{500} & \textbf{100} & \textbf{500} & \textbf{100} \\
 \hline
 \end{tabular}
 \end{table}
 
-Ambas distribuciones son simétricas en torno a cero, con un ligero desplazamiento positivo. El alemán presenta más notas en los extremos superiores ($>+15$: 21\,\% frente al 16\,\% del inglés), lo que confirma que el pivote germánico genera paráfrasis más expansivas en términos de palabras. La variabilidad de ambos pivotes es la señal útil para el entrenamiento: el modelo aprende que textos distintos en forma pueden corresponder al mismo conjunto de códigos CIE-10.
+Las tres distribuciones son simétricas en torno a cero con desplazamiento positivo. El alemán concentra más masa en los extremos superiores ($>+15$: 21\,\%) confirmando que genera paráfrasis más expansivas. El francés tiene más peso en la zona negativa ($< -10$: 15\,\%) que el inglés (11\,\%), coherente con su tendencia a condensar expresiones equivalentes. La variabilidad complementaria de los tres pivotes es la señal útil para el entrenamiento: el modelo aprende que textos muy distintos en forma pueden corresponder al mismo conjunto de códigos CIE-10.
 
 % ---------------------------------------------------------------------------
 \section{Implementación técnica}
