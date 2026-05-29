@@ -58,8 +58,8 @@ T-33 & Infraestructura & Configuración de commitlint y Husky para validación d
 T-34 & Infraestructura & Workflow de GitHub Actions para integración continua & Media \\
 T-35 & Infraestructura & Dockerización del entorno de entrenamiento con soporte CPU y GPU & Alta \\
 T-36 & Infraestructura & Despliegue en clúster Kubernetes con Traefik como proxy inverso & Media \\
-T-37 & Infraestructura & Monitorización con Prometheus y Grafana & Baja \\
-T-38 & Infraestructura & Gestión de errores y excepciones con Sentry & Baja \\
+T-37 & Infraestructura & Monitorización con Prometheus y Grafana: el backend expone métricas de latencia HTTP, queries Ecto y VM BEAM en \texttt{:9568/metrics} mediante \texttt{telemetry\_metrics\_prometheus}; Prometheus scrapea todos los servicios y Grafana los visualiza con datasource provisionado automáticamente & Baja \\
+T-38 & Infraestructura & Gestión de errores y excepciones con Sentry: captura de excepciones HTTP mediante \texttt{Sentry.PlugCapture} en el endpoint Phoenix, captura de crashes OTP (GenServer, comandos Commanded) mediante \texttt{Sentry.LoggerHandler}, con stacktrace completo y etiqueta de entorno configurada vía \texttt{SENTRY\_DSN} & Baja \\
 T-47 & Infraestructura & Configuración del servidor de email en producción con registros SPF, DKIM y política DMARC para garantizar la entregabilidad y autenticidad de los emails transaccionales & Media \\
 T-48 & Datos & Aumentación del corpus CodiEsp mediante retrotraducción con Azure Translator (F0 free tier) usando tres pivotes (EN, DE, FR), cuadruplicando el dataset de 500 a 2000 documentos & Media \\
 \hline
