@@ -1769,9 +1769,49 @@ Si el objetivo prioritario es recall en códigos raros: 32a (λ=0.1) da mejor F1
 
 ---
 
+### Paso 33 — Back-translation 4× (EN+DE+FR, schedule sin ajustar)
+
+**Motivación:** Tras comprobar que la ratio datos/clases era el cuello de botella (~1 ejemplo por clase de media), se generaron variantes retrotraducidas con tres pivotes independientes (EN, DE, FR) para cuadruplicar el corpus de entrenamiento de 500 a 2000 documentos. Ver AnexoL del TFG para los detalles del proceso de aumentación.
+
+**Configuración:** Idéntica a 32b (config ganadora) salvo el fichero de entrenamiento.
+
+```bash
+make ai-train-gpu \
+  TRAIN_FILE=/data/codiesp_csvs/codiesp_D_source_train_augmented_all.csv \
+  MODEL=IIC/RigoBERTa-Clinical MAX_LENGTH=512 BATCH_SIZE=8 GRAD_ACCUM=4 \
+  THRESHOLD=0.3 POS_WEIGHT_CAP=10.0 LR=1e-4 WARMUP_RATIO=0.1 WEIGHT_DECAY=0.1 \
+  DROPOUT=0.3 FREEZE_LAYERS=20 EPOCHS=150 PATIENCE=20 FULL_CODES=1 \
+  PRETRAIN_EPOCHS=10 "PRETRAIN_TASKX=/data/codiesp_csvs/codiesp_X_source_train.csv /data/codiesp_csvs/codiesp_X_source_validation.csv" \
+  LABEL_SMOOTHING=0.1 LR_SCHEDULE=plateau UNFREEZE_EVERY=30 UNFREEZE_LAYERS=4 UNFREEZE_LR_RATIO=0.1 \
+  2>&1 | tee -a /tmp/train_paso33.log
+```
+
+**Duración:** inicio 03:27 CEST, fin 04:43 CEST (29 mayo 2026) = **~76 minutos** (vs ~90 min de 30b con 500 docs — más rápido por early stop temprano).
+
+**Resultado:**
+
+| Run       | F1-micro   | best época | F1-macro   | early stop |
+|-----------|------------|------------|------------|------------|
+| 32b (ref) | 0.4888     | 135        | 0.1524     | —          |
+| **33**    | **0.4668** | **~31**    | **0.1080** | **51**     |
+
+**Análisis — por qué empeoró:**
+
+Con 2000 docs el número de steps por época pasó de **63 a 250** (4×). El schedule estaba calibrado para 63 steps/época:
+
+- `UNFREEZE_EVERY=30` época × 250 steps = **7500 steps** antes del primer descongelado. Con 500 docs: 30 × 63 = 1890 steps. El modelo entrena con freeze total 4× más tiempo del que necesita.
+- El warmup y el plateau también se comportan de forma distinta: la señal de "mejora" llega cada 250 steps en lugar de cada 63.
+- El early stopping disparó en época 51 (best ~31), indicando que el modelo converge rápido pero el schedule de unfreezing llega demasiado tarde.
+
+**Lección crítica:** al cambiar el tamaño del dataset hay que reescalar `UNFREEZE_EVERY` por la inversa del factor de datos. Con 4× datos: `UNFREEZE_EVERY = 30 / 4 ≈ 8`.
+
+**Próximo paso (33b):** repetir con `UNFREEZE_EVERY=8` para que el primer descongelado ocurra tras ~2000 steps (equivalente al paso 30b).
+
+---
+
 ## Reflexión sobre el estado actual y próximos pasos
 
-### Dónde estamos (actualizado paso 32)
+### Dónde estamos (actualizado paso 33)
 
 | Paso | Configuración clave | F1-micro | F1-macro |
 |------|---------------------|----------|----------|
@@ -1782,21 +1822,22 @@ Si el objetivo prioritario es recall en códigos raros: 32a (λ=0.1) da mejor F1
 | 30b | + Progressive unfreezing (unfreeze_every=30) | 0.4842 | 0.1494 |
 | 31 | + Sliding window (mean-pool chunks) | 0.4124 | 0.1352 |
 | **32b** | **+ Hierarchical consistency loss (λ=0.5)** | **0.4888** | **0.1524** |
+| 33 | + Back-translation 4× (schedule sin ajustar) | 0.4668 | 0.1080 |
 
 Las claves del progreso: modelo clínico correcto (RigoBERTa-Clinical), pre-entrenamiento
 combinado con jerga médica real (task_X), freeze=20 imprescindible con 500 muestras,
 y scheduler adaptativo que permite seguir aprendiendo más allá de la época 50.
 El progressive unfreezing (paso 30) fue el último salto real. El sliding window (paso 31)
-confirmó que la truncación no era el cuello de botella: el problema es la ratio datos/clases
-(~500 documentos, 1767 clases → menos de 1 ejemplo de media por clase).
+confirmó que la truncación no era el cuello de botella: el problema es la ratio datos/clases.
+El paso 33 mostró que la aumentación por sí sola no basta: hay que reescalar el schedule al nuevo tamaño del dataset.
 
-### Opciones por orden de impacto esperado (actualizado paso 32)
+### Opciones por orden de impacto esperado (actualizado paso 33)
 
 | Opción | Esfuerzo | Impacto esperado | Estado |
 | ------ | -------- | ---------------- | ------ |
-| **Más datos (back-translation)** | Alto | +3-8pp F1 | Pendiente |
+| **Back-translation + schedule ajustado** | Bajo | +3-8pp F1 | Pendiente (paso 33b: UNFREEZE_EVERY=8) |
 | **Datasets adicionales** | Medio | +pretrain encodings | Ya hacemos pretrain CIE-10 |
-| **Hierarchical consistency loss** | Medio | +1-3pp F1-macro (códigos raros) | ✓ Paso 32 (+0.46pp micro, +0.3pp macro) |
+| **Hierarchical consistency loss** | Medio | +0.46pp micro, +0.3pp macro | ✓ Paso 32b |
 | **Ensemble de checkpoints** | Bajo | +0.5-1pp gratis | Pendiente |
 | **Sliding window** | Alto | −0.72pp | Descartado (paso 31) |
 
