@@ -21,11 +21,24 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
 
+import sentry_sdk
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
 
 logger = logging.getLogger("cie10_engine")
 logging.basicConfig(level=logging.INFO)
+
+# ==================== SENTRY ====================
+
+if _sentry_dsn := os.environ.get("SENTRY_DSN_AI"):
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        environment=os.environ.get("ENVIRONMENT", "production"),
+        integrations=[StarletteIntegration(), FastApiIntegration()],
+        traces_sample_rate=0.1,
+    )
 
 
 def _watch_download(model_name: str, stop_event: threading.Event) -> None:
@@ -189,6 +202,7 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan,
 )
+
 
 
 # ==================== SCHEMAS ====================
