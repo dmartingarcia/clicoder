@@ -435,13 +435,14 @@ export function ChatInterface() {
   const { t } = useI18n();
   const MAX_TOKENS = 1024;
   const [reportText, setReportText] = useState('');
-  const [serverTokenCount, setServerTokenCount] = useState<number | null>(null);
-  // approxTokenCount is computed synchronously; serverTokenCount refines it after 300ms
+  const [serverTokenEntry, setServerTokenEntry] = useState<{ text: string; count: number } | null>(null);
+  // approxTokenCount is computed synchronously; serverTokenEntry refines it after 300ms debounce.
+  // Deriving null from text mismatch avoids a synchronous setState inside the effect.
+  const serverTokenCount = serverTokenEntry?.text === reportText ? serverTokenEntry.count : null;
   const approxTokenCount = Math.ceil(reportText.length / 4);
   const tokenCount = serverTokenCount ?? approxTokenCount;
 
   useEffect(() => {
-    setServerTokenCount(null);
     if (!reportText) return;
     const timer = setTimeout(async () => {
       try {
@@ -452,7 +453,7 @@ export function ChatInterface() {
         });
         if (res.ok) {
           const data = await res.json();
-          setServerTokenCount(data.token_count);
+          setServerTokenEntry({ text: reportText, count: data.token_count });
         }
       } catch {
         // keep approxTokenCount
