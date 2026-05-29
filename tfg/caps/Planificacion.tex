@@ -4,7 +4,7 @@ Este capítulo describe cómo se organiza el desarrollo del proyecto: la metodol
 
 \section{Metodología de desarrollo}
 
-Dado que el proyecto combina investigación aplicada en \emph{la selección y entrenamiento de modelos de lenguaje} con el desarrollo de un sistema de software completo, se opta por una \textbf{metodología ágil basada en Kanban}~\cite{Vijayasarathy16}. Este enfoque es especialmente apropiado cuando los requisitos evolucionan a medida que se van obteniendo los resultados.
+Dado que el proyecto combina investigación aplicada en la selección y entrenamiento de modelos de lenguaje con el desarrollo de un sistema de software completo, se opta por una \textbf{metodología ágil basada en Kanban}~\cite{Vijayasarathy16}. Este enfoque es especialmente apropiado cuando los requisitos evolucionan a medida que se van obteniendo los resultados.
 
 Kanban no impone iteraciones de duración fija ni \emph{sprints} formales, sino que organiza el trabajo en un tablero con columnas que representan los posibles estados de cada tarea: \textbf{Backlog} (identificadas pero no iniciadas), \textbf{En progreso} (activas), \textbf{En revisión} (completadas y pendientes de verificación) y \textbf{Hecho} (finalizadas). Esto permite visualizar el flujo de trabajo de forma continua sin la rigidez de otras metodologías.
 
@@ -27,7 +27,7 @@ La priorización del \emph{backlog} se revisa cada vez que se completa una tarea
 
 \subsection{Recursos humanos}
 
-El proyecto se realiza íntegramente por un único desarrollador, con la dirección y supervisión del ambos tutores. El desarrollador asume todos los roles del proceso de desarrollo (analista, diseñador, desarrollador, responsable de pruebas y documentador).
+El proyecto se realiza íntegramente por un único desarrollador, con la dirección y supervisión de ambos tutores. El desarrollador asume todos los roles del proceso de desarrollo (analista, diseñador, desarrollador, responsable de pruebas y documentador).
 
 \subsection{Recursos hardware}
 
@@ -128,7 +128,7 @@ Tareas completadas:
     \item Análisis estadístico del corpus: Distribución de longitudes, frecuencia de códigos, desequilibrio de clases, stop-words y lemmatización.
     \item Análisis estadístico del catálogo CIE-10-ES: Cobertura, distribución por capítulos y uso de vocabulario médico específico.
     \item Generación de los ficheros CSV de entrenamiento, validación y test.
-    \item Aumentación del corpus CodiEsp mediante retrotraducción ES→EN→ES con Azure Translator (1 día estimado).
+    \item Aumentación del corpus CodiEsp mediante retrotraducción con tres pivotes (EN, DE, FR) usando Azure Translator, cuadruplicando el corpus a 2000 documentos.
 \end{itemize}
 
 \subsection{Épica 2: Modelo de clasificación}
@@ -228,6 +228,7 @@ Redacción de la memoria & 20 & 22 \\
 \end{table}
 
 La épica de modelo de clasificación es la que más desviación ha sufrido. La diferencia de ocho puntos se explica por la necesidad de explorar un número mayor de configuraciones de hiperparámetros del previsto: los primeros experimentos con batch size y tasa de aprendizaje por defecto no alcanzan el nivel de F1 micro esperado en validación, lo que obliga a repetir el ciclo de entrenamiento con distintas combinaciones antes de dar por cerrada esa épica. Este tipo de desviación es habitual en proyectos con componentes de investigación aplicada, donde el resultado de un experimento condiciona las decisiones que siguen.
+
 El servicio de inferencia se vio afectado también por dichos cambios en el modelo, dado que el endpoint de predicción se implementó inicialmente con la expectativa de una respuesta concreta del modelo. La necesidad de adaptar el formato de entrada y salida del servicio a las nuevas configuraciones del modelo explica la desviación en puntos de historia.
 
 \section{Costes y análisis de riesgos}

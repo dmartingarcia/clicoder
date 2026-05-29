@@ -5,12 +5,13 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 
 \section{ADR-01: Elixir y Phoenix como backend}
 
-\textbf{Contexto.} El sistema requiere gestión de múltiples conexiones WebSocket concurrentes (una por sesión activa), comunicación asíncrona con el motor de IA (cuya respuesta puede tardar entre 10 y 30 segundos) y un modelo de datos con trazabilidad de todas las operaciones.
+\textbf{Contexto.} El sistema requiere gestión de múltiples conexiones WebSocket concurrentes (una por sesión activa), comunicación asíncrona con el motor de IA (cuya respuesta tarda menos de un segundo tanto en GPU como en CPU de gama alta) y un modelo de datos con trazabilidad de todas las operaciones.
 
 \textbf{Decisión.} Se elige Elixir 1.15 con el framework Phoenix 1.8~\cite{phoenix2024}.
 
 \textbf{Justificación.}
 \begin{itemize}
+    \item WebSocket permite que el servidor notifique al cliente en cuanto la predicción está lista, evitando el \emph{polling}: sin él, el frontend tendría que interrogar al servidor repetidamente hasta obtener respuesta, lo que introduce latencia innecesaria y carga superflua. Con WebSocket la comunicación es asíncrona de forma nativa: el frontend queda a la espera y el servidor empuja el resultado en cuanto está disponible.
     \item El modelo de actores de la BEAM (\emph{Erlang VM}) gestiona de forma nativa miles de procesos ligeros concurrentes sin bloqueos, lo que encaja directamente con el modelo de canales WebSocket de Phoenix~\cite{phoenix2024}.
     \item Phoenix Channels proporciona soporte integrado para WebSocket con reconexión automática, multiplexación de temas y difusión (\emph{broadcast}) a todos los clientes suscritos a un canal.
     \item La tolerancia a fallos de la BEAM (supervisores OTP) garantiza que un error en el procesamiento de una conversación no afecta al resto.
@@ -20,7 +21,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 \textbf{Alternativas descartadas.}
 \begin{itemize}
     \item \textbf{Node.js + Express}: buena gestión de I/O asíncrono, pero el modelo \emph{single-threaded} dificulta el aislamiento de fallos y carece de soporte equivalente para CQRS.
-    \item \textbf{Python + FastAPI}: tecnología ya usada en el motor de IA; tiene un peor rendimiento en concurrencia y no está tan orientado a sistemas altamente concurrentes y tolerantes a fallos con Event sourcing.
+    \item \textbf{Python + FastAPI}: tecnología ya usada en el motor de IA; tiene un peor rendimiento en concurrencia y no está tan orientado a sistemas altamente concurrentes y tolerantes a fallos con Event Sourcing.
     \item \textbf{Go + Gin}: excelente rendimiento, pero ecosistema de Event Sourcing menos maduro y mayor coste de desarrollo para funcionalidades como canales WebSocket multiplexados.
 \end{itemize}
 
@@ -72,12 +73,12 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 
 \textbf{Contexto.} CIE-10-ES tiene estructura jerárquica (capítulo → bloque → código específico). Podría entrenarse un clasificador por nivel. Los notebooks de análisis (\texttt{bert-classifier/}) exploraron ambas aproximaciones.
 
-\textbf{Decisión.} En producción se usa un clasificador plano sobre los 1.767 códigos de bloque (3 caracteres), sin clasificación jerárquica por niveles.
+\textbf{Decisión.} En producción se usa un clasificador plano sobre los 1.767 códigos completos del espacio de entrenamiento de CodiEsp (p.\,ej.\ \texttt{E11.9}), sin clasificación jerárquica por niveles.
 
 \textbf{Justificación.}
 \begin{itemize}
     \item Un clasificador jerárquico propaga errores: un error en el nivel de capítulo excluye todos los códigos correctos de ese capítulo en los niveles inferiores.
-    \item La granularidad de bloque (3 caracteres) cubre el uso clínico habitual. Los códigos a 4 o 5 caracteres tienen frecuencias demasiado bajas en el corpus CodiEsp para entrenarse con fiabilidad.
+    \item Los códigos completos son los requeridos en la práctica clínica real; truncar a tres caracteres limitaría la utilidad del sistema.
     \item El espacio de 1.767 clases es manejable con una sola cabeza de clasificación multilabel, sin necesidad de múltiples modelos.
     \item La simplicidad del clasificador plano facilita el mantenimiento y la actualización del modelo cuando se publiquen nuevas versiones de CIE.
 \end{itemize}
@@ -106,8 +107,8 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 
 \textbf{Justificación.}
 \begin{itemize}
-    \item Reduce el ciclo de retroalimentación en el desarrollo frontend de 30 segundos (tiempo de inferencia real) a menos de 1 segundo.
-    \item Permite ejecutar el sistema completo en hardware sin GPU.
+    \item Desacopla el desarrollo del frontend y del backend del ciclo de entrenamiento del modelo: permite iterar sobre cada capa del sistema de forma independiente sin necesidad de GPU ni de un modelo entrenado disponible.
+    \item Permite ejecutar el sistema completo en entornos de bajos recursos o de forma rápida, sin depender del modelo, su descarga, y el alto consumo de memoria asociado.
     \item Al compartir la misma interfaz (\texttt{POST /predict}), el backend y el frontend no necesitan ninguna modificación para cambiar entre el motor real y el \emph{mock}.
 \end{itemize}
 
@@ -125,7 +126,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 02 & Backend       & CQRS + Event Sourcing por trazabilidad clínica y separación lectura/escritura. \\
 03 & Frontend      & Next.js + React 19 por SSR, tipado fuerte y velocidad de desarrollo. \\
 04 & Base de datos & PostgreSQL dual (eventos + proyecciones) por simplicidad operacional. \\
-05 & Motor de IA   & Clasificador plano sobre 1.767 bloques por robustez frente a la propagación de errores. \\
+05 & Motor de IA   & Clasificador plano sobre 1.767 códigos completos por robustez frente a la propagación de errores. \\
 06 & Motor de IA   & FastAPI sobre HTTP por desacoplamiento y facilidad de consumo desde Elixir. \\
 07 & Motor de IA   & Servicio \emph{mock} con la misma interfaz para agilizar el desarrollo. \\
 \hline

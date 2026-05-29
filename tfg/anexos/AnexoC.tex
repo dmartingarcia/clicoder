@@ -18,6 +18,8 @@ La Figura~\ref{fig:seq-analisis} ilustra la secuencia completa de mensajes que s
 
 La base de la URL es configurable mediante la variable de entorno \texttt{NEXT\_PUBLIC\_API\_URL} (valor por defecto: \texttt{http://localhost:4000/api}). Las rutas protegidas requieren la cabecera \texttt{Authorization: Bearer <token>}, donde \texttt{<token>} es un JWT emitido por Phoenix al iniciar sesión con validez de 30 días.
 
+La especificación completa de la API está disponible a través de la interfaz web de Swagger UI en \texttt{http://localhost:4000/api/swagger}, donde es posible explorar todos los \emph{endpoints}, consultar los esquemas de petición y respuesta, y ejecutar llamadas de prueba directamente desde el navegador.
+
 \subsection{Autenticación}
 
 \begin{table}[h]
@@ -96,7 +98,9 @@ Cada conversación se suscribe a un canal propio con el topic \texttt{conversati
 
 \subsection{Mensajes entrantes (cliente \texorpdfstring{$\rightarrow$}{->} servidor)}
 
-\begin{table}[h]
+El frontend envía seis tipos de mensajes al canal. El mensaje \texttt{join} se emite automáticamente al montar el componente de conversación y recibe como respuesta el historial completo del canal. Los mensajes de acción (\texttt{validate\_code}, \texttt{reject\_code} y \texttt{suggest\_code}) se generan cuando el codificador interactúa con los códigos predichos; cada uno emite el comando CQRS correspondiente sobre el agregado de análisis.
+
+\begin{table}[H]
 \centering
 \caption{Mensajes enviados por el frontend al canal WebSocket.}
 \label{tab:ws-in}
@@ -141,6 +145,8 @@ Cada análisis genera exactamente tres tarjetas (\texttt{summary}, \texttt{codes
 \section{HTTP interno: backend \texorpdfstring{$\rightarrow$}{->} motor de IA}
 
 El backend se comunica con el motor de IA mediante HTTP usando la librería Elixir \texttt{Req}. La URL base es \texttt{http://ai\_engine:8000} dentro de la red Docker, o \texttt{http://localhost:8000} en desarrollo sin Docker.
+
+La especificación de los \emph{endpoints} del motor de IA está disponible a través de la interfaz web de Swagger UI en \texttt{http://localhost:8000/docs}, donde también se puede consultar el esquema OpenAPI generado automáticamente por FastAPI y realizar llamadas de prueba.
 
 \subsection{Endpoint de predicción}
 
@@ -195,7 +201,7 @@ La llamada se realiza dentro de una \texttt{Task.start} asíncrona, por lo que e
 
 \begin{description}
     \item[Ruta] \texttt{GET /}
-    \item[Respuesta] \texttt{\{status: "ok", model\_loaded: bool, dict\_loaded: bool\}}
+    \item[Respuesta] \texttt{\{status: \textquotedbl{}ok\textquotedbl{}, model\_loaded: bool, dict\_loaded: bool\}}
 \end{description}
 
 Permite al backend verificar que el motor de IA está disponible y que el modelo ha terminado de cargarse en memoria antes de aceptar peticiones de análisis.

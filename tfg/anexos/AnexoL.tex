@@ -41,7 +41,7 @@ Desde la perspectiva del aprendizaje estadístico, añadir ejemplos retrotraduci
   \item \textbf{Beneficia especialmente a las clases minoritarias.} Cada código raro que aparece en un documento pasa a aparecer también en su versión retrotraducida, duplicando la señal de entrenamiento para esa clase.
 \end{itemize}
 
-Con tres pivotes independientes (EN, DE, FR) el corpus de entrenamiento pasa de \textbf{500 a 2000 documentos} sin coste de anotación. Añadiendo un segundo pivote independiente, el corpus puede crecer a 1500 documentos.
+Con tres pivotes independientes (EN, DE, FR) el corpus de entrenamiento pasa de \textbf{500 a 2000 documentos} sin coste de anotación: cada pivote añade 500 documentos retrotraducidos, sumando 1500 variantes a las 500 originales.
 
 \subsection{Elección del segundo pivote: alemán frente a francés}
 
@@ -49,7 +49,7 @@ Para maximizar la utilidad de un segundo pivote se evaluaron francés (FR) y ale
 
 El francés es una lengua romance que comparte con el español raíces latinas y una gran parte del vocabulario médico especializado (\emph{hematoma}, \emph{diagnóstico}, \emph{paciente}…). La retrotraducción ES→FR→ES tiende a devolver textos muy similares al original, con variación limitada que apenas aporta información nueva al modelo.
 
-El alemán, en cambio, pertenece a la rama germánica. Sus estructuras sintácticas y su formación de compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) obligan al motor de traducción a reformular las oraciones de forma más profunda al retraducir al español, generando paráfrasis más diversas. Azure Translator dispone de alta calidad para el par ES↔DE en textos clínicos, comparable al par ES↔EN. Por estos motivos se eligió \textbf{alemán (DE)} como segundo pivote.
+El alemán, en cambio, pertenece a la rama germánica. Sus estructuras sintácticas y su formación de compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) obligan al motor de traducción a reformular las oraciones de forma más profunda al retraducir al español, generando paráfrasis más diversas. Azure Translator dispone de alta calidad para el par ES$\leftrightarrow$DE en textos clínicos, comparable al par ES$\leftrightarrow$EN. Por estos motivos se eligió \textbf{alemán (DE)} como segundo pivote.
 
 % ---------------------------------------------------------------------------
 \section{Servicio empleado: Azure Translator}
@@ -95,7 +95,7 @@ Si el crédito gratuito se agotase antes de completar las notas, el script permi
 
 \subsection{Distribución de códigos antes y después}
 
-El corpus de entrenamiento de CodiESP contiene 500 documentos con una media de \textbf{11,28 etiquetas por documento}, cubriendo los 1767 códigos del catálogo CIE-10-ES. La distribución de frecuencias es marcadamente sesgada: el \textbf{56,5\,\%} de los códigos aparece exactamente una vez, y el \textbf{88,7\,\%} tiene cinco o menos apariciones. Solo 200 códigos (11,3\,\%) superan las cinco ocurrencias.
+El corpus de entrenamiento de CodiEsp contiene 500 documentos con una media de \textbf{11,28 etiquetas por documento}, cubriendo los 1767 códigos del catálogo CIE-10-ES. La distribución de frecuencias es marcadamente sesgada: el \textbf{56,5\,\%} de los códigos aparece exactamente una vez, y el \textbf{88,7\,\%} tiene cinco o menos apariciones. Solo 200 códigos (11,3\,\%) superan las cinco ocurrencias.
 
 \begin{table}[h]
 \centering
@@ -303,7 +303,7 @@ make ai-combine
 
 El script toma el corpus original y añade las variantes aumentadas de cada pivote (EN, DE, FR), produciendo \texttt{codiesp\_D\_source\_train\_augmented\_all.csv} con \textbf{2000 documentos} (500 originales + 1500 aumentados). A continuación, entrenar con el corpus completo requiere únicamente pasar el fichero combinado como \texttt{TRAIN\_FILE}:
 
-\begin{lstlisting}[language=bash]
+\begin{lstlisting}[language=bash, breaklines=true, breakatwhitespace=false]
 make ai-train-gpu \
   TRAIN_FILE=/data/codiesp_csvs/codiesp_D_source_train_augmented_all.csv \
   FREEZE_LAYERS=20 LR=1e-4 BATCH_SIZE=8 EPOCHS=150 PATIENCE=20 \

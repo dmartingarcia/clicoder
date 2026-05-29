@@ -5,11 +5,11 @@ Este anexo documenta los hiperparámetros del modelo desplegado en producción y
 
 \section{Modelo base}
 
-Se emplea \texttt{IIC/RigoBERTa-Clinical}~\cite{garciasubies2026rigobertaclinical}, variante clínica de RigoBERTa~\cite{vacaserrano2022rigoberta} basada en la arquitectura DeBERTa-v2~\cite{he2021deberta} con Flash Attention~2 habilitado. Ventana de contexto: 4096 \emph{tokens} (truncada a 512 en producción por restricciones de memoria de la GPU disponible durante el entrenamiento).
+Se emplea \texttt{IIC/RigoBERTa-Clinical}~\cite{garciasubies2026rigobertaclinical}, variante clínica de RigoBERTa~\cite{vacaserrano2022rigoberta} basada en la arquitectura XLM-RoBERTa-large. La ventana de contexto nativa del modelo es de 512 \emph{tokens}, que es también la longitud máxima empleada en entrenamiento e inferencia.
 
 \section{Hiperparámetros}
 
-La Tabla~\ref{tab:hyperparams} recoge la configuración del \emph{run} final (\texttt{20260326T130358Z}).
+La Tabla~\ref{tab:hyperparams} recoge la configuración del \emph{run} de producción (\texttt{20260326T045031Z}, paso~32b).
 
 \begin{table}[h]
 \centering
@@ -20,9 +20,9 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración del \emph{run} final (\t
 \textbf{Parámetro} & \textbf{Valor} & \textbf{Descripción} \\
 \hline
 \multicolumn{3}{l}{\textit{Datos}} \\
-\texttt{num\_codes}      & 1767          & Clases (códigos de bloque CIE-10, 3 caracteres) \\
+\texttt{num\_codes}      & 1767          & Clases (códigos CIE-10 completos presentes en CodiEsp) \\
 \texttt{max\_length}     & 512           & Longitud máxima de secuencia en \emph{tokens} \\
-\texttt{full\_codes}     & \texttt{True} & Clasificación sobre el espacio completo de códigos \\
+\texttt{full\_codes}     & \texttt{True} & Granularidad completa (p.\,ej.\ \texttt{E11.9}), sin truncar a 3~caracteres \\
 \hline
 \multicolumn{3}{l}{\textit{Optimización}} \\
 \texttt{lr}              & $10^{-4}$     & Tasa de aprendizaje \\
@@ -30,7 +30,7 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración del \emph{run} final (\t
 \texttt{lr\_schedule}    & plateau       & Reducción al detectar estancamiento en val. F1 \\
 \texttt{weight\_decay}   & 0{,}1         & Regularización L2 \\
 \texttt{epochs\_max}     & 150           & Máximo de épocas permitido \\
-\texttt{epochs\_run}     & 110           & Épocas ejecutadas hasta la parada temprana \\
+\texttt{epochs\_run}     & 150           & Épocas ejecutadas (alcanzó el máximo sin parada temprana) \\
 \texttt{patience}        & 20            & Épocas sin mejora antes de parar \\
 \hline
 \multicolumn{3}{l}{\textit{Arquitectura}} \\
@@ -52,6 +52,7 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración del \emph{run} final (\t
 \multicolumn{3}{l}{\textit{Inferencia}} \\
 \texttt{threshold}       & 0{,}3         & Umbral de probabilidad para activar una etiqueta \\
 \texttt{pretrain\_epochs}& 10            & Épocas de precalentamiento con todo congelado \\
+\texttt{attn\_impl}     & \texttt{flash\_attention\_2} & Implementación de atención (FlashAttention 2) \\
 \hline
 \end{tabular}
 \end{table}
@@ -60,7 +61,7 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración del \emph{run} final (\t
 
 El sistema emplea dos estrategias de umbral diferentes. Durante el entrenamiento se usa un umbral global fijo para monitorizar la mejora. En producción se aplican umbrales por clase optimizados sobre el conjunto de validación, que ajustan individualmente el punto de corte de cada uno de los 1.767 códigos para maximizar el F1 micro conjunto.
 
-La Tabla~\ref{tab:final-results} muestra ambas métricas para el modelo desplegado (\emph{run} \texttt{20260326T130358Z}).
+La Tabla~\ref{tab:final-results} muestra ambas métricas para el modelo de producción (\emph{run} \texttt{20260326T045031Z}, paso 32b).
 
 \begin{table}[h]
 \centering
@@ -70,15 +71,15 @@ La Tabla~\ref{tab:final-results} muestra ambas métricas para el modelo desplega
 \hline
 \textbf{Estrategia} & \textbf{Umbral} & \textbf{F1 micro} & \textbf{F1 macro} \\
 \hline
-Global (entrenamiento) & 0{,}3 fijo & 0{,}483 & 0{,}127 \\
-Por clase (producción) & optimizado & \textbf{0{,}537} & — \\
+Global (entrenamiento) & 0{,}3 fijo & 0{,}489 & 0{,}120 \\
+Por clase (producción) & optimizado & \textbf{0{,}551} & \textbf{0{,}152} \\
 \hline
 \end{tabular}
 \end{table}
 
-El mejor \emph{run} registrado (\texttt{20260326T045031Z}) alcanzó F1 micro = 0{,}489 con umbral global y F1 micro = \textbf{0{,}551} con umbrales por clase. Se seleccionó el \emph{run} \texttt{20260326T130358Z} para producción por ofrecer un equilibrio mejor entre F1 micro y F1 macro.
+El \emph{run} seleccionado como modelo de producción es \texttt{20260326T045031Z} (paso~32b), que alcanzó F1-micro = 0{,}489 y F1-macro = 0{,}120 con umbral global, y F1-micro = \textbf{0{,}551} y F1-macro = \textbf{0{,}152} con umbrales por clase optimizados sobre el conjunto de validación.
 
-La diferencia entre F1 micro (0{,}537) y F1 macro (0{,}127) refleja el fuerte desequilibrio de clases del corpus: el modelo rinde bien sobre los códigos frecuentes, pero tiene dificultades con los poco representados. Este es un límite inherente al corpus de entrenamiento de 500 documentos, donde la mayoría de los 1.767 códigos aparecen menos de cinco veces.
+La diferencia entre F1-micro (0{,}551) y F1-macro (0{,}152 con umbrales por clase; 0{,}120 con umbral global) refleja el fuerte desequilibrio de clases del corpus: el modelo rinde bien sobre los códigos frecuentes, pero tiene dificultades con los poco representados. Este es un límite inherente al corpus de entrenamiento de 500 documentos, donde la mayoría de los 1.767 códigos aparecen menos de cinco veces.
 
 \section{Curvas de entrenamiento}
 
@@ -96,7 +97,7 @@ La Figura~\ref{fig:epochs-graph} muestra la evolución del F1 micro de validaci�
 Los artefactos del modelo desplegado en producción se encuentran en \texttt{ai\_engine/model/}:
 
 \begin{description}
-    \item[\texttt{classifier\_20260326T130358Z\_f1=0.4831.pt}] Pesos del modelo PyTorch.
-    \item[\texttt{thresholds\_20260326T130358Z.json}] Umbrales por clase optimizados sobre el conjunto de validación.
+    \item[\texttt{classifier\_20260326T045031Z\_f1=0.4888.pt}] Pesos del modelo PyTorch.
+    \item[\texttt{thresholds\_20260326T045031Z.json}] Umbrales por clase optimizados sobre el conjunto de validación.
     \item[\texttt{config.json}] Metadatos del modelo activo: nombre, fichero de pesos, fichero de umbrales y parámetros de inferencia.
 \end{description}

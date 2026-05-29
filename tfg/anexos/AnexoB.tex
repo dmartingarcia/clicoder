@@ -43,7 +43,7 @@ El orden de arranque impuesto por las dependencias de Docker Compose es el sigui
 
 \begin{enumerate}
     \item \textbf{PostgreSQL} (\texttt{db}) arranca primero; expone el puerto 5432 internamente.
-    \item \textbf{AI Engine} arranca en paralelo con la base de datos; carga el modelo en memoria durante el arranque (puede tardar entre 30 y 120 segundos según el hardware).
+    \item \textbf{AI Engine} arranca en paralelo con la base de datos; carga el modelo en memoria durante el arranque.
     \item \textbf{Backend} espera a que \texttt{db} y \texttt{ai\_engine} estén disponibles; ejecuta las migraciones Ecto al arrancar y crea las tablas del \emph{event store} si no existen.
     \item \textbf{Frontend} arranca una vez el backend está activo.
     \item \textbf{Mailpit} arranca en paralelo; solo se usa en entornos de desarrollo.
@@ -51,12 +51,12 @@ El orden de arranque impuesto por las dependencias de Docker Compose es el sigui
 
 \section{Variantes de despliegue}
 
-El repositorio incluye tres ficheros de sobreescritura de Docker Compose que adaptan la configuración al entorno de ejecución:
+El repositorio incluye tres ficheros de configuración adicional de Docker Compose que adaptan el despliegue al entorno de ejecución:
 
 \begin{description}
-    \item[\texttt{docker-compose.gpu.yml}] Configuración por defecto para máquinas con GPU NVIDIA. El servicio \texttt{ai\_engine} arranca con \texttt{DEVICE=cuda} y acceso al \emph{runtime} NVIDIA. Requiere el controlador NVIDIA y el toolkit de contenedores de NVIDIA instalados en el anfitrión. Tiempo de inferencia aproximado: 11 segundos por informe en tarjetas Ampere o superior.
+    \item[\texttt{docker-compose.gpu.yml}] Configuración por defecto para máquinas con GPU NVIDIA. El servicio \texttt{ai\_engine} arranca con \texttt{DEVICE=cuda} y acceso al \emph{runtime} NVIDIA. Requiere el controlador NVIDIA y el toolkit de contenedores de NVIDIA instalados en el anfitrión. Tiempo de inferencia: menos de 1 segundo por informe.
 
-    \item[\texttt{docker-compose.cpu.yml}] Configuración para máquinas sin GPU. Sobreescribe \texttt{DEVICE=cpu} en \texttt{ai\_engine}. El backend de atención cambia automáticamente a SDPA (\emph{Scaled Dot-Product Attention}). Tiempo de inferencia aproximado: 30 segundos por informe.
+    \item[\texttt{docker-compose.cpu.yml}] Configuración para máquinas sin GPU. Sobreescribe \texttt{DEVICE=cpu} en \texttt{ai\_engine}. El backend de atención cambia automáticamente a SDPA (\emph{Scaled Dot-Product Attention}). Tiempo de inferencia: menos de 1 segundo por informe en hardware moderno (verificado en Ryzen 7900X y Apple M4).
 
     \item[\texttt{docker-compose.mock.yml}] Sustituye el servicio \texttt{ai\_engine} por \texttt{ai\_engine\_mock}, una implementación ligera en FastAPI que devuelve predicciones ficticias sin cargar ningún modelo. Recomendado para el desarrollo del frontend y del backend cuando no se necesita inferencia real.
 \end{description}

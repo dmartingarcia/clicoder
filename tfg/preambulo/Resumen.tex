@@ -34,9 +34,9 @@ Este trabajo propone un sistema automático de codificación mediante modelos BE
   \item Adaptación a los requisitos de trazabilidad y auditabilidad del Reglamento UE 2017/745~\cite{eu2017745}, aplicable al software de apoyo a la decisión clínica.
 \end{itemize}
 
-La metodología combina técnicas avanzadas de PLN con conocimiento clínico estructurado: preentrenamiento débil sobre las descripciones oficiales del catálogo CIE-10-ES, \emph{fine-tuning} del modelo RigoBERTa-Clinical~\cite{miranda2020} con función de pérdida Binary Cross-Entropy ponderada para combatir el desequilibrio extremo de clases, y calibración de umbrales de decisión por código sobre el conjunto de validación del corpus CodiEsp.
+La metodología combina técnicas de PLN con conocimiento clínico estructurado: preentrenamiento débil sobre las descripciones oficiales del catálogo CIE-10-ES, \emph{fine-tuning} del modelo RigoBERTa-Clinical~\cite{garciasubies2026rigobertaclinical} con función de pérdida Binary Cross-Entropy ponderada para combatir el desequilibrio extremo de clases, y calibración de umbrales de decisión por código sobre el conjunto de validación del corpus CodiEsp~\cite{miranda2020}.
 
-Los resultados muestran un F1-score micro de 0,537 en codificación de diagnósticos sobre el corpus CodiEsp (F1 macro de 0,127, reflejo del fuerte desequilibrio de clases). El modelo reduce la fase de propuesta de codificación a menos de un segundo por informe, frente a los 14 minutos de media del proceso manual, requiriendo únicamente revisión humana en los casos de baja certeza.
+Los resultados muestran un F1-micro de 0,551 y un F1-macro de 0,152 en codificación de diagnósticos sobre el corpus CodiEsp con umbrales por clase optimizados (F1-micro de 0,489 y F1-macro de 0,120 con umbral global de 0,3), diferencia que refleja el fuerte desequilibrio de clases del corpus. El modelo reduce la fase de propuesta de codificación a menos de un segundo por informe, frente a los 14 minutos de media del proceso manual, requiriendo únicamente revisión humana en los casos de baja certeza.
 
 El trabajo demuestra la viabilidad de sistemas basados en transformers para codificación clínica automatizada, proponiendo un \emph{pipeline} reproducible que integra un clasificador multilabel, un servicio de inferencia con API REST y una interfaz web de demostración en tiempo real. Las limitaciones identificadas —cobertura reducida de códigos poco frecuentes y ausencia de datos de hospitales reales— establecen las líneas prioritarias para trabajos futuros.
 
@@ -77,11 +77,11 @@ This work proposes an automatic coding system based on multilabel BERT models ad
   \item Compliance with the traceability and auditability requirements of EU Regulation 2017/745~\cite{eu2017745}, applicable to clinical decision-support software.
 \end{itemize}
 
-The methodology combines advanced NLP techniques with structured clinical knowledge: weak pre-training on the official ICD-10-ES catalogue descriptions, fine-tuning of the RigoBERTa-Clinical model with weighted Binary Cross-Entropy loss to address extreme class imbalance, and per-code decision threshold calibration on the CodiEsp validation set~\cite{miranda2020}.
+The methodology combines advanced NLP techniques with structured clinical knowledge: weak pre-training on the official ICD-10-ES catalogue descriptions, fine-tuning of the RigoBERTa-Clinical model~\cite{garciasubies2026rigobertaclinical} with weighted Binary Cross-Entropy loss to address extreme class imbalance, and per-code decision threshold calibration on the CodiEsp validation set~\cite{miranda2020}.
 
-Results show a micro F1-score of 0.537 on diagnostic coding over the CodiEsp corpus (macro F1 of 0.127, reflecting strong class imbalance). The model reduces the coding proposal phase to under one second per report, compared to the 14-minute average of the manual process, requiring human review only for low-confidence cases.
+Results show an F1-micro of 0.551 and an F1-macro of 0.152 on diagnostic coding over the CodiEsp corpus with per-class optimized thresholds (F1-micro of 0.489 and F1-macro of 0.120 with global threshold of 0.3), a gap that reflects the strong class imbalance of the corpus. The model reduces the coding proposal phase to under one second per report, compared to the 14-minute average of the manual process, requiring human review only for low-confidence cases.
 
-The work demonstrates the feasibility of transformer-based systems for automated clinical coding, proposing a reproducible pipeline integrating a multilabel classifier, a REST API inference service, and a real-time web interface. Identified limitations~---~limited coverage of rare codes and absence of real hospital data~---~define the priority directions for future work.
+The work demonstrates the feasibility of transformer-based systems for automated clinical coding, proposing a reproducible pipeline integrating a multilabel classifier, a REST API inference service, and a real-time web interface. Identified limitations---limited coverage of rare codes and absence of real hospital data---define the priority directions for future work.
 
 \bigskip
 

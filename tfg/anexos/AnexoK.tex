@@ -107,7 +107,7 @@ Cada modo se describe a continuación:
 \begin{sloppypar}
 \begin{itemize}
   \item \textbf{GPU} (\texttt{make up}): modo de producción. Requiere una GPU NVIDIA con \texttt{nvidia-container-toolkit} y un modelo previamente entrenado montado en \texttt{ai\_engine/model/}. Es el único modo que ofrece tiempos de inferencia aceptables en uso real.
-  \item \textbf{CPU} (\texttt{make cpu-up}): carga el modelo real pero realiza la inferencia en CPU. Útil para probar el modelo en una máquina sin GPU. La respuesta puede tardar varios segundos por petición.
+  \item \textbf{CPU} (\texttt{make cpu-up}): carga el modelo real pero realiza la inferencia en CPU. Útil para probar el modelo en una máquina sin GPU. La respuesta tarda menos de 1 segundo por informe en hardware moderno.
   \item \textbf{Mock} (\texttt{make mock-up}): el motor de IA devuelve respuestas fijas sin cargar ningún modelo. Recomendado para desarrollo del frontend y pruebas funcionales del backend cuando no se dispone de modelo entrenado.
 \end{itemize}
 \end{sloppypar}

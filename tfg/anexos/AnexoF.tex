@@ -3,7 +3,7 @@
 
 Este anexo documenta la evolución del proceso de entrenamiento del clasificador CIE-10, desde los primeros experimentos exploratorios hasta la configuración final desplegada en producción.
 
-Durante las fases de exploración (Fases~1--4), los experimentos se realizaron sobre la tarea de \textbf{clasificación de capítulos CIE-10} (21 clases) como aproximación de primer nivel: el menor número de clases permite ciclos de entrenamiento cortos y resultados interpretables, y el ranking relativo de modelos se transfiere bien a la tarea real. El \textbf{clasificador final de producción} opera sobre los 1.767 \emph{block codes} de tres caracteres, proporcionando el código CIE-10 completo.
+Durante las fases de exploración (Fases~1--4), los experimentos se realizaron sobre la tarea de \textbf{clasificación de capítulos CIE-10} (21 clases) como aproximación de primer nivel: el menor número de clases permite ciclos de entrenamiento cortos y resultados interpretables, y el ranking relativo de modelos se transfiere bien a la tarea real. El \textbf{clasificador final de producción} opera sobre los 1.767 códigos CIE-10 completos (p.\,ej.\ \texttt{E11.9}) presentes en el conjunto de entrenamiento de CodiEsp.
 
 \section{Fases de exploración}
 
@@ -56,8 +56,8 @@ La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de los 46
 21 & RigoBERTa-Clinical & 1767  & 79  & 0{,}327 & Expansión a espacio completo \\
 27 & RigoBERTa-Clinical & 1767  & 60  & 0{,}470 & Introducción descongelación prog. \\
 39 & RigoBERTa-Clinical & 1767  & 96  & 0{,}481 & Ajuste umbral y \emph{pos\_weight} \\
-44 & RigoBERTa-Clinical & 1767  & 150 & 0{,}489 & Mejor F1 con umbral global \\
-46 & RigoBERTa-Clinical & 1767  & 110 & 0{,}483 & Modelo desplegado en producción \\
+44 & RigoBERTa-Clinical & 1767  & 150 & 0{,}489 & Modelo desplegado en producción \\
+46 & RigoBERTa-Clinical & 1767  & 110 & 0{,}483 & Run de verificación posterior \\
 \hline
 \end{tabular}
 \end{table}
