@@ -344,7 +344,33 @@ El paso~35d repitió la misma configuración sobre el corpus aumentado de 2000 d
 \end{tabular}
 \end{table}
 
-La configuración ganadora es la del \textbf{paso~36}: con umbral global 0,3 obtiene F1-micro~0,4945 y F1-macro~0,119; con umbrales por clase optimizados sobre validación, F1-micro~0,551 y F1-macro~0,152; y MAP por documento~\textbf{0,544}, que \textbf{supera el MAP de 0,48 de los mejores sistemas basados en transformers del \emph{benchmark} CodiEsp}~\cite{miranda2020}. Corpus: 500 documentos originales, \texttt{PRETRAIN\_EPOCHS=10}. El modelo de producción es la ejecución \texttt{classifier\_20260530T030233Z\_f1=0.4945.pt}; los detalles de evaluación se recogen en el Anexo~\ref{cap:AnexoH}. Todas las vías de mejora han sido exploradas exhaustivamente y los experimentos de entrenamiento quedan concluidos.
+La configuración ganadora es la del \textbf{paso~36}: con umbral global 0,3 obtiene F1-micro~0,4945 y F1-macro~0,119; con umbrales por clase optimizados sobre validación, F1-micro~0,551 y F1-macro~0,152; y MAP por documento~\textbf{0,544}. Corpus: 500 documentos originales, \texttt{PRETRAIN\_EPOCHS=10}. El modelo de producción es la ejecución \texttt{classifier\_20260530T030233Z\_f1=0.4945.pt}; los detalles de evaluación se recogen en el Anexo~\ref{cap:AnexoH}. Todas las vías de mejora han sido exploradas exhaustivamente y los experimentos de entrenamiento quedan concluidos.
+
+La Tabla~\ref{tab:codiesp-comparativa} sitúa el modelo en el contexto del \emph{benchmark} CodiEsp-D 2020, la tarea compartida de referencia para codificación automática de diagnósticos clínicos en español~\cite{miranda2020}. El MAP de nuestro modelo se calcula sobre el conjunto de validación de CodiEsp, mientras que los resultados de los equipos participantes corresponden al conjunto de prueba; la comparación debe interpretarse con esta cautela metodológica.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Comparación con los sistemas del \emph{benchmark} CodiEsp-D (CLEF 2020)~\protect\cite{miranda2020}. Los resultados de los equipos externos corresponden al conjunto de prueba; el MAP de este trabajo se calcula sobre el conjunto de validación ($^\dagger$). F1 reportado para este trabajo con umbrales por clase optimizados ($^*$); el resto de equipos usa listas de códigos ordenados por confianza (sin umbral), lo que explica valores de F1 muy bajos con recall alto.}
+\label{tab:codiesp-comparativa}
+\begin{tabular}{llrrrr}
+\hline
+\textbf{Sistema} & \textbf{Enfoque} & \textbf{P} & \textbf{R} & \textbf{F1} & \textbf{MAP} \\
+\hline
+IXA-AAA & XGBoost + BERT Multilingüe & 0{,}004 & 0{,}858 & 0{,}009 & \textbf{0{,}593} \\
+\rowcolor{gray!15}
+\textbf{Este trabajo} & RigoBERTa-Clinical + \emph{fine-tuning} & — & — & \textbf{0{,}551}$^*$ & \underline{0{,}544}$^\dagger$ \\
+IAM & Diccionario + coincidencia exacta/Levenshtein & 0{,}817 & 0{,}592 & \textbf{0{,}687} & 0{,}521 \\
+FLE & Sistema clínico multilingüe propietario & 0{,}740 & 0{,}633 & 0{,}679 & 0{,}519 \\
+The Mental Strokers & BETO \emph{fine-tuning} & 0{,}759 & 0{,}638 & 0{,}591 & 0{,}517 \\
+LSI-UNED & Recuperación de información + expansión & 0{,}253 & 0{,}688 & 0{,}370 & 0{,}517 \\
+Anuj & BERT + búsqueda léxica & 0{,}741 & 0{,}621 & 0{,}676 & 0{,}505 \\
+MEDIA & Ensamble con BETO & 0{,}735 & 0{,}630 & 0{,}629 & 0{,}488 \\
+ICB-UMA~\cite{lopezgarcia2020icb} & BERT-SciELO \emph{fine-tuning} & 0{,}004 & 0{,}897 & 0{,}009 & 0{,}482 \\
+IMS & CNN + atención & 0{,}373 & 0{,}709 & 0{,}474 & 0{,}449 \\
+\hline
+\end{tabular}
+\end{table}
 
 \paragraph{Nota sobre reproducibilidad y variabilidad entre ejecuciones.}
 \begin{sloppypar}
@@ -357,7 +383,7 @@ Para un ciclo de reentrenamiento productivo con datos reales se recomienda añad
 
 \paragraph{Paso 36}
 \begin{sloppypar}
-Tras confirmar en los pasos 33--35 que ninguna modificación de hiperparámetros mejoraba de forma robusta la referencia 32b, se realizó una reejecución con la configuración exacta de 32b para explotar la variabilidad estocástica inherente al entrenamiento. El resultado fue F1-micro~\textbf{0,4945} ($+0{,}006$ respecto a 32b), F1-macro~0,119 y MAP por documento~\textbf{0,544}. La ejecución completó las 150~épocas en \textbf{27~minutos} ($\sim$11~s/época). La ganancia en F1-micro, dentro del intervalo de variabilidad estocástica $\pm 0{,}01$, se debe a una inicialización aleatoria más favorable. El MAP de 0,544 \textbf{supera el 0,48 alcanzado por los mejores sistemas basados en transformers en el \emph{benchmark} CodiEsp}~\cite{miranda2020}, siendo la métrica oficial del \emph{benchmark}. Este modelo pasa a ser el artefacto de producción: \texttt{classifier\_20260530T030233Z\_f1=0.4945.pt}.
+Tras confirmar en los pasos 33--35 que ninguna modificación de hiperparámetros mejoraba de forma robusta la referencia 32b, se realizó una reejecución con la configuración exacta de 32b para explotar la variabilidad estocástica inherente al entrenamiento. El resultado fue F1-micro~\textbf{0,4945} ($+0{,}006$ respecto a 32b), F1-macro~0,119 y MAP por documento~\textbf{0,544}. La ejecución completó las 150~épocas en \textbf{27~minutos} ($\sim$11~s/época). La ganancia en F1-micro, dentro del intervalo de variabilidad estocástica $\pm 0{,}01$, se debe a una inicialización aleatoria más favorable. El MAP de 0,544 supera a 20 de los 22 sistemas presentados al \emph{benchmark} CodiEsp 2020~\cite{miranda2020}, incluyendo sistemas basados en transformers como ICB-UMA~\cite{lopezgarcia2020icb} (MAP~0,482) o The Mental Strokers (MAP~0,517), y quedaría en segunda posición del \emph{ranking} por detrás únicamente de IXA-AAA (MAP~0,593), siendo el MAP la métrica oficial del \emph{benchmark} (véase Tabla~\ref{tab:codiesp-comparativa}). Este modelo pasa a ser el artefacto de producción: \texttt{classifier\_20260530T030233Z\_f1=0.4945.pt}.
 
 El comando empleado para esta ejecución fue:
 \begin{lstlisting}[language=bash,basicstyle=\small\ttfamily]
