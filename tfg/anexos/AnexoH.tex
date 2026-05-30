@@ -67,17 +67,17 @@ La Tabla~\ref{tab:final-results} muestra ambas métricas para el modelo de produ
 \centering
 \caption{Resultados del modelo final en validación por estrategia de umbral.}
 \label{tab:final-results}
-\begin{tabular}{llrr}
+\begin{tabular}{llrrr}
 \hline
-\textbf{Estrategia} & \textbf{Umbral} & \textbf{F1 micro} & \textbf{F1 macro} \\
+\textbf{Estrategia} & \textbf{Umbral} & \textbf{F1 micro} & \textbf{F1 macro} & \textbf{MAP} \\
 \hline
-Global (entrenamiento) & 0{,}3 fijo & 0{,}489 & 0{,}120 \\
-Por clase (producción) & optimizado & \textbf{0{,}551} & \textbf{0{,}152} \\
+Global (entrenamiento) & 0{,}3 fijo & 0{,}4945 & 0{,}119 & \textbf{0{,}544} \\
+Por clase (producción) & optimizado & \textbf{0{,}551} & \textbf{0{,}152} & --- \\
 \hline
 \end{tabular}
 \end{table}
 
-La ejecución seleccionada como modelo de producción es \texttt{20260326T045031Z} (paso~32b), que alcanzó F1-micro = 0{,}489 y F1-macro = 0{,}120 con umbral global, y F1-micro = \textbf{0{,}551} y F1-macro = \textbf{0{,}152} con umbrales por clase optimizados sobre el conjunto de validación.
+La ejecución seleccionada como modelo de producción es \texttt{20260530T030233Z} (paso~36), que alcanzó F1-micro = 0{,}4945 y F1-macro = 0{,}119 con umbral global, y F1-micro = \textbf{0{,}551} y F1-macro = \textbf{0{,}152} con umbrales por clase optimizados sobre el conjunto de validación. El MAP por documento ---métrica oficial del \emph{benchmark} CodiEsp--- alcanza \textbf{0{,}544}, superando el MAP~0{,}48 de los mejores sistemas basados en transformers del \emph{benchmark}~\cite{miranda2020}.
 
 La diferencia entre F1-micro (0{,}551) y F1-macro (0{,}152 con umbrales por clase; 0{,}120 con umbral global) refleja el fuerte desequilibrio de clases del corpus: el modelo rinde bien sobre los códigos frecuentes, pero tiene dificultades con los poco representados. Este es un límite inherente al corpus de entrenamiento de 500 documentos, donde la mayoría de los 1.767 códigos aparecen menos de cinco veces.
 

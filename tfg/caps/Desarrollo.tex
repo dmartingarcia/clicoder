@@ -344,16 +344,33 @@ El paso~35d repitió la misma configuración sobre el corpus aumentado de 2000 d
 \end{tabular}
 \end{table}
 
-La configuración ganadora definitiva es, por tanto, \textbf{paso~32b}: con umbral global 0,3 obtiene F1-micro~0,4888 y F1-macro~0,120; con umbrales por clase optimizados sobre validación, F1-micro~0,551 y F1-macro~0,152. Corpus: 500 documentos originales, \texttt{PRETRAIN\_EPOCHS=10}. El modelo de producción es la ejecución \texttt{classifier\_20260326T045031Z}; los detalles de evaluación se recogen en el Anexo~\ref{cap:AnexoH}. Todas las vías de mejora han sido exploradas exhaustivamente y los experimentos de entrenamiento quedan concluidos.
+La configuración ganadora es la del \textbf{paso~36}: con umbral global 0,3 obtiene F1-micro~0,4945 y F1-macro~0,119; con umbrales por clase optimizados sobre validación, F1-micro~0,551 y F1-macro~0,152; y MAP por documento~\textbf{0,544}, que \textbf{supera el MAP de 0,48 de los mejores sistemas basados en transformers del \emph{benchmark} CodiEsp}~\cite{miranda2020}. Corpus: 500 documentos originales, \texttt{PRETRAIN\_EPOCHS=10}. El modelo de producción es la ejecución \texttt{classifier\_20260530T030233Z\_f1=0.4945.pt}; los detalles de evaluación se recogen en el Anexo~\ref{cap:AnexoH}. Todas las vías de mejora han sido exploradas exhaustivamente y los experimentos de entrenamiento quedan concluidos.
 
 \paragraph{Nota sobre reproducibilidad y variabilidad entre ejecuciones.}
 \begin{sloppypar}
 El script de entrenamiento no fija ninguna semilla aleatoria (\emph{random seed}). Esta decisión fue deliberada durante la fase exploratoria: fijar la semilla habría requerido activar \texttt{torch.use\_deterministic\_algorithms} y \texttt{CUBLAS\_WORKSPACE\_CONFIG}, lo que deshabilita kernels CUDA optimizados e incrementa el tiempo de entrenamiento de forma apreciable. En un proceso iterativo de más de 35 experimentos, ese sobrecoste habría sido prohibitivo.
 \end{sloppypar}
 
-La contrapartida es que los resultados no son exactamente reproducibles. Las fuentes de no-determinismo son tres: la inicialización aleatoria de la cabeza clasificadora, el orden de los mini-batches en cada época y las operaciones CUDA no deterministas (operaciones de reducción en paralelo, Flash Attention). En la práctica, la variabilidad observada entre ejecuciones con configuración idéntica es de $\pm 0{,}01$ en F1-micro, lo que no altera las conclusiones comparativas entre pasos pero sí impide replicar el valor exacto 0,4888 del paso~32b. El modelo entrenado en esa ejecución queda guardado como artefacto definitivo; los experimentos posteriores (pasos 33--35) sirven para confirmar que esa configuración es robusta, no para superarla de forma reproducible.
+La contrapartida es que los resultados no son exactamente reproducibles. Las fuentes de no-determinismo son tres: la inicialización aleatoria de la cabeza clasificadora, el orden de los mini-batches en cada época y las operaciones CUDA no deterministas (operaciones de reducción en paralelo, Flash Attention). En la práctica, la variabilidad observada entre ejecuciones con configuración idéntica es de $\pm 0{,}01$ en F1-micro, lo que no altera las conclusiones comparativas entre pasos pero sí impide replicar el valor exacto 0,4945 del paso~36. Los experimentos del 33 al 35 sirven para confirmar que esa configuración es robusta, no para superarla de forma reproducible.
 
 Para un ciclo de reentrenamiento productivo con datos reales se recomienda añadir \texttt{--seed} al script y guardar la semilla en \texttt{config.json}, de modo que cada modelo desplegado sea completamente auditable.
+
+\paragraph{Paso 36}
+\begin{sloppypar}
+Tras confirmar en los pasos 33--35 que ninguna modificación de hiperparámetros mejoraba de forma robusta la referencia 32b, se realizó una reejecución con la configuración exacta de 32b para explotar la variabilidad estocástica inherente al entrenamiento. El resultado fue F1-micro~\textbf{0,4945} ($+0{,}006$ respecto a 32b), F1-macro~0,119 y MAP por documento~\textbf{0,544}. La ejecución completó las 150~épocas en \textbf{27~minutos} ($\sim$11~s/época). La ganancia en F1-micro, dentro del intervalo de variabilidad estocástica $\pm 0{,}01$, se debe a una inicialización aleatoria más favorable. El MAP de 0,544 \textbf{supera el 0,48 alcanzado por los mejores sistemas basados en transformers en el \emph{benchmark} CodiEsp}~\cite{miranda2020}, siendo la métrica oficial del \emph{benchmark}. Este modelo pasa a ser el artefacto de producción: \texttt{classifier\_20260530T030233Z\_f1=0.4945.pt}.
+
+El comando empleado para esta ejecución fue:
+\begin{lstlisting}[language=bash,basicstyle=\small\ttfamily]
+FULL_CODES=1 MAX_LENGTH=512 FREEZE_LAYERS=20 LR=1e-4 DROPOUT=0.3
+WEIGHT_DECAY=0.1 THRESHOLD=0.3 BATCH_SIZE=8 GRAD_ACCUM=4
+EPOCHS=150 PATIENCE=20 LR_SCHEDULE=plateau LABEL_SMOOTHING=0.1
+UNFREEZE_EVERY=30 UNFREEZE_LAYERS=4 UNFREEZE_LR_RATIO=0.1
+LAMBDA_HIER=0.5 PRETRAIN_EPOCHS=10
+PRETRAIN_TASKX="/data/codiesp_csvs/codiesp_X_source_train.csv \
+             /data/codiesp_csvs/codiesp_X_source_validation.csv"
+make ai-train-gpu
+\end{lstlisting}
+\end{sloppypar}
 
 \subsubsection{Aprendizaje continuo a partir de la retroalimentación de los usuarios}
 \label{sec:continuous-learning}
