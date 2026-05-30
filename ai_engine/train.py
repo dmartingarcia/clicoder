@@ -613,10 +613,23 @@ def find_optimal_thresholds_per_class(
     return thresholds
 
 
+def _map_codiesp(T, PROBS):
+    """MAP estilo CodiEsp: per-documento (TREC-style).
+    Para cada nota, ordena los códigos por score y calcula AP de los correctos.
+    Solo documentos con al menos un código positivo contribuyen a la media.
+    Directamente comparable con el MAP del benchmark CodiEsp (best≈0.48).
+    """
+    aps = [
+        float(average_precision_score(T[i], PROBS[i]))
+        for i in range(len(T)) if T[i].sum() > 0
+    ]
+    return float(np.mean(aps)) if aps else 0.0
+
+
 def evaluate(model, loader, device, threshold=0.5):
-    """Devuelve dict con precision, recall y F1 en micro y macro."""
+    """Devuelve dict con precision, recall, F1 (micro y macro) y MAP macro."""
     model.eval()
-    preds_all, targets_all = [], []
+    probs_all, preds_all, targets_all = [], [], []
     ac = _autocast_ctx(device)
     with torch.no_grad(), ac:
         for batch in loader:
@@ -627,21 +640,20 @@ def evaluate(model, loader, device, threshold=0.5):
             )
             probs = torch.sigmoid(logits).float().cpu().numpy()
             targets = batch["labels"].cpu().numpy()
+            probs_all.append(probs)
             preds_all.append((probs >= threshold).astype(int))
             targets_all.append(targets)
 
     P = np.vstack(preds_all)
     T = np.vstack(targets_all)
+    PROBS = np.vstack(probs_all)
     if T.sum() == 0:
         return {
             k: 0.0
             for k in (
-                "p_micro",
-                "r_micro",
-                "f1_micro",
-                "p_macro",
-                "r_macro",
-                "f1_macro",
+                "p_micro", "r_micro", "f1_micro",
+                "p_macro", "r_macro", "f1_macro",
+                "map_macro",
             )
         }
     return {
@@ -651,6 +663,7 @@ def evaluate(model, loader, device, threshold=0.5):
         "p_macro": float(precision_score(T, P, average="macro", zero_division=0)),
         "r_macro": float(recall_score(T, P, average="macro", zero_division=0)),
         "f1_macro": float(f1_score(T, P, average="macro", zero_division=0)),
+        "map_macro": _map_codiesp(T, PROBS),
     }
 
 
@@ -941,6 +954,7 @@ def train(
             f"  epoch {epoch}/{epochs}  loss={avg_loss:.4f}  lr={current_lr:.2e}"
             f"  P={m['p_micro']:.3f}  R={m['r_micro']:.3f}  F1={m['f1_micro']:.3f} (micro)"
             f"  |  P={m['p_macro']:.3f}  R={m['r_macro']:.3f}  F1={m['f1_macro']:.3f} (macro)"
+            f"  |  MAP={m['map_macro']:.3f}"
             f"  [{fmt_seconds(epoch_elapsed)}/epoch  elapsed {fmt_seconds(elapsed_total)}"
             f"  ETA {fmt_seconds(total_eta)}]"
         )
@@ -1349,9 +1363,9 @@ def main():
         f"[threshold] por clase → F1-micro={f1_per_class_micro:.4f}  F1-macro={f1_per_class_macro:.4f}"
     )
 
-    # MAP (Mean Average Precision): evalúa la calidad del ranking, sin umbral fijo.
-    # Equivalente al MAP del benchmark CodiEsp original.
-    map_macro = float(average_precision_score(targets_val, probs_val, average="macro"))
+    # MAP macro sobre clases con positivos en validación (no comparable directamente
+    # con el MAP por documento de CodiEsp, que promedia sobre documentos, no clases).
+    map_macro = _map_codiesp(targets_val, probs_val)
     print(f"[threshold] MAP macro={map_macro:.4f}  (benchmark CodiEsp best≈0.48)")
 
     # Usar global para eval final (el per-class se guarda como artefacto opcional)
@@ -1454,7 +1468,7 @@ def main():
         "val_p_macro": round(fm["p_macro"], 6),
         "val_r_macro": round(fm["r_macro"], 6),
         "val_f1_macro": round(fm["f1_macro"], 6),
-        "val_map_macro": round(map_macro, 6),
+        "val_map_macro": round(fm["map_macro"], 6),
         "total_seconds": round(sum(h["epoch_seconds"] for h in history), 1),
         "avg_epoch_seconds": round(
             sum(h["epoch_seconds"] for h in history) / len(history), 1
@@ -1462,6 +1476,7 @@ def main():
         "sliding_window": args.sliding_window,
         "chunk_overlap": args.chunk_overlap if args.sliding_window else "",
         "pretrain_epochs": args.pretrain_epochs,
+        "lambda_hier": args.lambda_hier,
     }
     fieldnames = list(row.keys())
     if runs_csv.exists():

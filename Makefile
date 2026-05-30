@@ -12,8 +12,8 @@ DB = $(COMPOSE) exec db
 # Modelo Hugging Face
 HF_REPO      = dmartingarcia/cie10-rigoberta-classifier
 MODEL_DIR    = ai_engine/model
-BEST_PT      = classifier_20260326T045031Z_f1=0.4888.pt
-BEST_THR     = thresholds_20260326T045031Z.json
+BEST_PT      = classifier_20260530T030233Z_f1=0.4945.pt
+BEST_THR     = thresholds_20260530T030233Z.json
 AI_MODEL_DIR = /app/model
 
 # Colores para output
