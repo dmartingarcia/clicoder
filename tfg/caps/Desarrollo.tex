@@ -100,7 +100,7 @@ Los informes tienen una longitud media de 2.317 caracteres (349 palabras) en el 
 Cada documento tiene una media de 11,3 códigos CIE-10-ES asignados (mediana: 10; máximo: 40; mínimo: 1). La correlación entre longitud del texto y número de etiquetas es de 0,56. La distribución de frecuencias sigue una ley de potencia: la mayoría de los 2.557 códigos únicos del corpus aparece en cinco o menos documentos. Esta distribución de cola larga motivó el uso de ponderación de clases en la función de pérdida.
 
 \paragraph{Solapamiento entre particiones.}
-El coeficiente de Jaccard entre particiones se sitúa entre 0,31 y 0,33. El dato más relevante para la evaluación es que \textbf{el 38\,\% de los códigos presentes en test no aparece en ningún documento de entrenamiento}, lo que impone un techo teórico al F1-macro independiente de la arquitectura elegida.
+El coeficiente de Jaccard entre particiones se sitúa entre 0,31 y 0,33. El dato más relevante para la evaluación es que \textbf{el 38\,\% de los códigos presentes en el conjunto de prueba no aparece en ningún documento de entrenamiento}, lo que impone un techo teórico al F1-macro independiente de la arquitectura elegida.
 
 \paragraph{Características del catálogo CIE-10-ES.}
 El catálogo contiene 101.246 entradas en 21 capítulos. Las categorías más representadas son R (síntomas y signos), S (traumatismos), T (envenenamientos) e I (enfermedades circulatorias). Esta distribución, unida a que solo una fracción de los códigos aparece en CodiEsp, explica que el espacio de clases del clasificador se limite a los 1.767 códigos completos (p.\,ej.\ \texttt{E11.9}) únicos del conjunto de entrenamiento, frente a los más de 100.000 del catálogo CIE-10-ES.
@@ -157,7 +157,7 @@ Antes de cualquier comparación, el texto del informe se lematiza con \texttt{es
 \subsubsection{Proceso de entrenamiento experimental}
 \label{sec:entrenamiento}
 
-El proceso de entrenamiento se articuló en cuatro fases experimentales sucesivas, guiadas por los resultados en el conjunto de validación. Se registraron 46 corridas en \texttt{training\_runs.csv}, proporcionando trazabilidad total del proceso. El Anexo~\ref{cap:AnexoF} recoge las curvas de aprendizaje más representativas y el Anexo~\ref{cap:AnexoH} los hiperparámetros y resultados finales.
+El proceso de entrenamiento se articuló en cuatro fases experimentales sucesivas, guiadas por los resultados en el conjunto de validación. Se registraron 46 ejecuciones en \texttt{training\_runs.csv}, proporcionando trazabilidad total del proceso. El Anexo~\ref{cap:AnexoF} recoge las curvas de aprendizaje más representativas y el Anexo~\ref{cap:AnexoH} los hiperparámetros y resultados finales.
 
 \paragraph{Decisión arquitectural: clasificación en cascada vs. clasificador plano.}
 La primera decisión de diseño fue la estrategia de clasificación. Se consideró una arquitectura de cascada en dos niveles: un clasificador de capítulos (19–21 clases) seguido de clasificadores especializados por capítulo, que reduciría el espacio de búsqueda en un 95\,\%. Para la implementación final se optó por un clasificador plano sobre los 1.767 códigos completos del espacio de entrenamiento, combinando la manejabilidad del segundo nivel con la compatibilidad con un único modelo de producción.
@@ -183,7 +183,7 @@ jhu-clsp/mmBERT-base                 & 8.192 & Multi & General   & 0,121 \\
 \end{tabular}
 \end{table}
 
-mmBERT fue descartado por ausencia de especialización en español médico. ModernBERT, pese a su ventana de 8192 tokens, obtuvo F1-micro\,=\,0{,}601 en nivel~1, penalizado por operar con un modelo entrenado en inglés. El Longformer-BSC fue descartado por coste computacional (8.022\,s por corrida, 70× más lento) sin mejora apreciable. \textbf{RigoBERTa-Clinical} fue seleccionado por combinar la mayor F1-micro experimental (0{,}799 en nivel~1) con el mejor equilibrio micro/macro entre los modelos evaluados, gracias a su especialización en texto clínico en español.
+mmBERT fue descartado por ausencia de especialización en español médico. ModernBERT, pese a su ventana de 8192 tokens, obtuvo F1-micro\,=\,0{,}601 en nivel~1, penalizado por operar con un modelo entrenado en inglés. El Longformer-BSC fue descartado por coste computacional (8.022\,s por ejecución, 70× más lento) sin mejora apreciable. \textbf{RigoBERTa-Clinical} fue seleccionado por combinar la mayor F1-micro experimental (0{,}799 en nivel~1) con el mejor equilibrio micro/macro entre los modelos evaluados, gracias a su especialización en texto clínico en español.
 
 \paragraph{Fase 2: clasificador de capítulos.}
 RigoBERTa-Clinical alcanzó F1-micro = 0,799 en la tarea de capítulos. El principal hallazgo de esta fase fue el diseño del \emph{LR Brickwall}: un suelo de tasa de aprendizaje fijado en $10^{-5}$ que impide que el scheduler reduzca el LR hasta valores en los que el modelo pierde capacidad de ajustar las clases minoritarias.
@@ -196,7 +196,7 @@ w_c = \frac{N_{\text{total}} - N_c}{N_c + \varepsilon}
 donde $N_c$ es el número de ocurrencias del código $c$ en entrenamiento. El valor operativo se fijó en el rango 10–25 mediante búsqueda sobre el conjunto de validación.
 
 \paragraph{Fase 4: optimización del clasificador plano.}
-Las 46 corridas identificaron los factores de mayor impacto en F1-micro. La Tabla~\ref{tab:hitos} resume los hitos del proceso.
+Las 46 ejecuciones identificaron los factores de mayor impacto en F1-micro. Se adopta el F1-micro como métrica de optimización —en lugar del MAP utilizado como referencia en el benchmark CodiEsp original— porque el sistema emite una decisión binaria por código a un umbral fijo, y el rendimiento en ese punto de corte es más representativo que la calidad del \emph{ranking}. El F1-macro complementa al micro al ponderar todos los códigos por igual, siendo directamente sensible a la mejora en clases raras. La Tabla~\ref{tab:hitos} resume los hitos del proceso.
 
 \begin{table}[h]
 \centering
@@ -206,24 +206,24 @@ Las 46 corridas identificaron los factores de mayor impacto en F1-micro. La Tabl
 \hline
 \textbf{Fecha} & \textbf{Cambio introducido} & \textbf{F1-micro} \\
 \hline
-2026-03-18 & Primera corrida RigoBERTa (LR\,=\,$3\times10^{-5}$) & 0,320 \\
+2026-03-18 & Primera ejecución RigoBERTa (LR\,=\,$3\times10^{-5}$) & 0,320 \\
 2026-03-19 & LR aumentado a $10^{-4}$ & 0,413 \\
 2026-03-19 & Calibración de umbral (0,5 → 0,3) & 0,430 \\
 2026-03-20 & Batch virtual 32 + preentrenamiento 10 épocas & 0,470 \\
 2026-03-24 & \emph{LR schedule plateau} (vs. cosine) & 0,475 \\
 2026-03-24 & \emph{Label smoothing} = 0,1 & 0,482 \\
 2026-03-25 & Descongelado progresivo de capas & 0,484 \\
-2026-03-26 & Configuración consolidada (run final) & \textbf{0,4888} \\
+2026-03-26 & Paso~32b: configuración de producción & \textbf{0,4888} \\
 \hline
 \end{tabular}
 \end{table}
 
-Tres técnicas mostraron impacto relevante: (1) el \emph{preentrenamiento débil} sobre las descripciones CIE-10-ES y los fragmentos clínicos del task\_X de CodiEsp, que aportó entre 5 y 8 puntos de F1-micro; (2) el \emph{scheduler plateau}, que solo reduce el LR cuando el F1 se estanca en validación, evitando la convergencia prematura del schedule cosine; y (3) el \textbf{descarte de la ventana deslizante}, cuya fragmentación destruye la coherencia clínica (caída de F1-micro de 0,484 a 0,412). La mejor corrida alcanzó F1-micro = 0,551 con umbrales por clase optimizados; la configuración de producción ofrece un mejor equilibrio micro/macro, como se detalla en el Anexo~\ref{cap:AnexoH}.
+Tres técnicas mostraron impacto relevante: (1) el \emph{preentrenamiento débil} sobre las descripciones CIE-10-ES y los fragmentos clínicos del task\_X de CodiEsp, que aportó entre 5 y 8 puntos de F1-micro; (2) el \emph{scheduler plateau}, que solo reduce el LR cuando el F1 se estanca en validación, evitando la convergencia prematura del schedule cosine; y (3) el \textbf{descarte de la ventana deslizante}, cuya fragmentación destruye la coherencia clínica (caída de F1-micro de 0,484 a 0,412). La ejecución~32b alcanzó F1-micro~0,551 y F1-macro~0,152 con umbrales por clase optimizados (F1-micro~0,4888 y F1-macro~0,120 con umbral global 0,3); los detalles de evaluación se recogen en el Anexo~\ref{cap:AnexoH}.
 
 \paragraph{Determinación del límite de congelación y barrido de umbrales (pasos 11--18).}
 La búsqueda del número óptimo de capas a congelar estableció que freeze=20 —solo las 4 capas superiores del encoder más la cabeza clasificadora, $\sim$5\,M parámetros entrenables— es el único punto de equilibrio estable con 500 muestras. Los intentos con freeze=16 (8 capas libres, $\sim$102\,M parámetros) colapsaron de forma sistemática con todas las tasas de aprendizaje probadas ($10^{-4}$, $3\times10^{-4}$, $5\times10^{-4}$). El ratio datos/parámetros ($\sim$$5\times10^{-6}$) es demasiado bajo para estabilizar el gradiente: el modelo tiene más grados de libertad que restricciones. Esta asimetría establece un \emph{techo duro} estructural —el número de capas entrenables está limitado por el tamaño del corpus, no por la capacidad del modelo— que resultó determinante para el diseño del descongelado progresivo posterior. La combinación óptima dentro del régimen de freeze=20 fue LR\,=\,$10^{-4}$ (frente al $3\times10^{-5}$ inicial), que con pocos parámetros libres converge más rápido sin colapso.
 
-Un barrido de umbrales de decisión sobre el conjunto de validación (threshold \{0,5; 0,4; 0,3; 0,2\}) reveló que threshold=0,3 maximiza el F1-micro (0,430) porque el modelo, con BCE y pos\_weight, aprende probabilidades sistemáticamente bajas para la mayoría de códigos: un threshold conservador de 0,5 descarta demasiados positivos reales. El threshold=0,2 da el mejor F1-macro (0,124), preferible cuando el objetivo es cobertura de códigos raros a costa de precisión.
+Un barrido de umbrales de decisión sobre el conjunto de validación (umbrales \{0,5; 0,4; 0,3; 0,2\}) reveló que el umbral 0,3 maximiza el F1-micro (0,430) porque el modelo, con BCE y pos\_weight, aprende probabilidades sistemáticamente bajas para la mayoría de códigos: un umbral conservador de 0,5 descarta demasiados positivos reales. El umbral 0,2 da el mejor F1-macro (0,124), preferible cuando el objetivo es cobertura de códigos raros a costa de precisión. La configuración de producción emplea \textbf{umbral=0,3} como punto de equilibrio: maximiza el F1-micro sin sacrificar excesiva precisión.
 
 \paragraph{Modelos alternativos y granularidad de código (pasos 19--20).}
 El modelo Longformer BSC-Medical (ventana 2048 tokens) fue evaluado como alternativa para eliminar la truncación del 50\,\% de los documentos. Pese a un recall superior (+5,8\,pp), el F1-micro cayó 1,4\,pp respecto a RigoBERTa-Clinical y el tiempo de entrenamiento aumentó 6,4× (70\,s/época frente a 11\,s). Los diagnósticos clave aparecen mayoritariamente en los primeros 512 tokens del informe; el contexto adicional introduce más falsos positivos que verdaderos positivos. RigoBERTa-Clinical con 512 tokens se confirmó como la mejor opción.
@@ -260,15 +260,15 @@ La Tabla~\ref{tab:progreso_pasos} recoge la evolución acumulada desde el clasif
 \hline
 \textbf{Paso} & \textbf{Técnica incorporada} & \textbf{F1-micro} & \textbf{F1-macro} \\
 \hline
-20 & Código completo sin pretrain & 0,327 & 0,050 \\
-21 & + Pretrain CIE-10 (3k descripciones) & 0,431 & 0,092 \\
+20 & Código completo sin preentrenamiento & 0,327 & 0,050 \\
+21 & + Preentrenamiento sobre CIE-10 (3k descripciones) & 0,431 & 0,092 \\
 23 & + Snippets clínicos task\_X (10k) & 0,470 & 0,139 \\
 28b & + ReduceLROnPlateau & 0,475 & 0,116 \\
-30b & + Label smoothing + progressive unfreezing & 0,484 & 0,116 \\
-\textbf{32b} & \textbf{+ Consistencia jerárquica ($\lambda$=0,5)} & \textbf{0,4888} & \textbf{0,1524}$^\dagger$ \\
+30b & + \emph{Label smoothing} + descongelado progresivo & 0,484 & 0,116 \\
+\textbf{32b} & \textbf{+ Consistencia jerárquica ($\lambda$=0,5)} & \textbf{0,4888}$^\dagger$ & \textbf{0,120}$^\dagger$ \\
 \hline
 \end{tabular}
-\smallskip\par\footnotesize $^\dagger$ Con umbrales por clase optimizados sobre validación. Con umbral global 0,3: F1-macro~=~0,120.
+\smallskip\par\footnotesize $^\dagger$ Con umbrales por clase optimizados sobre validación: F1-micro~=~0,551, F1-macro~=~0,152.
 \end{table}
 
 \subsubsection{Aumentación de datos mediante retrotraducción}
@@ -297,16 +297,16 @@ El entrenamiento con el corpus 4× duró \textbf{76~minutos} (03:27--04:43~CEST,
 
 La lección es que al escalar el dataset hay que reescalar los hitos de unfreezing por la inversa del factor de datos: $\texttt{UNFREEZE\_EVERY} = \lfloor 30 / 4 \rfloor = 8$ para mantener el mismo número de pasos entre descongelados.
 
-Durante el mismo experimento se observó además que el pre-entrenamiento estaba sobreajustado: el loss de pretrain cae de 0,76 en el primer paso a 0,0038 al final de la época~1 y llega a 0,0008 en la época~6, esencialmente cero. Las épocas 7--10 no añaden información nueva al modelo, solo refuerzan la memorización de las descripciones oficiales. El experimento de corrección (\emph{paso~33b}) aplica dos ajustes simultáneos: \texttt{UNFREEZE\_EVERY=8} y \texttt{PRETRAIN\_EPOCHS=3}, recortando $\sim$28~minutos de pre-entrenamiento inútil y partiendo de una inicialización menos sobreajustada.
+Durante el mismo experimento se observó además que el pre-entrenamiento estaba sobreajustado: el loss de pretrain cae de 0,76 en el primer paso a 0,0038 al final de la época~1 y llega a 0,0008 en la época~6, esencialmente cero. Con el loss de pretrain prácticamente nulo desde la época~6, las épocas 7--10 aparentaban ser prescindibles: no aportan señal nueva a la función de pérdida. El experimento de corrección (\emph{paso~33b}) aplica dos ajustes simultáneos: \texttt{UNFREEZE\_EVERY=8} y \texttt{PRETRAIN\_EPOCHS=3}, con la hipótesis de ahorrar $\sim$28~minutos de pre-entrenamiento y partir de una inicialización menos sobreajustada.
 
 \paragraph{Paso 33b — schedule corregido (resultado).}
 Con \texttt{UNFREEZE\_EVERY=8} el descongelado progresivo se comportó exactamente como se esperaba: cinco grupos de capas se liberaron en las épocas 8, 16, 24, 32 y 40, hasta llegar a 303\,M parámetros entrenables. El mejor resultado, F1-micro~\textbf{0,4572}, se obtuvo tras el tercer descongelado (capas~8--11, $\sim$época~30); abrir las capas inferiores a partir de ese punto no aportó nada y el early~stop cerró el experimento en la época~60.
 
 La mejora de schedule no fue suficiente: el modelo sigue por debajo de la referencia ($-0{,}032$ frente a 32b). El diagnóstico apunta a un problema más profundo que el calendario de descongelados: el corpus de entrenamiento es ahora back-translated, pero el conjunto de validación sigue siendo español original. El modelo aprende una distribución ligeramente diferente —construcciones sintácticas características de texto retraducido— y esa brecha penaliza la evaluación. Los datos sintéticos añaden variedad léxica pero no resuelven la escasez de señal real; en este contexto, introducen más ruido del que aportan.
 
-\paragraph{Pasos 34a y 34b — batch efectivo 64, pretrain reducido y mayor margen de entrenamiento.}
+\paragraph{Pasos 34a y 34b — batch efectivo 64, preentrenamiento reducido y mayor margen de entrenamiento.}
 \begin{sloppypar}
-Descartada la aumentación como vía principal, se diseñó un experimento que acumulaba todos los ajustes identificados a lo largo del proceso pero que aún no habían aparecido juntos: reducción del pre-entrenamiento a 3 épocas (lo suficiente para saturar el loss sin memorizar), mayor batch efectivo (\texttt{GRAD\_ACCUM=8}, batch~64 frente al batch~32 de 32b), más margen de entrenamiento (\texttt{EPOCHS=200}, \texttt{PATIENCE=25}) y una tasa de aprendizaje ligeramente más alta para las capas descongeladas (\texttt{UNFREEZE\_LR\_RATIO=0.2}, es decir $2\times10^{-5}$ frente a $10^{-5}$). Los dos runs se lanzaron en paralelo sobre la misma GPU: el paso~34a sobre los 500 documentos originales (sin aumentación) y el paso~34b sobre el corpus aumentado de 2000, cada uno con \texttt{UNFREEZE\_EVERY} ajustado a su tamaño de dataset (30 y 8 respectivamente).
+Descartada la aumentación como vía principal, se diseñó un experimento que acumulaba todos los ajustes identificados a lo largo del proceso pero que aún no habían aparecido juntos: reducción del pre-entrenamiento a 3 épocas (lo suficiente para saturar el loss sin memorizar), mayor batch efectivo (\texttt{GRAD\_ACCUM=8}, batch~64 frente al batch~32 de 32b), más margen de entrenamiento (\texttt{EPOCHS=200}, \texttt{PATIENCE=25}) y una tasa de aprendizaje ligeramente más alta para las capas descongeladas (\texttt{UNFREEZE\_LR\_RATIO=0.2}, es decir $2\times10^{-5}$ frente a $10^{-5}$). Las dos ejecuciones se lanzaron en paralelo sobre la misma GPU: el paso~34a sobre los 500 documentos originales (sin aumentación) y el paso~34b sobre el corpus aumentado de 2000, cada uno con \texttt{UNFREEZE\_EVERY} ajustado a su tamaño de corpus (30 y 8 respectivamente).
 \end{sloppypar}
 
 Los resultados fueron F1-micro~\textbf{0,4568} para 34a y \textbf{0,4518} para 34b, ambos por debajo de 32b. La causa de la regresión en 34a es \texttt{GRAD\_ACCUM=8}: con \texttt{BATCH\_SIZE=8} y 500 documentos hay 63~mini-batches por época, de modo que la acumulación doble deja solo $\lfloor 63/8 \rfloor \approx 8$ actualizaciones reales del optimizador por época. Con esa cadencia tan baja el scheduler plateau apenas recibe señal de mejora, el \emph{warmup} consume proporcionalmente más del presupuesto de entrenamiento y el descongelado progresivo opera con gradientes menos informativos. El paso~32b funcionaba con 63 actualizaciones por época —la granularidad adecuada para ese tamaño de corpus— y ese ajuste resultó ser más crítico de lo esperado. El paso~34b arrastra además el problema de distribución ya identificado en los pasos 33 y 33b.
@@ -315,27 +315,25 @@ Los resultados fueron F1-micro~\textbf{0,4568} para 34a y \textbf{0,4518} para 3
 La lección transversal de los pasos 33--34 es que los hiperparámetros de schedule (\texttt{GRAD\_ACCUM}, \texttt{UNFREEZE\_EVERY}, \texttt{PATIENCE}) no son independientes del tamaño del corpus: todos ellos fijan una cadencia de señal por época y deben calibrarse conjuntamente cada vez que cambia el número de muestras.
 \end{sloppypar}
 
-\paragraph{Pasos 35a y 35b — replicación de 32b con pretrain reducido y mayor margen (35a: datos originales; 35b: corpus aumentado 4×).}
+\paragraph{Pasos 35a y 35b — replicación de 32b con preentrenamiento reducido y mayor margen (35a: datos originales; 35b: corpus aumentado 4×).}
 El objetivo del paso~35 es verificar si la configuración ganadora (32b, F1-micro~0,4888) es replicable o incluso superable aplicando únicamente los ajustes que no implican riesgo de regresión: reducir el pre-entrenamiento a 3 épocas —suficiente para saturar el loss sin memorizar— y ampliar el presupuesto de entrenamiento a 200 épocas con \texttt{PATIENCE=25}, dado que el paso~32b alcanzó su mejor resultado en la época~135 con un límite de 150. El resto de hiperparámetros es idéntico a 32b, en particular \texttt{GRAD\_ACCUM=4} y \texttt{UNFREEZE\_LR\_RATIO=0.1}. Como en el paso~34, se lanza en paralelo una variante sobre el corpus aumentado (35b) con \texttt{UNFREEZE\_EVERY=8} para mantener la cadencia de descongelado equivalente.
 
 Los resultados fueron F1-micro~\textbf{0,4643} para 35a y \textbf{0,4569} para 35b, ambos por debajo de la referencia. La regresión de 35a respecto a 32b ($-0{,}025$), con todo lo demás idéntico, apunta a \texttt{PRETRAIN\_EPOCHS=3} como causa. Aunque el loss de pre-entrenamiento llegaba a valores próximos a cero ya en la primera época, esto no implica que las representaciones internas estuviesen consolidadas: con 10 épocas el modelo continúa refinando sus pesos aunque la señal de error sea casi nula, y ese refinamiento silencioso resulta beneficioso para el fine-tuning posterior. La aparente saturación del loss no es equivalente a sobreajuste evitable; es convergencia gradual de las representaciones.
 
 \begin{sloppypar}
-El paso~35c repitió la configuración exacta de 32b añadiendo únicamente \texttt{EPOCHS=200} y \texttt{PATIENCE=25} para dar más margen tras el último descongelado. El resultado fue F1-micro~\textbf{0,4888} en la época~124, reproduciendo el valor del paso~32b y confirmando que la configuración es robusta y no dependiente de una inicialización afortunada. Aunque el F1-macro fue 0,1110 frente a 0,1196 de 32b, dentro de la variabilidad esperada entre runs. El modelo de producción es el \emph{run} \texttt{classifier\_20260326T045031Z} del paso~32b, que alcanza F1-micro~0,489 con umbral global de 0,3 y F1-micro~\textbf{0,551} con umbrales por clase optimizados sobre validación; los detalles de evaluación se recogen en el Anexo~\ref{cap:AnexoH}.
+El paso~35c repitió la configuración exacta de 32b —incluyendo \texttt{PRETRAIN\_EPOCHS=10}— añadiendo únicamente \texttt{EPOCHS=200} y \texttt{PATIENCE=25} para dar más margen tras el último descongelado. El resultado fue F1-micro~\textbf{0,4888} en la época~124: recuperar las 10 épocas de pre-entrenamiento restaura íntegramente el rendimiento perdido en 35a, cerrando la hipótesis de que el loss cero implica que esas épocas son prescindibles. Aunque el F1-macro fue 0,1110 frente a 0,1196 de 32b, dentro de la variabilidad esperada entre ejecuciones.
 \end{sloppypar}
 
-El paso~35d repitió la misma configuración sobre el corpus aumentado de 2000 documentos, obteniendo F1-micro~\textbf{0,4766} y F1-macro~0,114 en la época~29. Es el mejor resultado obtenido con aumentación en todo el proceso, pero sigue por debajo de 32b. El early~stop temprano (época~29 frente a~124 del 35c) confirma el patrón observado desde el paso~33: con 2000 documentos el modelo converge rápidamente pero no generaliza bien sobre el conjunto de validación en español original.
-
-La configuración ganadora definitiva es, por tanto, \textbf{paso~32b}: F1-micro~0,4888, F1-macro~0,1196, 500 documentos originales, \texttt{PRETRAIN\_EPOCHS=10}. Todas las vías de mejora han sido exploradas exhaustivamente y los experimentos de entrenamiento quedan concluidos.
+El paso~35d repitió la misma configuración sobre el corpus aumentado de 2000 documentos, obteniendo F1-micro~\textbf{0,4766} y F1-macro~0,114 en la época~29. Es el mejor resultado obtenido con aumentación en todo el proceso, pero sigue por debajo de 32b. La parada temprana (época~29 frente a~124 del 35c) confirma el patrón observado desde el paso~33: con 2000 documentos el modelo converge rápidamente pero no generaliza bien sobre el conjunto de validación en español original.
 
 \begin{table}[h]
 \centering
 \small
-\caption{Resumen del paso~35: variantes evaluadas y resultados.}
+\caption{Resumen del paso~35: comparativa de variantes frente a la ejecución de referencia 32b (F1 con umbral global 0,3).}
 \label{tab:paso35}
 \begin{tabular}{llrrr}
 \hline
-\textbf{Run} & \textbf{Corpus} & \textbf{F1-micro} & \textbf{F1-macro} & \textbf{Best época} \\
+\textbf{Ejec.} & \textbf{Corpus} & \textbf{F1-micro} & \textbf{F1-macro} & \textbf{Mejor época} \\
 \hline
 \textbf{32b (referencia)} & \textbf{500 docs originales} & \textbf{0,4888} & \textbf{0,1196} & \textbf{135} \\
 35a & 500 docs, pretrain=3 & 0,4643 & 0,0990 & — \\
@@ -346,20 +344,22 @@ La configuración ganadora definitiva es, por tanto, \textbf{paso~32b}: F1-micro
 \end{tabular}
 \end{table}
 
-\paragraph{Nota sobre reproducibilidad y variabilidad entre runs.}
+La configuración ganadora definitiva es, por tanto, \textbf{paso~32b}: con umbral global 0,3 obtiene F1-micro~0,4888 y F1-macro~0,120; con umbrales por clase optimizados sobre validación, F1-micro~0,551 y F1-macro~0,152. Corpus: 500 documentos originales, \texttt{PRETRAIN\_EPOCHS=10}. El modelo de producción es la ejecución \texttt{classifier\_20260326T045031Z}; los detalles de evaluación se recogen en el Anexo~\ref{cap:AnexoH}. Todas las vías de mejora han sido exploradas exhaustivamente y los experimentos de entrenamiento quedan concluidos.
+
+\paragraph{Nota sobre reproducibilidad y variabilidad entre ejecuciones.}
 \begin{sloppypar}
 El script de entrenamiento no fija ninguna semilla aleatoria (\emph{random seed}). Esta decisión fue deliberada durante la fase exploratoria: fijar la semilla habría requerido activar \texttt{torch.use\_deterministic\_algorithms} y \texttt{CUBLAS\_WORKSPACE\_CONFIG}, lo que deshabilita kernels CUDA optimizados e incrementa el tiempo de entrenamiento de forma apreciable. En un proceso iterativo de más de 35 experimentos, ese sobrecoste habría sido prohibitivo.
 \end{sloppypar}
 
-La contrapartida es que los resultados no son exactamente reproducibles. Las fuentes de no-determinismo son tres: la inicialización aleatoria de la cabeza clasificadora, el orden de los mini-batches en cada época y las operaciones CUDA no deterministas (operaciones de reducción en paralelo, Flash Attention). En la práctica, la variabilidad observada entre runs con configuración idéntica es de $\pm 0{,}01$ en F1-micro, lo que no altera las conclusiones comparativas entre pasos pero sí impide replicar el valor exacto 0,4888 del paso~32b. El modelo entrenado en ese run queda guardado como artefacto definitivo; los experimentos posteriores (pasos 33--35) sirven para confirmar que esa configuración es robusta, no para superarla de forma reproducible.
+La contrapartida es que los resultados no son exactamente reproducibles. Las fuentes de no-determinismo son tres: la inicialización aleatoria de la cabeza clasificadora, el orden de los mini-batches en cada época y las operaciones CUDA no deterministas (operaciones de reducción en paralelo, Flash Attention). En la práctica, la variabilidad observada entre ejecuciones con configuración idéntica es de $\pm 0{,}01$ en F1-micro, lo que no altera las conclusiones comparativas entre pasos pero sí impide replicar el valor exacto 0,4888 del paso~32b. El modelo entrenado en esa ejecución queda guardado como artefacto definitivo; los experimentos posteriores (pasos 33--35) sirven para confirmar que esa configuración es robusta, no para superarla de forma reproducible.
 
 Para un ciclo de reentrenamiento productivo con datos reales se recomienda añadir \texttt{--seed} al script y guardar la semilla en \texttt{config.json}, de modo que cada modelo desplegado sea completamente auditable.
 
-\subsubsection{Aprendizaje continuo a partir del feedback de usuarios}
+\subsubsection{Aprendizaje continuo a partir de la retroalimentación de los usuarios}
 \label{sec:continuous-learning}
 
 Una limitación estructural del entrenamiento sobre CodiEsp es que los datos proceden de
-un benchmark con distribución fija. En un entorno clínico real, el modelo encontrará
+un \emph{benchmark} con distribución fija. En un entorno clínico real, el modelo encontrará
 patrones de redacción, abreviaturas y combinaciones de códigos que difieren del corpus de
 entrenamiento. Para cerrar esta brecha, el sistema está diseñado para capturar señal de
 retroalimentación de los propios codificadores y reutilizarla en ciclos de reentrenamiento
@@ -391,13 +391,13 @@ El mecanismo de retroalimentación presenta una asimetría inherente. El codific
 valida o rechaza los códigos que el modelo ya ha sugerido; los códigos correctos que no
 aparecen en el top-$k$ de predicciones permanecen invisibles salvo que el codificador los
 añada explícitamente mediante la función de sugerencia manual. Esto implica que el
-feedback de validación/rechazo refuerza las predicciones existentes, pero no corrige los
+retroalimentación de validación/rechazo refuerza las predicciones existentes, pero no corrige los
 falsos negativos estructurales del modelo. Por este motivo, las sugerencias manuales tienen
 mayor peso informativo que las validaciones: cada sugerencia manual identifica un caso que
 el modelo no cubrió.
 
 \paragraph{Transformación al formato de entrenamiento.}
-Para incorporar el feedback al ciclo de entrenamiento, los datos de las proyecciones se
+Para incorporar la retroalimentación al ciclo de entrenamiento, los datos de las proyecciones se
 transforman al mismo formato CSV que CodiEsp: una fila por informe con el texto clínico
 como campo \texttt{text} y la lista de códigos confirmados —validaciones más sugerencias
 manuales— como campo \texttt{labels} separados por punto y coma. El conjunto resultante
@@ -414,15 +414,15 @@ En lugar de entrenar desde cero con el conjunto combinado, se recomienda partir 
 hereda el conocimiento adquirido durante el entrenamiento completo sobre CodiEsp, reduce
 el tiempo de cómputo, y minimiza el riesgo de \emph{catastrophic forgetting} mediante una
 tasa de aprendizaje reducida ($\eta \approx 2 \times 10^{-5}$). Antes de sustituir el
-modelo en producción, el nuevo \emph{checkpoint} debe evaluarse sobre el split de
+modelo en producción, el nuevo \emph{checkpoint} debe evaluarse sobre la partición de
 validación de CodiEsp; si el F1-micro decrece más de un punto porcentual respecto al
 modelo en producción, ese reentrenamiento se descarta.
 
 \paragraph{Requisito de volumen mínimo.}
-Con menos de 100 muestras nuevas, la relación señal/ruido del feedback no compensa
+Con menos de 100 muestras nuevas, la relación señal/ruido de la retroalimentación no compensa
 el coste del reentrenamiento. El ciclo de mejora continua se activa cuando se acumulan
 al menos 100--200 informes con al menos un código validado o sugerido manualmente.
-Este umbral garantiza que el conjunto de feedback tenga diversidad suficiente para
+Este umbral garantiza que el conjunto de retroalimentación tenga diversidad suficiente para
 generalizar y no sobreajustar a patrones específicos de un único codificador o servicio
 hospitalario.
 
@@ -449,7 +449,7 @@ La comunicación en tiempo real entre frontend y backend se realiza mediante can
 
 El frontend está desarrollado en Next.js 16 con React 19 y TypeScript. La interfaz utiliza Tailwind CSS 4 y la biblioteca de componentes shadcn/ui. La arquitectura de estado se basa en contextos de React: \texttt{AuthContext} gestiona la sesión del usuario, \texttt{ConversationContext} gestiona el estado del análisis activo y el historial, e \texttt{I18nContext} gestiona las traducciones de la interfaz (español e inglés).
 
-La configuración de URLs de backend y WebSocket se centraliza en \texttt{src/lib/config.ts}, que lee las variables de entorno \texttt{NEXT\_PUBLIC\_API\_URL} y \texttt{NEXT\_PUBLIC\_WS\_URL}, evitando cualquier \emph{hardcode} de direcciones.
+La configuración de URLs de backend y WebSocket se centraliza en \texttt{src/lib/config.ts}, que lee las variables de entorno \texttt{NEXT\_PUBLIC\_API\_URL} y \texttt{NEXT\_PUBLIC\_WS\_URL}, evitando cualquier dirección codificada directamente en el código.
 
 \section{Implementación del sistema}
 
@@ -489,9 +489,9 @@ Si el directorio del modelo no existe al arrancar, el servicio se inicia igualme
 
 El parámetro \texttt{engine} del endpoint \texttt{POST /predict} actúa como un \textbf{\emph{feature toggle}} o \emph{feature flag}: permite seleccionar en tiempo de ejecución, sin modificar ni desplegar código, qué motor de predicción utiliza el sistema. Los valores admitidos son \texttt{\textquotedbl{}bert\textquotedbl{}} (clasificador neuronal RigoBERTa, valor por defecto), \texttt{\textquotedbl{}dict\textquotedbl{}} (clasificador de diccionario determinista) y \texttt{\textquotedbl{}both\textquotedbl{}} (ambos motores en paralelo, devolviendo las predicciones de cada uno con su campo \texttt{\textquotedbl{}engine\textquotedbl{}} identificando el origen).
 
-Un \emph{feature toggle}~\cite{Fowler17} es una técnica de ingeniería del software que separa la \emph{activación} de una funcionalidad de su \emph{despliegue}. El código de la funcionalidad llega a producción desactivado —o activable dinámicamente— y se habilita o conmuta sin necesidad de relanzar el servicio. En contraste con los \emph{feature branches}, que retrasan la integración del código, los \emph{feature toggles} permiten integración continua: la rama principal contiene siempre el código más actualizado y son los toggles quienes determinan qué comportamiento observan los usuarios en cada momento.
+Un \emph{feature toggle}~\cite{Fowler17} es una técnica de ingeniería del software que separa la \emph{activación} de una funcionalidad de su \emph{despliegue}. El código de la funcionalidad llega a producción desactivado —o activable dinámicamente— y se habilita o conmuta sin necesidad de relanzar el servicio. En contraste con los \emph{feature branches}, que retrasan la integración del código, los \emph{feature toggles} permiten integración continua: la rama principal contiene siempre el código más actualizado y son los \emph{feature toggles} quienes determinan qué comportamiento observan los usuarios en cada momento.
 
-En este proyecto, el toggle se implementa en dos capas:
+En este proyecto, el \emph{feature toggle} se implementa en dos capas:
 
 \begin{itemize}
     \item \textbf{Motor de IA (Python / FastAPI)}: el parámetro \texttt{engine} del cuerpo JSON de \texttt{POST /predict} determina qué función interna se invoca —\texttt{\_predict\_bert}, \texttt{\_predict\_dict} o \texttt{\_predict\_both}—. Cuando se elige \texttt{\textquotedbl{}both\textquotedbl{}}, ambas funciones se ejecutan en paralelo con \texttt{asyncio.gather} y sus resultados se concatenan, preservando el campo \texttt{\textquotedbl{}engine\textquotedbl{}} de cada predicción para que la interfaz pueda distinguir el origen de cada código.

@@ -23,7 +23,7 @@ El \emph{notebook} \texttt{2\_clasificador\_jerarquico\_RigoBERTa.ipynb} introdu
 
 \subsection{Fase 3: mmBERT — primeros entrenamientos experimentales}
 
-El \emph{notebook} \texttt{5\_clasificador\_jerarquico\_mmBert.ipynb} inició los experimentos con entrenamiento real sobre el corpus CodiEsp~\cite{miranda2020}. Se entrenaron 8 \emph{runs} con \texttt{jhu-clsp/mmBERT-base} sobre 809 códigos de bloque, con F1 micro entre 0{,}06 y 0{,}15.
+El \emph{notebook} \texttt{5\_clasificador\_jerarquico\_mmBert.ipynb} inició los experimentos con entrenamiento real sobre el corpus CodiEsp~\cite{miranda2020}. Se realizaron 8 ejecuciones con \texttt{jhu-clsp/mmBERT-base} sobre 809 códigos de bloque, con F1 micro entre 0{,}06 y 0{,}15.
 
 \subsection{Fase 4: ModernBERT (evaluación)}
 
@@ -31,7 +31,7 @@ El \emph{notebook} \texttt{4\_clasificador\_jerarquico\_ModernBert.ipynb} evalu�
 
 \subsection{Fase 5: IIC/RigoBERTa-Clinical — entrenamiento intensivo}
 
-A partir del \emph{run} 9 se adoptó \texttt{IIC/RigoBERTa-Clinical}~\cite{garciasubies2026rigobertaclinical} como modelo base. La fase 5 comprende 38 \emph{runs} en los que se ajustaron progresivamente los hiperparámetros: tasa de aprendizaje, congelación de capas, descongelación progresiva, \emph{dropout}, \emph{pos\_weight\_cap}, \emph{label smoothing} y umbral de clasificación. El F1 micro pasó de 0{,}32 (primer \emph{run}) a 0{,}489 (mejor \emph{run}).
+A partir de la ejecución 9 se adoptó \texttt{IIC/RigoBERTa-Clinical}~\cite{garciasubies2026rigobertaclinical} como modelo base. La fase 5 comprende 38 ejecuciones en las que se ajustaron progresivamente los hiperparámetros: tasa de aprendizaje, congelación de capas, descongelación progresiva, \emph{dropout}, \emph{pos\_weight\_cap}, \emph{label smoothing} y umbral de clasificación. El F1 micro pasó de 0{,}32 (primera ejecución) a 0{,}489 (mejor ejecución).
 
 \subsection{Fase 6: análisis de nivel 2}
 
@@ -39,7 +39,7 @@ El \emph{notebook} \texttt{7\_clasificador\_jerarquico\_analisis\_nivel\_2.ipynb
 
 \section{Evolución de los entrenamientos}
 
-La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de los 46 \emph{runs} registrados.
+La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de las 46 ejecuciones registradas.
 
 \begin{table}[h]
 \centering
@@ -47,7 +47,7 @@ La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de los 46
 \label{tab:training-evolution}
 \begin{tabular}{clcrcc}
 \hline
-\textbf{Run} & \textbf{Modelo} & \textbf{Códigos} & \textbf{Épocas} & \textbf{F1 micro} & \textbf{Observación} \\
+\textbf{Ejec.} & \textbf{Modelo} & \textbf{Códigos} & \textbf{Épocas} & \textbf{F1 micro} & \textbf{Observación} \\
 \hline
 1  & mmBERT             & 809   & 19  & 0{,}061 & Línea base inicial \\
 8  & mmBERT             & 809   & 20  & 0{,}150 & Mejor mmBERT \\
@@ -57,18 +57,18 @@ La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de los 46
 27 & RigoBERTa-Clinical & 1767  & 60  & 0{,}470 & Introducción descongelación prog. \\
 39 & RigoBERTa-Clinical & 1767  & 96  & 0{,}481 & Ajuste umbral y \emph{pos\_weight} \\
 44 & RigoBERTa-Clinical & 1767  & 150 & 0{,}489 & Modelo desplegado en producción \\
-46 & RigoBERTa-Clinical & 1767  & 110 & 0{,}483 & Run de verificación posterior \\
+46 & RigoBERTa-Clinical & 1767  & 110 & 0{,}483 & Ejecución de verificación posterior \\
 \hline
 \end{tabular}
 \end{table}
 
-\section{Comparativa de \emph{runs}}
+\section{Comparativa de ejecuciones}
 
-La Figura~\ref{fig:all-trainings} muestra la comparativa de F1 micro y F1 macro de todos los \emph{runs}, a diferentes umbrales de clasificación (0{,}2, 0{,}3 y 0{,}5), junto con el número de épocas ejecutadas y la longitud máxima de secuencia empleada.
+La Figura~\ref{fig:all-trainings} muestra la comparativa de F1 micro y F1 macro de todas las ejecuciones, a diferentes umbrales de clasificación (0{,}2, 0{,}3 y 0{,}5), junto con el número de épocas ejecutadas y la longitud máxima de secuencia empleada.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{figs/all_trainings_graph}
-\caption{Comparativa de F1 micro y F1 macro en todos los \emph{runs} del proceso de entrenamiento.}
+\caption{Comparativa de F1 micro y F1 macro en todas las ejecuciones del proceso de entrenamiento.}
 \label{fig:all-trainings}
 \end{figure}

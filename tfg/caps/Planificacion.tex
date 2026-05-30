@@ -125,10 +125,10 @@ Tareas completadas:
 \begin{itemize}[noitemsep]
     \item Descarga del corpus CodiEsp (diagnósticos, procedimientos y variante extendida).
     \item Desarrollo del script de \emph{scraping} sobre el portal eCIE-maps para obtener el catálogo CIE-10-ES.
-    \item Análisis estadístico del corpus: Distribución de longitudes, frecuencia de códigos, desequilibrio de clases, stop-words y lemmatización.
+    \item Análisis estadístico del corpus: Distribución de longitudes, frecuencia de códigos, desequilibrio de clases, \emph{stop-words} y lemmatización.
     \item Análisis estadístico del catálogo CIE-10-ES: Cobertura, distribución por capítulos y uso de vocabulario médico específico.
-    \item Generación de los ficheros CSV de entrenamiento, validación y test.
-    \item Aumentación del corpus CodiEsp mediante retrotraducción con tres pivotes (EN, DE, FR) usando Azure Translator, cuadruplicando el corpus a 2000 documentos.
+    \item Generación de los ficheros CSV de entrenamiento, validación y prueba.
+    \item Aumentación del corpus CodiEsp mediante retrotraducción con tres pivotes (EN, DE, FR) usando Azure Translator: cada pivote genera 500 paráfrasis adicionales que, sumadas a los 500 documentos originales, cuadruplican el corpus hasta 2000 documentos (500 originales + 500 EN + 500 DE + 500 FR).
 \end{itemize}
 
 \subsection{Épica 2: Modelo de clasificación}
@@ -139,8 +139,8 @@ Tareas completadas:
     \item Implementación del clasificador plano multilabel basado en un modelo clínico preentrenado BERT.
     \item Configuración del pipeline de entrenamiento (función de pérdida, optimizador, \emph{scheduler}).
     \item Implementación del clasificador de diccionario como \emph{baseline}.
-    \item Entrenamiento y selección del mejor checkpoint por F1-score micro en validación.
-    \item Evaluación sobre el conjunto de test con métricas de precisión, recall y F1.
+    \item Entrenamiento y selección del mejor \emph{checkpoint} por F1-micro en validación.
+    \item Evaluación sobre el conjunto de prueba con métricas de precisión, recall y F1.
 \end{itemize}
 
 \subsection{Épica 3: Servicio de inferencia (AI Engine)}
@@ -157,7 +157,7 @@ Tareas completadas:
 
 Tareas completadas:
 \begin{itemize}[noitemsep]
-    \item Preparación del entorno y las diferentes herramientas (linting, static analysis)
+    \item Preparación del entorno y las diferentes herramientas (\emph{linting}, análisis estático)
     \item Sistema de autenticación con registro, confirmación por email e inicio de sesión con un token Bearer.
     \item Arquitectura CQRS/Event Sourcing con Commanded y PostgreSQL como \emph{event store}.
     \item Canal WebSocket para comunicación en tiempo real con el frontend.
@@ -189,7 +189,7 @@ Tareas completadas:
     \item Configuración de commitlint y Husky para validación de commits.
     \item Workflow de GitHub Actions para CI.
     \item Dockerización del entorno de entrenamiento con soporte CPU y GPU.
-    \item Implementación del entorno de producción con un cluster de Kubernetes.
+    \item Implementación del entorno de producción con un clúster de Kubernetes(K3s en VPS).
     \item Monitorización del servicio mediante Prometheus y Grafana.
     \item Gestión de errores utilizando el SaaS Sentry.
 \end{itemize}
@@ -227,7 +227,7 @@ Redacción de la memoria & 20 & 22 \\
 \label{tab:planificacion}
 \end{table}
 
-La épica de modelo de clasificación es la que más desviación ha sufrido. La diferencia de ocho puntos se explica por la necesidad de explorar un número mayor de configuraciones de hiperparámetros del previsto: los primeros experimentos con batch size y tasa de aprendizaje por defecto no alcanzan el nivel de F1 micro esperado en validación, lo que obliga a repetir el ciclo de entrenamiento con distintas combinaciones antes de dar por cerrada esa épica. Este tipo de desviación es habitual en proyectos con componentes de investigación aplicada, donde el resultado de un experimento condiciona las decisiones que siguen.
+La épica de modelo de clasificación es la que más desviación ha sufrido. La diferencia de ocho puntos se explica por la necesidad de explorar un número mayor de configuraciones de hiperparámetros del previsto: los primeros experimentos con batch size y la tasa de aprendizaje por defecto no alcanzan el nivel de F1 micro esperado en validación, lo que obliga a repetir el ciclo de entrenamiento con distintas combinaciones antes de dar por cerrada esa épica. Este tipo de desviación es habitual en proyectos con componentes de investigación aplicada, donde el resultado de un experimento condiciona las decisiones que siguen.
 
 El servicio de inferencia se vio afectado también por dichos cambios en el modelo, dado que el endpoint de predicción se implementó inicialmente con la expectativa de una respuesta concreta del modelo. La necesidad de adaptar el formato de entrada y salida del servicio a las nuevas configuraciones del modelo explica la desviación en puntos de historia.
 
