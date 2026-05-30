@@ -64,6 +64,8 @@ up: frontend-install ## Levantar todos los servicios
 	@echo "  - AI Engine:     http://localhost:8000"
 	@echo "  - AI Docs:       http://localhost:8000/docs"
 	@echo "  - Mailpit UI:    http://localhost:8025"
+	@echo "  - Grafana:       http://localhost:3030"
+	@echo "  - Prometheus:    http://localhost:9090"
 	@echo "  - PostgreSQL:    localhost:5432"
 
 down: ## Detener todos los servicios
@@ -89,9 +91,6 @@ logs: ## Ver logs (pregunta por servicio o todos)
 		*) echo "Opción no válida" ;; \
 	esac
 
-mailpit: ## Abrir Mailpit en el navegador (fake email inbox)
-	@echo "$(GREEN)Abriendo Mailpit en http://localhost:8025$(NC)"
-	open http://localhost:8025 2>/dev/null || xdg-open http://localhost:8025 2>/dev/null || echo "Abre manualmente: http://localhost:8025"
 
 setup: ## Setup completo desde cero: down -v + build + seed (sin levantar). Luego usa `make up`
 	@[ -f .env ] || cp .env.example .env
@@ -400,6 +399,8 @@ cpu-up: frontend-install ## Levantar servicios en modo CPU (sin GPU)
 	@echo "  - AI Engine:     http://localhost:8000 (CPU)"
 	@echo "  - AI Docs:       http://localhost:8000/docs"
 	@echo "  - Mailpit UI:    http://localhost:8025"
+	@echo "  - Grafana:       http://localhost:3030"
+	@echo "  - Prometheus:    http://localhost:9090"
 	@echo "  - PostgreSQL:    localhost:5432"
 
 cpu-down: ## Detener servicios del modo CPU
@@ -423,6 +424,8 @@ mock-up: frontend-install ## Levantar servicios en modo mock (sin GPU, sin model
 	@echo "  - AI Engine:     http://localhost:8000 (mock)"
 	@echo "  - AI Docs:       http://localhost:8000/docs"
 	@echo "  - Mailpit UI:    http://localhost:8025"
+	@echo "  - Grafana:       http://localhost:3030"
+	@echo "  - Prometheus:    http://localhost:9090"
 	@echo "  - PostgreSQL:    localhost:5432"
 
 mock-down: ## Detener servicios del modo mock
