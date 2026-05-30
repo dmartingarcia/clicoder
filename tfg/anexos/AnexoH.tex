@@ -9,7 +9,7 @@ Se emplea \texttt{IIC/RigoBERTa-Clinical}~\cite{garciasubies2026rigobertaclinica
 
 \section{Hiperparámetros}
 
-La Tabla~\ref{tab:hyperparams} recoge la configuración del \emph{run} de producción (\texttt{20260326T045031Z}, paso~32b).
+La Tabla~\ref{tab:hyperparams} recoge la configuración de la ejecución de producción (\texttt{20260326T045031Z}, paso~32b).
 
 \begin{table}[h]
 \centering
@@ -61,7 +61,7 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración del \emph{run} de produc
 
 El sistema emplea dos estrategias de umbral diferentes. Durante el entrenamiento se usa un umbral global fijo para monitorizar la mejora. En producción se aplican umbrales por clase optimizados sobre el conjunto de validación, que ajustan individualmente el punto de corte de cada uno de los 1.767 códigos para maximizar el F1 micro conjunto.
 
-La Tabla~\ref{tab:final-results} muestra ambas métricas para el modelo de producción (\emph{run} \texttt{20260326T045031Z}, paso 32b).
+La Tabla~\ref{tab:final-results} muestra ambas métricas para el modelo de producción (ejecución \texttt{20260326T045031Z}, paso 32b).
 
 \begin{table}[h]
 \centering
@@ -77,7 +77,7 @@ Por clase (producción) & optimizado & \textbf{0{,}551} & \textbf{0{,}152} \\
 \end{tabular}
 \end{table}
 
-El \emph{run} seleccionado como modelo de producción es \texttt{20260326T045031Z} (paso~32b), que alcanzó F1-micro = 0{,}489 y F1-macro = 0{,}120 con umbral global, y F1-micro = \textbf{0{,}551} y F1-macro = \textbf{0{,}152} con umbrales por clase optimizados sobre el conjunto de validación.
+La ejecución seleccionada como modelo de producción es \texttt{20260326T045031Z} (paso~32b), que alcanzó F1-micro = 0{,}489 y F1-macro = 0{,}120 con umbral global, y F1-micro = \textbf{0{,}551} y F1-macro = \textbf{0{,}152} con umbrales por clase optimizados sobre el conjunto de validación.
 
 La diferencia entre F1-micro (0{,}551) y F1-macro (0{,}152 con umbrales por clase; 0{,}120 con umbral global) refleja el fuerte desequilibrio de clases del corpus: el modelo rinde bien sobre los códigos frecuentes, pero tiene dificultades con los poco representados. Este es un límite inherente al corpus de entrenamiento de 500 documentos, donde la mayoría de los 1.767 códigos aparecen menos de cinco veces.
 

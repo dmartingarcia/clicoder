@@ -147,17 +147,17 @@ Se aplicaron tres pivotes independientes: inglés (EN), alemán (DE) y francés 
 \textbf{Métrica} & \textbf{Pivot EN} & \textbf{Pivot DE} & \textbf{Pivot FR} \\
 \hline
 Notas con variación léxica  & 496 / 500 (99,2\,\%) & 497 / 500 (99,4\,\%) & 495 / 500 (99,0\,\%) \\
-$\Delta$ chars (media)      & $+7{,}6$  & $-2{,}4$  & $+3{,}7$  \\
-$\Delta$ chars (mediana)    & $+7{,}0$  & $-9{,}0$  & $0{,}0$   \\
+$\Delta$ caracteres (media)      & $+7{,}6$  & $-2{,}4$  & $+3{,}7$  \\
+$\Delta$ caracteres (mediana)    & $+7{,}0$  & $-9{,}0$  & $0{,}0$   \\
 $\Delta$ palabras (media)   & $+4{,}4$  & $+5{,}9$  & $+4{,}0$  \\
 $\Delta$ palabras (mediana) & $+4{,}0$  & $+4{,}0$  & $+3{,}0$  \\
-$\Delta$ chars (rango)      & $-2.696$ a $+2.648$ & $-473$ a $+307$ & $-305$ a $+305$ \\
+$\Delta$ caracteres (rango)      & $-2.696$ a $+2.648$ & $-473$ a $+307$ & $-305$ a $+305$ \\
 $\Delta$ palabras (rango)   & $-398$ a $+404$     & $-74$ a $+96$   & $-61$ a $+59$   \\
 \hline
 \end{tabular}
 \end{table}
 
-Los tres pivotes muestran patrones claramente distintos que se complementan. El inglés produce la mayor variación absoluta en caracteres (rango $\pm$2600), con un sesgo positivo que refleja la tendencia del español recuperado a ser más explícito. El alemán reduce el recuento de caracteres ($-2{,}4$ de media) pero aumenta el de palabras ($+5{,}9$): sus compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) se descomponen al retraducirse al español en frases de varias palabras. El francés es el pivote más conservador, con mediana de variación en chars de $0{,}0$ y el rango más estrecho ($\pm$305 chars, $\pm$61 palabras), lo que era esperado dada su proximidad lingüística al español.
+Los tres pivotes muestran patrones claramente distintos que se complementan. El inglés produce la mayor variación absoluta en caracteres (rango $\pm$2600), con un sesgo positivo que refleja la tendencia del español recuperado a ser más explícito. El alemán reduce el recuento de caracteres ($-2{,}4$ de media) pero aumenta el de palabras ($+5{,}9$): sus compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) se descomponen al retraducirse al español en frases de varias palabras. El francés es el pivote más conservador, con mediana de variación en caracteres de $0{,}0$ y el rango más estrecho ($\pm$305~caracteres, $\pm$61~palabras), lo que era esperado dada su proximidad lingüística al español.
 
 \begin{table}[h]
 \centering
@@ -252,7 +252,7 @@ set -a && source .env && set +a && \
   TRANS_BACKEND=azure make ai-augment RESUME=1 2>&1 | tee -a tmp/augment_azure.log
 \end{lstlisting}
 
-La flag \texttt{RESUME=1} activa el checkpoint incremental desde el inicio. Si el proceso se interrumpe (corte de red, agotamiento del free tier, reinicio del sistema), basta con relanzar exactamente el mismo comando: el script cuenta las filas ya guardadas en el CSV de salida y retoma desde donde lo dejó sin retraducir nada.
+La opción \texttt{RESUME=1} activa el \emph{checkpoint} incremental desde el inicio. Si el proceso se interrumpe (corte de red, agotamiento del nivel gratuito, reinicio del sistema), basta con relanzar exactamente el mismo comando: el script cuenta las filas ya guardadas en el CSV de salida y retoma desde donde lo dejó sin retraducir nada.
 
 \begin{lstlisting}[language=bash]
 # Usar NLLB-200 local si no se dispone de clave Azure
