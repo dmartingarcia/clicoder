@@ -36,7 +36,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import average_precision_score, f1_score, precision_score, recall_score
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModel, AutoTokenizer, get_cosine_schedule_with_warmup
 from transformers import logging as hf_logging
@@ -1349,6 +1349,11 @@ def main():
         f"[threshold] por clase → F1-micro={f1_per_class_micro:.4f}  F1-macro={f1_per_class_macro:.4f}"
     )
 
+    # MAP (Mean Average Precision): evalúa la calidad del ranking, sin umbral fijo.
+    # Equivalente al MAP del benchmark CodiEsp original.
+    map_macro = float(average_precision_score(targets_val, probs_val, average="macro"))
+    print(f"[threshold] MAP macro={map_macro:.4f}  (benchmark CodiEsp best≈0.48)")
+
     # Usar global para eval final (el per-class se guarda como artefacto opcional)
     final_thr = best_global_thr
     fm = evaluate(model, val_loader, device, threshold=final_thr)
@@ -1389,6 +1394,7 @@ def main():
                 "f1_micro_global": round(best_global_f1, 6),
                 "f1_micro_per_class": round(f1_per_class_micro, 6),
                 "f1_macro_per_class": round(f1_per_class_macro, 6),
+                "map_macro": round(map_macro, 6),
             },
             f,
             indent=2,
@@ -1448,6 +1454,7 @@ def main():
         "val_p_macro": round(fm["p_macro"], 6),
         "val_r_macro": round(fm["r_macro"], 6),
         "val_f1_macro": round(fm["f1_macro"], 6),
+        "val_map_macro": round(map_macro, 6),
         "total_seconds": round(sum(h["epoch_seconds"] for h in history), 1),
         "avg_epoch_seconds": round(
             sum(h["epoch_seconds"] for h in history) / len(history), 1
