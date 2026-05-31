@@ -26,15 +26,15 @@
   "panels": [
     {
       "type": "stat",
-      "title": "BERT model",
+      "title": "Modelo BERT",
       "id": 1,
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "gridPos": { "h": 2, "w": 4, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "cie10_model_loaded",
-          "legendFormat": "",
+          "expr": "cie10_model_info",
+          "legendFormat": "{{model_name}}",
           "refId": "A"
         }
       ],
@@ -48,15 +48,7 @@
               { "color": "green", "value": 1 }
             ]
           },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": { "text": "Offline", "color": "red" },
-                "1": { "text": "Cargado", "color": "green" }
-              }
-            }
-          ]
+          "mappings": []
         },
         "overrides": []
       },
@@ -66,7 +58,44 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
+        "textMode": "name"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Checkpoint",
+      "id": 9,
+      "gridPos": { "h": 2, "w": 4, "x": 0, "y": 2 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "cie10_model_info",
+          "legendFormat": "{{checkpoint}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "blue", "value": 1 }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "name"
       }
     },
     {
@@ -115,10 +144,55 @@
       }
     },
     {
+      "type": "stat",
+      "title": "Summarizer",
+      "id": 8,
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "cie10_summarizer_loaded",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "orange", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "Inactivo", "color": "orange" },
+                "1": { "text": "Cargado", "color": "green" }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
       "type": "timeseries",
       "title": "Inferencias por segundo (por motor)",
       "id": 3,
-      "gridPos": { "h": 4, "w": 16, "x": 8, "y": 0 },
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
