@@ -24,7 +24,7 @@ from typing import Literal
 
 import sentry_sdk
 from fastapi import FastAPI, HTTPException
-from prometheus_client import Gauge, Histogram
+from prometheus_client import Gauge, Histogram, Info
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -42,7 +42,9 @@ INFERENCE_LATENCY = Histogram(
     buckets=[0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0],
 )
 MODEL_LOADED = Gauge("cie10_model_loaded", "1 si el modelo BERT está cargado")
+MODEL_INFO = Info("cie10_model", "Metadatos del modelo BERT cargado")
 DICT_LOADED = Gauge("cie10_dict_loaded", "1 si el clasificador de diccionario está cargado")
+SUMMARIZER_LOADED = Gauge("cie10_summarizer_loaded", "1 si el summarizer LLM está cargado")
 
 # ==================== SENTRY ====================
 
@@ -148,17 +150,25 @@ async def lifespan(app: FastAPI):
             MODEL_LOADED.set(1)
 
             _stop.set()
+            import glob as _glob
             import torch as _torch
+
+            _pt_files = sorted(_glob.glob(os.path.join(model_dir, "classifier_*.pt")))
+            _checkpoint = os.path.basename(_pt_files[-1]) if _pt_files else "classifier.pt"
+            MODEL_INFO.info({"model_name": _model_name, "checkpoint": _checkpoint})
 
             if _torch.cuda.is_available():
                 gpu_name = _torch.cuda.get_device_name(0)
                 gpu_mem = _torch.cuda.get_device_properties(0).total_memory // (1024**2)
-                logger.info("Ejecutando en GPU: %s (%d MB VRAM)", gpu_name, gpu_mem)
+                _device_info = f"GPU: {gpu_name} ({gpu_mem} MB VRAM)"
             else:
-                logger.info("Ejecutando en CPU (sin GPU disponible)")
+                _device_info = "CPU"
             logger.info(
-                "Modelo BERT cargado. %d descripciones disponibles.",
+                "Modelo cargado: %s | checkpoint: %s | %d códigos CIE-10 | %s",
+                _model_name,
+                _checkpoint,
                 len(code_descriptions),
+                _device_info,
             )
         except Exception as exc:
             logger.warning("No se pudo cargar el modelo BERT: %s", exc)
@@ -203,9 +213,11 @@ async def lifespan(app: FastAPI):
         if summarizer is not None:
             # Carga en hilo para no bloquear el arranque
             await asyncio.to_thread(summarizer.load)
+            SUMMARIZER_LOADED.set(1)
     except Exception as exc:
         logger.warning("No se pudo inicializar el resumidor: %s", exc)
         summarizer = None
+        SUMMARIZER_LOADED.set(0)
 
     yield
 
@@ -329,13 +341,6 @@ async def _predict_bert(text: str):
                     for p in predictions
                 ],
             },
-            {
-                "type": "recommendations",
-                "content": (
-                    "Revisar y confirmar los códigos asignados con el equipo médico "
-                    "antes de registrar el alta."
-                ),
-            },
         ]
     }
 
@@ -377,13 +382,6 @@ async def _predict_dict(text: str):  # noqa: E302
                     for p in predictions
                 ],
             },
-            {
-                "type": "recommendations",
-                "content": (
-                    "Revisar y confirmar los códigos asignados con el equipo médico "
-                    "antes de registrar el alta."
-                ),
-            },
         ]
     }
 
@@ -411,13 +409,6 @@ async def _predict_both(text: str):
         "cards": [
             summary_card,
             {"type": "codes", "content": all_codes},
-            {
-                "type": "recommendations",
-                "content": (
-                    "Revisar y confirmar los códigos asignados con el equipo médico "
-                    "antes de registrar el alta."
-                ),
-            },
         ]
     }
 
