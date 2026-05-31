@@ -29,7 +29,7 @@ defmodule AppWeb.Admin.AdminLayout do
           liveSocket.connect()
         </script>
       </head>
-      <body class="bg-gray-100 min-h-screen">
+      <body class="bg-gray-200 min-h-screen">
         <nav class="bg-indigo-700 text-white px-6 py-3 flex items-center justify-between shadow">
           <div class="flex items-center gap-6">
             <span class="font-bold text-lg">CIE-10 Backoffice</span>

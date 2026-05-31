@@ -54,6 +54,7 @@ chat:
   max_words_error: "Le rapport dépasse la limite de {max} tokens du modèle. Veuillez le raccourcir avant d'envoyer."
   analyze_button: "Analyser le rapport"
   min_chars: "Minimum {min} caractères requis (il en manque {remaining})"
+  review_reminder: "Vérifier et confirmer les codes attribués avec l'équipe médicale avant d'enregistrer la sortie."
 
 errors:
   load_conversations: "Impossible de charger les conversations"
