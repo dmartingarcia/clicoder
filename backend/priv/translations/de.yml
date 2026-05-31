@@ -54,6 +54,7 @@ chat:
   max_words_error: "Der Bericht überschreitet das Token-Limit von {max} des Modells. Bitte kürzen Sie ihn vor dem Senden."
   analyze_button: "Bericht analysieren"
   min_chars: "Mindestens {min} Zeichen erforderlich (noch {remaining} fehlend)"
+  review_reminder: "Die zugewiesenen Codes vor der Entlassungsregistrierung mit dem medizinischen Team überprüfen und bestätigen."
 
 errors:
   load_conversations: "Konversationen konnten nicht geladen werden"

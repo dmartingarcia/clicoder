@@ -54,6 +54,7 @@ chat:
   max_words_error: "Il referto supera il limite di {max} token del modello. Accorciarlo prima di inviare."
   analyze_button: "Analizza referto"
   min_chars: "Minimo {min} caratteri richiesti (mancano {remaining})"
+  review_reminder: "Verificare e confermare i codici assegnati con il team medico prima di registrare la dimissione."
 
 errors:
   load_conversations: "Impossibile caricare le conversazioni"

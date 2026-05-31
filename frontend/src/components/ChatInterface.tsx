@@ -178,20 +178,6 @@ function CodesCard({
   );
 }
 
-// ─── Card: Recomendaciones ────────────────────────────────────────────────────
-function RecommendationsCard({ content }: { content: string }) {
-  const { t } = useI18n();
-  return (
-    <Card className="p-4 border-l-4 border-l-amber-400 bg-amber-50">
-      <div className="flex items-center gap-2 mb-2 text-amber-700">
-        <Lightbulb className="h-4 w-4 shrink-0" />
-        <span className="text-xs font-semibold uppercase tracking-wide">{t('cards.recommendations_title')}</span>
-      </div>
-      <p className="text-sm text-gray-700 leading-relaxed">{content}</p>
-    </Card>
-  );
-}
-
 // ─── Card: Sugerencia de código ───────────────────────────────────────────────
 function SuggestionCard({ content }: { content: string }) {
   const { t } = useI18n();
@@ -421,7 +407,7 @@ function ChatItemView({
         />
       );
     case 'recommendations':
-      return wrapper(<RecommendationsCard content={card.content as string} />);
+      return null;
     case 'suggest':
       return wrapper(<SuggestionCard content={card.content as string} />);
     default:
@@ -606,6 +592,10 @@ export function ChatInterface() {
                   {t('chat.analyze_button')}
                 </Button>
               </div>
+              <p className="text-xs text-gray-400 mt-3 flex items-center gap-1.5">
+                <Lightbulb className="h-3 w-3 shrink-0" />
+                {t('chat.review_reminder')}
+              </p>
             </div>
           </div>
         </div>

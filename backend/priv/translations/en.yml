@@ -54,6 +54,7 @@ chat:
   max_words_error: "Report exceeds the model's {max}-token limit. Please shorten it before submitting."
   analyze_button: "Analyse report"
   min_chars: "Minimum {min} characters required ({remaining} remaining)"
+  review_reminder: "Review and confirm the assigned codes with the medical team before recording the discharge."
 
 errors:
   load_conversations: "Could not load conversations"
