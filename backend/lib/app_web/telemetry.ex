@@ -17,74 +17,75 @@ defmodule AppWeb.Telemetry do
   end
 
   def metrics do
+    http_buckets = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000]
+    db_buckets = [1, 5, 10, 25, 50, 100, 250, 500, 1000]
+
     [
       # Phoenix Metrics
-      summary("phoenix.endpoint.start.system_time",
-        unit: {:native, :millisecond}
+      distribution("phoenix.endpoint.stop.duration",
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: http_buckets]
       ),
-      summary("phoenix.endpoint.stop.duration",
-        unit: {:native, :millisecond}
-      ),
-      summary("phoenix.router_dispatch.start.system_time",
+      distribution("phoenix.router_dispatch.stop.duration",
         tags: [:route],
-        unit: {:native, :millisecond}
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: http_buckets]
       ),
-      summary("phoenix.router_dispatch.exception.duration",
+      distribution("phoenix.router_dispatch.exception.duration",
         tags: [:route],
-        unit: {:native, :millisecond}
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: http_buckets]
       ),
-      summary("phoenix.router_dispatch.stop.duration",
-        tags: [:route],
-        unit: {:native, :millisecond}
+      distribution("phoenix.channel_joined.duration",
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: http_buckets]
       ),
-      summary("phoenix.socket_connected.duration",
-        unit: {:native, :millisecond}
+      distribution("phoenix.channel_handled_in.duration",
+        tags: [:event],
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: http_buckets]
       ),
       sum("phoenix.socket_drain.count"),
-      summary("phoenix.channel_joined.duration",
-        unit: {:native, :millisecond}
-      ),
-      summary("phoenix.channel_handled_in.duration",
-        tags: [:event],
-        unit: {:native, :millisecond}
-      ),
 
       # Database Metrics
-      summary("app.repo.query.total_time",
+      distribution("app.repo.query.total_time",
         unit: {:native, :millisecond},
-        description: "The sum of the other measurements"
+        description: "The sum of the other measurements",
+        reporter_options: [buckets: db_buckets]
       ),
-      summary("app.repo.query.decode_time",
+      distribution("app.repo.query.decode_time",
         unit: {:native, :millisecond},
-        description: "The time spent decoding the data received from the database"
+        description: "The time spent decoding the data received from the database",
+        reporter_options: [buckets: db_buckets]
       ),
-      summary("app.repo.query.query_time",
+      distribution("app.repo.query.query_time",
         unit: {:native, :millisecond},
-        description: "The time spent executing the query"
+        description: "The time spent executing the query",
+        reporter_options: [buckets: db_buckets]
       ),
-      summary("app.repo.query.queue_time",
+      distribution("app.repo.query.queue_time",
         unit: {:native, :millisecond},
-        description: "The time spent waiting for a database connection"
+        description: "The time spent waiting for a database connection",
+        reporter_options: [buckets: db_buckets]
       ),
-      summary("app.repo.query.idle_time",
+      distribution("app.repo.query.idle_time",
         unit: {:native, :millisecond},
-        description:
-          "The time the connection spent waiting before being checked out for the query"
+        description: "The time the connection spent waiting before being checked out for the query",
+        reporter_options: [buckets: db_buckets]
       ),
 
       # VM Metrics
-      summary("vm.memory.total", unit: {:byte, :kilobyte}),
-      summary("vm.total_run_queue_lengths.total"),
-      summary("vm.total_run_queue_lengths.cpu"),
-      summary("vm.total_run_queue_lengths.io")
+      last_value("vm.memory.total", unit: {:byte, :kilobyte}),
+      last_value("vm.total_run_queue_lengths.total"),
+      last_value("vm.total_run_queue_lengths.cpu"),
+      last_value("vm.total_run_queue_lengths.io")
     ]
   end
 
   defp periodic_measurements do
     [
-      # A module, function and arguments to be invoked periodically.
-      # This function must call :telemetry.execute/3 and a metric must be added above.
-      # {AppWeb, :count_users, []}
+      :memory,
+      :total_run_queue_lengths
     ]
   end
 end
