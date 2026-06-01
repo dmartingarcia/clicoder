@@ -168,6 +168,22 @@ ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
 	$(COMPOSE) run --rm ai_engine python plot_runs.py
 	@echo "$(GREEN)Gráfico guardado en ai_engine/model/all_trainings_graph.png$(NC)"
 
+audit: audit-python audit-js audit-backend ## Auditar CVEs en todas las dependencias
+
+audit-backend: ## Auditar dependencias Elixir retiradas/vulnerables (mix hex.audit)
+	@echo "$(BLUE)Auditando dependencias Elixir...$(NC)"
+	$(COMPOSE_CPU) run --rm --no-deps backend mix hex.audit
+
+audit-js: ## Auditar CVEs en dependencias JS/Node (npm audit)
+	@echo "$(BLUE)Auditando dependencias JS...$(NC)"
+	$(COMPOSE_CPU) run --rm --no-deps frontend npm audit
+
+audit-python: ## Auditar CVEs en dependencias Python (pip-audit)
+	@echo "$(BLUE)Auditando dependencias Python...$(NC)"
+	$(COMPOSE_CPU) run --rm --no-deps \
+		-v $(CURDIR)/ai_engine:/audit:ro \
+		ai_engine sh -c 'pip install -q pip-audit && pip-audit -r /audit/requirements.txt -r /audit/requirements-dev.txt'
+
 backend-dialyzer: ## Análisis estático de tipos del backend (Dialyzer)
 	$(BACKEND) mix deps.get
 	$(BACKEND) mix dialyzer --format dialyxir
@@ -216,8 +232,9 @@ build: build-base ## Construir todos los contenedores
 	@echo "$(GREEN)Construyendo contenedores...$(NC)"
 	$(COMPOSE) build
 
-build-ai: build-base ## Construir solo AI engine. GPU=1 para modo GPU
+build-ai: ## Construir solo AI engine. GPU=1 para modo GPU
 	@echo "$(GREEN)Construyendo AI engine...$(NC)"
+	$(if $(filter 1,$(GPU)),$(MAKE) build-base,)
 	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) build ai_engine
 
 build-backend: ## Construir solo backend
