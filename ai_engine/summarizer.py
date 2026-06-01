@@ -5,6 +5,10 @@ Variables de entorno
 --------------------
 SUMMARIZER_MODEL   Modelo a usar: "gemma3" | "phi4" | "qwen" | "none" (default: "none").
                    Con "none" se devuelve el resumen estadístico básico.
+SUMMARIZER_MODE    Modo de salida: "summary" | "paraphrase" (default: "summary").
+                   - summary:    resumen conciso de ~120 palabras.
+                   - paraphrase: reformulación completa estructurada por secciones,
+                                 conservando todos los detalles médicos.
 SUMMARIZER_THREADS Número de hilos CPU para llama-cpp (default: 4).
 SUMMARIZER_CTX     Tamaño de contexto en tokens (default: 4096).
 """
@@ -42,17 +46,26 @@ MODELS = {
 }
 
 # ─────────────────────────────────────────────
-# Prompt médico estructurado
+# Prompts por modo
 # ─────────────────────────────────────────────
 
-SYSTEM_PROMPT = (
+MODES = ("summary", "paraphrase")
+
+_SYSTEM_SUMMARY = (
     "Eres un médico especialista en documentación clínica. "
     "Tu tarea es resumir informes clínicos de forma concisa y estructurada. "
     "Responde siempre en español. No añadas comentarios ni explicaciones fuera del resumen."
 )
 
-USER_PROMPT_TEMPLATE = """Resume el siguiente informe clínico desde un punto de vista médico.
-Incluye en el resumen: motivo de consulta, antecedentes relevantes, hallazgos exploratorios y analíticos, \
+_SYSTEM_PARAPHRASE = (
+    "Eres un médico especialista en documentación clínica. "
+    "Tu tarea es reformular informes clínicos de forma clara y estructurada, "
+    "conservando TODOS los detalles médicos: diagnósticos, fármacos, dosis, fechas y procedimientos. "
+    "Responde siempre en español. No añadas ni omitas información médica."
+)
+
+_USER_SUMMARY = """Resume el siguiente informe clínico desde un punto de vista médico.
+Incluye: motivo de consulta, antecedentes relevantes, hallazgos exploratorios y analíticos, \
 diagnóstico principal y procedimientos realizados. Máximo 120 palabras. Sin listas, en prosa continua.
 
 Informe:
@@ -60,16 +73,29 @@ Informe:
 
 Resumen médico:"""
 
+_USER_PARAPHRASE = """Reformula el siguiente informe clínico de forma clara y estructurada.
+Organiza la información en estas secciones (sin encabezados, en prosa continua): \
+antecedentes y motivo de consulta, evolución clínica, hallazgos diagnósticos, \
+tratamiento y procedimientos. Conserva TODOS los datos médicos exactos.
+
+Informe:
+{text}
+
+Informe reformulado:"""
+
 
 class MedicalSummarizer:
-    """Genera resúmenes médicos usando un LLM local en formato GGUF."""
+    """Genera resúmenes o paráfrasis médicas usando un LLM local en formato GGUF."""
 
-    def __init__(self, model_key: str):
+    def __init__(self, model_key: str, mode: str = "summary"):
         if model_key not in MODELS:
             raise ValueError(
                 f"Modelo desconocido: '{model_key}'. Opciones: {list(MODELS.keys())}"
             )
+        if mode not in MODES:
+            raise ValueError(f"Modo desconocido: '{mode}'. Opciones: {list(MODES)}")
         self._model_key = model_key
+        self._mode = mode
         self._cfg = MODELS[model_key]
         self._llm = None
         self._n_threads = int(os.environ.get("SUMMARIZER_THREADS", "4"))
@@ -80,6 +106,10 @@ class MedicalSummarizer:
     @property
     def model_name(self) -> str:
         return self._cfg["display"]
+
+    @property
+    def mode(self) -> str:
+        return self._mode
 
     @property
     def is_loaded(self) -> bool:
@@ -186,17 +216,20 @@ class MedicalSummarizer:
 
     # ── Inferencia ─────────────────────────────────────────────────────────
 
-    def summarize(self, text: str, max_tokens: int = 250) -> str:
-        """Genera un resumen médico del texto. Llama a load() si no está cargado."""
+    def summarize(self, text: str, max_tokens: int | None = None) -> str:
+        """Genera un resumen o paráfrasis del texto. Llama a load() si no está cargado."""
         if not self.is_loaded:
             self.load()
 
-        # Truncar input para no exceder el contexto
         words = text.split()
-        if len(words) > 600:
-            text = " ".join(words[:600])
+        max_input = 600 if self._mode == "summary" else 800
+        if len(words) > max_input:
+            text = " ".join(words[:max_input])
 
-        prompt = _build_prompt(self._model_key, text)
+        if max_tokens is None:
+            max_tokens = 250 if self._mode == "summary" else 600
+
+        prompt = _build_prompt(self._model_key, self._mode, text)
 
         output = self._llm(
             prompt,
@@ -206,14 +239,16 @@ class MedicalSummarizer:
             repeat_penalty=1.1,
             stop=["Informe:", "\n\n\n"],
         )
-        summary = output["choices"][0]["text"].strip()
+        result = output["choices"][0]["text"].strip()
 
-        # Limpiar artefactos frecuentes de algunos modelos
-        for prefix in ("Resumen médico:", "Resumen:", "**Resumen médico:**"):
-            if summary.startswith(prefix):
-                summary = summary[len(prefix) :].strip()
+        for prefix in (
+            "Resumen médico:", "Resumen:", "**Resumen médico:**",
+            "Informe reformulado:", "**Informe reformulado:**",
+        ):
+            if result.startswith(prefix):
+                result = result[len(prefix):].strip()
 
-        return summary or _fallback_summary(text)
+        return result or _fallback_summary(text)
 
 
 # ─────────────────────────────────────────────
@@ -262,32 +297,23 @@ def _watch_gguf_download(
         stop_event.wait(15)
 
 
-def _build_prompt(model_key: str, text: str) -> str:
+def _build_prompt(model_key: str, mode: str, text: str) -> str:
     """Construye el prompt en el formato de chat de cada modelo."""
-    user_msg = USER_PROMPT_TEMPLATE.format(text=text)
+    system = _SYSTEM_SUMMARY if mode == "summary" else _SYSTEM_PARAPHRASE
+    user_msg = (_USER_SUMMARY if mode == "summary" else _USER_PARAPHRASE).format(text=text)
 
     if model_key == "gemma3":
-        # Gemma 3 usa <start_of_turn> / <end_of_turn>
         return (
-            f"<start_of_turn>user\n{SYSTEM_PROMPT}\n\n{user_msg}<end_of_turn>\n"
+            f"<start_of_turn>user\n{system}\n\n{user_msg}<end_of_turn>\n"
             "<start_of_turn>model\n"
         )
-    if model_key == "phi4":
-        # Phi-4 usa ChatML
+    if model_key in ("phi4", "qwen"):
         return (
-            f"<|im_start|>system\n{SYSTEM_PROMPT}<|im_end|>\n"
+            f"<|im_start|>system\n{system}<|im_end|>\n"
             f"<|im_start|>user\n{user_msg}<|im_end|>\n"
             "<|im_start|>assistant\n"
         )
-    if model_key == "qwen":
-        # Qwen 2.5 usa ChatML igual que Phi
-        return (
-            f"<|im_start|>system\n{SYSTEM_PROMPT}<|im_end|>\n"
-            f"<|im_start|>user\n{user_msg}<|im_end|>\n"
-            "<|im_start|>assistant\n"
-        )
-    # Fallback genérico
-    return f"{SYSTEM_PROMPT}\n\n{user_msg}"
+    return f"{system}\n\n{user_msg}"
 
 
 def _fallback_summary(text: str) -> str:
@@ -301,7 +327,7 @@ def _fallback_summary(text: str) -> str:
 
 
 def create_summarizer() -> "MedicalSummarizer | None":
-    """Lee SUMMARIZER_MODEL y devuelve un MedicalSummarizer o None si está desactivado."""
+    """Lee SUMMARIZER_MODEL y SUMMARIZER_MODE y devuelve un MedicalSummarizer o None."""
     model_key = os.environ.get("SUMMARIZER_MODEL", "none").strip().lower()
     if model_key == "none" or not model_key:
         logger.info("Resumidor desactivado (SUMMARIZER_MODEL=none).")
@@ -313,4 +339,13 @@ def create_summarizer() -> "MedicalSummarizer | None":
             list(MODELS.keys()),
         )
         return None
-    return MedicalSummarizer(model_key)
+    mode = os.environ.get("SUMMARIZER_MODE", "summary").strip().lower()
+    if mode not in MODES:
+        logger.warning(
+            "SUMMARIZER_MODE='%s' no reconocido. Opciones: %s. Usando 'summary'.",
+            mode,
+            list(MODES),
+        )
+        mode = "summary"
+    logger.info("Resumidor: modelo=%s modo=%s", model_key, mode)
+    return MedicalSummarizer(model_key, mode)

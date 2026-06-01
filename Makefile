@@ -1,4 +1,4 @@
-.PHONY: ai-augment ai-baseline-dict ai-combine ai-format ai-install ai-lint ai-train ai-train-gpu backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload setup shell tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: ai-augment ai-baseline-dict ai-combine ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload setup shell tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 # Variables — compose stacks
 COMPOSE      = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
@@ -51,8 +51,21 @@ ai-augment: ## Back-translation. Vars: TRANS_BACKEND=azure|nllb PIVOT_LANGS="EN 
 		$(if $(ONLY_ROW),--only_row $(ONLY_ROW),)
 	@echo "$(GREEN)Datos guardados en /data/codiesp_csvs/codiesp_D_source_train_augmented.csv$(NC)"
 
-ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 (clinical+corpus+combined → model/baseline_dict.json)
-	@echo "$(BLUE)Calculando diccionario CIE-10...$(NC)"
+ai-augment-paraphrase: ## Paráfrasis con Gemma 3 4B IT (GPU). Vars: N_PER_NOTE=1 TEMPERATURE=0.7 DRY_RUN=1 RESUME=1
+	@echo "$(BLUE)Paráfrasis de notas clínicas con Gemma 3 4B IT...$(NC)"
+	$(COMPOSE) run --rm \
+		-e HUGGING_FACE_HUB_TOKEN=$${HUGGING_FACE_HUB_TOKEN} \
+		ai_engine python augment_paraphrase.py \
+		--input_file  /data/codiesp_csvs/codiesp_D_source_train.csv \
+		--output_file /data/codiesp_csvs/codiesp_D_source_train_augmented_paraphrase.csv \
+		$(if $(N_PER_NOTE),--n_per_note $(N_PER_NOTE),) \
+		$(if $(TEMPERATURE),--temperature $(TEMPERATURE),) \
+		$(if $(DRY_RUN),--dry_run,) \
+		$(if $(RESUME),--resume,)
+	@echo "$(GREEN)Datos guardados en /data/codiesp_csvs/codiesp_D_source_train_augmented_paraphrase.csv$(NC)"
+
+ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 en CPU (clinical+corpus+combined → model/baseline_dict.json)
+	@echo "$(BLUE)Calculando diccionario CIE-10 (CPU)...$(NC)"
 	$(COMPOSE_CPU) run --rm ai_engine python baseline_dict.py \
 		--train_file        /data/codiesp_csvs/codiesp_D_source_train.csv \
 		--val_file          /data/codiesp_csvs/codiesp_D_source_validation.csv \
@@ -67,6 +80,28 @@ ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 (clinical+corpus+comb
 		--save_dict         /app/model/baseline_dict.json \
 		$(if $(SOURCES),--sources $(SOURCES),) \
 		$(if $(MIN_LEN),--min_phrase_len $(MIN_LEN),) \
+		$(if $(MIN_BLOCK_PRECISION),--min_block_precision $(MIN_BLOCK_PRECISION),) \
+		$(if $(FULL_CODES),--full_codes,) \
+		$(if $(NO_ABBREVS),--no_expand_abbrevs,)
+
+ai-baseline-dict-gpu: ## Calcular y guardar diccionario CIE-10 en GPU (clinical+corpus+combined → model/baseline_dict.json)
+	@echo "$(BLUE)Calculando diccionario CIE-10 (GPU)...$(NC)"
+	$(COMPOSE) run --rm ai_engine python baseline_dict.py \
+		--train_file        /data/codiesp_csvs/codiesp_D_source_train.csv \
+		--val_file          /data/codiesp_csvs/codiesp_D_source_validation.csv \
+		--diagnoses_file    /data/cie10-csvs/cie10-es-diagnoses.csv \
+		--procedures_file   /data/cie10-csvs/cie10-es-procedures.csv \
+		--chemicals_file    /data/cie10-csvs/cie10-es-chemicals.csv \
+		--task_x_train      /data/codiesp_csvs/codiesp_X_source_train.csv \
+		--task_x_val        /data/codiesp_csvs/codiesp_X_source_validation.csv \
+		--sources clinical corpus combined \
+		--corpus_selective \
+		--only_combined \
+		--save_dict         /app/model/baseline_dict.json \
+		$(if $(SOURCES),--sources $(SOURCES),) \
+		$(if $(MIN_LEN),--min_phrase_len $(MIN_LEN),) \
+		$(if $(MIN_BLOCK_PRECISION),--min_block_precision $(MIN_BLOCK_PRECISION),) \
+		$(if $(FULL_CODES),--full_codes,) \
 		$(if $(NO_ABBREVS),--no_expand_abbrevs,)
 
 ai-combine: ## Combina los CSV aumentados (EN+DE+FR) en un único fichero de entrenamiento
