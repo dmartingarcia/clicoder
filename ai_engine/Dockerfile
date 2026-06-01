@@ -8,9 +8,10 @@
 ARG BUILD_WITH_CUDA=0
 
 # ─── CPU base (lightweight) ──────────────────────────────────────────────────
-FROM python:3.11-slim AS base-0
+FROM python:3.14-slim AS base-0
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl build-essential cmake \
     && rm -rf /var/lib/apt/lists/*
 
 # ─── GPU base (flash-attn + CUDA 13.1 precompilados) ─────────────────────────
