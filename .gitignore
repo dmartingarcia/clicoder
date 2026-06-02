@@ -92,3 +92,6 @@ tfg/**/*.gls
 tfg/**/*.bcf
 tfg/**/*.run.xml
 tfg/**/*.pdf
+
+# Traefik Let's Encrypt certs
+letsencrypt/

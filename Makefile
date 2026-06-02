@@ -1,9 +1,12 @@
-.PHONY: ai-augment ai-baseline-dict ai-combine ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload setup shell tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: ai-augment ai-baseline-dict ai-combine ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-proxy stop-monitoring stop-proxy traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 # Variables — compose stacks
-COMPOSE      = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
-COMPOSE_CPU  = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
-COMPOSE_MOCK = docker compose -f docker-compose.yml -f docker-compose.mock.yml
+COMPOSE            = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
+COMPOSE_CPU        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
+COMPOSE_MOCK       = docker compose -f docker-compose.yml -f docker-compose.mock.yml
+COMPOSE_MONITORING = docker compose -f docker-compose.monitoring.yml
+COMPOSE_PROXY      = docker compose -f docker-compose-proxy.yml
+NETWORK            = ciecoder
 BACKEND = $(COMPOSE) exec backend
 FRONTEND = $(COMPOSE) exec frontend
 AI = $(COMPOSE) exec ai_engine
@@ -306,7 +309,7 @@ cpu-down: ## Detener servicios del modo CPU
 	@echo "$(YELLOW)Deteniendo servicios CPU...$(NC)"
 	$(COMPOSE_CPU) down
 
-cpu-up: frontend-install ## Levantar servicios en modo CPU (sin GPU)
+cpu-up: frontend-install network-create ## Levantar servicios en modo CPU (sin GPU)
 	@echo "$(GREEN)Levantando servicios en modo CPU...$(NC)"
 	$(COMPOSE_CPU) up -d db backend frontend ai_engine
 	@echo "$(GREEN)Servicios levantados (modo CPU):$(NC)"
@@ -334,6 +337,8 @@ db-reset: ## Reset completo: drop + backend-seed
 down: ## Detener todos los servicios. GPU=1 para modo GPU
 	@echo "$(YELLOW)Deteniendo servicios...$(NC)"
 	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) down
+	$(COMPOSE_MONITORING) down 2>/dev/null || true
+	$(COMPOSE_PROXY) down 2>/dev/null || true
 
 frontend-format: ## Formatear código del frontend
 	$(COMPOSE_CPU) run --rm --no-deps frontend npm format
@@ -375,7 +380,7 @@ mock-down: ## Detener servicios del modo mock
 	@echo "$(YELLOW)Deteniendo servicios mock...$(NC)"
 	$(COMPOSE_MOCK) down
 
-mock-up: frontend-install ## Levantar servicios en modo mock (sin GPU, sin modelo real)
+mock-up: frontend-install network-create ## Levantar servicios en modo mock (sin GPU, sin modelo real)
 	@echo "$(GREEN)Levantando servicios en modo mock...$(NC)"
 	$(COMPOSE_MOCK) up -d db backend frontend ai_engine
 	@echo "$(GREEN)Servicios levantados (modo mock):$(NC)"
@@ -413,14 +418,60 @@ model-upload: ## Subir mejor modelo a Hugging Face (lee HF_TOKEN de .env)
 	rm -f $(MODEL_DIR)/classifier.pt $(MODEL_DIR)/thresholds.json
 	@echo "$(GREEN)Modelo subido: https://huggingface.co/$(HF_REPO)$(NC)"
 
-setup: ## Setup completo desde cero: down -v + build + seed (sin levantar). Luego usa 'make up'
+network-create: ## Crear red Docker compartida entre stacks (proxy, app, monitoring)
+	@docker network create $(NETWORK) 2>/dev/null || true
+
+setup: network-create ## Setup completo desde cero: down -v + build + seed (sin levantar). Luego usa 'make deploy'
 	@[ -f .env ] || cp .env.example .env
 	$(COMPOSE_CPU) down -v --remove-orphans
 	$(COMPOSE_CPU) build --progress=plain backend
 	$(COMPOSE_CPU) build --progress=plain frontend
 	$(MAKE) backend-seed
 	@[ -f $(MODEL_DIR)/$(BEST_PT) ] || $(MAKE) model-download
-	@echo "$(GREEN)Setup completado. Usa 'make up' para levantar los servicios.$(NC)"
+	@echo "$(GREEN)Setup completado. Usa 'make deploy' para levantar los servicios.$(NC)"
+
+start-proxy: network-create ## Arrancar proxy Traefik
+	@echo "$(BLUE)Arrancando Traefik...$(NC)"
+	$(COMPOSE_PROXY) up -d
+	@echo "$(GREEN)Traefik disponible en: http://localhost:80$(NC)"
+	@echo "$(GREEN)Dashboard Traefik:     http://localhost:8080$(NC)"
+
+stop-proxy: ## Detener proxy Traefik
+	@echo "$(YELLOW)Deteniendo Traefik...$(NC)"
+	$(COMPOSE_PROXY) down
+
+traefik-passwd: ## Generar hash htpasswd para el dashboard. Vars: USER=admin PASSWORD=changeme
+	@echo "$(BLUE)Generando hash htpasswd...$(NC)"
+	@docker run --rm httpd:alpine htpasswd -nbm $(or $(USER),admin) $(or $(PASSWORD),changeme)
+	@echo ""
+	@echo "$(YELLOW)Copia la línea anterior como TRAEFIK_DASHBOARD_AUTH en .env$(NC)"
+
+start-monitoring: network-create ## Arrancar stack de monitorización (Prometheus + Grafana + cAdvisor + Node Exporter)
+	@echo "$(BLUE)Arrancando monitorización...$(NC)"
+	$(COMPOSE_MONITORING) up -d
+	@echo "$(GREEN)Grafana:       http://localhost:3030  (admin / $${GRAFANA_PASSWORD:-changeme})$(NC)"
+	@echo "$(GREEN)Prometheus:    http://localhost:9090$(NC)"
+	@echo "$(GREEN)cAdvisor:      http://localhost:8082$(NC)"
+	@echo "$(GREEN)Node Exporter: http://localhost:9100/metrics$(NC)"
+
+stop-monitoring: ## Detener stack de monitorización
+	@echo "$(YELLOW)Deteniendo monitorización...$(NC)"
+	$(COMPOSE_MONITORING) down
+
+deploy: network-create ## Deploy completo. GPU=1 para modo GPU
+	@echo "$(BLUE)Desplegando CIE-10...$(NC)"
+	$(MAKE) start-proxy
+	$(MAKE) start-monitoring
+	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) up -d db backend frontend ai_engine
+	@echo ""
+	@echo "$(GREEN)Deploy completado:$(NC)"
+	@echo "  - Frontend:    http://localhost:${FRONTEND_PORT:-3000}  →  http://${DOMAIN:-localhost}"
+	@echo "  - Backend API: http://localhost:${BACKEND_PORT:-4000}  →  http://api.${DOMAIN:-localhost}"
+	@echo "  - Grafana:     http://localhost:3030  →  http://grafana.${DOMAIN:-localhost}"
+	@echo "  - Traefik:     http://localhost:8080  (dashboard)"
+	@echo "  - Prometheus:  http://localhost:9090"
+	@echo "  - cAdvisor:    http://localhost:8082"
+	@echo "  - Mailpit:     http://localhost:8025"
 
 shell: ## Abrir shell interactivo (pregunta por contenedor)
 	@echo "$(GREEN)Contenedores disponibles:$(NC)"
