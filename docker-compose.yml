@@ -16,6 +16,7 @@ services:
       - "1025:1025"   # SMTP
     environment:
       MP_MAX_MESSAGES: 500
+    networks: [ciecoder]
 
   # Base de Datos: PostgreSQL (Doble propósito: App y EventStore)
   db:
@@ -35,6 +36,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks: [ciecoder]
 
   # Entrenamiento: Python + PyTorch + Jupyter
   training:
@@ -86,6 +88,7 @@ services:
       - ./ai_engine:/app
       - ./training/csv_import_scripts:/data
       - ./.huggingface_cache:/root/.cache/huggingface
+    networks: [ciecoder]
 
   # Backend: Elixir Phoenix + Commanded
   backend:
@@ -107,7 +110,7 @@ services:
       - EVENT_STORE_URL=${EVENT_STORE_URL:-postgresql://postgres:changeme@db:5432/cie10_eventstore}
       - AI_ENGINE_URL=${AI_ENGINE_URL:-http://ai_engine:8000}
       - SECRET_KEY_BASE=${SECRET_KEY_BASE:-supersecretkeythatisatleast64byteslongforproductionuse}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      - CORS_ORIGINS=${CORS_ORIGINS}
       - PGPASSWORD=${POSTGRES_PASSWORD:-changeme}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - SENTRY_DSN=${SENTRY_DSN:-}
@@ -116,35 +119,14 @@ services:
       - backend_build:/app/_build
       - backend_deps:/app/deps
       - ./training/csv_import_scripts/cie10-csvs:/data/cie10-csvs:ro
-
-  # Monitorización: Prometheus (métricas) + Grafana (dashboards)
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: cie10_prometheus
-    restart: always
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.retention.time=15d"
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: cie10_grafana
-    restart: always
-    ports:
-      - "3030:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-changeme}
-      - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-    depends_on:
-      - prometheus
+    networks: [ciecoder]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls=true"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.backend.loadbalancer.server.port=4000"
 
   # Frontend: Next.js + Tailwind + shadcn
   frontend:
@@ -168,10 +150,20 @@ services:
       - ./frontend/.next:/app/.next
     stdin_open: true
     tty: true
+    networks: [ciecoder]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls=true"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
 
 volumes:
   postgres_data:
   backend_build:
   backend_deps:
-  prometheus_data:
-  grafana_data:
+
+networks:
+  ciecoder:
+    external: true

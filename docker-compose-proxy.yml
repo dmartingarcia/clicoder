@@ -1,0 +1,56 @@
+# docker-compose-proxy.yml
+# Proxy inverso Traefik v3. Auto-descubre servicios vía labels de Docker.
+# Uso: docker compose -f docker-compose-proxy.yml up -d
+# Requiere red externa: make network-create
+# Generar hash del dashboard: make traefik-passwd
+
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: cie10_traefik
+    restart: always
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=ciecoder"
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # Redirect HTTP → HTTPS global (permanente)
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      # Let's Encrypt (HTTP challenge)
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    networks: [proxy, ciecoder]
+    labels:
+      - "traefik.enable=true"
+      # Router del dashboard (solo HTTPS)
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth,dashboard-ratelimit"
+      # Basic auth — hash generado con: make traefik-passwd
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
+      # Rate limit: 5 req x min, burst de 5 → bloqueo efectivo de 10 min tras agotarlo
+      - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.average=5"
+      - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.burst=5"
+      - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.period=10m"
+
+networks:
+  proxy:
+  ciecoder:
+    external: true
