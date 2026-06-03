@@ -332,7 +332,7 @@ cpu-up: frontend-install network-create ## Levantar servicios en modo CPU (sin G
 
 db-backup: ## Backup de la base de datos
 	@echo "$(GREEN)Creando backup...$(NC)"
-	docker exec cie10_db pg_dump -U postgres cie10_app > backup_$(shell date +%Y%m%d_%H%M%S).sql
+	$(COMPOSE) exec db pg_dump -U postgres cie10_app > backup_$(shell date +%Y%m%d_%H%M%S).sql
 	@echo "$(GREEN)Backup creado!$(NC)"
 
 db-reset: ## Reset completo: drop + backend-seed

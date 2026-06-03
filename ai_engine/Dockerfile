@@ -51,6 +51,12 @@ COPY ai_engine/ .
 # ---- Runtime configuration ----
 ENV MODEL_DIR=/app/model
 ENV DEVICE=cpu
+ENV HF_HOME=/cache/huggingface
+
+RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -m appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8000
 
