@@ -11,6 +11,11 @@ RUN npm ci
 # Desarrollo
 FROM base AS dev
 WORKDIR /app
+
+# Crear directorio para npm cache con permisos correctos
+RUN mkdir -p /app/.npm-cache && chmod 777 /app/.npm-cache
+ENV NPM_CONFIG_CACHE=/app/.npm-cache
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 

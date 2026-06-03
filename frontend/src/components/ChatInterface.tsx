@@ -419,7 +419,7 @@ function ChatItemView({
 export function ChatInterface() {
   const { activeConversationId, pendingConversation, chatItems, predictedCodes, isAnalyzing, engine, analyzeReport, validateCode, rejectCode, createConversation } = useConversation();
   const { t } = useI18n();
-  const MAX_TOKENS = 1024;
+  const MAX_TOKENS = 512;
   const [reportText, setReportText] = useState('');
   const [serverTokenEntry, setServerTokenEntry] = useState<{ text: string; count: number } | null>(null);
   // approxTokenCount is computed synchronously; serverTokenEntry refines it after 300ms debounce.

@@ -12,7 +12,7 @@ defmodule AppWeb.Endpoint do
   ]
 
   socket "/socket", AppWeb.UserSocket,
-    websocket: [check_origin: ["https://api.clicoder.app", "https://clicoder.app", "http://localhost:5173"]],
+    websocket: [check_origin: false],
     longpoll: false
 
   socket "/live", Phoenix.LiveView.Socket,
@@ -75,7 +75,11 @@ defmodule AppWeb.Endpoint do
   end
 
   plug :put_security_headers
-  plug Sentry.PlugContext
+
+  if Code.ensure_loaded?(Sentry.PlugContext) do
+    plug Sentry.PlugContext
+  end
+
   plug AppWeb.Router
 
   defp put_security_headers(conn, _opts) do
