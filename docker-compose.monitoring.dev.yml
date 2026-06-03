@@ -1,0 +1,21 @@
+# Override para desarrollo local: expone puertos directamente sin Traefik
+services:
+  prometheus:
+    ports:
+      - "9090:9090"
+
+  grafana:
+    ports:
+      - "3030:3000"
+
+  loki:
+    ports:
+      - "3100:3100"
+
+  cadvisor:
+    ports:
+      - "8082:8080"
+
+  node_exporter:
+    ports:
+      - "9100:9100"
