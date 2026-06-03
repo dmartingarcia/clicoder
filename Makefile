@@ -6,6 +6,10 @@ COMPOSE_CPU        = docker compose -f docker-compose.yml -f docker-compose.cpu.
 COMPOSE_MOCK       = docker compose -f docker-compose.yml -f docker-compose.mock.yml
 COMPOSE_MONITORING = docker compose -f docker-compose.monitoring.yml
 COMPOSE_PROXY      = docker compose -f docker-compose-proxy.yml
+COMPOSE_DEV        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.dev.yml
+COMPOSE_DEV_GPU    = docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.dev.yml
+COMPOSE_PROD       = docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.prod.yml
+COMPOSE_PROD_GPU   = docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml
 NETWORK            = ciecoder
 BACKEND = $(COMPOSE) exec backend
 FRONTEND = $(COMPOSE) exec frontend
@@ -309,7 +313,7 @@ cpu-down: ## Detener servicios del modo CPU
 
 cpu-up: frontend-install network-create ## Levantar servicios en modo CPU (sin GPU)
 	@echo "$(GREEN)Levantando servicios en modo CPU...$(NC)"
-	$(COMPOSE_CPU) up -d db backend frontend ai_engine
+	$(COMPOSE_DEV) up -d db backend frontend ai_engine
 	@echo "$(GREEN)Servicios levantados (modo CPU):$(NC)"
 	@echo "  - Frontend:      http://localhost:3000"
 	@echo "  - Backend API:   http://localhost:4000"
@@ -460,7 +464,7 @@ deploy: network-create ## Deploy completo. GPU=1 para modo GPU
 	@echo "$(BLUE)Desplegando CIE-10...$(NC)"
 	$(MAKE) start-proxy
 	$(MAKE) start-monitoring
-	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) up -d db backend frontend ai_engine
+	$(if $(filter 1,$(GPU)),$(COMPOSE_PROD_GPU),$(COMPOSE_PROD)) up -d db backend frontend ai_engine
 	@echo ""
 	@echo "$(GREEN)Deploy completado:$(NC)"
 	@echo "  - Frontend:    http://localhost:$${FRONTEND_PORT:-3000}  ->  http://$${DOMAIN:-localhost}"
@@ -549,7 +553,7 @@ training-setup: ## Configurar entorno de entrenamiento
 
 up: frontend-install ## Levantar todos los servicios. GPU=1 para modo GPU
 	@echo "$(GREEN)Levantando servicios...$(NC)"
-	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) up -d
+	$(if $(filter 1,$(GPU)),$(COMPOSE_DEV_GPU),$(COMPOSE_DEV)) up -d
 	@echo "$(GREEN)Servicios levantados:$(NC)"
 	@echo "  - Frontend:      http://localhost:3000"
 	@echo "  - Backend API:   http://localhost:4000"
