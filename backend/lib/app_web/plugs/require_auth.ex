@@ -8,7 +8,7 @@ defmodule AppWeb.Plugs.RequireAuth do
   def call(conn, _opts) do
     with ["Bearer " <> token] <- get_req_header(conn, "authorization"),
          {:ok, user_id} <-
-           Phoenix.Token.verify(AppWeb.Endpoint, "user auth", token, max_age: 86_400 * 30) do
+           Phoenix.Token.verify(AppWeb.Endpoint, "user auth", token, max_age: 3_600) do
       assign(conn, :current_user_id, user_id)
     else
       _ ->

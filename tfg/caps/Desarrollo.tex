@@ -547,12 +547,55 @@ El toggle se expone en el \emph{backoffice} de administración (\texttt{/admin/s
 Esta arquitectura sigue el principio de diseño \emph{«separación de responsabilidades»}: el motor de IA no sabe nada del mecanismo de selección —simplemente atiende la petición que recibe—; el backend actúa como orquestador y centraliza la decisión de qué motor invocar; y la interfaz de administración proporciona el punto de control sin acoplarse a la lógica de predicción.
 
 \subsection{Autenticación y seguridad}
+\label{sec:seguridad}
 
-El sistema implementa autenticación mediante registro con confirmación por email. Al registrarse, el usuario recibe un email con un enlace de confirmación generado con \texttt{Phoenix.Token}. Una vez confirmada la cuenta, el inicio de sesión devuelve un token Bearer que el frontend almacena en \texttt{localStorage} y envía en la cabecera \texttt{Authorization} de cada petición REST y en el \emph{handshake} del WebSocket. El \emph{plug} \texttt{RequireAuth} verifica el token en todas las rutas protegidas.
+El sistema implementa autenticación mediante registro con confirmación por email. Al registrarse, el usuario recibe un email con un enlace de confirmación generado con \texttt{Phoenix.Token}. Una vez confirmada la cuenta, el inicio de sesión devuelve un token Bearer que el frontend almacena en \texttt{localStorage} y envía en la cabecera \texttt{Authorization} de cada petición REST y en el \emph{handshake} del WebSocket. El \emph{plug} \texttt{RequireAuth} verifica el token en todas las rutas protegidas. Los tokens tienen una validez de \textbf{una hora} (\texttt{max\_age: 3\_600}); pasado ese tiempo, cualquier petición es rechazada con un error 401, lo que limita la ventana de exposición ante un robo de sesión.
 
-Las contraseñas se almacenan hasheadas con bcrypt. El servicio de email se implementa con Swoosh y, en el entorno de desarrollo, se captura con Mailpit (accesible en \texttt{http://localhost:8025}).
+Las contraseñas se almacenan hasheadas con bcrypt y se exige una longitud mínima de \textbf{12 caracteres} para reducir la vulnerabilidad ante ataques de fuerza bruta. El servicio de email se implementa con Swoosh y, en el entorno de desarrollo, se captura con Mailpit (accesible en \texttt{http://localhost:8025}).
 
 La política CORS del backend se gestiona mediante el \emph{plug} \texttt{CORSPlug} en el \emph{endpoint} Phoenix. Los orígenes permitidos se leen en tiempo de ejecución desde la variable de entorno \texttt{CORS\_ORIGINS}, lo que permite restringir el acceso a los dominios exactos del frontend sin modificar el código. Los métodos permitidos son \texttt{GET}, \texttt{POST}, \texttt{PUT}, \texttt{DELETE} y \texttt{OPTIONS}; las cabeceras autorizadas son \texttt{Authorization}, \texttt{Content-Type} y \texttt{Accept}. En producción, \texttt{CORS\_ORIGINS} se establece al dominio \texttt{clicoder.app}, de modo que cualquier petición cruzada desde un origen distinto es rechazada antes de llegar a la lógica de la aplicación.
+
+\subsubsection{Limitación de peticiones (\emph{rate limiting})}
+
+Los \emph{endpoints} de autenticación (\texttt{POST /auth/register}, \texttt{POST /auth/login} y \texttt{GET /auth/confirm/:token}) están protegidos por un mecanismo de limitación de peticiones implementado mediante una tabla ETS (\emph{Erlang Term Storage}) local, sin dependencias externas. El \emph{plug} \texttt{AppWeb.Plugs.RateLimit} mantiene una ventana deslizante de 60 segundos por dirección IP: si la misma IP supera las 10 peticiones en ese intervalo, el servidor responde con el código HTTP 429 (\emph{Too Many Requests}) antes de ejecutar cualquier lógica de negocio. Este límite frena de forma efectiva los ataques de fuerza bruta sobre el formulario de inicio de sesión sin necesitar infraestructura adicional.
+
+\subsubsection{Cabeceras de seguridad HTTP}
+
+El \emph{endpoint} Phoenix incluye el \emph{plug} \texttt{put\_security\_headers}, que añade a todas las respuestas un conjunto de cabeceras defensivas:
+
+\begin{itemize}
+    \item \texttt{X-Frame-Options: DENY} — impide que la aplicación sea embebida en un \texttt{<iframe>}, previniendo ataques de \emph{clickjacking}.
+    \item \texttt{X-Content-Type-Options: nosniff} — fuerza al navegador a respetar el tipo MIME declarado, evitando la ejecución involuntaria de recursos mal tipificados.
+    \item \texttt{Referrer-Policy: strict-origin-when-cross-origin} — limita la información del \emph{referer} enviada en peticiones cruzadas, reduciendo la filtración de URLs internas.
+    \item \texttt{Strict-Transport-Security: max-age=31536000; includeSubDomains} (HSTS) — obliga al navegador a usar HTTPS durante un año para el dominio y todos sus subdominios, eliminando la posibilidad de ataques de degradación de protocolo (\emph{SSL stripping}).
+\end{itemize}
+
+\subsubsection{Filtrado de datos sensibles en el sistema de monitorización}
+
+El sistema utiliza Sentry para la captura y notificación de errores en producción. Dado que algunos errores pueden capturar el contexto de la petición —incluido el cuerpo del \emph{request}—, se registra un \emph{callback} \texttt{before\_send} implementado en el módulo \texttt{AppWeb.SentryFilter}. Este módulo intercepta cada evento antes de enviarlo a Sentry y redacta los campos sensibles, sustituyéndolos por la cadena \texttt{[FILTERED]}. Los campos afectados incluyen \texttt{password}, \texttt{password\_hash}, \texttt{token}, \texttt{content} (texto del informe clínico), \texttt{report\_text}, \texttt{authorization} y \texttt{cookie}. Adicionalmente, la configuración de Sentry declara esos mismos campos en la opción \texttt{filter\_keys}, que actúa como segunda capa de filtrado antes de la serialización del evento.
+
+\subsection{Conformidad con el Reglamento General de Protección de Datos (RGPD)}
+\label{sec:rgpd}
+
+El sistema maneja datos personales —nombre, apellidos, dirección de correo electrónico— e información clínica sensible en forma de informes médicos y los códigos CIE-10 inferidos. Su diseño incorpora los mecanismos técnicos necesarios para cumplir con los artículos 17 y 20 del Reglamento (UE) 2016/679 (RGPD).
+
+\subsubsection{Artículo 17 — Derecho de supresión (\emph{«derecho al olvido»})}
+
+El RGPD exige que el responsable del tratamiento suprima los datos personales sin dilación indebida cuando el interesado lo solicite. El sistema ofrece dos niveles de supresión:
+
+\begin{itemize}
+    \item \textbf{Borrado permanente de una conversación} (\texttt{DELETE /api/conversations/:id/purge}): elimina de forma irreversible la conversación y todos los datos asociados — mensajes, tarjetas de análisis, códigos predichos y sugerencias de código — mediante una transacción atómica que recorre todas las tablas dependientes en orden inverso a sus claves foráneas antes de eliminar el registro raíz. A diferencia del borrado lógico habitual (que establece \texttt{deleted\_at} y mantiene los datos en base de datos), este \emph{endpoint} garantiza que no queda ningún rastro en el modelo de lectura.
+
+    \item \textbf{Eliminación completa de la cuenta} (\texttt{DELETE /api/users/account}): borra la totalidad de los datos del usuario en una única transacción: primero obtiene los identificadores de todas sus conversaciones, después elimina en cascada sus dependencias (sugerencias, códigos predichos, tarjetas de análisis, mensajes y conversaciones) y finalmente suprime el registro del usuario. Tras el borrado, el token del usuario queda invalidado de facto al no existir ya el sujeto en la base de datos.
+\end{itemize}
+
+Desde el frontend, el usuario accede a la función de eliminación de cuenta a través del icono \texttt{UserX} situado en la barra lateral. Al pulsarlo, se muestra un modal de confirmación con un texto explícito sobre la irreversibilidad de la acción y dos botones: cancelar o confirmar. Solo al confirmar se envía la petición \texttt{DELETE} al \emph{endpoint} correspondiente; en caso de éxito, el cliente cierra la sesión y redirige a la pantalla de inicio de sesión.
+
+\subsubsection{Artículo 20 — Derecho a la portabilidad de los datos}
+
+El RGPD reconoce al interesado el derecho a recibir sus datos personales en un formato estructurado, de uso común y lectura mecánica. El \emph{endpoint} \texttt{GET /api/users/export} (autenticado mediante Bearer token) devuelve un fichero JSON que incluye el perfil del usuario —nombre, apellidos, nombre de usuario, dirección de correo y preferencia de idioma— y la totalidad de sus conversaciones, con sus mensajes y los códigos predichos asociados. La respuesta se sirve con la cabecera \texttt{Content-Disposition: attachment; filename="datos\_usuario.json"} para que el navegador la ofrezca como descarga directa.
+
+El acceso a esta función desde el frontend se realiza mediante el icono de descarga (\texttt{Download}) en la barra lateral: al pulsarlo, el cliente realiza la petición autenticada, convierte la respuesta en un \emph{blob} y lo descarga como fichero JSON sin exponer el token en la URL.
 
 \subsection{Internacionalización}
 

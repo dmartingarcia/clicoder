@@ -38,6 +38,12 @@ sidebar:
   delete: "Supprimer la conversation"
   restore: "Restaurer la conversation"
   trash: "Corbeille"
+  export_data: "Exporter mes données"
+  delete_account: "Supprimer mon compte"
+  delete_account_title: "Supprimer votre compte ?"
+  delete_account_body: "Cette action est irréversible. Toutes vos analyses, messages et données personnelles seront définitivement supprimés."
+  delete_account_confirm: "Oui, supprimer mon compte"
+  cancel: "Annuler"
 
 chat:
   welcome_title: "Classificateur CIM-10"

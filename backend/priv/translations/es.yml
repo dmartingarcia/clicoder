@@ -38,6 +38,12 @@ sidebar:
   delete: "Eliminar conversación"
   restore: "Restaurar conversación"
   trash: "Papelera"
+  export_data: "Exportar mis datos"
+  delete_account: "Eliminar mi cuenta"
+  delete_account_title: "¿Eliminar tu cuenta?"
+  delete_account_body: "Esta acción es irreversible. Se borrarán todos tus análisis, mensajes y datos personales de forma permanente."
+  delete_account_confirm: "Sí, eliminar mi cuenta"
+  cancel: "Cancelar"
 
 chat:
   welcome_title: "Clasificador CIE-10"

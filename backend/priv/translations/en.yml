@@ -38,6 +38,12 @@ sidebar:
   delete: "Delete conversation"
   restore: "Restore conversation"
   trash: "Trash"
+  export_data: "Export my data"
+  delete_account: "Delete my account"
+  delete_account_title: "Delete your account?"
+  delete_account_body: "This action is irreversible. All your analyses, messages and personal data will be permanently deleted."
+  delete_account_confirm: "Yes, delete my account"
+  cancel: "Cancel"
 
 chat:
   welcome_title: "ICD-10 Classifier"

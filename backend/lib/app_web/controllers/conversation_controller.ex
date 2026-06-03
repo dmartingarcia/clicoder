@@ -4,6 +4,10 @@ defmodule AppWeb.ConversationController do
 
   alias App.Repo
   alias App.Projections.ConversationProjection
+  alias App.Projections.MessageProjection
+  alias App.Projections.AnalysisCardProjection
+  alias App.Projections.PredictedCodeProjection
+  alias App.Projections.CodeSuggestionProjection
 
   import Ecto.Query
 
@@ -168,6 +172,52 @@ defmodule AppWeb.ConversationController do
         conv
         |> Ecto.Changeset.change(deleted_at: nil)
         |> Repo.update!()
+
+        json(conn, %{ok: true})
+    end
+  end
+
+  operation(:purge,
+    summary: "Eliminar conversación permanentemente (RGPD Art. 17)",
+    tags: ["Conversations"],
+    security: [%{"bearer_auth" => []}],
+    parameters: [
+      OpenApiSpex.Operation.parameter(:conversation_id, :path, :string, "ID de la conversación",
+        required: true
+      )
+    ],
+    responses: [
+      ok:
+        {"Eliminada permanentemente", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{ok: %OpenApiSpex.Schema{type: :boolean}}
+         }},
+      not_found:
+        {"No encontrada", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{error: %OpenApiSpex.Schema{type: :string}}
+         }}
+    ]
+  )
+
+  # Hard delete — borra todos los datos de la conversación (RGPD Art. 17)
+  def purge(conn, %{"conversation_id" => conversation_id}) do
+    user_id = conn.assigns.current_user_id
+
+    case Repo.get_by(ConversationProjection, conversation_id: conversation_id, user_id: user_id) do
+      nil ->
+        conn |> put_status(:not_found) |> json(%{error: "Conversation not found"})
+
+      conv ->
+        Repo.transaction(fn ->
+          from(r in CodeSuggestionProjection, where: r.conversation_id == ^conv.id) |> Repo.delete_all()
+          from(r in PredictedCodeProjection, where: r.conversation_id == ^conv.id) |> Repo.delete_all()
+          from(r in AnalysisCardProjection, where: r.conversation_id == ^conv.id) |> Repo.delete_all()
+          from(r in MessageProjection, where: r.conversation_id == ^conv.id) |> Repo.delete_all()
+          Repo.delete!(conv)
+        end)
 
         json(conn, %{ok: true})
     end

@@ -38,6 +38,12 @@ sidebar:
   delete: "Konversation löschen"
   restore: "Konversation wiederherstellen"
   trash: "Papierkorb"
+  export_data: "Meine Daten exportieren"
+  delete_account: "Mein Konto löschen"
+  delete_account_title: "Ihr Konto löschen?"
+  delete_account_body: "Diese Aktion ist unwiderruflich. Alle Ihre Analysen, Nachrichten und persönlichen Daten werden dauerhaft gelöscht."
+  delete_account_confirm: "Ja, mein Konto löschen"
+  cancel: "Abbrechen"
 
 chat:
   welcome_title: "ICD-10-Klassifikator"
