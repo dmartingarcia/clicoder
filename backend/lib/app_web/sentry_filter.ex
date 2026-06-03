@@ -1,8 +1,8 @@
 defmodule AppWeb.SentryFilter do
   @scrub_fields ~w(password password_hash token content report_text authorization cookie)
 
-  def filter_event(%Sentry.Event{} = event, _extra) do
-    {:ok, event |> scrub_request() |> scrub_extra()}
+  def filter_event(%Sentry.Event{} = event) do
+    event |> scrub_request() |> scrub_extra()
   end
 
   defp scrub_request(%{request: request} = event) when not is_nil(request) do
