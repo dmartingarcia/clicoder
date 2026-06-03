@@ -6,7 +6,8 @@ import { useI18n } from '@/contexts/I18nContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Stethoscope, Loader2, MailCheck } from 'lucide-react';
+import { Stethoscope, Loader2, MailCheck, ShieldCheck } from 'lucide-react';
+import { PrivacyModal } from '@/components/PrivacyModal';
 
 type Mode = 'login' | 'register';
 
@@ -22,6 +23,7 @@ export function AuthPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const handleSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault();
@@ -61,6 +63,8 @@ export function AuthPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
+
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8 gap-3">
@@ -141,6 +145,20 @@ export function AuthPage() {
               {error && (
                 <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
                   {error}
+                </p>
+              )}
+
+              {mode === 'register' && (
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  {t('privacy.register_notice')}{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowPrivacy(true)}
+                    className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                  >
+                    <ShieldCheck className="h-3 w-3" />
+                    {t('privacy.learn_more')}
+                  </button>
                 </p>
               )}
 
