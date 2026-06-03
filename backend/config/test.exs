@@ -37,3 +37,8 @@ config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+# Deshabilitar Sentry en tests
+config :sentry,
+  included_environments: [],
+  enable_source_code_context: false

@@ -406,7 +406,6 @@ model-download: ## Descargar modelo desde Hugging Face a ai_engine/model/
 	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
 		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) classifier.pt          --local-dir $(AI_MODEL_DIR) && \
 		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) thresholds.json        --local-dir $(AI_MODEL_DIR) && \
-		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) config.json            --local-dir $(AI_MODEL_DIR) && \
 		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) code_descriptions.json --local-dir $(AI_MODEL_DIR) && \
 		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) baseline_dict.json     --local-dir $(AI_MODEL_DIR)'
 	@echo "$(GREEN)Modelo descargado en $(MODEL_DIR)/$(NC)"
@@ -418,7 +417,6 @@ model-upload: ## Subir mejor modelo a Hugging Face (lee HF_TOKEN de .env)
 	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
 		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/classifier.pt        classifier.pt && \
 		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/thresholds.json      thresholds.json && \
-		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/config.json          config.json && \
 		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/code_descriptions.json code_descriptions.json && \
 		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/baseline_dict.json   baseline_dict.json'
 	rm -f $(MODEL_DIR)/classifier.pt $(MODEL_DIR)/thresholds.json
