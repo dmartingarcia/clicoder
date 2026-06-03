@@ -12,7 +12,7 @@ defmodule AppWeb.Endpoint do
   ]
 
   socket "/socket", AppWeb.UserSocket,
-    websocket: true,
+    websocket: [check_origin: ["https://api.clicoder.app", "https://clicoder.app", "http://localhost:5173"]],
     longpoll: false
 
   socket "/live", Phoenix.LiveView.Socket,

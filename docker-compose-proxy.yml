@@ -35,7 +35,7 @@ services:
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./letsencrypt:/letsencrypt
+      - ./docker/letsencrypt:/letsencrypt
       - /var/log/traefik:/var/log/traefik
     networks: [proxy, clicoder]
     labels:
@@ -60,7 +60,7 @@ services:
     container_name: cie10_maintenance
     restart: always
     volumes:
-      - ./maintenance:/usr/share/nginx/html:ro
+      - ./docker/maintenance:/usr/share/nginx/html:ro
     networks: [proxy, clicoder]
     labels:
       - "traefik.enable=true"

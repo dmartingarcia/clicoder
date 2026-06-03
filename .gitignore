@@ -94,4 +94,4 @@ tfg/**/*.run.xml
 tfg/**/*.pdf
 
 # Traefik Let's Encrypt certs
-letsencrypt/
+docker/letsencrypt/
