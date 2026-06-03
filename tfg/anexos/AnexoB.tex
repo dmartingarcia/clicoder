@@ -43,7 +43,7 @@ El orden de arranque impuesto por las dependencias de Docker Compose es el sigui
 
 \begin{enumerate}
     \item \textbf{PostgreSQL} (\texttt{db}) arranca primero; expone el puerto 5432 internamente.
-    \item \textbf{AI Engine} arranca en paralelo con la base de datos; carga el modelo en memoria durante el arranque.
+    \item \textbf{AI Engine} arranca en paralelo con la base de datos; carga el modelo en memoria durante el arranque (\textasciitilde{}13\,GB de RAM del sistema en modo CPU).
     \item \textbf{Backend} espera a que \texttt{db} y \texttt{ai\_engine} estén disponibles; ejecuta las migraciones Ecto al arrancar y crea las tablas del \emph{event store} si no existen.
     \item \textbf{Frontend} arranca una vez el backend está activo.
     \item \textbf{Mailpit} arranca en paralelo; solo se usa en entornos de desarrollo.
@@ -54,9 +54,9 @@ El orden de arranque impuesto por las dependencias de Docker Compose es el sigui
 El repositorio incluye tres ficheros de configuración adicional de Docker Compose que adaptan el despliegue al entorno de ejecución:
 
 \begin{description}
-    \item[\texttt{docker-compose.gpu.yml}] Configuración por defecto para máquinas con GPU NVIDIA. El servicio \texttt{ai\_engine} arranca con \texttt{DEVICE=cuda} y acceso al \emph{runtime} NVIDIA. Requiere el controlador NVIDIA y el toolkit de contenedores de NVIDIA instalados en el anfitrión. Tiempo de inferencia: menos de 1 segundo por informe.
+    \item[\texttt{docker-compose.gpu.yml}] Configuración por defecto para máquinas con GPU NVIDIA. El servicio \texttt{ai\_engine} arranca con \texttt{DEVICE=cuda} y acceso al \emph{runtime} NVIDIA. Requiere el controlador NVIDIA y el toolkit de contenedores de NVIDIA instalados en el anfitrión. El modelo se carga en VRAM (verificado con una RTX~4080 de 16\,GB), lo que libera la mayor parte de los \textasciitilde{}13\,GB de RAM del sistema que ocuparía en modo CPU. La construcción de la imagen GPU incluye la compilación de flash attention, lo que requiere al menos 32\,GB de RAM durante el proceso de compilación. Tiempo de inferencia: menos de 1 segundo por informe.
 
-    \item[\texttt{docker-compose.cpu.yml}] Configuración para máquinas sin GPU. Sobreescribe \texttt{DEVICE=cpu} en \texttt{ai\_engine}. El backend de atención cambia automáticamente a SDPA (\emph{Scaled Dot-Product Attention}). Tiempo de inferencia: menos de 1 segundo por informe en hardware moderno (verificado en Ryzen 7900X y Apple M4).
+    \item[\texttt{docker-compose.cpu.yml}] Configuración para máquinas sin GPU. Sobreescribe \texttt{DEVICE=cpu} en \texttt{ai\_engine}. El backend de atención cambia automáticamente a SDPA (\emph{Scaled Dot-Product Attention}). Requiere al menos 16\,GB de RAM del sistema; el entorno completo con todos los modelos cargados ocupa aproximadamente 13\,GB. Tiempo de inferencia: menos de 1 segundo por informe en hardware moderno (verificado en Ryzen 7900X y Apple M4).
 
     \item[\texttt{docker-compose.mock.yml}] Sustituye el servicio \texttt{ai\_engine} por \texttt{ai\_engine\_mock}, una implementación ligera en FastAPI que devuelve predicciones ficticias sin cargar ningún modelo. Recomendado para el desarrollo del frontend y del backend cuando no se necesita inferencia real.
 \end{description}
@@ -110,6 +110,7 @@ La Tabla~\ref{tab:envvars} recoge las variables de entorno configurables del sis
     \item[\texttt{backend/}] Aplicación Phoenix. \texttt{lib/app/} contiene la lógica de negocio (agregados, comandos, eventos, proyectores); \texttt{lib/app\_web/} contiene la capa HTTP (controladores, canales, \emph{plugs}, router).
     \item[\texttt{frontend/}] Aplicación Next.js. \texttt{src/components/} contiene los componentes de UI; \texttt{src/contexts/} los contextos de estado; \texttt{src/lib/} la configuración y utilidades de red.
     \item[\texttt{training/}] Entorno de entrenamiento aislado. \texttt{csv\_import\_scripts/} para descarga de datos; \texttt{data\_analysis/} para análisis exploratorio; \texttt{bert-classifier/} para notebooks de entrenamiento.
+    \item[\texttt{grafana/}] Configuración de aprovisionamiento de Grafana: paneles de monitorización del sistema (métricas de contenedores, backend y motor de IA) listos para importar automáticamente al arrancar el stack de monitorización.
+    \item[\texttt{prometheus/}] Configuración de Prometheus (\texttt{prometheus.yml}): definición de los \emph{targets} de scraping para el backend, el motor de IA, cAdvisor y Node Exporter.
     \item[\texttt{tfg/}] Contiene los archivos del trabajo de fin de grado, incluyendo capítulos, anexos y figuras.
-    \item[] 
 \end{description}
