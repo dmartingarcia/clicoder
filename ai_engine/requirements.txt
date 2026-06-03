@@ -13,3 +13,4 @@ sentry-sdk[fastapi]>=2.0.0
 accelerate>=0.26.0
 llama-cpp-python>=0.3.0
 sentencepiece>=0.1.99
+structlog>=24.0.0

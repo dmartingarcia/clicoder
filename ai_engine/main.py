@@ -24,16 +24,32 @@ from pathlib import Path
 from typing import Literal
 
 import sentry_sdk
+import structlog
 import torch
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from prometheus_client import Gauge, Histogram, Info
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
-logger = logging.getLogger("cie10_engine")
-logging.basicConfig(level=logging.INFO)
+# ==================== STRUCTURED LOGGING ====================
+
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer(),
+    ],
+    wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+    context_class=dict,
+    logger_factory=structlog.PrintLoggerFactory(),
+    cache_logger_on_first_use=False,
+)
+
+logger = structlog.get_logger("cie10_engine")
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 # ==================== MÉTRICAS PROMETHEUS ====================
 
@@ -225,6 +241,36 @@ app = FastAPI(
 )
 
 Instrumentator().instrument(app).expose(app)
+
+
+# ==================== MIDDLEWARE ====================
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log detallado de requests: método, path, query params, tiempo."""
+    start_time = time.perf_counter()
+
+    # Capturar parámetros de query
+    query_params = dict(request.query_params) if request.query_params else None
+
+    response = await call_next(request)
+
+    # Tiempo de procesamiento
+    duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+
+    # Log estructurado
+    logger.info(
+        "http_request",
+        method=request.method,
+        path=request.url.path,
+        status_code=response.status_code,
+        duration_ms=duration_ms,
+        query_params=query_params,
+        client_host=request.client.host if request.client else None,
+    )
+
+    return response
 
 
 # ==================== SCHEMAS ====================
