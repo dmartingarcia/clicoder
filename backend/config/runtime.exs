@@ -21,10 +21,13 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
-  if sentry_dsn = System.get_env("SENTRY_DSN") do
-    config :sentry,
-      dsn: sentry_dsn,
-      environment_name: :prod
+  case System.get_env("SENTRY_DSN") do
+    dsn when is_binary(dsn) and dsn != "" ->
+      config :sentry,
+        dsn: dsn,
+        environment_name: :prod
+    _ ->
+      :ok
   end
 end
 

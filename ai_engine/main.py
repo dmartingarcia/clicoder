@@ -341,8 +341,8 @@ def health_check():
         "model": "rigoberta-cie10-flat",
         "model_loaded": classifier is not None,
         "dict_loaded": dict_classifier is not None,
-        "summarizer_model": summarizer.model_name if summarizer else "none",
-        "summarizer_loaded": summarizer.is_loaded if summarizer else False,
+        "summarizer_model": summarizer.model_name if summarizer and hasattr(summarizer, "model_name") else "none",
+        "summarizer_loaded": summarizer.is_loaded if summarizer and hasattr(summarizer, "is_loaded") else False,
     }
 
 
