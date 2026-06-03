@@ -447,9 +447,13 @@ stop-proxy: ## Detener proxy Traefik
 
 traefik-passwd: ## Generar hash htpasswd para el dashboard. Vars: USER=admin PASSWORD=changeme
 	@echo "$(BLUE)Generando hash htpasswd...$(NC)"
-	@docker run --rm httpd:alpine htpasswd -nbm $(or $(USER),admin) $(or $(PASSWORD),changeme)
-	@echo ""
-	@echo "$(YELLOW)Copia la línea anterior como TRAEFIK_DASHBOARD_AUTH en .env$(NC)"
+	@hash=$$(docker run --rm httpd:alpine htpasswd -nbm $(or $(USER),admin) $(or $(PASSWORD),changeme)); \
+	 echo "$$hash"; \
+	 echo ""; \
+	 echo "$(YELLOW)Lista para .env (signos dolar escapados para Make):$(NC)"; \
+	 echo "$$hash" | sed 's/\$$/$$$$/g'; \
+	 echo ""; \
+	 echo "$(YELLOW)Copia la segunda linea como TRAEFIK_DASHBOARD_AUTH en .env$(NC)"
 
 start-monitoring: network-create ## Arrancar stack de monitorización (Prometheus + Grafana + Loki + cAdvisor + Node Exporter)
 	@echo "$(BLUE)Arrancando monitorización...$(NC)"
