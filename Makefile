@@ -428,7 +428,8 @@ setup: network-create ## Setup completo desde cero: down -v + build + seed (sin 
 	@[ -f .env ] || cp .env.example .env
 	$(COMPOSE_CPU) down -v --remove-orphans
 	$(COMPOSE_CPU) --progress=plain build backend frontend
-	$(MAKE) -j2 model-download backend-seed
+	$(MAKE) model-download
+	$(MAKE) backend-seed
 	@echo "$(GREEN)Setup completado. Usa 'make up' para levantar los servicios. make deploy para producción$(NC)"
 
 start-proxy: network-create ## Arrancar proxy Traefik
