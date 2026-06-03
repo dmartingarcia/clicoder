@@ -25,8 +25,12 @@ auth:
   error_invalid_credentials: "Email o password errati"
   error_not_confirmed: "Devi confermare la tua email prima di accedere"
 
+email:
+  confirmations:
+    registration_subject: "Toc toc, conferma il tuo account su Clicoder"
+
 app:
-  title: "Classificatore ICD-10"
+  title: "Classificatore ICD-10 Clicoder"
   subtitle: "Assistente di codifica medica"
   doctor: "Medico"
 

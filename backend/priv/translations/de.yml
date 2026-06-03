@@ -25,8 +25,12 @@ auth:
   error_invalid_credentials: "Falsche E-Mail oder falsches Passwort"
   error_not_confirmed: "Sie müssen Ihre E-Mail bestätigen, bevor Sie sich anmelden"
 
+email:
+  confirmations:
+    registration_subject: "Klopf, klopf – bestätige dein Konto bei Clicoder"
+
 app:
-  title: "ICD-10-Klassifikator"
+  title: "ICD-10-Klassifikator Clicoder"
   subtitle: "Assistent für medizinische Kodierung"
   doctor: "Arzt"
 
