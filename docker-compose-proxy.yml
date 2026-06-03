@@ -49,10 +49,10 @@ services:
       - "traefik.http.routers.dashboard.middlewares=dashboard-auth,dashboard-ratelimit"
       # Basic auth — hash generado con: make traefik-passwd
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
-      # Rate limit: 5 req x min, burst de 5 → bloqueo efectivo de 10 min tras agotarlo
-      - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.average=5"
-      - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.burst=5"
-      - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.period=10m"
+      # Rate limit: 60 req / min, burst de 20
+      - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.average=60"
+      - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.burst=20"
+      - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.period=1m"
 
   # Fallback cuando el frontend está caído. Prioridad 1 < frontend (10).
   maintenance:
