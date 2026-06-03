@@ -7,7 +7,10 @@ defmodule App.Application do
 
   @impl true
   def start(_type, _args) do
-    :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{})
+    # Solo inicializar Sentry si hay DSN configurado (típicamente en prod)
+    if Application.get_env(:sentry, :dsn) do
+      :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{})
+    end
 
     children = [
       AppWeb.Telemetry,
