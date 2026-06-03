@@ -16,7 +16,7 @@ services:
       - "1025:1025"   # SMTP
     environment:
       MP_MAX_MESSAGES: 500
-    networks: [ciecoder]
+    networks: [clicoder]
 
   # Base de Datos: PostgreSQL (Doble propósito: App y EventStore)
   db:
@@ -36,7 +36,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks: [ciecoder]
+    networks: [clicoder]
 
   # Entrenamiento: Python + PyTorch + Jupyter
   training:
@@ -88,7 +88,7 @@ services:
       - ./ai_engine:/app
       - ./training/csv_import_scripts:/data
       - ./.huggingface_cache:/root/.cache/huggingface
-    networks: [ciecoder]
+    networks: [clicoder]
 
   # Backend: Elixir Phoenix + Commanded
   backend:
@@ -124,7 +124,7 @@ services:
       - backend_build:/app/_build
       - backend_deps:/app/deps
       - ./training/csv_import_scripts/cie10-csvs:/data/cie10-csvs:ro
-    networks: [ciecoder]
+    networks: [clicoder]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`api.${DOMAIN:-localhost}`)"
@@ -144,7 +144,7 @@ services:
       - backend
     ports:
       - "${FRONTEND_PORT}:3000"
-    networks: [ciecoder]
+    networks: [clicoder]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`${DOMAIN:-localhost}`)"
@@ -159,5 +159,5 @@ volumes:
   backend_deps:
 
 networks:
-  ciecoder:
+  clicoder:
     external: true
