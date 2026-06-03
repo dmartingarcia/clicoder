@@ -41,12 +41,12 @@ Tras ejecutar \texttt{provision.sh}, el operador edita el fichero \texttt{.env} 
 El proceso completo desde un servidor recién aprovisionado se reduce a tres pasos:
 
 \begin{enumerate}
-    \item \textbf{Aprovisionamiento del servidor}: \texttt{bash provision.sh}
+    \item \textbf{Aprovisionamiento del servidor}: \texttt{sudo bash provision.sh} (requiere root para instalar Docker, crear el usuario \texttt{app} y configurar fail2ban).
     \item \textbf{Setup inicial} (construcción de imágenes, migraciones y seed): \texttt{make setup}
     \item \textbf{Despliegue}: \texttt{make deploy}
 \end{enumerate}
 
-\texttt{make deploy} arranca en orden: la red Docker compartida, Traefik (proxy), el \emph{stack} de monitorización (Prometheus + Grafana) y los servicios de la aplicación (base de datos, backend, frontend, motor de IA).
+\texttt{make deploy} arranca en orden: la red Docker compartida, Traefik (proxy), el \emph{stack} de monitorización (Prometheus + Grafana) y los servicios de la aplicación (base de datos, backend, frontend, motor de IA). En entorno de desarrollo el flujo es equivalente pero sin Traefik ni monitorización: \texttt{make setup up}.
 
 \section{Proxy inverso con Traefik}
 
@@ -96,6 +96,10 @@ El script \texttt{provision.sh} instala y configura fail2ban con dos \emph{jails
 \end{table}
 
 El \emph{jail} de Traefik se apoya en que el servicio escribe los \emph{access logs} en formato JSON al fichero \texttt{/var/log/traefik/access.log}, montado como \emph{bind mount} desde el host. El filtro personalizado \texttt{traefik-auth} extrae el campo \texttt{ClientHost} de cada línea con \texttt{DownstreamStatus: 401}, lo que cubre cualquier \emph{endpoint} de autenticación del backend sin necesidad de hardcodear rutas.
+
+\section{Copias de seguridad}
+
+Contabo incluye en el plan contratado un servicio de \emph{snapshots} diarias automáticas del servidor completo. Cada \emph{snapshot} captura el estado íntegro del sistema, incluyendo los volúmenes Docker donde reside la base de datos PostgreSQL, por lo que no es necesario implementar un mecanismo de backup con \texttt{pg\_dump} adicional.
 
 \section{Comparativa de costes}
 
