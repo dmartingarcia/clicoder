@@ -1,10 +1,11 @@
-.PHONY: ai-augment ai-baseline-dict ai-combine ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-proxy stop-monitoring stop-proxy traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: ai-augment ai-baseline-dict ai-combine ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy stop-monitoring stop-proxy traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 # Variables — compose stacks
 COMPOSE            = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
 COMPOSE_CPU        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
 COMPOSE_MOCK       = docker compose -f docker-compose.yml -f docker-compose.mock.yml
-COMPOSE_MONITORING = docker compose -f docker-compose.monitoring.yml
+COMPOSE_MONITORING     = docker compose -f docker-compose.monitoring.yml
+COMPOSE_MONITORING_DEV = docker compose -f docker-compose.monitoring.yml -f docker-compose.monitoring.dev.yml
 COMPOSE_PROXY      = docker compose -f docker-compose-proxy.yml
 COMPOSE_DEV        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.dev.yml
 COMPOSE_DEV_GPU    = docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.dev.yml
@@ -446,9 +447,14 @@ traefik-passwd: ## Generar hash htpasswd para el dashboard. Vars: USER=admin PAS
 	@echo ""
 	@echo "$(YELLOW)Copia la línea anterior como TRAEFIK_DASHBOARD_AUTH en .env$(NC)"
 
-start-monitoring: network-create ## Arrancar stack de monitorización (Prometheus + Grafana + cAdvisor + Node Exporter)
+start-monitoring: network-create ## Arrancar stack de monitorización (Prometheus + Grafana + Loki + cAdvisor + Node Exporter)
 	@echo "$(BLUE)Arrancando monitorización...$(NC)"
 	$(COMPOSE_MONITORING) up -d
+	@echo "$(GREEN)Grafana:  https://grafana.$${DOMAIN:-localhost}$(NC)"
+
+start-monitoring-dev: network-create ## Arrancar monitorización con puertos expuestos (acceso local sin Traefik)
+	@echo "$(BLUE)Arrancando monitorización (dev)...$(NC)"
+	$(COMPOSE_MONITORING_DEV) up -d
 	@echo "$(GREEN)Grafana:       http://localhost:3030  (admin / $${GRAFANA_PASSWORD:-changeme})$(NC)"
 	@echo "$(GREEN)Prometheus:    http://localhost:9090$(NC)"
 	@echo "$(GREEN)cAdvisor:      http://localhost:8082$(NC)"
@@ -463,13 +469,9 @@ deploy: network-create start-proxy start-monitoring ## Deploy completo. GPU=1 pa
 	$(if $(filter 1,$(GPU)),$(COMPOSE_PROD_GPU),$(COMPOSE_PROD)) up -d db backend frontend ai_engine
 	@echo ""
 	@echo "$(GREEN)Deploy completado:$(NC)"
-	@echo "  - Frontend:    http://localhost:$${FRONTEND_PORT:-3000}  ->  http://$${DOMAIN:-localhost}"
-	@echo "  - Backend API: http://localhost:$${BACKEND_PORT:-4000}  ->  http://api.$${DOMAIN:-localhost}"
-	@echo "  - Grafana:     http://localhost:3030  Prod ->  http://grafana.$${DOMAIN:-localhost}"
-	@echo "  - Traefik:     http://localhost:8080  (dashboard)"
-	@echo "  - Prometheus:  http://localhost:9090"
-	@echo "  - cAdvisor:    http://localhost:8082"
-	@echo "  - Mailpit:     http://localhost:8025"
+	@echo "  - Frontend:    https://$${DOMAIN:-localhost}"
+	@echo "  - Backend API: https://api.$${DOMAIN:-localhost}"
+	@echo "  - Grafana:     https://grafana.$${DOMAIN:-localhost}"
 
 shell: ## Abrir shell interactivo (pregunta por contenedor)
 	@echo "$(GREEN)Contenedores disponibles:$(NC)"
