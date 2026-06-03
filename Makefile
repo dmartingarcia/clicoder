@@ -10,7 +10,7 @@ COMPOSE_DEV        = docker compose -f docker-compose.yml -f docker-compose.cpu.
 COMPOSE_DEV_GPU    = docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.dev.yml
 COMPOSE_PROD       = docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.prod.yml
 COMPOSE_PROD_GPU   = docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml
-NETWORK            = ciecoder
+NETWORK            = clicoder
 BACKEND = $(COMPOSE) exec backend
 FRONTEND = $(COMPOSE) exec frontend
 AI = $(COMPOSE) exec ai_engine
@@ -426,8 +426,8 @@ network-create: ## Crear red Docker compartida entre stacks (proxy, app, monitor
 setup: network-create ## Setup completo desde cero: down -v + build + seed (sin levantar). Luego usa 'make deploy'
 	@[ -f .env ] || cp .env.example .env
 	$(COMPOSE_CPU) down -v --remove-orphans
-	$(COMPOSE_CPU) build --progress=plain backend
-	$(COMPOSE_CPU) build --progress=plain frontend
+	$(COMPOSE_CPU) --progress=plain build backend
+	$(COMPOSE_CPU) --progress=plain build frontend
 	$(MAKE) model-download
 	$(MAKE) backend-seed
 	@echo "$(GREEN)Setup completado. Usa 'make up' para levantar los servicios. make deploy para producción$(NC)"
