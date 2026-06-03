@@ -62,7 +62,7 @@ services:
 
   # Métricas por contenedor: CPU, memoria, red, disco
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.56.2
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
     container_name: cie10_cadvisor
     restart: always
     privileged: true

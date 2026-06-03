@@ -1,8 +1,5 @@
-# docker-compose-proxy.yml
-# Proxy inverso Traefik v3. Auto-descubre servicios vía labels de Docker.
-# Uso: docker compose -f docker-compose-proxy.yml up -d
-# Requiere red externa: make network-create
-# Generar hash del dashboard: make traefik-passwd
+# Traefik v3 — proxy inverso. Red externa: make network-create
+# Dashboard hash: make traefik-passwd
 
 services:
   traefik:
@@ -49,6 +46,23 @@ services:
       - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.average=5"
       - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.burst=5"
       - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.period=10m"
+
+  # Fallback cuando el frontend está caído. Prioridad 1 < frontend (10).
+  maintenance:
+    image: nginx:1.27-alpine
+    container_name: cie10_maintenance
+    restart: always
+    volumes:
+      - ./maintenance:/usr/share/nginx/html:ro
+    networks: [proxy, clicoder]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.maintenance.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.maintenance.entrypoints=websecure"
+      - "traefik.http.routers.maintenance.tls=true"
+      - "traefik.http.routers.maintenance.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.maintenance.priority=1"
+      - "traefik.http.services.maintenance.loadbalancer.server.port=80"
 
 networks:
   proxy:

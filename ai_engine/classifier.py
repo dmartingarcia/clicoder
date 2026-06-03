@@ -118,9 +118,7 @@ class CIE10Classifier:
                     thr_data = json.load(f)
                 self.per_class_thresholds = thr_data.get("per_class_thresholds")
 
-        print(
-            f"CIE10Classifier cargado: {len(self.code_to_idx)} códigos · device={self.device}"
-        )
+        print(f"CIE10Classifier cargado: {len(self.code_to_idx)} códigos · device={self.device}")
 
     def predict(
         self,
@@ -185,9 +183,7 @@ class CIE10Classifier:
                 "probability": float(prob),
                 "chapter": chapter or "",
                 "chapter_name": (
-                    self.chapters.get(chapter or "", {}).get("name", "")
-                    if chapter
-                    else ""
+                    self.chapters.get(chapter or "", {}).get("name", "") if chapter else ""
                 ),
             }
             if code_descriptions is not None:
@@ -199,10 +195,7 @@ class CIE10Classifier:
         predictions = [
             p
             for p in predictions
-            if not any(
-                other.startswith(p["code"]) and other != p["code"]
-                for other in codes_set
-            )
+            if not any(other.startswith(p["code"]) and other != p["code"] for other in codes_set)
         ]
 
         predictions.sort(key=lambda x: x["probability"], reverse=True)

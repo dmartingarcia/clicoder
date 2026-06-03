@@ -61,9 +61,7 @@ class TestExtractChapter:
 class TestLoadCodeDescriptions:
     def test_loads_valid_json(self, tmp_path):
         data = {"I10": "Hipertensión esencial", "J45.0": "Asma alérgica"}
-        (tmp_path / "code_descriptions.json").write_text(
-            json.dumps(data), encoding="utf-8"
-        )
+        (tmp_path / "code_descriptions.json").write_text(json.dumps(data), encoding="utf-8")
 
         result = load_code_descriptions(str(tmp_path))
         assert result["I10"] == "Hipertensión esencial"
@@ -74,9 +72,7 @@ class TestLoadCodeDescriptions:
         assert result == {}
 
     def test_returns_empty_dict_on_invalid_json(self, tmp_path):
-        (tmp_path / "code_descriptions.json").write_text(
-            "not valid json", encoding="utf-8"
-        )
+        (tmp_path / "code_descriptions.json").write_text("not valid json", encoding="utf-8")
         result = load_code_descriptions(str(tmp_path))
         assert result == {}
 
