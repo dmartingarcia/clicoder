@@ -245,6 +245,42 @@ class AnalysisRequest(BaseModel):
     engine: Literal["bert", "dict", "both"] = "bert"
 
 
+class TimingInfo(BaseModel):
+    """Información de timing de la inferencia en milisegundos.
+
+    Nota: classifier_ms y summarizer_ms se ejecutan en paralelo,
+    por lo que total_ms será menor que su suma.
+    """
+
+    classifier_ms: float
+    summarizer_ms: float
+    total_ms: float
+
+
+class CodePrediction(BaseModel):
+    """Código CIE-10 predicho con metadatos."""
+
+    code: str
+    description: str
+    reason: str
+    confidence: float
+    engine: str
+
+
+class Card(BaseModel):
+    """Tarjeta de resultado (resumen o códigos)."""
+
+    type: str
+    content: str | list[CodePrediction]
+
+
+class PredictResponse(BaseModel):
+    """Respuesta del endpoint /predict con timing desglosado."""
+
+    cards: list[Card]
+    timing: TimingInfo
+
+
 class TokenCountRequest(BaseModel):
     text: str
 
@@ -306,11 +342,24 @@ async def _predict_bert(text: str):
         )
 
     _t0 = time.perf_counter()
-    predictions, summary_text = await asyncio.gather(
-        asyncio.to_thread(classifier.predict, text, 10, code_descriptions or None),
-        _generate_summary(text),
+
+    # Ejecutar en paralelo y medir tiempos individuales
+    async def _timed_classifier():
+        _t_start = time.perf_counter()
+        result = await asyncio.to_thread(classifier.predict, text, 10, code_descriptions or None)
+        return result, time.perf_counter() - _t_start
+
+    async def _timed_summary():
+        _t_start = time.perf_counter()
+        result = await _generate_summary(text)
+        return result, time.perf_counter() - _t_start
+
+    (predictions, _t_classifier), (summary_text, _t_summary) = await asyncio.gather(
+        _timed_classifier(), _timed_summary()
     )
-    INFERENCE_LATENCY.labels(engine="bert").observe(time.perf_counter() - _t0)
+
+    _t_total = time.perf_counter() - _t0
+    INFERENCE_LATENCY.labels(engine="bert").observe(_t_total)
 
     return {
         "cards": [
@@ -331,7 +380,12 @@ async def _predict_bert(text: str):
                     for p in predictions
                 ],
             },
-        ]
+        ],
+        "timing": {
+            "classifier_ms": round(_t_classifier * 1000, 2),
+            "summarizer_ms": round(_t_summary * 1000, 2),
+            "total_ms": round(_t_total * 1000, 2),
+        },
     }
 
 
@@ -348,11 +402,24 @@ async def _predict_dict(text: str):  # noqa: E302
         )
 
     _t0 = time.perf_counter()
-    predictions, summary_text = await asyncio.gather(
-        asyncio.to_thread(dict_classifier.predict, text),
-        _generate_summary(text),
+
+    # Ejecutar en paralelo y medir tiempos individuales
+    async def _timed_classifier():
+        _t_start = time.perf_counter()
+        result = await asyncio.to_thread(dict_classifier.predict, text)
+        return result, time.perf_counter() - _t_start
+
+    async def _timed_summary():
+        _t_start = time.perf_counter()
+        result = await _generate_summary(text)
+        return result, time.perf_counter() - _t_start
+
+    (predictions, _t_classifier), (summary_text, _t_summary) = await asyncio.gather(
+        _timed_classifier(), _timed_summary()
     )
-    INFERENCE_LATENCY.labels(engine="dict").observe(time.perf_counter() - _t0)
+
+    _t_total = time.perf_counter() - _t0
+    INFERENCE_LATENCY.labels(engine="dict").observe(_t_total)
 
     return {
         "cards": [
@@ -371,7 +438,12 @@ async def _predict_dict(text: str):  # noqa: E302
                     for p in predictions
                 ],
             },
-        ]
+        ],
+        "timing": {
+            "classifier_ms": round(_t_classifier * 1000, 2),
+            "summarizer_ms": round(_t_summary * 1000, 2),
+            "total_ms": round(_t_total * 1000, 2),
+        },
     }
 
 
@@ -382,10 +454,12 @@ async def _predict_both(text: str):
     frontend pueda distinguir el origen. No se deduplicaan: un código puede
     aparecer dos veces si ambos motores lo detectan.
     """
+    _t0 = time.perf_counter()
     bert_result, dict_result = await asyncio.gather(
         _predict_bert(text),
         _predict_dict(text),
     )
+    _t_total = time.perf_counter() - _t0
 
     bert_codes = bert_result["cards"][1]["content"]
     dict_codes = dict_result["cards"][1]["content"]
@@ -398,7 +472,14 @@ async def _predict_both(text: str):
         "cards": [
             summary_card,
             {"type": "codes", "content": all_codes},
-        ]
+        ],
+        "timing": {
+            "bert_classifier_ms": bert_result.get("timing", {}).get("classifier_ms", 0),
+            "bert_summarizer_ms": bert_result.get("timing", {}).get("summarizer_ms", 0),
+            "dict_classifier_ms": dict_result.get("timing", {}).get("classifier_ms", 0),
+            "dict_summarizer_ms": dict_result.get("timing", {}).get("summarizer_ms", 0),
+            "total_ms": round(_t_total * 1000, 2),
+        },
     }
 
 

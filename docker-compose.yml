@@ -85,11 +85,11 @@ services:
       - ./training/csv_import_scripts:/data
       - ./.huggingface_cache:/cache/huggingface
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/ || exit 1"]
-      interval: 15s
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 10s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 20
+      start_period: 30s
     networks: [clicoder]
 
   # Backend: Elixir Phoenix + Commanded
