@@ -82,9 +82,7 @@ def paraphrase(
         text = " ".join(words[:MAX_INPUT_WORDS])
 
     messages = [{"role": "user", "content": PARAPHRASE_PROMPT.format(text=text)}]
-    prompt = tokenizer.apply_chat_template(
-        messages, tokenize=False, add_generation_prompt=True
-    )
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     inputs = tokenizer(prompt, return_tensors="pt").to(device)
     input_len = inputs["input_ids"].shape[1]
 
@@ -202,9 +200,7 @@ def main() -> None:
             global_idx = pass_i * total_notes + (i - 1)
             if global_idx < already_done:
                 n_done += 1
-                print(
-                    f"[pass {pass_i + 1}/{args.n_per_note}][{i}/{total_notes}] (ya procesado)"
-                )
+                print(f"[pass {pass_i + 1}/{args.n_per_note}][{i}/{total_notes}] (ya procesado)")
                 continue
 
             text = row.get("text", "")

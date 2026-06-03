@@ -89,9 +89,7 @@ class MedicalSummarizer:
 
     def __init__(self, model_key: str, mode: str = "summary"):
         if model_key not in MODELS:
-            raise ValueError(
-                f"Modelo desconocido: '{model_key}'. Opciones: {list(MODELS.keys())}"
-            )
+            raise ValueError(f"Modelo desconocido: '{model_key}'. Opciones: {list(MODELS.keys())}")
         if mode not in MODES:
             raise ValueError(f"Modo desconocido: '{mode}'. Opciones: {list(MODES)}")
         self._model_key = model_key
@@ -303,15 +301,10 @@ def _watch_gguf_download(
 def _build_prompt(model_key: str, mode: str, text: str) -> str:
     """Construye el prompt en el formato de chat de cada modelo."""
     system = _SYSTEM_SUMMARY if mode == "summary" else _SYSTEM_PARAPHRASE
-    user_msg = (_USER_SUMMARY if mode == "summary" else _USER_PARAPHRASE).format(
-        text=text
-    )
+    user_msg = (_USER_SUMMARY if mode == "summary" else _USER_PARAPHRASE).format(text=text)
 
     if model_key == "gemma3":
-        return (
-            f"<start_of_turn>user\n{system}\n\n{user_msg}<end_of_turn>\n"
-            "<start_of_turn>model\n"
-        )
+        return f"<start_of_turn>user\n{system}\n\n{user_msg}<end_of_turn>\n<start_of_turn>model\n"
     if model_key in ("phi4", "qwen"):
         return (
             f"<|im_start|>system\n{system}<|im_end|>\n"

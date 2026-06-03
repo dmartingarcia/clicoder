@@ -182,12 +182,8 @@ class CIE10Dataset(Dataset):
         self.num_labels = len(code_to_idx)
         self.full_codes = full_codes
         self.chapters = chapters
-        self.sliding_window = (
-            sliding_window  # True → encode full text as overlapping chunks
-        )
-        self.chunk_overlap = (
-            chunk_overlap  # stride in tokens between consecutive chunks
-        )
+        self.sliding_window = sliding_window  # True → encode full text as overlapping chunks
+        self.chunk_overlap = chunk_overlap  # stride in tokens between consecutive chunks
 
     def __len__(self):
         return len(self.texts)
@@ -358,9 +354,7 @@ def pretrain(model, pretrain_loader, device, epochs, lr, weight_decay):
             step_start = _time.time()
             optimizer.zero_grad()
             with autocast:
-                logits = model(
-                    batch["input_ids"].to(device), batch["attention_mask"].to(device)
-                )
+                logits = model(batch["input_ids"].to(device), batch["attention_mask"].to(device))
                 loss = loss_fn(logits, batch["labels"].to(device))
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -447,9 +441,7 @@ class FlatClassifier(nn.Module):
             elif hasattr(enc, "layers"):
                 layers = enc.layers
         if layers is None:
-            print(
-                f"[model] freeze_layers={freeze_layers}: arquitectura no reconocida, se omite"
-            )
+            print(f"[model] freeze_layers={freeze_layers}: arquitectura no reconocida, se omite")
             return
         total = len(layers)
         n = min(freeze_layers, total)
@@ -624,11 +616,7 @@ def _map_codiesp(T, PROBS):
     Solo documentos con al menos un código positivo contribuyen a la media.
     Directamente comparable con el MAP del benchmark CodiEsp (best≈0.48).
     """
-    aps = [
-        float(average_precision_score(T[i], PROBS[i]))
-        for i in range(len(T))
-        if T[i].sum() > 0
-    ]
+    aps = [float(average_precision_score(T[i], PROBS[i])) for i in range(len(T)) if T[i].sum() > 0]
     return float(np.mean(aps)) if aps else 0.0
 
 
@@ -762,9 +750,7 @@ def compute_pos_weight(train_loader, num_labels: int, device, cap: float = 50.0)
         total += batch["labels"].shape[0]
     neg_counts = total - pos_counts
     weight = (neg_counts / pos_counts.clamp(min=1)).clamp(max=cap)
-    print(
-        f"[loss] pos_weight media={weight.mean():.1f}  max={weight.max():.1f}  (cap={cap})"
-    )
+    print(f"[loss] pos_weight media={weight.mean():.1f}  max={weight.max():.1f}  (cap={cap})")
     return weight.to(device)
 
 
@@ -781,9 +767,7 @@ def build_hier_pairs(code_to_idx):
     if not child_ids:
         return None
     print(f"[hier] {len(child_ids)} child→parent pairs found in label set")
-    return torch.tensor(child_ids, dtype=torch.long), torch.tensor(
-        parent_ids, dtype=torch.long
-    )
+    return torch.tensor(child_ids, dtype=torch.long), torch.tensor(parent_ids, dtype=torch.long)
 
 
 def train(
@@ -826,9 +810,7 @@ def train(
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="max", factor=0.5, patience=max(1, patience // 2)
         )
-        print(
-            f"[scheduler] ReduceLROnPlateau  factor=0.5  patience={max(1, patience // 2)}"
-        )
+        print(f"[scheduler] ReduceLROnPlateau  factor=0.5  patience={max(1, patience // 2)}")
     else:
         # Cosine con warmup (default): warmup lineal + decaída coseno hasta 0
         total_opt_steps = (len(train_loader) // grad_accum) * epochs
@@ -838,16 +820,10 @@ def train(
             num_warmup_steps=warmup_steps,
             num_training_steps=total_opt_steps,
         )
-        print(
-            f"[scheduler] cosine  warmup={warmup_steps} steps  total={total_opt_steps} steps"
-        )
+        print(f"[scheduler] cosine  warmup={warmup_steps} steps  total={total_opt_steps} steps")
     if asl_gamma_neg > 0 or asl_gamma_pos > 0:
-        loss_fn = AsymmetricLoss(
-            gamma_neg=asl_gamma_neg, gamma_pos=asl_gamma_pos, clip=asl_clip
-        )
-        print(
-            f"[loss] AsymmetricLoss  γ-={asl_gamma_neg}  γ+={asl_gamma_pos}  clip={asl_clip}"
-        )
+        loss_fn = AsymmetricLoss(gamma_neg=asl_gamma_neg, gamma_pos=asl_gamma_pos, clip=asl_clip)
+        print(f"[loss] AsymmetricLoss  γ-={asl_gamma_neg}  γ+={asl_gamma_pos}  clip={asl_clip}")
     else:
         pos_weight = compute_pos_weight(
             train_loader, model.classifier.out_features, device, cap=pos_weight_cap
@@ -912,9 +888,7 @@ def train(
                     # Penalizar cuando logit_hijo > logit_padre: relu(child - parent).
                     # Asimétrico: no penaliza si padre > hijo (consistente). No modifica la
                     # arquitectura — solo presiona al modelo a activar el padre cuando activa el hijo.
-                    hier_loss = torch.relu(
-                        logits[:, hier_child] - logits[:, hier_parent]
-                    ).mean()
+                    hier_loss = torch.relu(logits[:, hier_child] - logits[:, hier_parent]).mean()
                     loss = (bce_loss + lambda_hier * hier_loss) / grad_accum
                 else:
                     loss = bce_loss / grad_accum
@@ -1014,9 +988,7 @@ def main():
     script_dir = Path(__file__).resolve().parent
     data_dir = script_dir / "../training/csv_import_scripts"
 
-    parser = argparse.ArgumentParser(
-        description="Train flat CIE-10 classifier (RigoBERTa)"
-    )
+    parser = argparse.ArgumentParser(description="Train flat CIE-10 classifier (RigoBERTa)")
     parser.add_argument(
         "--train_file",
         default=str(data_dir / "codiesp_csvs/codiesp_D_source_train.csv"),
@@ -1025,9 +997,7 @@ def main():
         "--val_file",
         default=str(data_dir / "codiesp_csvs/codiesp_D_source_validation.csv"),
     )
-    parser.add_argument(
-        "--cie10_file", default=str(data_dir / "cie10-csvs/cie10-es-diagnoses.csv")
-    )
+    parser.add_argument("--cie10_file", default=str(data_dir / "cie10-csvs/cie10-es-diagnoses.csv"))
     parser.add_argument("--output_dir", default=str(script_dir / "model"))
     parser.add_argument("--model_name", default="IIC/RigoBERTa-Clinical")
     parser.add_argument("--max_length", type=int, default=1024)
@@ -1206,9 +1176,7 @@ def main():
             device = torch.device("cpu")
     else:
         device = torch.device(args.device)
-    print(
-        f"\n[setup] device={device}  model={args.model_name}  max_length={args.max_length}"
-    )
+    print(f"\n[setup] device={device}  model={args.model_name}  max_length={args.max_length}")
 
     # Data
     train_df, val_df = load_data(args.train_file, args.val_file)
@@ -1363,12 +1331,8 @@ def main():
         probs_val, targets_val, global_thr=best_global_thr
     )
     P_per_class = (probs_val >= per_class_thr).astype(int)
-    f1_per_class_micro = float(
-        f1_score(targets_val, P_per_class, average="micro", zero_division=0)
-    )
-    f1_per_class_macro = float(
-        f1_score(targets_val, P_per_class, average="macro", zero_division=0)
-    )
+    f1_per_class_micro = float(f1_score(targets_val, P_per_class, average="micro", zero_division=0))
+    f1_per_class_macro = float(f1_score(targets_val, P_per_class, average="macro", zero_division=0))
     print(
         f"[threshold] por clase → F1-micro={f1_per_class_micro:.4f}  F1-macro={f1_per_class_macro:.4f}"
     )
@@ -1382,12 +1346,8 @@ def main():
     final_thr = best_global_thr
     fm = evaluate(model, val_loader, device, threshold=final_thr)
     print(f"\n[result] threshold={final_thr}")
-    print(
-        f"  micro — P={fm['p_micro']:.4f}  R={fm['r_micro']:.4f}  F1={fm['f1_micro']:.4f}"
-    )
-    print(
-        f"  macro — P={fm['p_macro']:.4f}  R={fm['r_macro']:.4f}  F1={fm['f1_macro']:.4f}"
-    )
+    print(f"  micro — P={fm['p_micro']:.4f}  R={fm['r_micro']:.4f}  F1={fm['f1_micro']:.4f}")
+    print(f"  macro — P={fm['p_macro']:.4f}  R={fm['r_macro']:.4f}  F1={fm['f1_macro']:.4f}")
 
     # ---- CSV de run ----
     import csv
@@ -1480,9 +1440,7 @@ def main():
         "val_f1_macro": round(fm["f1_macro"], 6),
         "val_map_macro": round(fm["map_macro"], 6),
         "total_seconds": round(sum(h["epoch_seconds"] for h in history), 1),
-        "avg_epoch_seconds": round(
-            sum(h["epoch_seconds"] for h in history) / len(history), 1
-        ),
+        "avg_epoch_seconds": round(sum(h["epoch_seconds"] for h in history) / len(history), 1),
         "sliding_window": args.sliding_window,
         "chunk_overlap": args.chunk_overlap if args.sliding_window else "",
         "pretrain_epochs": args.pretrain_epochs,
@@ -1554,9 +1512,7 @@ def main():
     ax1.legend()
     ax1.grid(True, alpha=0.3)
 
-    ax2.plot(
-        epochs_x, p_micro, marker="^", color="royalblue", label="Precision (micro)"
-    )
+    ax2.plot(epochs_x, p_micro, marker="^", color="royalblue", label="Precision (micro)")
     ax2.plot(epochs_x, r_micro, marker="v", color="tomato", label="Recall (micro)")
     ax2.plot(
         epochs_x,

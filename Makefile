@@ -232,7 +232,7 @@ backend-format: ## Formatear código del backend
 	$(BACKEND) mix format
 
 backend-install: ## Instalar dependencias del backend
-	$(COMPOSE_CPU) run --rm backend mix deps.get
+	$(COMPOSE_CPU) run --rm backend sh -c "mix deps.get && mix deps.compile && mix compile"
 
 backend-lint: ## Lint del backend (format check + credo)
 	$(BACKEND) mix deps.get
@@ -426,10 +426,8 @@ network-create: ## Crear red Docker compartida entre stacks (proxy, app, monitor
 setup: network-create ## Setup completo desde cero: down -v + build + seed (sin levantar). Luego usa 'make deploy'
 	@[ -f .env ] || cp .env.example .env
 	$(COMPOSE_CPU) down -v --remove-orphans
-	$(COMPOSE_CPU) --progress=plain build backend
-	$(COMPOSE_CPU) --progress=plain build frontend
-	$(MAKE) model-download
-	$(MAKE) backend-seed
+	$(COMPOSE_CPU) --progress=plain build backend frontend
+	$(MAKE) -j2 model-download backend-seed
 	@echo "$(GREEN)Setup completado. Usa 'make up' para levantar los servicios. make deploy para producción$(NC)"
 
 start-proxy: network-create ## Arrancar proxy Traefik
@@ -460,10 +458,8 @@ stop-monitoring: ## Detener stack de monitorización
 	@echo "$(YELLOW)Deteniendo monitorización...$(NC)"
 	$(COMPOSE_MONITORING) down
 
-deploy: network-create ## Deploy completo. GPU=1 para modo GPU
+deploy: network-create start-proxy start-monitoring ## Deploy completo. GPU=1 para modo GPU
 	@echo "$(BLUE)Desplegando CIE-10...$(NC)"
-	$(MAKE) start-proxy
-	$(MAKE) start-monitoring
 	$(if $(filter 1,$(GPU)),$(COMPOSE_PROD_GPU),$(COMPOSE_PROD)) up -d db backend frontend ai_engine
 	@echo ""
 	@echo "$(GREEN)Deploy completado:$(NC)"

@@ -58,9 +58,7 @@ class NLLBTranslator:
         print(f"[nllb] cargando {model_name} en {device}…")
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(
-            model_name, torch_dtype=dtype
-        ).to(device)
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name, torch_dtype=dtype).to(device)
         self.model.eval()
         self.device = device
         self.batch_size = batch_size
@@ -98,8 +96,7 @@ class AzureTranslator:
 
         if not key:
             raise ValueError(
-                "Azure Translator key vacío. "
-                "Exporta AZURE_TRANSLATOR_KEY o usa --azure_key."
+                "Azure Translator key vacío. Exporta AZURE_TRANSLATOR_KEY o usa --azure_key."
             )
         self._requests = requests
         self.key = key
@@ -135,9 +132,7 @@ class AzureTranslator:
                         flush=True,
                     )
                     time.sleep(1)
-                print(
-                    f"\r[azure] 429 rate-limit (retry #{retries}) — reintentando…          "
-                )
+                print(f"\r[azure] 429 rate-limit (retry #{retries}) — reintentando…          ")
                 continue
             retries = 0
             resp.raise_for_status()
@@ -250,9 +245,7 @@ def main() -> None:
         help="Región del recurso Azure (default: global)",
     )
     # Data options
-    parser.add_argument(
-        "--input_file", default="/data/codiesp_csvs/codiesp_D_source_train.csv"
-    )
+    parser.add_argument("--input_file", default="/data/codiesp_csvs/codiesp_D_source_train.csv")
     parser.add_argument(
         "--output_file",
         default="/data/codiesp_csvs/codiesp_D_source_train_augmented.csv",
@@ -293,9 +286,7 @@ def main() -> None:
 
     if args.backend == "azure":
         azure_chars = total_chars * len(args.pivot_langs) * 2
-        print(
-            f"[augment] Azure chars estimados: {azure_chars:,} (free tier: 2,000,000/mes)"
-        )
+        print(f"[augment] Azure chars estimados: {azure_chars:,} (free tier: 2,000,000/mes)")
 
     if args.dry_run:
         print("[augment] --dry_run: sin traducción. Saliendo.")
@@ -330,9 +321,7 @@ def main() -> None:
                     file=sys.stderr,
                 )
                 continue
-            print(
-                f"\n[augment] pivot={pivot} → {out_path.name} | solo fila {args.only_row}"
-            )
+            print(f"\n[augment] pivot={pivot} → {out_path.name} | solo fila {args.only_row}")
         elif args.resume and out_path.exists():
             already_done = _count_rows(str(out_path)) - len(rows)
             print(

@@ -94,9 +94,7 @@ def main():
     ax.grid(axis="y", linestyle="--", alpha=0.4)
 
     # threshold legend patches
-    patches = [
-        mpatches.Patch(color=c, label=f"thr={t}") for t, c in thr_colours.items()
-    ]
+    patches = [mpatches.Patch(color=c, label=f"thr={t}") for t, c in thr_colours.items()]
     ax.legend(handles=patches, title="Threshold", fontsize=8, loc="upper right")
 
     # ── panel 2: F1-macro ──────────────────────────────────────────────────────
@@ -112,12 +110,8 @@ def main():
     # ── panel 3: epochs run + max_length ─────────────────────────────────
     ax3 = axes[2]
     ax3b = ax3.twinx()
-    ax3.bar(
-        x - 0.15, epochs, width=0.3, color="#76b7b2", alpha=0.85, label="Epochs run"
-    )
-    ax3b.bar(
-        x + 0.15, max_len, width=0.3, color="#edc948", alpha=0.7, label="max_length"
-    )
+    ax3.bar(x - 0.15, epochs, width=0.3, color="#76b7b2", alpha=0.85, label="Epochs run")
+    ax3b.bar(x + 0.15, max_len, width=0.3, color="#edc948", alpha=0.7, label="max_length")
     ax3.set_ylabel("Epochs run", color="#76b7b2")
     ax3b.set_ylabel("max_length", color="#edc948")
     ax3.set_title("Epochs run  /  max_length per run", fontsize=10)
@@ -181,7 +175,9 @@ def _plot_epochs(history_files: list, out_path: pathlib.Path):
         model = data.get("model_name", "").split("/")[-1]  # short name
         thr = data.get("threshold", "?")
         mx = data.get("max_length", "?")
-        label = f"{STEP_LABELS.get(ts, ts[-6:]).replace(chr(10), ' ')}  [{model} thr={thr} max={mx}]"
+        label = (
+            f"{STEP_LABELS.get(ts, ts[-6:]).replace(chr(10), ' ')}  [{model} thr={thr} max={mx}]"
+        )
         colour = COLOURS[i % len(COLOURS)]
         history = data["history"]
         epochs = [h["epoch"] for h in history]
