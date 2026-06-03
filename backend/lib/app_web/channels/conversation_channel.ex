@@ -344,8 +344,14 @@ defmodule AppWeb.ConversationChannel do
 
   defp call_ai_engine(conversation_id, message_id, report_text, socket) do
     ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
-
     engine = App.AIEngineSettings.get_engine()
+
+    Logger.info("Iniciando llamada a AI Engine",
+      ai_url: ai_url,
+      engine: engine,
+      conversation_id: conversation_id,
+      message_id: message_id
+    )
 
     case Req.post("#{ai_url}/predict",
            json: %{text: report_text, engine: engine},
@@ -396,15 +402,26 @@ defmodule AppWeb.ConversationChannel do
         })
 
       {:error, reason} ->
-        Logger.error("AI Engine request failed: #{inspect(reason)}")
+        Logger.error("AI Engine request failed",
+          reason: inspect(reason),
+          ai_url: ai_url,
+          conversation_id: conversation_id,
+          message_id: message_id
+        )
 
         broadcast!(socket, "analysis_failed", %{
           message_id: message_id,
           error: "No se pudo contactar con el motor de análisis"
         })
 
-      {:ok, %{status: status}} ->
-        Logger.error("AI Engine returned HTTP #{status}")
+      {:ok, %{status: status, body: body}} ->
+        Logger.error("AI Engine returned HTTP #{status}",
+          status: status,
+          body: inspect(body),
+          ai_url: ai_url,
+          conversation_id: conversation_id,
+          message_id: message_id
+        )
 
         broadcast!(socket, "analysis_failed", %{
           message_id: message_id,

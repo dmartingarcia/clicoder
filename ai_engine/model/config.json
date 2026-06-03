@@ -1,7 +1,7 @@
 {
-  "model_name": "IIC/RigoBERTa-Clinical",
-  "model_file": "classifier_20260530T030233Z_f1=0.4945.pt",
-  "thresholds_file": "thresholds_20260530T030233Z.json",
+  "model_name": "dmartingarcia/cie10-rigoberta-classifier",
+  "model_file": "classifier.pt",
+  "thresholds_file": "thresholds.json",
   "max_length": 512,
   "threshold": 0.3,
   "threshold_configured": 0.3,
