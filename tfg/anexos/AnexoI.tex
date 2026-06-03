@@ -13,7 +13,7 @@ La portabilidad futura no se compromete: todos los servicios están dockerizados
 
 \section{Infraestructura}
 
-El servidor es un VPS ubicado en Europa. La pila de software se compone de:
+El servidor es un VPS de Contabo\footnote{\url{https://contabo.com}} ubicado en Europa (Frankfurt). La pila de software se compone de:
 
 \begin{itemize}
     \item \textbf{Sistema operativo}: Ubuntu LTS.
@@ -99,24 +99,34 @@ El \emph{jail} de Traefik se apoya en que el servicio escribe los \emph{access l
 
 \section{Comparativa de costes}
 
-La Tabla~\ref{tab:vps-vs-cloud} muestra la diferencia de coste entre el setup actual y una alternativa cloud gestionada equivalente.
+La Tabla~\ref{tab:vps-vs-cloud} muestra la diferencia de coste entre el setup actual y dos alternativas cloud gestionadas: una con instancia GPU dedicada y otra íntegramente en CPU.
 
 \begin{table}[h]
 \centering
-\caption{Comparativa de costes: VPS vs.\ cloud gestionado.}
+\caption{Comparativa de costes: VPS vs.\ cloud gestionado (GCP, región europea, on-demand, junio 2026).}
 \label{tab:vps-vs-cloud}
 \begin{tabular}{llr}
 \hline
 \textbf{Setup} & \textbf{Descripción} & \textbf{Coste aprox.} \\
 \hline
-VPS (actual)          & VPS CPU, Europa, Docker Compose + Traefik & $\sim$130\,€/año \\
+VPS (actual)          & VPS CPU, Contabo Frankfurt, Docker Compose    & $\sim$130\,€/año \\
 \hline
-Cloud gestionado      & Node pool CPU (frontend + backend + DB)   & $\sim$140\,€/mes \\
-con GPU               & Nodo GPU (motor de IA, 1× V100)           & $\sim$1.100\,€/mes \\
-                      & Base de datos gestionada                  & $\sim$50\,€/mes \\
-                      & \textbf{Total estimado}                   & \textbf{$\sim$1.290\,€/mes} \\
+Cloud con GPU\footnotemark[1]
+                      & Nodos CPU (frontend + backend)                & $\sim$140\,€/mes \\
+                      & Nodo GPU (motor de IA, 1$\times$ V100)\footnotemark[2] & $\sim$1.950\,€/mes \\
+                      & Base de datos gestionada (PostgreSQL)\footnotemark[3] & $\sim$230\,€/mes \\
+                      & \textbf{Total estimado}                       & \textbf{$\sim$2.320\,€/mes} \\
+\hline
+Cloud solo CPU        & Nodos CPU (frontend + backend)                & $\sim$140\,€/mes \\
+                      & Nodo CPU para motor de IA (8\,vCPU, 30\,GB)\footnotemark[4] & $\sim$230\,€/mes \\
+                      & Base de datos gestionada (PostgreSQL)\footnotemark[3] & $\sim$230\,€/mes \\
+                      & \textbf{Total estimado}                       & \textbf{$\sim$600\,€/mes} \\
 \hline
 \end{tabular}
 \end{table}
+\footnotetext[1]{GCP europe-west4. Precios on-demand consultados en junio de 2026. Fuente: \url{https://cloud.google.com/compute/gpus-pricing}}
+\footnotetext[2]{Instancia n1-standard-8 + 1$\times$ NVIDIA V100: \$2,55/h GPU + \$0,35/h VM $\approx$ \$2.117/mes $\approx$ 1.950\,€/mes.}
+\footnotetext[3]{Cloud SQL PostgreSQL, 4\,vCPU / 16\,GB RAM, estimado para europe-west4. Fuente: \url{https://cloud.google.com/sql/pricing}}
+\footnotetext[4]{Instancia n1-standard-8 (8\,vCPU, 30\,GB RAM) para alojar el modelo RigoBERTa-Clinical en CPU ($\sim$13\,GB de RAM en inferencia).}
 
-El coste del nodo con GPU domina el presupuesto cloud. Para el volumen actual del prototipo, el motor de IA en modo CPU sobre el VPS ofrece latencia suficiente ($<$1\,s) a una fracción del coste.
+La GPU no es estrictamente necesaria para servir tráfico: el motor de IA ya opera en modo CPU en el VPS actual con latencia inferior a 1\,s por informe. Sin embargo, la opción cloud en CPU sigue siendo mas de 40 veces más cara que el VPS, dado que las instancias de aplicación son pequeñas pero el modelo requiere un nodo con suficiente RAM ($\sim$13\,GB) para cargarse íntegramente. En ambos escenarios cloud el coste está dominado por componentes que en el VPS se comparten en un único nodo sin sobrecoste.

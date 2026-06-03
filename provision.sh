@@ -50,6 +50,7 @@ if ! command -v fail2ban-client &>/dev/null; then
 fi
 
 mkdir -p /var/log/traefik
+touch /var/log/traefik/access.log
 mkdir -p /etc/fail2ban/filter.d
 
 cat > /etc/fail2ban/jail.local << 'EOF'
