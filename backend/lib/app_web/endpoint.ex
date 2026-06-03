@@ -74,6 +74,18 @@ defmodule AppWeb.Endpoint do
     |> String.split(",", trim: true)
   end
 
+  plug :put_security_headers
   plug Sentry.PlugContext
   plug AppWeb.Router
+
+  defp put_security_headers(conn, _opts) do
+    conn
+    |> Plug.Conn.put_resp_header("x-frame-options", "DENY")
+    |> Plug.Conn.put_resp_header("x-content-type-options", "nosniff")
+    |> Plug.Conn.put_resp_header("referrer-policy", "strict-origin-when-cross-origin")
+    |> Plug.Conn.put_resp_header(
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains"
+    )
+  end
 end

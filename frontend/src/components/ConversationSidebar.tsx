@@ -6,7 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PlusCircle, MessageSquare, LogOut, Trash2, RotateCcw, ChevronDown, ChevronRight } from 'lucide-react';
+import { config } from '@/lib/config';
+import { PlusCircle, MessageSquare, LogOut, Trash2, RotateCcw, ChevronDown, ChevronRight, Download, UserX } from 'lucide-react';
 
 export function ConversationSidebar() {
   const { conversations, trashedConversations, activeConversationId, createConversation, switchConversation, deleteConversation, restoreConversation } = useConversation();
@@ -15,6 +16,38 @@ export function ConversationSidebar() {
   const [trashOpen, setTrashOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [localeOpen, setLocaleOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const handleExportData = async () => {
+    const res = await fetch(`${config.apiUrl}/users/export`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'datos_usuario.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      const res = await fetch(`${config.apiUrl}/users/account`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        logout();
+      }
+    } finally {
+      setDeletingAccount(false);
+      setShowDeleteModal(false);
+    }
+  };
 
   const LOCALES: { code: string; flag: string }[] = [
     { code: 'es', flag: '🇪🇸' },
@@ -64,6 +97,20 @@ export function ConversationSidebar() {
               </div>
             )}
           </div>
+          <button
+            onClick={handleExportData}
+            title={t('sidebar.export_data')}
+            className="p-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            title={t('sidebar.delete_account')}
+            className="p-1 rounded text-gray-400 hover:text-red-400 hover:bg-gray-700 transition-colors"
+          >
+            <UserX className="h-4 w-4" />
+          </button>
           <button
             onClick={logout}
             title={t('auth.logout')}
@@ -172,6 +219,31 @@ export function ConversationSidebar() {
           </div>
         )}
       </ScrollArea>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-xl max-w-sm w-full p-6 space-y-4">
+            <h3 className="text-white font-semibold text-base">{t('sidebar.delete_account_title')}</h3>
+            <p className="text-gray-300 text-sm leading-relaxed">{t('sidebar.delete_account_body')}</p>
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deletingAccount}
+                className="flex-1 px-4 py-2 text-sm rounded-md border border-gray-500 text-gray-300 hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                {t('sidebar.cancel')}
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount}
+                className="flex-1 px-4 py-2 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-50"
+              >
+                {deletingAccount ? '…' : t('sidebar.delete_account_confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

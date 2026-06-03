@@ -8,6 +8,10 @@ defmodule AppWeb.Router do
     plug OpenApiSpex.Plug.PutApiSpec, module: AppWeb.ApiSpec
   end
 
+  pipeline :rate_limited do
+    plug AppWeb.Plugs.RateLimit
+  end
+
   pipeline :require_auth do
     plug AppWeb.Plugs.RequireAuth
   end
@@ -27,9 +31,13 @@ defmodule AppWeb.Router do
 
     get "/health", HealthController, :check
 
-    post "/auth/register", AuthController, :register
-    post "/auth/login", AuthController, :login
-    get "/auth/confirm/:token", AuthController, :confirm
+    # Auth endpoints con rate limiting propio
+    scope "/" do
+      pipe_through [:rate_limited]
+      post "/auth/register", AuthController, :register
+      post "/auth/login", AuthController, :login
+      get "/auth/confirm/:token", AuthController, :confirm
+    end
 
     get "/translations/:locale", TranslationController, :show
 
@@ -45,8 +53,11 @@ defmodule AppWeb.Router do
     get "/conversations", ConversationController, :index
     get "/conversations/trash", ConversationController, :trash
     delete "/conversations/:conversation_id", ConversationController, :delete
+    delete "/conversations/:conversation_id/purge", ConversationController, :purge
     put "/conversations/:conversation_id/restore", ConversationController, :restore
     put "/users/locale", AuthController, :update_locale
+    get "/users/export", AuthController, :export
+    delete "/users/account", AuthController, :delete_account
   end
 
   pipeline :browser do

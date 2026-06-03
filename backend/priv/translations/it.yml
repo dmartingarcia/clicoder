@@ -38,6 +38,12 @@ sidebar:
   delete: "Elimina conversazione"
   restore: "Ripristina conversazione"
   trash: "Cestino"
+  export_data: "Esporta i miei dati"
+  delete_account: "Elimina il mio account"
+  delete_account_title: "Eliminare il tuo account?"
+  delete_account_body: "Questa azione è irreversibile. Tutte le tue analisi, messaggi e dati personali verranno eliminati definitivamente."
+  delete_account_confirm: "Sì, elimina il mio account"
+  cancel: "Annulla"
 
 chat:
   welcome_title: "Classificatore ICD-10"

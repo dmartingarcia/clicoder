@@ -28,7 +28,7 @@ defmodule App.Accounts.User do
       message: "solo letras, números y guión bajo"
     )
     |> validate_length(:username, min: 3, message: "mínimo 3 caracteres")
-    |> validate_length(:password, min: 6, message: "mínimo 6 caracteres")
+    |> validate_length(:password, min: 12, message: "mínimo 12 caracteres")
     |> unique_constraint(:email, message: "email ya registrado")
     |> unique_constraint(:username, message: "nombre de usuario no disponible")
     |> hash_password()

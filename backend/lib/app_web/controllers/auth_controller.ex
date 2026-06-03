@@ -4,6 +4,10 @@ defmodule AppWeb.AuthController do
 
   alias App.Accounts
   alias App.Translations
+  alias App.Repo
+  alias App.Projections.{ConversationProjection, MessageProjection, AnalysisCardProjection, PredictedCodeProjection, CodeSuggestionProjection}
+
+  import Ecto.Query
 
   operation(:register,
     summary: "Registrar usuario",
@@ -190,6 +194,87 @@ defmodule AppWeb.AuthController do
       {:error, _} -> conn |> put_status(:unprocessable_entity) |> json(%{error: "Invalid locale"})
     end
   end
+
+  operation(:export,
+    summary: "Exportar datos del usuario (RGPD Art. 20)",
+    tags: ["Auth"],
+    security: [%{"bearer_auth" => []}],
+    responses: [
+      ok: {"Datos exportados", "application/json", %OpenApiSpex.Schema{type: :object}}
+    ]
+  )
+
+  def export(conn, _params) do
+    user_id = conn.assigns.current_user_id
+    user = Accounts.get_user(user_id)
+
+    conversations =
+      Repo.all(
+        from c in ConversationProjection,
+          where: c.user_id == ^user_id,
+          order_by: [asc: c.started_at],
+          preload: [:messages, :predicted_codes]
+      )
+
+    data = %{
+      user: format_user(user),
+      conversations:
+        Enum.map(conversations, fn c ->
+          %{
+            conversation_id: c.conversation_id,
+            started_at: c.started_at,
+            status: c.status,
+            deleted_at: c.deleted_at,
+            messages: Enum.map(c.messages, &format_message/1),
+            predicted_codes: Enum.map(c.predicted_codes, &format_code/1)
+          }
+        end),
+      exported_at: DateTime.utc_now()
+    }
+
+    conn
+    |> put_resp_header("content-disposition", "attachment; filename=\"datos_usuario.json\"")
+    |> json(data)
+  end
+
+  operation(:delete_account,
+    summary: "Eliminar cuenta y todos los datos (RGPD Art. 17)",
+    tags: ["Auth"],
+    security: [%{"bearer_auth" => []}],
+    responses: [
+      ok: {"Cuenta eliminada", "application/json", %OpenApiSpex.Schema{type: :object}},
+      not_found: {"Usuario no encontrado", "application/json", %OpenApiSpex.Schema{type: :object}}
+    ]
+  )
+
+  def delete_account(conn, _params) do
+    user_id = conn.assigns.current_user_id
+
+    case Accounts.get_user(user_id) do
+      nil ->
+        conn |> put_status(:not_found) |> json(%{error: "User not found"})
+
+      user ->
+        Repo.transaction(fn ->
+          conv_ids =
+            from(c in ConversationProjection, where: c.user_id == ^user_id, select: c.id)
+            |> Repo.all()
+
+          from(r in CodeSuggestionProjection, where: r.conversation_id in ^conv_ids) |> Repo.delete_all()
+          from(r in PredictedCodeProjection, where: r.conversation_id in ^conv_ids) |> Repo.delete_all()
+          from(r in AnalysisCardProjection, where: r.conversation_id in ^conv_ids) |> Repo.delete_all()
+          from(r in MessageProjection, where: r.conversation_id in ^conv_ids) |> Repo.delete_all()
+          from(c in ConversationProjection, where: c.user_id == ^user_id) |> Repo.delete_all()
+          Repo.delete!(user)
+        end)
+
+        json(conn, %{ok: true})
+    end
+  end
+
+  defp format_message(m), do: %{content: m.content, timestamp: m.timestamp, type: m.message_type}
+
+  defp format_code(c), do: %{cie10_code: c.cie10_code, status: c.status, reasoning: c.reasoning}
 
   defp format_user(user) do
     %{
