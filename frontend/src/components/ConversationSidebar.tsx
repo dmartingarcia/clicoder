@@ -65,15 +65,13 @@ export function ConversationSidebar() {
   return (
     <div className="w-64 flex flex-col bg-gray-900 text-white h-screen">
       {/* User info */}
-      <div className="p-4 border-b border-gray-700 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">{t('app.doctor')}</p>
-          <p className="text-sm font-semibold truncate">
-            {user?.first_name} {user?.last_name}
-          </p>
-          <p className="text-xs text-gray-400 truncate">@{user?.username}</p>
-        </div>
-        <div className="flex flex-col gap-1.5 shrink-0 mt-1 items-end">
+      <div className="p-4 border-b border-gray-700">
+        <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">{t('app.doctor')}</p>
+        <p className="text-sm font-semibold truncate">
+          {user?.first_name} {user?.last_name}
+        </p>
+        <p className="text-xs text-gray-400 truncate">@{user?.username}</p>
+        <div className="flex items-center justify-between mt-2">
           <div className="relative">
             <button
               onClick={() => setLocaleOpen((o) => !o)}
