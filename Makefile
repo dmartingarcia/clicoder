@@ -1,5 +1,8 @@
 .PHONY: ai-augment ai-baseline-dict ai-combine ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy stop-monitoring stop-proxy traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
+-include .env
+export
+
 # Variables — compose stacks
 COMPOSE            = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
 COMPOSE_CPU        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
@@ -39,7 +42,7 @@ NC     = \033[0m # No Color
 help: ## Mostrar esta ayuda
 	@echo "$(GREEN)CIE-10 Medical Classifier - Comandos disponibles:$(NC)"
 	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-30s$(NC) %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-30s$(NC) %s\n", $$1, $$2}'
 	@echo ""
 
 ai-augment: ## Back-translation. Vars: TRANS_BACKEND=azure|nllb PIVOT_LANGS="EN FR" DRY_RUN=1 RESUME=1 ONLY_ROW=N
@@ -257,7 +260,7 @@ backend-seed: backend-install ## Primera vez: create + migrate + eventstore + se
 	$(COMPOSE_CPU) run --rm backend mix event_store.init
 	$(COMPOSE_CPU) run --rm backend mix run priv/repo/seeds.exs
 	$(COMPOSE_CPU) run --rm backend mix cie10.import
-	@echo "$(GREEN)Admin: $$(grep SEED_ADMIN_EMAIL .env | cut -d= -f2) / $$(grep SEED_ADMIN_PASSWORD .env | cut -d= -f2)$(NC)"
+	@echo "$(GREEN)Admin: $(SEED_ADMIN_EMAIL) / $(SEED_ADMIN_PASSWORD)$(NC)"
 
 backend-test: ## Ejecutar tests del backend
 	@echo "$(GREEN)Preparando BBDDs de test...$(NC)"
