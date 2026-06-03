@@ -14,7 +14,7 @@ defmodule Mix.Tasks.Cie10.Import do
   NimbleCSV.define(CsvParser, separator: ",", escape: "\"")
 
   @shortdoc "Import CIE-10 reference codes from CSV files"
-  @batch_size 500
+  @batch_size 1000
 
   @impl Mix.Task
   def run(args) do
@@ -188,7 +188,7 @@ defmodule Mix.Tasks.Cie10.Import do
         new_total
       end)
 
-    IO.write("\r  → #{total} registros insertados. Listo.\n")
+    IO.write("\r  -> #{total} registros insertados. Listo.\n")
     total
   end
 
