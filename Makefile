@@ -438,8 +438,8 @@ setup: network-create ## Setup completo desde cero: down -v + build + seed (sin 
 start-proxy: network-create ## Arrancar proxy Traefik
 	@echo "$(BLUE)Arrancando Traefik...$(NC)"
 	$(COMPOSE_PROXY) up -d
-	@echo "$(GREEN)Traefik disponible en: http://localhost:80$(NC)"
-	@echo "$(GREEN)Dashboard Traefik:     http://localhost:8080$(NC)"
+	@echo "$(GREEN)Traefik disponible en: https://$${DOMAIN}$(NC)"
+	@echo "$(GREEN)Dashboard Traefik:     https://traefik.$${DOMAIN}$(NC)"
 
 stop-proxy: ## Detener proxy Traefik
 	@echo "$(YELLOW)Deteniendo Traefik...$(NC)"
@@ -476,6 +476,7 @@ deploy: network-create start-proxy start-monitoring ## Deploy completo. GPU=1 pa
 	@echo "  - Frontend:    https://$${DOMAIN:-localhost}"
 	@echo "  - Backend API: https://api.$${DOMAIN:-localhost}"
 	@echo "  - Grafana:     https://grafana.$${DOMAIN:-localhost}"
+	@echo "  - Traefik:     https://"
 
 shell: ## Abrir shell interactivo (pregunta por contenedor)
 	@echo "$(GREEN)Contenedores disponibles:$(NC)"
