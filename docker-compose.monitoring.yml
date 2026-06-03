@@ -11,7 +11,7 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=15d"
-    networks: [monitoring, ciecoder]
+    networks: [monitoring, clicoder]
 
   grafana:
     image: grafana/grafana:latest
@@ -27,7 +27,7 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
-    networks: [monitoring, ciecoder]
+    networks: [monitoring, clicoder]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN:-localhost}`)"
@@ -104,5 +104,5 @@ volumes:
 
 networks:
   monitoring:
-  ciecoder:
+  clicoder:
     external: true

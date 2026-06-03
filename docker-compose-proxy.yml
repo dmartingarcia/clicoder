@@ -13,7 +13,7 @@ services:
       - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=ciecoder"
+      - "--providers.docker.network=clicoder"
       # Entrypoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
@@ -33,7 +33,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt
-    networks: [proxy, ciecoder]
+    networks: [proxy, clicoder]
     labels:
       - "traefik.enable=true"
       # Router del dashboard (solo HTTPS)
@@ -52,5 +52,5 @@ services:
 
 networks:
   proxy:
-  ciecoder:
+  clicoder:
     external: true
