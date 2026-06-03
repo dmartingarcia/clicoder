@@ -43,7 +43,19 @@ config :app, :ai_engine_url, System.get_env("AI_ENGINE_URL") || "http://localhos
 # Configures Elixir's Logger
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
+  metadata: [
+    :request_id,
+    :conversation_id,
+    :message_id,
+    :ai_url,
+    :engine,
+    :status,
+    :body,
+    :reason,
+    :classifier_ms,
+    :summarizer_ms,
+    :total_ms
+  ]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
@@ -53,7 +65,15 @@ config :sentry,
   enable_source_code_context: true,
   root_source_code_paths: [File.cwd!()],
   tags: %{app: "cie10-backend"},
-  filter_keys: [:password, :password_hash, :token, :content, :report_text, :authorization, :cookie],
+  filter_keys: [
+    :password,
+    :password_hash,
+    :token,
+    :content,
+    :report_text,
+    :authorization,
+    :cookie
+  ],
   before_send: {AppWeb.SentryFilter, :filter_event}
 
 # Import environment specific config. This must remain at the bottom
