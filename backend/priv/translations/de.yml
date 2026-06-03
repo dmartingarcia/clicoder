@@ -80,6 +80,7 @@ errors:
   suggest_failed: "Vorschlag konnte nicht gespeichert werden"
   delete_failed: "Fehler beim Löschen der Konversation"
   restore_failed: "Fehler beim Wiederherstellen der Konversation"
+  session_expired: "Sitzung abgelaufen, bitte erneut anmelden"
 
 cards:
   summary_title: "Berichtszusammenfassung"

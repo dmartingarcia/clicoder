@@ -75,7 +75,7 @@ interface ConversationContextType {
 
 const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
 
-export function ConversationProvider({ children, userId, token }: { children: ReactNode; userId: string; token: string }) {
+export function ConversationProvider({ children, userId, token, onUnauthorized }: { children: ReactNode; userId: string; token: string; onUnauthorized?: () => void }) {
   const { t } = useI18n();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -89,29 +89,36 @@ export function ConversationProvider({ children, userId, token }: { children: Re
   const channelRef = useRef<Channel | null>(null);
   const pendingReportRef = useRef<string | null>(null);
 
+  const authFetch = useCallback(async (url: string, opts?: RequestInit): Promise<Response> => {
+    const res = await fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}`, ...opts?.headers } });
+    if (res.status === 401) {
+      toast.error(t('errors.session_expired'));
+      onUnauthorized?.();
+    }
+    return res;
+  }, [token, t, onUnauthorized]);
+
   const loadTrashed = useCallback(async () => {
     try {
-      const res = await fetch(`${config.apiUrl}/conversations/trash?user_id=${encodeURIComponent(userId)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authFetch(`${config.apiUrl}/conversations/trash?user_id=${encodeURIComponent(userId)}`);
+      if (!res.ok) return;
       const data = await res.json();
       setTrashedConversations(data.conversations ?? []);
     } catch {
       // silent — trash load failure is non-critical
     }
-  }, [userId, token]);
+  }, [userId, authFetch]);
 
   const loadConversations = useCallback(async () => {
     try {
-      const res = await fetch(`${config.apiUrl}/conversations?user_id=${encodeURIComponent(userId)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authFetch(`${config.apiUrl}/conversations?user_id=${encodeURIComponent(userId)}`);
+      if (!res.ok) return;
       const data = await res.json();
       setConversations(data.conversations ?? []);
     } catch {
       toast.error(t('errors.load_conversations'));
     }
-  }, [userId, token, t]);
+  }, [userId, authFetch, t]);
 
   useEffect(() => {
     loadConversations();
@@ -289,10 +296,7 @@ export function ConversationProvider({ children, userId, token }: { children: Re
 
   const deleteConversation = useCallback(async (conversationId: string) => {
     try {
-      await fetch(`${config.apiUrl}/conversations/${conversationId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await authFetch(`${config.apiUrl}/conversations/${conversationId}`, { method: 'DELETE' });
       setConversations((prev) => prev.filter((c) => c.conversation_id !== conversationId));
       loadTrashed();
       if (activeConversationId === conversationId) {
@@ -303,20 +307,17 @@ export function ConversationProvider({ children, userId, token }: { children: Re
     } catch {
       toast.error(t('errors.delete_failed'));
     }
-  }, [token, activeConversationId, loadTrashed, t]);
+  }, [authFetch, activeConversationId, loadTrashed, t]);
 
   const restoreConversation = useCallback(async (conversationId: string) => {
     try {
-      await fetch(`${config.apiUrl}/conversations/${conversationId}/restore`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await authFetch(`${config.apiUrl}/conversations/${conversationId}/restore`, { method: 'PUT' });
       setTrashedConversations((prev) => prev.filter((c) => c.conversation_id !== conversationId));
       loadConversations();
     } catch {
       toast.error(t('errors.restore_failed'));
     }
-  }, [token, loadConversations, t]);
+  }, [authFetch, loadConversations, t]);
 
   return (
     <ConversationContext.Provider

@@ -6,13 +6,13 @@ import { ChatInterface } from '@/components/ChatInterface';
 import { AuthPage } from '@/components/AuthPage';
 
 function AppContent() {
-  const { user, token, mounted } = useAuth();
+  const { user, token, mounted, logout } = useAuth();
 
   if (!mounted) return null;
   if (!user || !token) return <AuthPage />;
 
   return (
-    <ConversationProvider userId={user.id} token={token}>
+    <ConversationProvider userId={user.id} token={token} onUnauthorized={logout}>
       <ChatInterface />
     </ConversationProvider>
   );

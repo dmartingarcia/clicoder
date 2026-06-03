@@ -80,6 +80,7 @@ errors:
   suggest_failed: "No se pudo guardar la sugerencia"
   delete_failed: "Error al eliminar la conversación"
   restore_failed: "Error al restaurar la conversación"
+  session_expired: "Sesión expirada, inicia sesión de nuevo"
 
 cards:
   summary_title: "Resumen del informe"

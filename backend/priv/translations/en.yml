@@ -80,6 +80,7 @@ errors:
   suggest_failed: "Failed to save suggestion"
   delete_failed: "Failed to delete conversation"
   restore_failed: "Failed to restore conversation"
+  session_expired: "Session expired, please log in again"
 
 cards:
   summary_title: "Report summary"

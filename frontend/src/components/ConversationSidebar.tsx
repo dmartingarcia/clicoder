@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { config } from '@/lib/config';
 import { PrivacyModal } from '@/components/PrivacyModal';
+import { toast } from 'sonner';
 import { PlusCircle, MessageSquare, LogOut, Trash2, RotateCcw, ChevronDown, ChevronRight, Download, UserX, ShieldCheck } from 'lucide-react';
 
 export function ConversationSidebar() {
@@ -25,6 +26,7 @@ export function ConversationSidebar() {
     const res = await fetch(`${config.apiUrl}/users/export`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (res.status === 401) { toast.error(t('errors.session_expired')); logout(); return; }
     if (!res.ok) return;
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -42,6 +44,7 @@ export function ConversationSidebar() {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (res.status === 401) { toast.error(t('errors.session_expired')); logout(); return; }
       if (res.ok) {
         logout();
       }
@@ -71,7 +74,7 @@ export function ConversationSidebar() {
           {user?.first_name} {user?.last_name}
         </p>
         <p className="text-xs text-gray-400 truncate">@{user?.username}</p>
-        <div className="flex items-center justify-between mt-2">
+        <div className="mt-2">
           <div className="relative">
             <button
               onClick={() => setLocaleOpen((o) => !o)}
@@ -96,40 +99,6 @@ export function ConversationSidebar() {
                 ))}
               </div>
             )}
-          </div>
-          <div className="flex flex-row gap-0.5">
-            <button
-              onClick={() => setShowPrivacyModal(true)}
-              title={t('privacy.title')}
-              className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-            >
-              <ShieldCheck className="h-4 w-4" />
-              <span className="text-[9px] leading-none">{t('sidebar.rights_label')}</span>
-            </button>
-            <button
-              onClick={handleExportData}
-              title={t('sidebar.export_data')}
-              className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-            >
-              <Download className="h-4 w-4" />
-              <span className="text-[9px] leading-none">{t('sidebar.export_label')}</span>
-            </button>
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              title={t('sidebar.delete_account')}
-              className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded text-gray-400 hover:text-red-400 hover:bg-gray-700 transition-colors"
-            >
-              <UserX className="h-4 w-4" />
-              <span className="text-[9px] leading-none">{t('sidebar.delete_label')}</span>
-            </button>
-            <button
-              onClick={logout}
-              title={t('auth.logout')}
-              className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="text-[9px] leading-none">{t('sidebar.logout_label')}</span>
-            </button>
           </div>
         </div>
       </div>
@@ -232,6 +201,38 @@ export function ConversationSidebar() {
           </div>
         )}
       </ScrollArea>
+
+      {/* Footer actions */}
+      <div className="border-t border-gray-700 p-2 flex flex-col gap-0.5">
+        <button
+          onClick={() => setShowPrivacyModal(true)}
+          className="w-full flex items-center gap-2 px-3 py-1.5 rounded text-xs text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+        >
+          <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+          {t('privacy.title')}
+        </button>
+        <button
+          onClick={handleExportData}
+          className="w-full flex items-center gap-2 px-3 py-1.5 rounded text-xs text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+        >
+          <Download className="h-3.5 w-3.5 shrink-0" />
+          {t('sidebar.export_data')}
+        </button>
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="w-full flex items-center gap-2 px-3 py-1.5 rounded text-xs text-gray-400 hover:text-red-400 hover:bg-gray-700 transition-colors"
+        >
+          <UserX className="h-3.5 w-3.5 shrink-0" />
+          {t('sidebar.delete_account')}
+        </button>
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-2 px-3 py-1.5 rounded text-xs text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+        >
+          <LogOut className="h-3.5 w-3.5 shrink-0" />
+          {t('auth.logout')}
+        </button>
+      </div>
 
       {showPrivacyModal && (
         <PrivacyModal

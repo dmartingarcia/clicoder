@@ -80,6 +80,7 @@ errors:
   suggest_failed: "Impossibile salvare il suggerimento"
   delete_failed: "Errore nell'eliminazione della conversazione"
   restore_failed: "Errore nel ripristino della conversazione"
+  session_expired: "Sessione scaduta, accedi di nuovo"
 
 cards:
   summary_title: "Riepilogo del referto"
