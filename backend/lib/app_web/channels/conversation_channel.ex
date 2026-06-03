@@ -359,6 +359,15 @@ defmodule AppWeb.ConversationChannel do
          ) do
       {:ok, %{status: 200, body: body}} ->
         cards = body["cards"] || []
+        timing = body["timing"] || %{}
+
+        Logger.info("AI Engine response timings",
+          classifier_ms: timing["classifier_ms"],
+          summarizer_ms: timing["summarizer_ms"],
+          total_ms: timing["total_ms"],
+          engine: engine,
+          conversation_id: conversation_id
+        )
 
         cmd = %ReceiveAIPrediction{
           conversation_id: conversation_id,
