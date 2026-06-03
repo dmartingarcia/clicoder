@@ -48,7 +48,13 @@ def load_model(model_id: str, device: str):
     print(f"[paraphrase] descargando/verificando {model_id}…")
     local_path = snapshot_download(
         repo_id=model_id,
-        ignore_patterns=["*.msgpack", "*.h5", "flax_model*", "tf_model*", "rust_model*"],
+        ignore_patterns=[
+            "*.msgpack",
+            "*.h5",
+            "flax_model*",
+            "tf_model*",
+            "rust_model*",
+        ],
     )
     print(f"[paraphrase] modelo en caché: {local_path}")
     print(f"[paraphrase] cargando en {device}…")
@@ -98,7 +104,7 @@ def paraphrase(
 
     for prefix in ("Informe reformulado:", "Reformulado:", "**Informe reformulado:**"):
         if result.startswith(prefix):
-            result = result[len(prefix):].strip()
+            result = result[len(prefix) :].strip()
 
     return result or text
 
@@ -196,7 +202,9 @@ def main() -> None:
             global_idx = pass_i * total_notes + (i - 1)
             if global_idx < already_done:
                 n_done += 1
-                print(f"[pass {pass_i + 1}/{args.n_per_note}][{i}/{total_notes}] (ya procesado)")
+                print(
+                    f"[pass {pass_i + 1}/{args.n_per_note}][{i}/{total_notes}] (ya procesado)"
+                )
                 continue
 
             text = row.get("text", "")
@@ -207,7 +215,12 @@ def main() -> None:
             while True:
                 try:
                     aug_text = paraphrase(
-                        tokenizer, model, text, args.temperature, args.max_new_tokens, device
+                        tokenizer,
+                        model,
+                        text,
+                        args.temperature,
+                        args.max_new_tokens,
+                        device,
                     )
                     break
                 except Exception as e:
@@ -218,6 +231,7 @@ def main() -> None:
                         file=sys.stderr,
                     )
                     import time
+
                     time.sleep(wait)
 
             aug_row = dict(row)

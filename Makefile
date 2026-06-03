@@ -67,7 +67,7 @@ ai-augment-paraphrase: ## Paráfrasis con Gemma 3 4B IT (GPU). Vars: N_PER_NOTE=
 		$(if $(RESUME),--resume,)
 	@echo "$(GREEN)Datos guardados en /data/codiesp_csvs/codiesp_D_source_train_augmented_paraphrase.csv$(NC)"
 
-ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 en CPU (clinical+corpus+combined → model/baseline_dict.json)
+ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 en CPU (clinical+corpus+combined -> model/baseline_dict.json)
 	@echo "$(BLUE)Calculando diccionario CIE-10 (CPU)...$(NC)"
 	$(COMPOSE_CPU) run --rm ai_engine python baseline_dict.py \
 		--train_file        /data/codiesp_csvs/codiesp_D_source_train.csv \
@@ -87,7 +87,7 @@ ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 en CPU (clinical+corp
 		$(if $(FULL_CODES),--full_codes,) \
 		$(if $(NO_ABBREVS),--no_expand_abbrevs,)
 
-ai-baseline-dict-gpu: ## Calcular y guardar diccionario CIE-10 en GPU (clinical+corpus+combined → model/baseline_dict.json)
+ai-baseline-dict-gpu: ## Calcular y guardar diccionario CIE-10 en GPU (clinical+corpus+combined -> model/baseline_dict.json)
 	@echo "$(BLUE)Calculando diccionario CIE-10 (GPU)...$(NC)"
 	$(COMPOSE) run --rm ai_engine python baseline_dict.py \
 		--train_file        /data/codiesp_csvs/codiesp_D_source_train.csv \
@@ -120,9 +120,7 @@ ai-install: ## Instalar dependencias del AI engine
 	$(AI) pip install -r requirements.txt
 
 ai-lint: ## Lint del AI engine (ruff check + format check)
-	$(AI) pip install -q ruff
-	$(AI) ruff check .
-	$(AI) ruff format --check .
+	$(COMPOSE) run --rm ai_engine sh -c "pip install -q ruff && ruff check . && ruff format --check ."
 
 ai-train: ## Entrenar clasificador CIE-10 en CPU (MODEL=IIC/RigoBERTa-Clinical, requiere HF_TOKEN en .env)
 	@echo "$(BLUE)Entrenando clasificador CIE-10 (CPU)$(NC)"
@@ -248,21 +246,21 @@ backend-rollback: ## Rollback última migración
 
 backend-seed: backend-install ## Primera vez: create + migrate + eventstore + seeds + CIE-10
 	$(COMPOSE_CPU) up -d db
-	$(COMPOSE_CPU) run --rm backend mix ecto.create || true
+	$(COMPOSE_CPU) run --rm backend mix ecto.create
 	$(COMPOSE_CPU) run --rm backend mix ecto.migrate
-	$(COMPOSE_CPU) run --rm backend mix event_store.create || true
-	$(COMPOSE_CPU) run --rm backend mix event_store.init || true
+	$(COMPOSE_CPU) run --rm backend mix event_store.create
+	$(COMPOSE_CPU) run --rm backend mix event_store.init
 	$(COMPOSE_CPU) run --rm backend mix run priv/repo/seeds.exs
 	$(COMPOSE_CPU) run --rm backend mix cie10.import
-	@echo "$(GREEN)Usuario de prueba: admin@test.com / password123$(NC)"
+	@echo "$(GREEN)Admin: $$(grep SEED_ADMIN_EMAIL .env | cut -d= -f2) / $$(grep SEED_ADMIN_PASSWORD .env | cut -d= -f2)$(NC)"
 
 backend-test: ## Ejecutar tests del backend
 	@echo "$(GREEN)Preparando BBDDs de test...$(NC)"
-	$(COMPOSE) exec -e MIX_ENV=test backend mix ecto.create --quiet || true
+	$(COMPOSE) exec -e MIX_ENV=test backend mix ecto.create --quiet
 	$(COMPOSE) exec -e MIX_ENV=test backend mix ecto.migrate --quiet
-	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.drop --quiet 2>/dev/null || true
-	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.create --quiet 2>/dev/null
-	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.init --quiet 2>/dev/null
+	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.drop --quiet
+	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.create --quiet
+	$(COMPOSE) exec -e MIX_ENV=test backend mix event_store.init --quiet
 	@echo "$(GREEN)Ejecutando tests...$(NC)"
 	$(COMPOSE) exec -e MIX_ENV=test backend mix test
 
@@ -331,14 +329,14 @@ db-backup: ## Backup de la base de datos
 
 db-reset: ## Reset completo: drop + backend-seed
 	$(COMPOSE_CPU) up -d db
-	$(COMPOSE_CPU) run --rm backend mix ecto.drop || true
+	$(COMPOSE_CPU) run --rm backend mix ecto.drop
 	$(MAKE) backend-seed
 
 down: ## Detener todos los servicios. GPU=1 para modo GPU
 	@echo "$(YELLOW)Deteniendo servicios...$(NC)"
 	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) down
-	$(COMPOSE_MONITORING) down 2>/dev/null || true
-	$(COMPOSE_PROXY) down 2>/dev/null || true
+	$(COMPOSE_MONITORING) down
+	$(COMPOSE_PROXY) down
 
 frontend-format: ## Formatear código del frontend
 	$(COMPOSE_CPU) run --rm --no-deps frontend npm format
@@ -419,16 +417,16 @@ model-upload: ## Subir mejor modelo a Hugging Face (lee HF_TOKEN de .env)
 	@echo "$(GREEN)Modelo subido: https://huggingface.co/$(HF_REPO)$(NC)"
 
 network-create: ## Crear red Docker compartida entre stacks (proxy, app, monitoring)
-	@docker network create $(NETWORK) 2>/dev/null || true
+	@docker network inspect $(NETWORK) >/dev/null 2>&1 || docker network create $(NETWORK)
 
 setup: network-create ## Setup completo desde cero: down -v + build + seed (sin levantar). Luego usa 'make deploy'
 	@[ -f .env ] || cp .env.example .env
 	$(COMPOSE_CPU) down -v --remove-orphans
 	$(COMPOSE_CPU) build --progress=plain backend
 	$(COMPOSE_CPU) build --progress=plain frontend
+	$(MAKE) model-download
 	$(MAKE) backend-seed
-	@[ -f $(MODEL_DIR)/$(BEST_PT) ] || $(MAKE) model-download
-	@echo "$(GREEN)Setup completado. Usa 'make deploy' para levantar los servicios.$(NC)"
+	@echo "$(GREEN)Setup completado. Usa 'make up' para levantar los servicios. make deploy para producción$(NC)"
 
 start-proxy: network-create ## Arrancar proxy Traefik
 	@echo "$(BLUE)Arrancando Traefik...$(NC)"
@@ -465,9 +463,9 @@ deploy: network-create ## Deploy completo. GPU=1 para modo GPU
 	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) up -d db backend frontend ai_engine
 	@echo ""
 	@echo "$(GREEN)Deploy completado:$(NC)"
-	@echo "  - Frontend:    http://localhost:${FRONTEND_PORT:-3000}  →  http://${DOMAIN:-localhost}"
-	@echo "  - Backend API: http://localhost:${BACKEND_PORT:-4000}  →  http://api.${DOMAIN:-localhost}"
-	@echo "  - Grafana:     http://localhost:3030  →  http://grafana.${DOMAIN:-localhost}"
+	@echo "  - Frontend:    http://localhost:$${FRONTEND_PORT:-3000}  ->  http://$${DOMAIN:-localhost}"
+	@echo "  - Backend API: http://localhost:$${BACKEND_PORT:-4000}  ->  http://api.$${DOMAIN:-localhost}"
+	@echo "  - Grafana:     http://localhost:3030  Prod ->  http://grafana.$${DOMAIN:-localhost}"
 	@echo "  - Traefik:     http://localhost:8080  (dashboard)"
 	@echo "  - Prometheus:  http://localhost:9090"
 	@echo "  - cAdvisor:    http://localhost:8082"
@@ -509,7 +507,7 @@ tfg-pdf: ## Compilar memoria TFG a PDF (requiere Docker)
 
 training-clean: ## Limpiar entornos de entrenamiento
 	@echo "$(YELLOW)Limpiando entorno de entrenamiento (Docker)...$(NC)"
-	$(COMPOSE_CPU) run --rm training bash -c 'cd csv_import_scripts && make clean || true; cd ../bert-classifier && rm -rf .venv __pycache__ .ipynb_checkpoints'
+	$(COMPOSE_CPU) run --rm training bash -c 'cd csv_import_scripts && make clean; cd ../bert-classifier && rm -rf .venv __pycache__ .ipynb_checkpoints'
 	@echo "$(GREEN)Limpieza completada$(NC)"
 
 training-collect-chemicals: ## Descargar tabla de químicos
@@ -533,7 +531,7 @@ training-jupyter-cpu: ## Abrir Jupyter (CPU)
 	@echo "$(YELLOW)  Jupyter disponible en: http://localhost:8888$(NC)"
 	@echo "$(YELLOW)  Abriendo navegador en 3 segundos...$(NC)"
 	@echo "$(YELLOW)  CTRL+C para detener$(NC)"
-	@(sleep 3 && xdg-open http://localhost:8888 2>/dev/null || true) & \
+	@(sleep 3 && xdg-open http://localhost:8888 2>/dev/null) & \
 	$(COMPOSE_CPU) run --rm --service-ports training bash -c 'cd bert-classifier && jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token="" --NotebookApp.password="" --NotebookApp.disable_check_xsrf=True --NotebookApp.trust_xheaders=True'
 
 training-jupyter-gpu: ## Abrir Jupyter (GPU)
@@ -541,8 +539,8 @@ training-jupyter-gpu: ## Abrir Jupyter (GPU)
 	@echo "$(YELLOW)  Jupyter disponible en: http://localhost:8888$(NC)"
 	@echo "$(YELLOW)  Abriendo navegador en 3 segundos...$(NC)"
 	@echo "$(YELLOW)  CTRL+C para detener$(NC)"
-	@(sleep 3 && xdg-open http://localhost:8888 2>/dev/null || true) & \
-	$(COMPOSE) run --rm --service-ports training bash -c 'cd bert-classifier && jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token="" --NotebookApp.password="" --NotebookApp.disable_check_xsrf=True --NotebookApp.trust_xheaders=True'
+	@(sleep 3 && xdg-open http://localhost:8888 2>/dev/null) & \
+	$(COMPOSE) run --rm --service-ports training bash -c 'cd bert-classifier && jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token="" --NotebookApp.disable_check_xsrf=True --NotebookApp.trust_xheaders=True'
 
 training-setup: ## Configurar entorno de entrenamiento
 	@echo "$(YELLOW)Configurando entorno de entrenamiento (Docker)...$(NC)"

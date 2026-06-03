@@ -242,11 +242,14 @@ class MedicalSummarizer:
         result = output["choices"][0]["text"].strip()
 
         for prefix in (
-            "Resumen médico:", "Resumen:", "**Resumen médico:**",
-            "Informe reformulado:", "**Informe reformulado:**",
+            "Resumen médico:",
+            "Resumen:",
+            "**Resumen médico:**",
+            "Informe reformulado:",
+            "**Informe reformulado:**",
         ):
             if result.startswith(prefix):
-                result = result[len(prefix):].strip()
+                result = result[len(prefix) :].strip()
 
         return result or _fallback_summary(text)
 
@@ -300,7 +303,9 @@ def _watch_gguf_download(
 def _build_prompt(model_key: str, mode: str, text: str) -> str:
     """Construye el prompt en el formato de chat de cada modelo."""
     system = _SYSTEM_SUMMARY if mode == "summary" else _SYSTEM_PARAPHRASE
-    user_msg = (_USER_SUMMARY if mode == "summary" else _USER_PARAPHRASE).format(text=text)
+    user_msg = (_USER_SUMMARY if mode == "summary" else _USER_PARAPHRASE).format(
+        text=text
+    )
 
     if model_key == "gemma3":
         return (

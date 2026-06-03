@@ -13,9 +13,7 @@ defmodule AppWeb.Plugs.RequireAdminTest do
 
     conn =
       Plug.Test.conn(:get, "/admin")
-      |> Plug.Session.call(
-        Plug.Session.init(store: :ets, key: "_test_key", table: table)
-      )
+      |> Plug.Session.call(Plug.Session.init(store: :ets, key: "_test_key", table: table))
       |> fetch_session()
 
     Enum.reduce(session_values, conn, fn {k, v}, c -> put_session(c, k, v) end)

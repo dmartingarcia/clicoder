@@ -36,7 +36,12 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from sklearn.metrics import average_precision_score, f1_score, precision_score, recall_score
+from sklearn.metrics import (
+    average_precision_score,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModel, AutoTokenizer, get_cosine_schedule_with_warmup
 from transformers import logging as hf_logging
@@ -621,7 +626,8 @@ def _map_codiesp(T, PROBS):
     """
     aps = [
         float(average_precision_score(T[i], PROBS[i]))
-        for i in range(len(T)) if T[i].sum() > 0
+        for i in range(len(T))
+        if T[i].sum() > 0
     ]
     return float(np.mean(aps)) if aps else 0.0
 
@@ -651,8 +657,12 @@ def evaluate(model, loader, device, threshold=0.5):
         return {
             k: 0.0
             for k in (
-                "p_micro", "r_micro", "f1_micro",
-                "p_macro", "r_macro", "f1_macro",
+                "p_micro",
+                "r_micro",
+                "f1_micro",
+                "p_macro",
+                "r_macro",
+                "f1_macro",
                 "map_macro",
             )
         }
