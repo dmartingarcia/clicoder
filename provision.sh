@@ -25,7 +25,6 @@ if ! command -v docker &>/dev/null; then
   curl -fsSL https://get.docker.com | sh
 fi
 usermod -aG docker app
-sudo -u app newgrp docker
 
 # Emacs
 if ! command -v emacs &>/dev/null; then
@@ -44,3 +43,51 @@ if [ ! -f "$REPO_DIR/.env" ]; then
   cp "$REPO_DIR/.env.example" "$REPO_DIR/.env"
   echo "Edita $REPO_DIR/.env antes de arrancar los servicios"
 fi
+
+# Fail2ban — protección SSH + brute force HTTP vía logs de Traefik
+if ! command -v fail2ban-client &>/dev/null; then
+  apt-get update -q && apt-get install -y fail2ban
+fi
+
+mkdir -p /var/log/traefik
+mkdir -p /etc/fail2ban/filter.d
+
+cat > /etc/fail2ban/jail.local << 'EOF'
+[DEFAULT]
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+banaction = iptables-multiport
+ignoreip  = 127.0.0.1/8 ::1
+
+# SSH: 3 intentos fallidos → ban 24h
+[sshd]
+enabled  = true
+port     = ssh
+filter   = sshd
+logpath  = /var/log/auth.log
+maxretry = 3
+bantime  = 24h
+
+# Traefik: 10 respuestas 401 en 5 min → ban 1h
+# Cubre login de backend (Phoenix) y dashboard de Traefik
+[traefik-auth]
+enabled  = true
+port     = http,https
+filter   = traefik-auth
+logpath  = /var/log/traefik/access.log
+maxretry = 10
+bantime  = 1h
+findtime = 5m
+EOF
+
+# Traefik escribe access logs en JSON — extraemos ClientHost de cada 401
+cat > /etc/fail2ban/filter.d/traefik-auth.conf << 'EOF'
+[Definition]
+failregex = ^.*"ClientHost":"<HOST>".*"DownstreamStatus":401.*$
+ignoreregex =
+EOF
+
+systemctl enable fail2ban
+systemctl restart fail2ban
+echo "Fail2ban activo. Estado: $(fail2ban-client status)"

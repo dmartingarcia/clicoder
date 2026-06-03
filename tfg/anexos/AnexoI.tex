@@ -73,6 +73,30 @@ El dominio \texttt{clicoder.app} está configurado con el proxy de Cloudflare ac
 
 Esta capa de protección es complementaria a Traefik: Cloudflare actúa en el borde de la red, antes de que el paquete llegue al servidor, mientras que Traefik gestiona el enrutamiento y TLS una vez que el tráfico ya ha pasado por el proxy.
 
+\section{Protección con Fail2ban}
+
+Cloudflare filtra el tráfico en el borde de la red, pero no actúa sobre intentos de acceso por SSH ni sobre peticiones que llegan directamente al servidor. Fail2ban cubre esta superficie residual: monitoriza los logs del sistema y de Traefik, y bloquea a nivel de \texttt{iptables} las IPs que muestran comportamiento de fuerza bruta.
+
+La distinción respecto al \emph{rate limiting} de Traefik es relevante. El \emph{middleware} de Traefik devuelve \texttt{429 Too Many Requests}, pero la IP sigue abriendo conexiones TCP y consumiendo recursos del servidor. Fail2ban, en cambio, inserta una regla en \texttt{iptables} que descarta los paquetes antes de que lleguen a ningún servicio.
+
+El script \texttt{provision.sh} instala y configura fail2ban con dos \emph{jails}:
+
+\begin{table}[h]
+\centering
+\caption{Jails de fail2ban configurados en producción.}
+\label{tab:fail2ban-jails}
+\begin{tabular}{llll}
+\hline
+\textbf{Jail} & \textbf{Fuente de logs} & \textbf{Umbral} & \textbf{Ban} \\
+\hline
+\texttt{sshd}         & \texttt{/var/log/auth.log}            & 3 intentos fallidos    & 24 h \\
+\texttt{traefik-auth} & \texttt{/var/log/traefik/access.log}  & 10 respuestas 401 en 5 min & 1 h  \\
+\hline
+\end{tabular}
+\end{table}
+
+El \emph{jail} de Traefik se apoya en que el servicio escribe los \emph{access logs} en formato JSON al fichero \texttt{/var/log/traefik/access.log}, montado como \emph{bind mount} desde el host. El filtro personalizado \texttt{traefik-auth} extrae el campo \texttt{ClientHost} de cada línea con \texttt{DownstreamStatus: 401}, lo que cubre cualquier \emph{endpoint} de autenticación del backend sin necesidad de hardcodear rutas.
+
 \section{Comparativa de costes}
 
 La Tabla~\ref{tab:vps-vs-cloud} muestra la diferencia de coste entre el setup actual y una alternativa cloud gestionada equivalente.
