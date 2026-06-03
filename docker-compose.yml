@@ -84,6 +84,12 @@ services:
       - ./ai_engine:/app
       - ./training/csv_import_scripts:/data
       - ./.huggingface_cache:/cache/huggingface
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks: [clicoder]
 
   # Backend: Elixir Phoenix + Commanded
@@ -96,7 +102,7 @@ services:
       db:
         condition: service_healthy
       ai_engine:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "${BACKEND_PORT}:4000"
     environment:
