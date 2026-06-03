@@ -26,6 +26,10 @@ services:
       - "--log.level=INFO"
       - "--accesslog=true"
       - "--accesslog.filepath=/var/log/traefik/access.log"
+      # Prometheus metrics (puerto interno, sin exponer)
+      - "--metrics.prometheus=true"
+      - "--entrypoints.metrics.address=:8082"
+      - "--metrics.prometheus.entrypoint=metrics"
     ports:
       - "80:80"
       - "443:443"
