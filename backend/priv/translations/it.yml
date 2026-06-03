@@ -28,6 +28,13 @@ auth:
 email:
   confirmations:
     registration_subject: "Toc toc, conferma il tuo account su Clicoder"
+    greeting: "Benvenuto/a, {first_name} {last_name}"
+    intro: "Grazie per esserti registrato su {app_title}."
+    instruction: "Per attivare il tuo account, clicca sul link seguente:"
+    cta: "Conferma account"
+    fallback_hint: "Se non riesci a cliccare, copia e incolla questo URL nel tuo browser:"
+    ignore: "Se non hai creato questo account, puoi ignorare questo messaggio."
+    plain_confirm: "Conferma il tuo account visitando:"
 
 app:
   title: "Classificatore ICD-10 Clicoder"

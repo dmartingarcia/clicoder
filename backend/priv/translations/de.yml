@@ -28,6 +28,13 @@ auth:
 email:
   confirmations:
     registration_subject: "Klopf, klopf – bestätige dein Konto bei Clicoder"
+    greeting: "Willkommen, {first_name} {last_name}"
+    intro: "Danke für deine Registrierung bei {app_title}."
+    instruction: "Um dein Konto zu aktivieren, klicke auf den folgenden Link:"
+    cta: "Konto bestätigen"
+    fallback_hint: "Falls du nicht klicken kannst, kopiere diese URL in deinen Browser:"
+    ignore: "Falls du dieses Konto nicht erstellt hast, kannst du diese Nachricht ignorieren."
+    plain_confirm: "Bestätige dein Konto unter:"
 
 app:
   title: "ICD-10-Klassifikator Clicoder"

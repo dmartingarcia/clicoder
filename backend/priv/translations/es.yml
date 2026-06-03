@@ -28,6 +28,13 @@ auth:
 email:
   confirmations:
     registration_subject: "Toc Toc, confirma tu cuenta en Clicoder"
+    greeting: "Bienvenido/a, {first_name} {last_name}"
+    intro: "Gracias por registrarte en el {app_title}."
+    instruction: "Para activar tu cuenta, haz clic en el siguiente enlace:"
+    cta: "Confirmar cuenta"
+    fallback_hint: "Si no puedes hacer clic, copia y pega esta URL en tu navegador:"
+    ignore: "Si no creaste esta cuenta, puedes ignorar este mensaje."
+    plain_confirm: "Confirma tu cuenta visitando:"
 
 app:
   title: "Clasificador CIE-10 Clicoder"
