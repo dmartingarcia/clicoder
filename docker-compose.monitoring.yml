@@ -36,6 +36,30 @@ services:
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
+  loki:
+    image: grafana/loki:3.4.3
+    container_name: cie10_loki
+    restart: always
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks: [monitoring]
+
+  promtail:
+    image: grafana/promtail:3.4.3
+    container_name: cie10_promtail
+    restart: always
+    volumes:
+      - ./loki/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks: [monitoring]
+
   # Métricas por contenedor: CPU, memoria, red, disco
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.56.2
@@ -76,6 +100,7 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  loki_data:
 
 networks:
   monitoring:
