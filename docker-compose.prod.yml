@@ -1,0 +1,12 @@
+# docker-compose.prod.yml
+# Override para producción: frontend con build optimizada (Next.js runner stage).
+# Las NEXT_PUBLIC_* vars se inlinan en tiempo de build — no son runtime.
+# Uso: incluido automáticamente en make deploy
+
+services:
+  frontend:
+    build:
+      target: runner
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL}
