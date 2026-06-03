@@ -43,31 +43,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  // On mount: load auth from localStorage and handle ?confirmed=1 redirect
   useEffect(() => {
-    // Restore session from storage
     const stored = loadFromStorage();
     if (stored) setAuth(stored);
     setMounted(true);
-
-    // Handle ?confirmed=1&token=...&user_id=... redirect from backend
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('confirmed') === '1') {
-      const token = params.get('token');
-      const userId = params.get('user_id');
-      if (token && userId) {
-        fetch(`${config.apiUrl}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then((r) => r.json())
-          .then((data) => {
-            if (data.user) persist({ user: data.user, token });
-          })
-          .catch(() => setPendingEmail(null));
-        window.history.replaceState({}, '', '/');
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const persist = useCallback((data: { user: AuthUser; token: string } | null) => {

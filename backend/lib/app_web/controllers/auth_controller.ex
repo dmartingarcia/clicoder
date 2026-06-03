@@ -132,8 +132,15 @@ defmodule AppWeb.AuthController do
       )
     ],
     responses: [
-      found:
-        {"Redirige al frontend con token", "application/json", %OpenApiSpex.Schema{type: :object}},
+      ok:
+        {"Token y usuario confirmados", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{
+             token: %OpenApiSpex.Schema{type: :string},
+             user: %OpenApiSpex.Schema{type: :object}
+           }
+         }},
       not_found:
         {"Token inválido", "application/json",
          %OpenApiSpex.Schema{
@@ -147,14 +154,7 @@ defmodule AppWeb.AuthController do
     case Accounts.confirm_user(token) do
       {:ok, user} ->
         auth_token = Phoenix.Token.sign(AppWeb.Endpoint, "user auth", user.id)
-        domain = System.get_env("DOMAIN") || "localhost"
-
-        frontend_url =
-          if domain == "localhost", do: "http://localhost:3000", else: "https://#{domain}"
-
-        redirect(conn,
-          external: "#{frontend_url}?confirmed=1&token=#{auth_token}&user_id=#{user.id}"
-        )
+        json(conn, %{token: auth_token, user: format_user(user)})
 
       {:error, :invalid_token} ->
         conn
