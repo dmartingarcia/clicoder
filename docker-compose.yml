@@ -121,8 +121,6 @@ services:
       - SENTRY_DSN=${SENTRY_DSN:-}
     volumes:
       - ./backend:/app
-      - backend_build:/app/_build
-      - backend_deps:/app/deps
       - ./training/csv_import_scripts/cie10-csvs:/data/cie10-csvs:ro
     networks: [clicoder]
     labels:
@@ -156,8 +154,6 @@ services:
 
 volumes:
   postgres_data:
-  backend_build:
-  backend_deps:
 
 networks:
   clicoder:
