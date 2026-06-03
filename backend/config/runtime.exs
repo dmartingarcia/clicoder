@@ -107,6 +107,14 @@ if config_env() == :prod do
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
 
+  event_store_url =
+    System.get_env("EVENT_STORE_URL") ||
+      raise "environment variable EVENT_STORE_URL is missing."
+
+  config :app, App.EventStore,
+    serializer: App.JsonSerializer,
+    url: event_store_url
+
   mailjet_api_key =
     System.get_env("MAILJET_API_KEY") ||
       raise "environment variable MAILJET_API_KEY is missing."

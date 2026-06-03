@@ -6,9 +6,12 @@ defmodule App.Accounts.Emails do
 
   def send_confirmation(user) do
     locale = user.locale || "es"
-    host = System.get_env("APP_HOST") || "localhost"
-    port = System.get_env("BACKEND_PORT") || "4000"
-    confirm_url = "http://#{host}:#{port}/api/auth/confirm/#{user.confirmation_token}"
+    domain = System.get_env("DOMAIN") || "localhost"
+
+    base_url =
+      if domain == "localhost", do: "http://localhost:4000", else: "https://api.#{domain}"
+
+    confirm_url = "#{base_url}/api/auth/confirm/#{user.confirmation_token}"
 
     app_title = Translations.t(locale, "app.title")
 

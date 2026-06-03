@@ -14,6 +14,7 @@ SUMMARIZER_CTX     Contexto en tokens para llama-cpp. Default: 4096
 """
 
 import asyncio
+import glob
 import logging
 import os
 import threading
@@ -23,6 +24,7 @@ from pathlib import Path
 from typing import Literal
 
 import sentry_sdk
+import torch
 from fastapi import FastAPI, HTTPException
 from prometheus_client import Gauge, Histogram, Info
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -43,8 +45,12 @@ INFERENCE_LATENCY = Histogram(
 )
 MODEL_LOADED = Gauge("cie10_model_loaded", "1 si el modelo BERT está cargado")
 MODEL_INFO = Info("cie10_model", "Metadatos del modelo BERT cargado")
-DICT_LOADED = Gauge("cie10_dict_loaded", "1 si el clasificador de diccionario está cargado")
-SUMMARIZER_LOADED = Gauge("cie10_summarizer_loaded", "1 si el summarizer LLM está cargado")
+DICT_LOADED = Gauge(
+    "cie10_dict_loaded", "1 si el clasificador de diccionario está cargado"
+)
+SUMMARIZER_LOADED = Gauge(
+    "cie10_summarizer_loaded", "1 si el summarizer LLM está cargado"
+)
 
 # ==================== SENTRY ====================
 
@@ -150,16 +156,15 @@ async def lifespan(app: FastAPI):
             MODEL_LOADED.set(1)
 
             _stop.set()
-            import glob as _glob
-            import torch as _torch
-
-            _pt_files = sorted(_glob.glob(os.path.join(model_dir, "classifier_*.pt")))
-            _checkpoint = os.path.basename(_pt_files[-1]) if _pt_files else "classifier.pt"
+            _pt_files = sorted(glob.glob(os.path.join(model_dir, "classifier_*.pt")))
+            _checkpoint = (
+                os.path.basename(_pt_files[-1]) if _pt_files else "classifier.pt"
+            )
             MODEL_INFO.info({"model_name": _model_name, "checkpoint": _checkpoint})
 
-            if _torch.cuda.is_available():
-                gpu_name = _torch.cuda.get_device_name(0)
-                gpu_mem = _torch.cuda.get_device_properties(0).total_memory // (1024**2)
+            if torch.cuda.is_available():
+                gpu_name = torch.cuda.get_device_name(0)
+                gpu_mem = torch.cuda.get_device_properties(0).total_memory // (1024**2)
                 _device_info = f"GPU: {gpu_name} ({gpu_mem} MB VRAM)"
             else:
                 _device_info = "CPU"

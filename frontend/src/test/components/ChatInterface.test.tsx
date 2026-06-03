@@ -536,7 +536,7 @@ describe('ChatInterface', () => {
       expect(screen.getByText('cards.summary_title')).toBeInTheDocument();
     });
 
-    it('renders RecommendationsCard content', () => {
+    it('does not render recommendations cards (handled externally)', () => {
       mockState.chatItems = [
         { kind: 'user', message_id: 'msg-1', content: 'Patient report text here', timestamp: new Date().toISOString() },
         {
@@ -548,8 +548,7 @@ describe('ChatInterface', () => {
         },
       ] as typeof mockState.chatItems;
       render(<ChatInterface />);
-      expect(screen.getByText('Follow up in 2 weeks')).toBeInTheDocument();
-      expect(screen.getByText('cards.recommendations_title')).toBeInTheDocument();
+      expect(screen.queryByText('Follow up in 2 weeks')).not.toBeInTheDocument();
     });
   });
 });

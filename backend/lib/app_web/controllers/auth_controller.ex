@@ -143,7 +143,10 @@ defmodule AppWeb.AuthController do
     case Accounts.confirm_user(token) do
       {:ok, user} ->
         auth_token = Phoenix.Token.sign(AppWeb.Endpoint, "user auth", user.id)
-        frontend_url = System.get_env("FRONTEND_URL") || "http://localhost:3000"
+        domain = System.get_env("DOMAIN") || "localhost"
+
+        frontend_url =
+          if domain == "localhost", do: "http://localhost:3000", else: "https://#{domain}"
 
         redirect(conn,
           external: "#{frontend_url}?confirmed=1&token=#{auth_token}&user_id=#{user.id}"
