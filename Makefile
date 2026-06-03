@@ -350,7 +350,7 @@ frontend-format: ## Formatear código del frontend
 	$(COMPOSE_CPU) run --rm --no-deps frontend npm format
 
 frontend-install: ## Instalar dependencias del frontend
-	$(COMPOSE_CPU) run --rm frontend npm install
+	$(COMPOSE_DEV) run --rm frontend sh -c "npm install && chown -R $$(id -u):$$(id -g) /app/package-lock.json /app/node_modules /app/.npm-cache 2>/dev/null || true"
 
 frontend-lint: ## Lint del frontend
 	$(COMPOSE_CPU) run --rm --no-deps frontend npm run lint

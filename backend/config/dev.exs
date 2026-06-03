@@ -73,8 +73,3 @@ config :app, App.Mailer,
 
 config :swoosh, :api_client, Swoosh.ApiClient.Finch
 config :swoosh, :finch_name, App.Finch
-
-# Deshabilitar Sentry en desarrollo
-config :sentry,
-  included_environments: [],
-  enable_source_code_context: false

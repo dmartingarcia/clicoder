@@ -85,7 +85,7 @@ services:
       - ./training/csv_import_scripts:/data
       - ./.huggingface_cache:/cache/huggingface
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/ || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 20
@@ -125,11 +125,11 @@ services:
       - ./backend:/app
       - ./training/csv_import_scripts/cie10-csvs:/data/cie10-csvs:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/api/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 5s
     networks: [clicoder]
     labels:
       - "traefik.enable=true"
