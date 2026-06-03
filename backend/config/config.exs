@@ -37,6 +37,9 @@ config :app, AppWeb.Endpoint,
 # at the `config/runtime.exs`.
 config :app, App.Mailer, adapter: Swoosh.Adapters.Local
 
+# URL del microservicio de IA
+config :app, :ai_engine_url, System.get_env("AI_ENGINE_URL") || "http://localhost:8000"
+
 # Configures Elixir's Logger
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",

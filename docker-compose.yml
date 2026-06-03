@@ -104,6 +104,7 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:?CORS_ORIGINS no definido en .env}
       - DATABASE_URL=${DATABASE_URL:?DATABASE_URL no definido en .env}
       - DOMAIN=${DOMAIN:?DOMAIN no definido en .env}
+      - PHX_HOST=api.${DOMAIN}
       - EVENT_STORE_URL=${EVENT_STORE_URL:?EVENT_STORE_URL no definido en .env}
       - MAILJET_API_KEY=${MAILJET_API_KEY:-}
       - MAILJET_SECRET_KEY=${MAILJET_SECRET_KEY:-}
