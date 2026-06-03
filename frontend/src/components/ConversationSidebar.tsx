@@ -7,7 +7,8 @@ import { useI18n } from '@/contexts/I18nContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { config } from '@/lib/config';
-import { PlusCircle, MessageSquare, LogOut, Trash2, RotateCcw, ChevronDown, ChevronRight, Download, UserX } from 'lucide-react';
+import { PrivacyModal } from '@/components/PrivacyModal';
+import { PlusCircle, MessageSquare, LogOut, Trash2, RotateCcw, ChevronDown, ChevronRight, Download, UserX, ShieldCheck } from 'lucide-react';
 
 export function ConversationSidebar() {
   const { conversations, trashedConversations, activeConversationId, createConversation, switchConversation, deleteConversation, restoreConversation } = useConversation();
@@ -18,6 +19,7 @@ export function ConversationSidebar() {
   const [localeOpen, setLocaleOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   const handleExportData = async () => {
     const res = await fetch(`${config.apiUrl}/users/export`, {
@@ -97,6 +99,13 @@ export function ConversationSidebar() {
               </div>
             )}
           </div>
+          <button
+            onClick={() => setShowPrivacyModal(true)}
+            title={t('privacy.title')}
+            className="p-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+          >
+            <ShieldCheck className="h-4 w-4" />
+          </button>
           <button
             onClick={handleExportData}
             title={t('sidebar.export_data')}
@@ -219,6 +228,14 @@ export function ConversationSidebar() {
           </div>
         )}
       </ScrollArea>
+
+      {showPrivacyModal && (
+        <PrivacyModal
+          onClose={() => setShowPrivacyModal(false)}
+          onExport={() => { handleExportData(); setShowPrivacyModal(false); }}
+          onDeleteAccount={() => { setShowPrivacyModal(false); setShowDeleteModal(true); }}
+        />
+      )}
 
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
