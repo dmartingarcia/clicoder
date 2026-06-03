@@ -12,18 +12,13 @@ defmodule App.Accounts.Emails do
       if domain == "localhost", do: "http://localhost:4000", else: "https://api.#{domain}"
 
     confirm_url = "#{base_url}/api/auth/confirm/#{user.confirmation_token}"
-
     app_title = Translations.t(locale, "app.title")
-
-    subject_line =
-      if locale == "en",
-        do: "Confirm your account — #{app_title}",
-        else: "Confirma tu cuenta — #{app_title}"
+    subject_line = Translations.t(locale, "email.confirmations.registration_subject")
 
     email =
       new()
       |> to({user.first_name <> " " <> user.last_name, user.email})
-      |> from({app_title, "noreply@cie10.local"})
+      |> from(from_email())
       |> subject(subject_line)
       |> html_body("""
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
@@ -55,5 +50,11 @@ defmodule App.Accounts.Emails do
       """)
 
     Mailer.deliver(email)
+  end
+
+  defp from_email do
+    domain = System.get_env("DOMAIN") || "localhost"
+    app_title = Translations.t("es", "app.title")
+    {app_title, "noreply@#{domain}"}
   end
 end
