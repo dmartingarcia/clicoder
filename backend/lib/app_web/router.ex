@@ -25,6 +25,8 @@ defmodule AppWeb.Router do
   scope "/api", AppWeb do
     pipe_through :api
 
+    get "/health", HealthController, :check
+
     post "/auth/register", AuthController, :register
     post "/auth/login", AuthController, :login
     get "/auth/confirm/:token", AuthController, :confirm
