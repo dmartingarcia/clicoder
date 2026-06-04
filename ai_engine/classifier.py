@@ -56,6 +56,9 @@ def load_code_descriptions(model_dir: str) -> dict[str, str]:
     path = Path(model_dir) / "code_descriptions.json"
     if not path.exists():
         return {}
+    if path.stat().st_size == 0:
+        logger.warning("code_descriptions.json está vacío en '%s'", model_dir)
+        return {}
     try:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
