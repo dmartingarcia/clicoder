@@ -29,6 +29,7 @@ export interface AnalysisCode {
   reasoning?: string;
   confidence: number;
   relative_confidence?: number;
+  triggers?: string[];
   // for validation (populated from predictedCodes)
   code_id?: string;
   status?: 'pending' | 'validated' | 'rejected';
@@ -42,6 +43,7 @@ export interface PredictedCode {
   reasoning: string;
   confidence: number;
   status: 'pending' | 'validated' | 'rejected';
+  verified_triggers: string[];
 }
 
 export interface ConversationSummary {
@@ -70,6 +72,7 @@ interface ConversationContextType {
   validateCode: (codeId: string, cie10Code: string) => void;
   rejectCode: (codeId: string, cie10Code: string, reason: string) => void;
   suggestCode: (selectedText: string, suggestedCode: string) => void;
+  verifyTrigger: (codeId: string, trigger: string, verified: boolean) => void;
   deleteConversation: (conversationId: string) => void;
   restoreConversation: (conversationId: string) => void;
 }
@@ -90,8 +93,8 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
   const channelRef = useRef<Channel | null>(null);
   const pendingReportRef = useRef<string | null>(null);
 
-  const authFetch = useCallback(async (url: string, opts?: RequestInit): Promise<Response> => {
-    const res = await fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}`, ...opts?.headers } });
+  const authFetch = useCallback(async (url: string, opts?: Omit<RequestInit, 'headers'>): Promise<Response> => {
+    const res = await fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}` } });
     if (res.status === 401) {
       toast.error(t('errors.session_expired'));
       onUnauthorized?.();
@@ -240,6 +243,12 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
       );
     });
 
+    ch.on('trigger_verified', (payload: { code_id: string; verified_triggers: string[] }) => {
+      setPredictedCodes((prev) =>
+        prev.map((c) => c.code_id === payload.code_id ? { ...c, verified_triggers: payload.verified_triggers } : c)
+      );
+    });
+
     channelRef.current = ch;
     setChannel(ch);
 
@@ -295,6 +304,24 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
       .receive('error', () => toast.error(t('errors.suggest_failed')));
   }, [channel, t]);
 
+  const verifyTrigger = useCallback((codeId: string, trigger: string, verified: boolean) => {
+    if (!channel) return;
+    // Optimistic update
+    setPredictedCodes((prev) =>
+      prev.map((c) => {
+        if (c.code_id !== codeId) return c;
+        const current = c.verified_triggers ?? [];
+        return {
+          ...c,
+          verified_triggers: verified
+            ? [...new Set([...current, trigger])]
+            : current.filter((t) => t !== trigger),
+        };
+      })
+    );
+    channel.push('verify_trigger', { code_id: codeId, trigger, verified });
+  }, [channel]);
+
   const deleteConversation = useCallback(async (conversationId: string) => {
     try {
       await authFetch(`${config.apiUrl}/conversations/${conversationId}`, { method: 'DELETE' });
@@ -338,6 +365,7 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
         validateCode,
         rejectCode,
         suggestCode,
+        verifyTrigger,
         deleteConversation,
         restoreConversation,
       }}
