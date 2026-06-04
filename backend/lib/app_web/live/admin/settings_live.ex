@@ -37,6 +37,8 @@ defmodule AppWeb.Admin.SettingsLive do
        summarizer_mode: summ.mode,
        prompt_summary: summ.prompt_summary,
        prompt_paraphrase: summ.prompt_paraphrase,
+       user_prompt_summary: summ.user_prompt_summary,
+       user_prompt_paraphrase: summ.user_prompt_paraphrase,
        summarizer_models: @summarizer_models,
        summarizer_modes: @summarizer_modes,
        engine_saved: false,
@@ -57,13 +59,28 @@ defmodule AppWeb.Admin.SettingsLive do
   end
 
   @impl true
-  def handle_event("set_summarizer", %{"model" => model, "mode" => mode}, socket) do
+  def handle_event(
+        "set_summarizer",
+        %{
+          "model" => model,
+          "mode" => mode,
+          "prompt_summary" => ps,
+          "prompt_paraphrase" => pp,
+          "user_prompt_summary" => ups,
+          "user_prompt_paraphrase" => upp
+        },
+        socket
+      ) do
     with :ok <- SummarizerSettings.set_model(model),
-         :ok <- SummarizerSettings.set_mode(mode) do
+         :ok <- SummarizerSettings.set_mode(mode),
+         :ok <- SummarizerSettings.set_prompts(ps, pp, ups, upp) do
       ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
 
+      {system_prompt, user_prompt} =
+        if mode == "summary", do: {ps, ups}, else: {pp, upp}
+
       case Req.post("#{ai_url}/admin/summarizer",
-             json: %{model: model, mode: mode},
+             json: %{model: model, mode: mode, system_prompt: system_prompt, user_prompt: user_prompt},
              receive_timeout: 120_000
            ) do
         {:ok, %{status: 200}} ->
@@ -71,6 +88,10 @@ defmodule AppWeb.Admin.SettingsLive do
            assign(socket,
              summarizer_model: model,
              summarizer_mode: mode,
+             prompt_summary: ps,
+             prompt_paraphrase: pp,
+             user_prompt_summary: ups,
+             user_prompt_paraphrase: upp,
              summarizer_saved: true,
              summarizer_error: nil
            )}
@@ -202,6 +223,51 @@ defmodule AppWeb.Admin.SettingsLive do
                 </label>
               <% end %>
             </div>
+          </div>
+
+          <%!-- System prompts --%>
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-1">System prompt — resumen</p>
+            <p class="text-xs text-gray-400 mb-2">Instrucciones que recibe el modelo al generar un resumen conciso.</p>
+            <textarea
+              name="prompt_summary"
+              rows="4"
+              class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-y"
+            ><%= @prompt_summary %></textarea>
+          </div>
+
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-1">System prompt — paráfrasis</p>
+            <p class="text-xs text-gray-400 mb-2">Instrucciones que recibe el modelo al reformular el informe completo.</p>
+            <textarea
+              name="prompt_paraphrase"
+              rows="4"
+              class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-y"
+            ><%= @prompt_paraphrase %></textarea>
+          </div>
+
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-1">User prompt — resumen</p>
+            <p class="text-xs text-gray-400 mb-2">
+              Instrucción de usuario para el resumen. Usa <code class="bg-gray-100 px-1 rounded">{text}</code> donde debe aparecer el informe.
+            </p>
+            <textarea
+              name="user_prompt_summary"
+              rows="5"
+              class="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-y"
+            ><%= @user_prompt_summary %></textarea>
+          </div>
+
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-1">User prompt — paráfrasis</p>
+            <p class="text-xs text-gray-400 mb-2">
+              Instrucción de usuario para la paráfrasis. Usa <code class="bg-gray-100 px-1 rounded">{text}</code> donde debe aparecer el informe.
+            </p>
+            <textarea
+              name="user_prompt_paraphrase"
+              rows="5"
+              class="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-y"
+            ><%= @user_prompt_paraphrase %></textarea>
           </div>
 
           <button

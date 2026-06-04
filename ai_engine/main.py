@@ -331,6 +331,13 @@ class TokenCountRequest(BaseModel):
     text: str
 
 
+class SummarizerConfigRequest(BaseModel):
+    model: str
+    mode: str = "summary"
+    system_prompt: str = ""
+    user_prompt: str = ""
+
+
 # ==================== ENDPOINTS ====================
 
 
@@ -344,6 +351,56 @@ def health_check():
         "summarizer_model": summarizer.model_name if summarizer and hasattr(summarizer, "model_name") else "none",
         "summarizer_loaded": summarizer.is_loaded if summarizer and hasattr(summarizer, "is_loaded") else False,
     }
+
+
+@app.post("/admin/summarizer", summary="Hot-reload del summarizer LLM")
+async def admin_summarizer(req: SummarizerConfigRequest):
+    global summarizer
+    from summarizer import MODELS, MedicalSummarizer
+
+    valid_models = list(MODELS.keys()) + ["none"]
+    valid_modes = ["summary", "paraphrase"]
+
+    if req.model not in valid_models:
+        raise HTTPException(status_code=422, detail=f"ERR_INVALID_MODEL:{req.model}")
+    if req.mode not in valid_modes:
+        raise HTTPException(status_code=422, detail=f"ERR_INVALID_MODE:{req.mode}")
+
+    # Si el modelo y modo no cambian, solo actualizar prompts sin recargar
+    model_unchanged = (
+        summarizer is not None
+        and summarizer.is_loaded
+        and hasattr(summarizer, "_model_key")
+        and summarizer._model_key == req.model
+        and summarizer._mode == req.mode
+    )
+
+    if model_unchanged:
+        try:
+            summarizer.update_prompts(req.system_prompt, req.user_prompt)
+            logger.info("Prompts actualizados sin recargar modelo: model=%s mode=%s", req.model, req.mode)
+            return {"model": req.model, "mode": req.mode, "status": "prompts_updated"}
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+
+    # Modelo o modo cambiaron → cargar nuevo primero, luego descartar el viejo
+    if req.model == "none":
+        summarizer = None
+        SUMMARIZER_LOADED.set(0)
+        logger.info("Summarizer desactivado desde admin.")
+        return {"model": "none", "mode": req.mode, "status": "disabled"}
+
+    try:
+        new_summarizer = MedicalSummarizer(req.model, req.mode, req.system_prompt, req.user_prompt)
+        await asyncio.to_thread(new_summarizer.load)
+        # Swap atómico: el viejo modelo sigue sirviendo hasta este punto
+        summarizer = new_summarizer
+        SUMMARIZER_LOADED.set(1)
+        logger.info("Summarizer recargado: model=%s mode=%s", req.model, req.mode)
+        return {"model": req.model, "mode": req.mode, "status": "loaded"}
+    except Exception as exc:
+        logger.error("Error cargando summarizer %s: %s", req.model, exc)
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.post("/count-tokens", summary="Contar tokens del tokenizador")

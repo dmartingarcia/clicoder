@@ -428,7 +428,7 @@ network-create: ## Crear red Docker compartida entre stacks (proxy, app, monitor
 setup: network-create ## Setup completo desde cero: down -v + build + seed (sin levantar). Luego usa 'make deploy'
 	@[ -f .env ] || cp .env.example .env
 	$(COMPOSE_CPU) down -v --remove-orphans
-	$(COMPOSE_CPU) --progress=plain build backend frontend
+	$(COMPOSE_CPU) --progress=plain build backend frontend ai_engine
 	$(MAKE) model-download
 	$(MAKE) backend-seed
 	@echo "$(GREEN)Setup completado. Usa 'make up' para levantar los servicios. make deploy para producción$(NC)"
