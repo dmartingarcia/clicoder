@@ -20,6 +20,7 @@ defmodule App.Application do
       {Finch, name: App.Finch},
       App.Translations,
       App.AIEngineSettings,
+      App.SummarizerSettings,
       App.CommandedApplication,
       App.Projections.ConversationProjector,
       # Start to serve requests, typically the last entry

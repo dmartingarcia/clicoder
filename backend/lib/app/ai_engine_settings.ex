@@ -5,6 +5,8 @@ defmodule App.AIEngineSettings do
   Mantiene el ajuste en memoria mediante un `Agent`. El valor se pierde
   al reiniciar el nodo y vuelve al valor por defecto (`"bert"`).
 
+  Solo funcional en deploys mono-instancia. Para setups distribuidos se debería migrar a una solución centralizada (DB, Redis, etc).
+
   Valores válidos: `"bert"` | `"dict"` | `"both"`
   """
 

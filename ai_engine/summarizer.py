@@ -31,6 +31,12 @@ MODELS = {
         "display": "Gemma 3 4B IT",
         "size_gb": 2.5,
     },
+    "gemma4": {
+        "repo": "ggml-org/gemma-4-e4b-it-GGUF",
+        "filename": "gemma-4-e4b-it-Q4_K_M.gguf",
+        "display": "Gemma 4 E4B IT",
+        "size_gb": 2.5,
+    },
     "phi4": {
         "repo": "bartowski/microsoft_Phi-4-mini-instruct-GGUF",
         "filename": "microsoft_Phi-4-mini-instruct-Q4_K_M.gguf",
@@ -87,7 +93,7 @@ Informe reformulado:"""
 class MedicalSummarizer:
     """Genera resúmenes o paráfrasis médicas usando un LLM local en formato GGUF."""
 
-    def __init__(self, model_key: str, mode: str = "summary"):
+    def __init__(self, model_key: str, mode: str = "summary", system_prompt: str | None = None):
         if model_key not in MODELS:
             raise ValueError(f"Modelo desconocido: '{model_key}'. Opciones: {list(MODELS.keys())}")
         if mode not in MODES:
@@ -98,6 +104,7 @@ class MedicalSummarizer:
         self._llm = None
         self._n_threads = int(os.environ.get("SUMMARIZER_THREADS", "4"))
         self._n_ctx = int(os.environ.get("SUMMARIZER_CTX", "4096"))
+        self._system_prompt = system_prompt  # None → usa el default del modo
 
     # ── Propiedades públicas ───────────────────────────────────────────────
 
@@ -227,7 +234,7 @@ class MedicalSummarizer:
         if max_tokens is None:
             max_tokens = 250 if self._mode == "summary" else 600
 
-        prompt = _build_prompt(self._model_key, self._mode, text)
+        prompt = _build_prompt(self._model_key, self._mode, text, self._system_prompt)
 
         output = self._llm(
             prompt,
@@ -298,9 +305,9 @@ def _watch_gguf_download(
         stop_event.wait(15)
 
 
-def _build_prompt(model_key: str, mode: str, text: str) -> str:
+def _build_prompt(model_key: str, mode: str, text: str, system_prompt: str | None = None) -> str:
     """Construye el prompt en el formato de chat de cada modelo."""
-    system = _SYSTEM_SUMMARY if mode == "summary" else _SYSTEM_PARAPHRASE
+    system = system_prompt or (_SYSTEM_SUMMARY if mode == "summary" else _SYSTEM_PARAPHRASE)
     user_msg = (_USER_SUMMARY if mode == "summary" else _USER_PARAPHRASE).format(text=text)
 
     if model_key == "gemma3":
