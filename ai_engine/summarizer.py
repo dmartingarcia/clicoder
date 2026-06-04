@@ -58,11 +58,12 @@ MODELS = {
 MODES = ("summary", "paraphrase")
 
 
-
 class MedicalSummarizer:
     """Genera resúmenes o paráfrasis médicas usando un LLM local en formato GGUF."""
 
-    def __init__(self, model_key: str, mode: str = "summary", system_prompt: str = "", user_prompt: str = ""):
+    def __init__(
+        self, model_key: str, mode: str = "summary", system_prompt: str = "", user_prompt: str = ""
+    ):
         if model_key not in MODELS:
             raise ValueError(f"ERR_INVALID_MODEL:{model_key}")
         if mode not in MODES:
@@ -221,7 +222,9 @@ class MedicalSummarizer:
         if max_tokens is None:
             max_tokens = 250 if self._mode == "summary" else 600
 
-        prompt = _build_prompt(self._model_key, self._mode, text, self._system_prompt, self._user_prompt)
+        prompt = _build_prompt(
+            self._model_key, self._mode, text, self._system_prompt, self._user_prompt
+        )
 
         output = self._llm(
             prompt,
@@ -245,11 +248,20 @@ class MedicalSummarizer:
 
         return result or _fallback_summary(text)
 
-    def summarize_stream(self, text: str, max_tokens: int | None = None):
+    def summarize_stream(
+        self,
+        text: str,
+        max_tokens: int | None = None,
+        system_prompt: str | None = None,
+        user_prompt: str | None = None,
+    ):
         """Genera tokens del resumen/paráfrasis de forma incremental (generador síncrono).
 
         Cada yield es un fragmento de texto (string). El llamador es responsable de
         ejecutar este generador en un hilo (no bloquea el event loop de asyncio).
+
+        Si ``system_prompt`` / ``user_prompt`` se proporcionan (pre-rellenados por el
+        backend — sin placeholders), se usan en lugar de los prompts almacenados.
         """
         if not self.is_loaded:
             self.load()
@@ -262,7 +274,9 @@ class MedicalSummarizer:
         if max_tokens is None:
             max_tokens = 250 if self._mode == "summary" else 600
 
-        prompt = _build_prompt(self._model_key, self._mode, text, self._system_prompt, self._user_prompt)
+        sys_p = system_prompt if system_prompt is not None else self._system_prompt
+        usr_p = user_prompt if user_prompt is not None else self._user_prompt
+        prompt = _build_prompt(self._model_key, self._mode, text, sys_p, usr_p)
 
         for chunk in self._llm(
             prompt,
@@ -324,10 +338,16 @@ def _watch_gguf_download(
         stop_event.wait(15)
 
 
-def _build_prompt(model_key: str, mode: str, text: str, system_prompt: str, user_prompt: str) -> str:
-    """Construye el prompt en el formato de chat de cada modelo."""
+def _build_prompt(
+    model_key: str, mode: str, text: str, system_prompt: str, user_prompt: str
+) -> str:
+    """Construye el prompt en el formato de chat de cada modelo.
+
+    Usa ``str.replace`` en vez de ``str.format`` para evitar KeyError si el admin
+    deja otras variables (ej. ``{language}``) sin rellenar en el prompt almacenado.
+    """
     system = system_prompt
-    user_msg = user_prompt.format(text=text)
+    user_msg = user_prompt.replace("{text}", text)
 
     if model_key in ("gemma3", "gemma4"):
         return f"<start_of_turn>user\n{system}\n\n{user_msg}<end_of_turn>\n<start_of_turn>model\n"
@@ -380,8 +400,8 @@ def create_summarizer() -> "MedicalSummarizer | None":
             "Eres un médico especialista en documentación clínica. "
             "Tu tarea es resumir informes clínicos de forma concisa y estructurada. "
             "Responde siempre en español. No añadas comentarios ni explicaciones fuera del resumen."
-            if mode == "summary" else
-            "Eres un médico especialista en documentación clínica. "
+            if mode == "summary"
+            else "Eres un médico especialista en documentación clínica. "
             "Tu tarea es reformular informes clínicos de forma clara y estructurada, "
             "conservando TODOS los detalles médicos: diagnósticos, fármacos, dosis, fechas y procedimientos. "
             "Responde siempre en español. No añadas ni omitas información médica."
@@ -392,8 +412,8 @@ def create_summarizer() -> "MedicalSummarizer | None":
             "Incluye: motivo de consulta, antecedentes relevantes, hallazgos exploratorios y analíticos, "
             "diagnóstico principal y procedimientos realizados. Máximo 120 palabras. Sin listas, en prosa continua.\n\n"
             "Informe:\n{text}\n\nResumen médico:"
-            if mode == "summary" else
-            "Reformula el siguiente informe clínico de forma clara y estructurada.\n"
+            if mode == "summary"
+            else "Reformula el siguiente informe clínico de forma clara y estructurada.\n"
             "Organiza la información en estas secciones (sin encabezados, en prosa continua): "
             "antecedentes y motivo de consulta, evolución clínica, hallazgos diagnósticos, "
             "tratamiento y procedimientos. Conserva TODOS los datos médicos exactos.\n\n"
