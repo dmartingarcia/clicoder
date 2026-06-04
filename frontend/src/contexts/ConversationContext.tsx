@@ -196,6 +196,17 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
     ch.on('analysis_card_received', (payload: { message_id: string; card_id: string; card_type: AnalysisCard['card_type']; content: string | AnalysisCode[] }) => {
       setChatItems((prev) => {
         if (prev.some((item) => item.kind === 'card' && item.card_id === payload.card_id)) return prev;
+        // Si llega la tarjeta definitiva de summary, sustituye el buffer de streaming
+        const streamingId = `streaming-summary-${payload.message_id}`;
+        const hasStreaming = payload.card_type === 'summary' &&
+          prev.some((item) => item.kind === 'card' && item.card_id === streamingId);
+        if (hasStreaming) {
+          return prev.map((item) =>
+            item.kind === 'card' && item.card_id === streamingId
+              ? { ...item, card_id: payload.card_id, content: payload.content }
+              : item
+          );
+        }
         return [...prev, {
           kind: 'card',
           card_id: payload.card_id,
@@ -241,6 +252,28 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
       setPredictedCodes((prev) =>
         prev.map((c) => c.code_id === payload.code_id ? { ...c, status: 'rejected' as const } : c)
       );
+    });
+
+    // Streaming del resumen: cada token actualiza la tarjeta en curso
+    ch.on('summary_token', (payload: { message_id: string; token: string }) => {
+      const streamingId = `streaming-summary-${payload.message_id}`;
+      setChatItems((prev) => {
+        const exists = prev.some((item) => item.kind === 'card' && item.card_id === streamingId);
+        if (exists) {
+          return prev.map((item) =>
+            item.kind === 'card' && item.card_id === streamingId
+              ? { ...item, content: (item.content as string) + payload.token }
+              : item
+          );
+        }
+        return [...prev, {
+          kind: 'card' as const,
+          card_id: streamingId,
+          message_id: payload.message_id,
+          card_type: 'summary' as const,
+          content: payload.token,
+        }];
+      });
     });
 
     ch.on('trigger_verified', (payload: { code_id: string; verified_triggers: string[] }) => {
