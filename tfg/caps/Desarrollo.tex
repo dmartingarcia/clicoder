@@ -569,6 +569,53 @@ La normalización se aplica en el servicio de inferencia (\texttt{ai_engine}) in
 \paragraph{Representación visual.}
 En el \emph{frontend}, la confianza relativa se muestra como una barra de progreso de ancho proporcional a $r_i$, con código de color en tres tramos: verde ($r_i \geq 0{,}66$), amarillo ($0{,}33 \leq r_i < 0{,}66$) y naranja ($r_i < 0{,}33$). La probabilidad bruta se conserva visible como texto secundario de pequeño tamaño, de forma que el codificador avanzado pueda consultarla si lo necesita. Esta combinación permite distinguir de un vistazo qué códigos tienen mayor respaldo del modelo dentro de cada análisis, sin inducir una falsa precisión numérica.
 
+\subsubsection{Explicabilidad de las predicciones}
+\label{sec:explicabilidad}
+
+La explicabilidad (\emph{explainability}) de los sistemas de aprendizaje automático es especialmente relevante en el ámbito clínico, donde el usuario necesita comprender \emph{por qué} el modelo sugiere un determinado código antes de validarlo. Sin esta información, el sistema actúa como una caja negra y dificulta la supervisión médica~\cite{Arrieta20}.
+
+\paragraph{Limitaciones de la atención como explicación.}
+Una primera aproximación natural sería utilizar los pesos de atención del transformador: los tokens a los que el mecanismo de atención presta más importancia en la capa final podrían interpretarse como los fragmentos más relevantes del informe. Sin embargo, \citeauthor{Jain19}~\cite{Jain19} demostraron empíricamente que los pesos de atención no son explicaciones fiables en el sentido de la teoría de la interpretabilidad: es posible obtener predicciones idénticas con distribuciones de atención muy distintas, y los tokens más atendidos no son necesariamente los responsables de la decisión. Por tanto, aunque los pesos de atención son útiles como herramienta de diagnóstico del modelo, no deben presentarse al usuario final como justificación de las predicciones.
+
+\paragraph{Primera aproximación: Gradient $\times$ Input y su descarte.}
+La primera implementación adoptó \textbf{Gradient~$\times$~Input}~\cite{Simonyan14}: para cada código $k$ y token $i$, se calculaba $s_{i,k} = |\nabla_{\mathbf{e}_i}\ell_k \odot \mathbf{e}_i|_1$ mediante una pasada hacia atrás desde el logit del código hasta los embeddings de entrada. El método es post-hoc, no requiere reentrenamiento y tiene coste $O(|\mathcal{P}|)$ pasadas backward para un conjunto de predicciones $\mathcal{P}$.
+
+Sin embargo, la evaluación empírica sobre informes clínicos reales reveló atribuciones de escasa utilidad. En un informe que contenía el término \emph{brucelosis} y para el que el modelo predijo correctamente el código de brucelosis (A23), el método no identificó \emph{brucelosis} entre los tokens de mayor saliencia. Este fallo se reproduce de forma sistemática con términos clínicos específicos: el gradiente al propagarse hacia atrás por las 24 capas del encoder RigoBERTa-Clinical se difumina hasta asignar saliencias comparables a términos clínicos y a artículos o preposiciones. El problema es inherente a arquitecturas transformer profundas con pooling en el token \texttt{[CLS]}: el gradiente debe atravesar todos los mecanismos de atención antes de llegar a los embeddings, perdiendo especificidad por el camino.
+
+\paragraph{Método adoptado: atribución por enmascaramiento (\emph{masking perturbation}).}
+Descartado el enfoque de gradientes, se adoptó la \textbf{atribución por perturbación}: para cada palabra $w$ del informe y cada código predicho $k$, se mide el descenso en el logit $\ell_k$ al sustituir los tokens de $w$ por el token especial \texttt{[MASK]}:
+
+\paragraph{Atribución por enmascaramiento (\emph{masking perturbation}).}
+El método adoptado es la \textbf{atribución por perturbación}: para cada palabra $w$ del informe y cada código predicho $k$, se mide el descenso en el logit $\ell_k$ al sustituir los tokens de $w$ por el token especial \texttt{[MASK]}:
+
+\begin{equation}
+    s_{w,k} = \max\!\left(0,\; \ell_k(\mathbf{x}) - \ell_k(\mathbf{x}_{w \to \text{[MASK]}})\right)
+\end{equation}
+
+donde $\mathbf{x}_{w \to \text{[MASK]}}$ es la secuencia de entrada con los tokens de la palabra $w$ reemplazados por \texttt{[MASK]}. Un valor alto de $s_{w,k}$ indica que eliminar $w$ reduce significativamente la confianza del modelo en el código $k$: $w$ es un término clave para esa predicción concreta. Solo se evalúan palabras de cuatro o más caracteres para evitar ruido de stopwords y artículos. Este método mide directamente el \textbf{impacto causal} de cada palabra sobre la predicción, produciendo atribuciones fiables incluso en redes profundas donde los gradientes se difuminan.
+
+\paragraph{Implementación.}
+La atribución se calcula en el método \texttt{CIE10Classifier.explain()} (\texttt{ai\_engine/classifier.py}):
+
+\begin{enumerate}
+    \item Se tokeniza el texto y se obtiene el mapeo palabra~$\to$~posiciones de subword tokens mediante \texttt{word\_ids()} del tokenizador.
+    \item Se ejecuta una pasada \emph{forward} de referencia para obtener los logits originales $\ell_k(\mathbf{x})$ de todos los códigos predichos.
+    \item Para cada palabra candidata se construye una versión enmascarada de la secuencia sustituyendo sus tokens por \texttt{[MASK]}.
+    \item Las versiones enmascaradas se agrupan en \emph{batches} de 16 y se procesan en una única pasada \emph{forward} por batch, obteniendo $\ell_k(\mathbf{x}_{w \to \text{[MASK]}})$ para todos los códigos simultáneamente.
+    \item Se calcula $s_{w,k}$ para cada par (palabra, código) y se devuelven las $k$ palabras de mayor importancia por código.
+\end{enumerate}
+
+El coste es $O(\lceil|W|/B\rceil)$ pasadas \emph{forward} adicionales, donde $|W|$ es el número de palabras candidatas y $B = 16$ el tamaño de batch. Para un informe típico de 350 palabras con \textasciitilde 200 candidatas válidas, el sobrecosto es de unas 13 pasadas adicionales. El cálculo se ejecuta en paralelo con la generación del resumen mediante \texttt{asyncio.to\_thread}.
+
+\paragraph{Clasificador de diccionario.}
+Para el motor basado en reglas, la explicabilidad es directa e inherente al diseño: el clasificador devuelve los términos clínicos concretos del informe que activaron cada código (\texttt{matched\_terms}), extraídos mediante las expresiones regulares construidas con spaCy. Estos términos se presentan al usuario de la misma forma que los triggers del motor BERT.
+
+\paragraph{Representación visual.}
+Los términos trigger de cada código se presentan como \emph{chips} de color ámbar bajo la descripción del código. El usuario puede identificar de un vistazo qué palabras del informe original motivaron cada sugerencia, facilitando la supervisión clínica y la detección de predicciones incorrectas.
+
+\paragraph{Trabajo futuro.}
+Una extensión natural es la estimación de intervalos de confianza en las atribuciones mediante múltiples perturbaciones con ruido (\emph{SmoothGrad}~\cite{Smilkov17}), o el uso de \emph{SHAP KernelExplainer}~\cite{Lundberg17} para obtener valores de Shapley con garantías de equidad en la distribución de la importancia entre palabras. Ambos métodos añaden coste computacional pero proporcionan propiedades teóricas más sólidas.
+
 \subsection{Autenticación y seguridad}
 \label{sec:seguridad}
 
