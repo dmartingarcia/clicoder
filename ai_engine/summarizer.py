@@ -57,54 +57,30 @@ MODELS = {
 
 MODES = ("summary", "paraphrase")
 
-_SYSTEM_SUMMARY = (
-    "Eres un médico especialista en documentación clínica. "
-    "Tu tarea es resumir informes clínicos de forma concisa y estructurada. "
-    "Responde siempre en español. No añadas comentarios ni explicaciones fuera del resumen."
-)
-
-_SYSTEM_PARAPHRASE = (
-    "Eres un médico especialista en documentación clínica. "
-    "Tu tarea es reformular informes clínicos de forma clara y estructurada, "
-    "conservando TODOS los detalles médicos: diagnósticos, fármacos, dosis, fechas y procedimientos. "
-    "Responde siempre en español. No añadas ni omitas información médica."
-)
-
-_USER_SUMMARY = """Resume el siguiente informe clínico desde un punto de vista médico.
-Incluye: motivo de consulta, antecedentes relevantes, hallazgos exploratorios y analíticos, \
-diagnóstico principal y procedimientos realizados. Máximo 120 palabras. Sin listas, en prosa continua.
-
-Informe:
-{text}
-
-Resumen médico:"""
-
-_USER_PARAPHRASE = """Reformula el siguiente informe clínico de forma clara y estructurada.
-Organiza la información en estas secciones (sin encabezados, en prosa continua): \
-antecedentes y motivo de consulta, evolución clínica, hallazgos diagnósticos, \
-tratamiento y procedimientos. Conserva TODOS los datos médicos exactos.
-
-Informe:
-{text}
-
-Informe reformulado:"""
 
 
 class MedicalSummarizer:
     """Genera resúmenes o paráfrasis médicas usando un LLM local en formato GGUF."""
 
-    def __init__(self, model_key: str, mode: str = "summary", system_prompt: str | None = None):
+    def __init__(self, model_key: str, mode: str = "summary", system_prompt: str = "", user_prompt: str = ""):
         if model_key not in MODELS:
-            raise ValueError(f"Modelo desconocido: '{model_key}'. Opciones: {list(MODELS.keys())}")
+            raise ValueError(f"ERR_INVALID_MODEL:{model_key}")
         if mode not in MODES:
-            raise ValueError(f"Modo desconocido: '{mode}'. Opciones: {list(MODES)}")
+            raise ValueError(f"ERR_INVALID_MODE:{mode}")
+        if not system_prompt or not system_prompt.strip():
+            raise ValueError("ERR_MISSING_SYSTEM_PROMPT")
+        if not user_prompt or not user_prompt.strip():
+            raise ValueError("ERR_MISSING_USER_PROMPT")
+        if "{text}" not in user_prompt:
+            raise ValueError("ERR_USER_PROMPT_MISSING_PLACEHOLDER")
         self._model_key = model_key
         self._mode = mode
         self._cfg = MODELS[model_key]
         self._llm = None
         self._n_threads = int(os.environ.get("SUMMARIZER_THREADS", "4"))
         self._n_ctx = int(os.environ.get("SUMMARIZER_CTX", "4096"))
-        self._system_prompt = system_prompt  # None → usa el default del modo
+        self._system_prompt = system_prompt
+        self._user_prompt = user_prompt
 
     # ── Propiedades públicas ───────────────────────────────────────────────
 
@@ -121,6 +97,17 @@ class MedicalSummarizer:
         return self._llm is not None
 
     # ── Carga / descarga ───────────────────────────────────────────────────
+
+    def update_prompts(self, system_prompt: str, user_prompt: str) -> None:
+        """Actualiza los prompts sin recargar el modelo."""
+        if not system_prompt or not system_prompt.strip():
+            raise ValueError("ERR_MISSING_SYSTEM_PROMPT")
+        if not user_prompt or not user_prompt.strip():
+            raise ValueError("ERR_MISSING_USER_PROMPT")
+        if "{text}" not in user_prompt:
+            raise ValueError("ERR_USER_PROMPT_MISSING_PLACEHOLDER")
+        self._system_prompt = system_prompt
+        self._user_prompt = user_prompt
 
     def load(self) -> None:
         """Descarga (si es necesario) y carga el modelo en memoria."""
@@ -234,7 +221,7 @@ class MedicalSummarizer:
         if max_tokens is None:
             max_tokens = 250 if self._mode == "summary" else 600
 
-        prompt = _build_prompt(self._model_key, self._mode, text, self._system_prompt)
+        prompt = _build_prompt(self._model_key, self._mode, text, self._system_prompt, self._user_prompt)
 
         output = self._llm(
             prompt,
@@ -305,10 +292,10 @@ def _watch_gguf_download(
         stop_event.wait(15)
 
 
-def _build_prompt(model_key: str, mode: str, text: str, system_prompt: str | None = None) -> str:
+def _build_prompt(model_key: str, mode: str, text: str, system_prompt: str, user_prompt: str) -> str:
     """Construye el prompt en el formato de chat de cada modelo."""
-    system = system_prompt or (_SYSTEM_SUMMARY if mode == "summary" else _SYSTEM_PARAPHRASE)
-    user_msg = (_USER_SUMMARY if mode == "summary" else _USER_PARAPHRASE).format(text=text)
+    system = system_prompt
+    user_msg = user_prompt.format(text=text)
 
     if model_key == "gemma3":
         return f"<start_of_turn>user\n{system}\n\n{user_msg}<end_of_turn>\n<start_of_turn>model\n"
