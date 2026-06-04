@@ -234,10 +234,17 @@ defmodule AppWeb.Admin.SettingsLive do
             </div>
           </div>
 
+          <%!-- Nota de variables --%>
+          <div class="rounded-lg bg-indigo-50 border border-indigo-100 px-4 py-3 text-xs text-indigo-700 space-y-0.5">
+            <p class="font-medium mb-1">Variables disponibles en los prompts:</p>
+            <p><code class="bg-white px-1 rounded border border-indigo-200">&#123;language&#125;</code> — idioma del usuario (ej. <em>español</em>, <em>English</em>). Se interpola en el backend antes de llamar al modelo.</p>
+            <p><code class="bg-white px-1 rounded border border-indigo-200">&#123;text&#125;</code> — informe clínico del paciente.</p>
+          </div>
+
           <%!-- System prompts --%>
           <div>
             <p class="text-sm font-medium text-gray-700 mb-1">System prompt — resumen</p>
-            <p class="text-xs text-gray-400 mb-2">Instrucciones que recibe el modelo al generar un resumen conciso.</p>
+            <p class="text-xs text-gray-400 mb-2">Instrucciones del sistema para generar el análisis CIE-10 + resumen. Acepta <code class="bg-gray-100 px-1 rounded">&#123;language&#125;</code>.</p>
             <textarea
               name="prompt_summary"
               rows="4"
@@ -247,7 +254,7 @@ defmodule AppWeb.Admin.SettingsLive do
 
           <div>
             <p class="text-sm font-medium text-gray-700 mb-1">System prompt — paráfrasis</p>
-            <p class="text-xs text-gray-400 mb-2">Instrucciones que recibe el modelo al reformular el informe completo.</p>
+            <p class="text-xs text-gray-400 mb-2">Instrucciones del sistema para reformular el informe. Acepta <code class="bg-gray-100 px-1 rounded">&#123;language&#125;</code>.</p>
             <textarea
               name="prompt_paraphrase"
               rows="4"
@@ -258,11 +265,11 @@ defmodule AppWeb.Admin.SettingsLive do
           <div>
             <p class="text-sm font-medium text-gray-700 mb-1">User prompt — resumen</p>
             <p class="text-xs text-gray-400 mb-2">
-              Instrucción de usuario para el resumen. Usa <code class="bg-gray-100 px-1 rounded">&#123;text&#125;</code> donde debe aparecer el informe.
+              Usa <code class="bg-gray-100 px-1 rounded">&#123;text&#125;</code> donde debe aparecer el informe y <code class="bg-gray-100 px-1 rounded">&#123;language&#125;</code> para el idioma del usuario.
             </p>
             <textarea
               name="user_prompt_summary"
-              rows="5"
+              rows="7"
               class="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-y"
             ><%= @user_prompt_summary %></textarea>
           </div>
@@ -270,11 +277,11 @@ defmodule AppWeb.Admin.SettingsLive do
           <div>
             <p class="text-sm font-medium text-gray-700 mb-1">User prompt — paráfrasis</p>
             <p class="text-xs text-gray-400 mb-2">
-              Instrucción de usuario para la paráfrasis. Usa <code class="bg-gray-100 px-1 rounded">&#123;text&#125;</code> donde debe aparecer el informe.
+              Usa <code class="bg-gray-100 px-1 rounded">&#123;text&#125;</code> donde debe aparecer el informe y <code class="bg-gray-100 px-1 rounded">&#123;language&#125;</code> para el idioma del usuario.
             </p>
             <textarea
               name="user_prompt_paraphrase"
-              rows="5"
+              rows="7"
               class="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-y"
             ><%= @user_prompt_paraphrase %></textarea>
           </div>
