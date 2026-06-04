@@ -32,7 +32,7 @@ defmodule App.Fixtures do
       "last_name" => "User",
       "username" => "testuser#{unique}",
       "email" => "user#{unique}@example.com",
-      "password" => "password123",
+      "password" => "password123#{unique}",
       "locale" => "es"
     }
 
@@ -62,7 +62,7 @@ defmodule App.Fixtures do
       "last_name" => "User",
       "username" => "pending#{unique}",
       "email" => "pending#{unique}@example.com",
-      "password" => "password123",
+      "password" => "password12345",
       "locale" => "es"
     }
 

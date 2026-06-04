@@ -11,7 +11,7 @@ defmodule App.AccountsTest do
         "last_name" => "García",
         "username" => "anagarcia",
         "email" => "ana@example.com",
-        "password" => "secret123"
+        "password" => "secretpass123"
       }
 
       assert {:ok, user} = Accounts.register_user(attrs)
@@ -28,11 +28,11 @@ defmodule App.AccountsTest do
         "last_name" => "B",
         "username" => "abuser",
         "email" => "ab@example.com",
-        "password" => "plaintext"
+        "password" => "plaintextpass123"
       }
 
       {:ok, user} = Accounts.register_user(attrs)
-      refute user.password_hash == "plaintext"
+      refute user.password_hash == "plaintextpass123"
     end
 
     test "returns error on duplicate email" do
@@ -43,7 +43,7 @@ defmodule App.AccountsTest do
         "last_name" => "User",
         "username" => "otherusername",
         "email" => existing.email,
-        "password" => "password123"
+        "password" => "password12345"
       }
 
       assert {:error, changeset} = Accounts.register_user(attrs)
@@ -58,7 +58,7 @@ defmodule App.AccountsTest do
         "last_name" => "User",
         "username" => existing.username,
         "email" => "unique@example.com",
-        "password" => "password123"
+        "password" => "password12345"
       }
 
       assert {:error, changeset} = Accounts.register_user(attrs)
@@ -71,7 +71,7 @@ defmodule App.AccountsTest do
         "last_name" => "B",
         "username" => "validuser",
         "email" => "notanemail",
-        "password" => "password123"
+        "password" => "password12345"
       }
 
       assert {:error, changeset} = Accounts.register_user(attrs)
@@ -97,7 +97,7 @@ defmodule App.AccountsTest do
         "last_name" => "B",
         "username" => "bad user!",
         "email" => "valid3@example.com",
-        "password" => "password123"
+        "password" => "password12345"
       }
 
       assert {:error, changeset} = Accounts.register_user(attrs)
@@ -129,8 +129,8 @@ defmodule App.AccountsTest do
 
   describe "authenticate/2" do
     test "returns user with valid credentials" do
-      user = Fixtures.user_fixture(%{"password" => "mypassword"})
-      assert {:ok, authenticated} = Accounts.authenticate(user.email, "mypassword")
+      user = Fixtures.user_fixture(%{"password" => "mypassword1234"})
+      assert {:ok, authenticated} = Accounts.authenticate(user.email, "mypassword1234")
       assert authenticated.id == user.id
     end
 
@@ -141,7 +141,7 @@ defmodule App.AccountsTest do
 
     test "returns error for unconfirmed user" do
       user = Fixtures.unconfirmed_user_fixture()
-      assert {:error, :email_not_confirmed} = Accounts.authenticate(user.email, "password123")
+      assert {:error, :email_not_confirmed} = Accounts.authenticate(user.email, "password12345")
     end
 
     test "returns error for nonexistent email" do

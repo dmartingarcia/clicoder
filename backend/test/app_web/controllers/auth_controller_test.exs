@@ -16,7 +16,7 @@ defmodule AppWeb.AuthControllerTest do
         "last_name" => "García",
         "username" => "anagarcia#{unique}",
         "email" => "ana#{unique}@example.com",
-        "password" => "secret123"
+        "password" => "secretpass123"
       }
 
       conn = post(conn, "/api/auth/register", params)
@@ -35,7 +35,7 @@ defmodule AppWeb.AuthControllerTest do
         "last_name" => "Person",
         "username" => "otherperson#{unique}",
         "email" => existing.email,
-        "password" => "password123"
+        "password" => "password12345"
       }
 
       conn = post(conn, "/api/auth/register", params)
@@ -77,7 +77,7 @@ defmodule AppWeb.AuthControllerTest do
         "last_name" => "Username",
         "username" => "bad user name!",
         "email" => "bad#{unique}@example.com",
-        "password" => "password123"
+        "password" => "password12345"
       }
 
       conn = post(conn, "/api/auth/register", params)
@@ -94,7 +94,7 @@ defmodule AppWeb.AuthControllerTest do
         "last_name" => "Rt",
         "username" => "ab",
         "email" => "ab#{unique}@example.com",
-        "password" => "password123"
+        "password" => "password12345"
       }
 
       conn = post(conn, "/api/auth/register", params)
@@ -110,9 +110,10 @@ defmodule AppWeb.AuthControllerTest do
 
   describe "login/2" do
     test "returns 200 with token and user info on success", %{conn: conn} do
-      user = user_fixture(%{"email" => "login_ok@example.com", "password" => "mypassword"})
+      user = user_fixture(%{"email" => "login_ok@example.com", "password" => "mypassword1234"})
 
-      conn = post(conn, "/api/auth/login", %{"email" => user.email, "password" => "mypassword"})
+      conn =
+        post(conn, "/api/auth/login", %{"email" => user.email, "password" => "mypassword1234"})
 
       assert %{"token" => token, "user" => user_data} = json_response(conn, 200)
 
@@ -127,9 +128,10 @@ defmodule AppWeb.AuthControllerTest do
     end
 
     test "returned token is a valid Phoenix.Token for the user", %{conn: conn} do
-      user = user_fixture(%{"email" => "token_valid@example.com", "password" => "mypassword"})
+      user = user_fixture(%{"email" => "token_valid@example.com", "password" => "mypassword1234"})
 
-      conn = post(conn, "/api/auth/login", %{"email" => user.email, "password" => "mypassword"})
+      conn =
+        post(conn, "/api/auth/login", %{"email" => user.email, "password" => "mypassword1234"})
 
       %{"token" => token} = json_response(conn, 200)
 
@@ -140,7 +142,7 @@ defmodule AppWeb.AuthControllerTest do
     end
 
     test "returns 401 when password is wrong", %{conn: conn} do
-      user = user_fixture(%{"email" => "wrong_pass@example.com", "password" => "correctpass"})
+      user = user_fixture(%{"email" => "wrong_pass@example.com", "password" => "correctpass12"})
 
       conn = post(conn, "/api/auth/login", %{"email" => user.email, "password" => "wrongpass"})
 
@@ -151,7 +153,7 @@ defmodule AppWeb.AuthControllerTest do
       conn =
         post(conn, "/api/auth/login", %{
           "email" => "nobody@example.com",
-          "password" => "anything"
+          "password" => "anything12345"
         })
 
       assert %{"error" => _msg} = json_response(conn, 401)
@@ -163,7 +165,7 @@ defmodule AppWeb.AuthControllerTest do
       conn =
         post(conn, "/api/auth/login", %{
           "email" => user.email,
-          "password" => "password123"
+          "password" => "password12345"
         })
 
       assert %{"error" => _msg} = json_response(conn, 403)
@@ -175,17 +177,15 @@ defmodule AppWeb.AuthControllerTest do
   # ---------------------------------------------------------------------------
 
   describe "confirm/2" do
-    test "valid token confirms the user and redirects", %{conn: conn} do
+    test "valid token confirms the user and returns auth token", %{conn: conn} do
       user = unconfirmed_user_fixture()
       token = user.confirmation_token
 
       conn = get(conn, "/api/auth/confirm/#{token}")
 
-      # The controller redirects to the frontend with confirmed=1
-      assert conn.status == 302
-      location = get_resp_header(conn, "location") |> List.first()
-      assert String.contains?(location, "confirmed=1")
-      assert String.contains?(location, "token=")
+      body = json_response(conn, 200)
+      assert Map.has_key?(body, "token")
+      assert get_in(body, ["user", "id"]) == user.id
     end
 
     test "invalid token returns 404", %{conn: conn} do
