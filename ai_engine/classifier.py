@@ -256,9 +256,9 @@ class CIE10Classifier:
 
         # Filtrar palabras cortas o de puntuación pura
         candidates = [
-            wid for wid in word_positions
-            if wid < len(raw_words)
-            and len(raw_words[wid].strip(_string.punctuation)) >= 4
+            wid
+            for wid in word_positions
+            if wid < len(raw_words) and len(raw_words[wid].strip(_string.punctuation)) >= 4
         ]
 
         if not candidates:
@@ -310,7 +310,7 @@ class CIE10Classifier:
                 )
                 words = [
                     raw_words[wid].strip(_string.punctuation)
-                    for wid in scored[:top_k * 2]  # margen para filtrar residuos
+                    for wid in scored[: top_k * 2]  # margen para filtrar residuos
                     if importance[wid][k_pos].item() > 0
                     and len(raw_words[wid].strip(_string.punctuation)) >= 4
                 ]
