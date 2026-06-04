@@ -26,11 +26,10 @@ defmodule App.Translations do
     locale = if locale in @supported_locales, do: locale, else: @default_locale
     translations = GenServer.call(__MODULE__, {:get, locale})
 
-    [namespace | rest] = String.split(key, ".", parts: 2)
-    subkey = Enum.join(rest, ".")
+    keys = String.split(key, ".")
 
     value =
-      case get_in(translations, [namespace, subkey]) do
+      case get_in(translations, keys) do
         nil -> key
         v -> v
       end
