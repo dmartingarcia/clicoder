@@ -36,11 +36,15 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 
 # ==================== STRUCTURED LOGGING ====================
 
+_shared_processors = [
+    structlog.contextvars.merge_contextvars,
+    structlog.processors.add_log_level,
+    structlog.processors.TimeStamper(fmt="iso"),
+]
+
 structlog.configure(
     processors=[
-        structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
+        *_shared_processors,
         structlog.processors.JSONRenderer(),
     ],
     wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
@@ -49,8 +53,21 @@ structlog.configure(
     cache_logger_on_first_use=False,
 )
 
+# Route stdlib logging (uvicorn startup messages, etc.) through structlog JSON
+_stdlib_handler = logging.StreamHandler()
+_stdlib_handler.setFormatter(
+    structlog.stdlib.ProcessorFormatter(
+        processor=structlog.processors.JSONRenderer(),
+        foreign_pre_chain=[
+            *_shared_processors,
+            structlog.stdlib.add_logger_name,
+        ],
+    )
+)
+logging.root.handlers = [_stdlib_handler]
+logging.root.setLevel(logging.INFO)
+
 logger = structlog.get_logger("cie10_engine")
-logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 # ==================== MÉTRICAS PROMETHEUS ====================
 
