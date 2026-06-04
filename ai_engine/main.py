@@ -27,6 +27,7 @@ import sentry_sdk
 import structlog
 import torch
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from prometheus_client import Gauge, Histogram, Info
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
@@ -338,6 +339,10 @@ class SummarizerConfigRequest(BaseModel):
     user_prompt: str = ""
 
 
+class SummarizeRequest(BaseModel):
+    text: str
+
+
 # ==================== ENDPOINTS ====================
 
 
@@ -453,6 +458,7 @@ def _add_relative_confidence(codes: list[dict]) -> list[dict]:
 
 
 async def _predict_bert(text: str):
+    """Predicción BERT sin resumen. El resumen se genera por separado via /summarize/stream."""
     if classifier is None:
         raise HTTPException(
             status_code=503,
@@ -461,34 +467,15 @@ async def _predict_bert(text: str):
 
     _t0 = time.perf_counter()
 
-    # Ejecutar en paralelo y medir tiempos individuales
-    async def _timed_classifier():
-        _t_start = time.perf_counter()
-        result = await asyncio.to_thread(classifier.predict, text, 10, code_descriptions or None)
-        return result, time.perf_counter() - _t_start
+    predictions = await asyncio.to_thread(classifier.predict, text, 10, code_descriptions or None)
+    _t_classifier = time.perf_counter() - _t0
 
-    async def _timed_summary():
-        _t_start = time.perf_counter()
-        result = await _generate_summary(text)
-        return result, time.perf_counter() - _t_start
-
-    # Paso 1: predict (necesario antes de explain)
-    (predictions, _t_classifier) = await _timed_classifier()
-
-    # Paso 2: explain + summary en paralelo (son independientes entre sí)
     code_indices = [
         int(classifier.code_to_idx[p["code"]])
         for p in predictions
         if p["code"] in classifier.code_to_idx
     ]
-
-    async def _timed_explain():
-        return await asyncio.to_thread(classifier.explain, text, code_indices) if code_indices else {}
-
-    explanations, (summary_text, _t_summary) = await asyncio.gather(
-        _timed_explain(),
-        _timed_summary(),
-    )
+    explanations = await asyncio.to_thread(classifier.explain, text, code_indices) if code_indices else {}
 
     code_triggers = {
         p["code"]: explanations.get(int(classifier.code_to_idx.get(p["code"], -1)), [])
@@ -500,7 +487,6 @@ async def _predict_bert(text: str):
 
     return {
         "cards": [
-            {"type": "summary", "content": summary_text},
             {
                 "type": "codes",
                 "content": _add_relative_confidence([
@@ -521,7 +507,7 @@ async def _predict_bert(text: str):
         ],
         "timing": {
             "classifier_ms": round(_t_classifier * 1000, 2),
-            "summarizer_ms": round(_t_summary * 1000, 2),
+            "summarizer_ms": 0,
             "total_ms": round(_t_total * 1000, 2),
         },
     }
@@ -541,27 +527,14 @@ async def _predict_dict(text: str):  # noqa: E302
 
     _t0 = time.perf_counter()
 
-    # Ejecutar en paralelo y medir tiempos individuales
-    async def _timed_classifier():
-        _t_start = time.perf_counter()
-        result = await asyncio.to_thread(dict_classifier.predict, text)
-        return result, time.perf_counter() - _t_start
-
-    async def _timed_summary():
-        _t_start = time.perf_counter()
-        result = await _generate_summary(text)
-        return result, time.perf_counter() - _t_start
-
-    (predictions, _t_classifier), (summary_text, _t_summary) = await asyncio.gather(
-        _timed_classifier(), _timed_summary()
-    )
+    predictions = await asyncio.to_thread(dict_classifier.predict, text)
+    _t_classifier = time.perf_counter() - _t0
 
     _t_total = time.perf_counter() - _t0
     INFERENCE_LATENCY.labels(engine="dict").observe(_t_total)
 
     return {
         "cards": [
-            {"type": "summary", "content": summary_text},
             {
                 "type": "codes",
                 "content": _add_relative_confidence([
@@ -579,7 +552,7 @@ async def _predict_dict(text: str):  # noqa: E302
         ],
         "timing": {
             "classifier_ms": round(_t_classifier * 1000, 2),
-            "summarizer_ms": round(_t_summary * 1000, 2),
+            "summarizer_ms": 0,
             "total_ms": round(_t_total * 1000, 2),
         },
     }
@@ -599,41 +572,65 @@ async def _predict_both(text: str):
     )
     _t_total = time.perf_counter() - _t0
 
-    bert_codes = bert_result["cards"][1]["content"]
-    dict_codes = dict_result["cards"][1]["content"]
+    bert_codes = bert_result["cards"][0]["content"]
+    dict_codes = dict_result["cards"][0]["content"]
     all_codes = bert_codes + dict_codes
-
-    # El resumen ya viene generado en bert_result (se calculó en paralelo)
-    summary_card = bert_result["cards"][0]
 
     return {
         "cards": [
-            summary_card,
             {"type": "codes", "content": all_codes},
         ],
         "timing": {
             "bert_classifier_ms": bert_result.get("timing", {}).get("classifier_ms", 0),
-            "bert_summarizer_ms": bert_result.get("timing", {}).get("summarizer_ms", 0),
             "dict_classifier_ms": dict_result.get("timing", {}).get("classifier_ms", 0),
-            "dict_summarizer_ms": dict_result.get("timing", {}).get("summarizer_ms", 0),
             "total_ms": round(_t_total * 1000, 2),
         },
     }
 
 
-# ─────────────────────────────────────────────
-# Helper: generación de resumen
-# ─────────────────────────────────────────────
+@app.post("/summarize/stream", summary="Resumen médico en streaming (NDJSON)")
+async def summarize_stream(request: SummarizeRequest):
+    """Genera el resumen/paráfrasis del texto token a token.
 
+    Devuelve NDJSON: una línea JSON por token + línea final ``{"done": true}``.
+    Si el summarizer no está cargado devuelve un único chunk con el fallback estadístico.
+    """
+    import json as _json
+    import threading
 
-async def _generate_summary(text: str) -> str:
-    """Genera un resumen médico real si el summarizer está activo, o uno básico si no."""
-    if summarizer is not None:
-        try:
-            return await asyncio.to_thread(summarizer.summarize, text)
-        except Exception as exc:
-            logger.warning("Error al generar resumen con LLM: %s — usando resumen básico.", exc)
+    text = request.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="El texto no puede estar vacío.")
 
-    # Fallback: resumen estadístico básico
-    word_count = len(text.split())
-    return f"Informe clínico de {word_count} palabras procesado."
+    async def _stream():
+        if summarizer is None:
+            word_count = len(text.split())
+            yield _json.dumps({"token": f"Informe clínico de {word_count} palabras procesado."}) + "\n"
+            yield _json.dumps({"done": True}) + "\n"
+            return
+
+        loop = asyncio.get_event_loop()
+        queue: asyncio.Queue = asyncio.Queue()
+
+        def _run():
+            try:
+                for token in summarizer.summarize_stream(text):
+                    loop.call_soon_threadsafe(queue.put_nowait, {"token": token})
+            except Exception as exc:
+                logger.warning("Error en streaming del summarizer: %s", exc)
+                loop.call_soon_threadsafe(queue.put_nowait, {"error": str(exc)})
+            finally:
+                loop.call_soon_threadsafe(queue.put_nowait, {"done": True})
+
+        thread = threading.Thread(target=_run, daemon=True)
+        thread.start()
+
+        while True:
+            item = await queue.get()
+            yield _json.dumps(item) + "\n"
+            if "done" in item or "error" in item:
+                break
+
+        thread.join(timeout=5)
+
+    return StreamingResponse(_stream(), media_type="application/x-ndjson")

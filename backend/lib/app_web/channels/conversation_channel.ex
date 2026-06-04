@@ -382,96 +382,151 @@ defmodule AppWeb.ConversationChannel do
     ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
     engine = App.AIEngineSettings.get_engine()
 
-    Logger.info("Iniciando llamada a AI Engine",
+    Logger.info("Iniciando análisis paralelo (predict + summarize/stream)",
       ai_url: ai_url,
       engine: engine,
       conversation_id: conversation_id,
       message_id: message_id
     )
 
-    case Req.post("#{ai_url}/predict",
-           json: %{text: report_text, engine: engine},
-           receive_timeout: 60_000
-         ) do
-      {:ok, %{status: 200, body: body}} ->
-        cards = body["cards"] || []
-        timing = body["timing"] || %{}
-
-        Logger.info("AI Engine response timings",
-          classifier_ms: timing["classifier_ms"],
-          summarizer_ms: timing["summarizer_ms"],
-          total_ms: timing["total_ms"],
-          engine: engine,
-          conversation_id: conversation_id
+    # Ambas tareas arrancan simultáneamente
+    predict_task =
+      Task.async(fn ->
+        Req.post("#{ai_url}/predict",
+          json: %{text: report_text, engine: engine},
+          receive_timeout: 60_000
         )
+      end)
 
-        cmd = %ReceiveAIPrediction{
-          conversation_id: conversation_id,
-          message_id: message_id,
-          cards: cards,
-          predicted_codes: [],
-          reasoning: "Análisis automático",
-          confidence_scores: [],
-          engine: engine
-        }
+    summary_task =
+      Task.async(fn ->
+        do_stream_summary(ai_url, report_text, message_id, socket)
+      end)
 
-        case CommandedApplication.dispatch(cmd) do
-          :ok ->
-            :ok
+    # ── Fase 1: códigos (rápidos, llegan antes del resumen) ──────────────────
+    predicted_codes =
+      case Task.await(predict_task, 60_000) do
+        {:ok, %{status: 200, body: body}} ->
+          cards = body["cards"] || []
+          timing = body["timing"] || %{}
 
-          {:error, reason} ->
-            Logger.warning(
-              "ReceiveAIPrediction dispatch failed (#{inspect(reason)}), persisting cards directly"
-            )
+          Logger.info("Códigos recibidos",
+            classifier_ms: timing["classifier_ms"],
+            engine: engine,
+            conversation_id: conversation_id
+          )
 
-            persist_cards_direct(conversation_id, message_id, cards)
+          persist_cards_direct(conversation_id, message_id, cards)
+
+          Enum.each(cards, fn card ->
+            broadcast!(socket, "analysis_card_received", %{
+              message_id: message_id,
+              card_id: UUID.uuid4(),
+              card_type: card["type"],
+              content: card["content"]
+            })
+          end)
+
+          persist_predicted_codes_direct(conversation_id, cards)
+
+        {:error, reason} ->
+          Logger.error("AI Engine predict failed",
+            reason: inspect(reason),
+            ai_url: ai_url,
+            conversation_id: conversation_id,
+            message_id: message_id
+          )
+
+          broadcast!(socket, "analysis_failed", %{
+            message_id: message_id,
+            error: "No se pudo contactar con el motor de análisis"
+          })
+
+          []
+
+        {:ok, %{status: status, body: body}} ->
+          Logger.error("AI Engine returned HTTP #{status}",
+            status: status,
+            body: inspect(body),
+            ai_url: ai_url,
+            conversation_id: conversation_id,
+            message_id: message_id
+          )
+
+          broadcast!(socket, "analysis_failed", %{
+            message_id: message_id,
+            error: "Error del motor de análisis: HTTP #{status}"
+          })
+
+          []
+      end
+
+    # ── Fase 2: resumen (los tokens ya llegaron en streaming) ────────────────
+    #
+    # Evento 1 — "summary_token": emitido por do_stream_summary/4 token a token
+    #   mientras el LLM genera. El FE lo usa para efecto typewriter.
+    #   Payload: %{message_id, token}
+    #
+    # Evento 2 — "analysis_card_received" (card_type: "summary"): emitido aquí
+    #   una vez que todo el texto está disponible. El FE reemplaza el buffer de
+    #   tokens con la tarjeta definitiva (se persiste en BD para el historial).
+    #   Payload: %{message_id, card_id, card_type: "summary", content: texto_completo}
+    full_summary = Task.await(summary_task, 120_000)
+
+    unless full_summary == "" do
+      summary_card = %{"type" => "summary", "content" => full_summary}
+      persist_cards_direct(conversation_id, message_id, [summary_card])
+
+      broadcast!(socket, "analysis_card_received", %{
+        message_id: message_id,
+        card_id: UUID.uuid4(),
+        card_type: "summary",
+        content: full_summary
+      })
+    end
+
+    broadcast!(socket, "analysis_complete", %{
+      message_id: message_id,
+      predicted_codes: predicted_codes,
+      engine: engine
+    })
+  end
+
+  defp do_stream_summary(ai_url, text, message_id, socket) do
+    Process.put(:summary_buf, "")
+    Process.put(:summary_acc, [])
+
+    Req.post("#{ai_url}/summarize/stream",
+      json: %{text: text},
+      receive_timeout: 120_000,
+      decode_body: false,
+      into: fn {:data, chunk}, {req, resp} ->
+        buf = Process.get(:summary_buf, "")
+        combined = buf <> chunk
+        lines = String.split(combined, "\n")
+        n = length(lines)
+        complete = Enum.take(lines, n - 1)
+        partial = List.last(lines) || ""
+        Process.put(:summary_buf, partial)
+
+        for line <- complete, String.trim(line) != "" do
+          case Jason.decode(line) do
+            {:ok, %{"token" => token}} when is_binary(token) and token != "" ->
+              broadcast!(socket, "summary_token", %{message_id: message_id, token: token})
+              Process.put(:summary_acc, [token | Process.get(:summary_acc, [])])
+
+            _ ->
+              :ok
+          end
         end
 
-        Enum.each(cards, fn card ->
-          broadcast!(socket, "analysis_card_received", %{
-            message_id: message_id,
-            card_id: UUID.uuid4(),
-            card_type: card["type"],
-            content: card["content"]
-          })
-        end)
+        {:cont, {req, resp}}
+      end
+    )
 
-        # Insert predicted codes synchronously with known UUIDs so analysis_complete
-        # always carries the correct code_id values (avoids async CQRS timing race).
-        predicted_codes = persist_predicted_codes_direct(conversation_id, cards)
-
-        broadcast!(socket, "analysis_complete", %{
-          message_id: message_id,
-          predicted_codes: predicted_codes,
-          engine: engine
-        })
-
-      {:error, reason} ->
-        Logger.error("AI Engine request failed",
-          reason: inspect(reason),
-          ai_url: ai_url,
-          conversation_id: conversation_id,
-          message_id: message_id
-        )
-
-        broadcast!(socket, "analysis_failed", %{
-          message_id: message_id,
-          error: "No se pudo contactar con el motor de análisis"
-        })
-
-      {:ok, %{status: status, body: body}} ->
-        Logger.error("AI Engine returned HTTP #{status}",
-          status: status,
-          body: inspect(body),
-          ai_url: ai_url,
-          conversation_id: conversation_id,
-          message_id: message_id
-        )
-
-        broadcast!(socket, "analysis_failed", %{
-          message_id: message_id,
-          error: "Error del motor de análisis: HTTP #{status}"
-        })
-    end
+    tokens = Enum.reverse(Process.get(:summary_acc, []))
+    Process.delete(:summary_buf)
+    Process.delete(:summary_acc)
+    Enum.join(tokens)
   end
 end

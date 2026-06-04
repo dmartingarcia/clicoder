@@ -17,15 +17,19 @@ import {
 } from 'lucide-react';
 
 // ─── Card: Resumen clínico ────────────────────────────────────────────────────
-function SummaryCard({ content }: { content: string }) {
+function SummaryCard({ content, streaming = false }: { content: string; streaming?: boolean }) {
   const { t } = useI18n();
   return (
     <Card className="p-4 border-l-4 border-l-blue-400 bg-blue-50">
       <div className="flex items-center gap-2 mb-2 text-blue-700">
         <ClipboardList className="h-4 w-4 shrink-0" />
         <span className="text-xs font-semibold uppercase tracking-wide">{t('cards.summary_title')}</span>
+        {streaming && <span className="ml-auto text-[10px] text-blue-400 animate-pulse">generando…</span>}
       </div>
-      <p className="text-sm text-gray-700 leading-relaxed">{content}</p>
+      <p className="text-sm text-gray-700 leading-relaxed">
+        {content}
+        {streaming && <span className="inline-block w-0.5 h-3.5 bg-blue-400 ml-0.5 animate-pulse align-middle" />}
+      </p>
     </Card>
   );
 }
@@ -436,7 +440,12 @@ function ChatItemView({
 
   switch (card.card_type) {
     case 'summary':
-      return wrapper(<SummaryCard content={card.content as string} />);
+      return wrapper(
+        <SummaryCard
+          content={card.content as string}
+          streaming={card.card_id.startsWith('streaming-summary-')}
+        />
+      );
     case 'codes':
       return wrapper(
         <CodesCard

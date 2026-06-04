@@ -245,6 +245,38 @@ class MedicalSummarizer:
 
         return result or _fallback_summary(text)
 
+    def summarize_stream(self, text: str, max_tokens: int | None = None):
+        """Genera tokens del resumen/paráfrasis de forma incremental (generador síncrono).
+
+        Cada yield es un fragmento de texto (string). El llamador es responsable de
+        ejecutar este generador en un hilo (no bloquea el event loop de asyncio).
+        """
+        if not self.is_loaded:
+            self.load()
+
+        words = text.split()
+        max_input = 600 if self._mode == "summary" else 800
+        if len(words) > max_input:
+            text = " ".join(words[:max_input])
+
+        if max_tokens is None:
+            max_tokens = 250 if self._mode == "summary" else 600
+
+        prompt = _build_prompt(self._model_key, self._mode, text, self._system_prompt, self._user_prompt)
+
+        for chunk in self._llm(
+            prompt,
+            max_tokens=max_tokens,
+            temperature=0.2,
+            top_p=0.9,
+            repeat_penalty=1.1,
+            stop=["Informe:", "\n\n\n"],
+            stream=True,
+        ):
+            token = chunk["choices"][0]["text"]
+            if token:
+                yield token
+
 
 # ─────────────────────────────────────────────
 # Helpers internos
