@@ -46,8 +46,8 @@ defmodule App.Accounts.EmailsTest do
       assert_email_sent(fn email ->
         assert email.html_body =~ "Ana"
         assert email.html_body =~ "García"
-        refute email.html_body =~ "{first_name}"
-        refute email.html_body =~ "{last_name}"
+        assert not (email.html_body =~ "{first_name}")
+        assert not (email.html_body =~ "{last_name}")
       end)
     end
 
@@ -76,10 +76,10 @@ defmodule App.Accounts.EmailsTest do
       Emails.send_confirmation(user)
 
       assert_email_sent(fn email ->
-        refute email.html_body =~ "email.confirmations"
-        refute email.text_body =~ "email.confirmations"
-        refute email.html_body =~ "app.title"
-        refute email.text_body =~ "app.title"
+        assert not (email.html_body =~ "email.confirmations")
+        assert not (email.text_body =~ "email.confirmations")
+        assert not (email.html_body =~ "app.title")
+        assert not (email.text_body =~ "app.title")
       end)
     end
 
@@ -88,11 +88,11 @@ defmodule App.Accounts.EmailsTest do
       Emails.send_confirmation(user)
 
       assert_email_sent(fn email ->
-        refute email.subject =~ "email.confirmations"
+        assert not (email.subject =~ "email.confirmations")
         assert email.subject =~ "Clicoder"
         assert email.html_body =~ "Ana"
         assert email.html_body =~ "Welcome"
-        refute email.html_body =~ "email.confirmations"
+        assert not (email.html_body =~ "email.confirmations")
       end)
     end
   end
