@@ -10,12 +10,12 @@ defmodule App.Accounts.Emails do
 
     confirm_url = "#{fe_base_url()}/confirm-email?token=#{user.confirmation_token}"
 
-    greeting     = Translations.t(locale, "email.confirmations.greeting", vars)
-    intro        = Translations.t(locale, "email.confirmations.intro", vars)
-    instruction  = Translations.t(locale, "email.confirmations.instruction")
-    cta          = Translations.t(locale, "email.confirmations.cta")
-    fallback     = Translations.t(locale, "email.confirmations.fallback_hint")
-    ignore       = Translations.t(locale, "email.confirmations.ignore")
+    greeting = Translations.t(locale, "email.confirmations.greeting", vars)
+    intro = Translations.t(locale, "email.confirmations.intro", vars)
+    instruction = Translations.t(locale, "email.confirmations.instruction")
+    cta = Translations.t(locale, "email.confirmations.cta")
+    fallback = Translations.t(locale, "email.confirmations.fallback_hint")
+    ignore = Translations.t(locale, "email.confirmations.ignore")
     plain_confirm = Translations.t(locale, "email.confirmations.plain_confirm")
     subject_line = Translations.t(locale, "email.confirmations.registration_subject")
 

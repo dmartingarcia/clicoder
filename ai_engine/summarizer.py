@@ -10,7 +10,7 @@ SUMMARIZER_MODE    Modo de salida: "summary" | "paraphrase" (default: "summary")
                    - paraphrase: reformulación completa estructurada por secciones,
                                  conservando todos los detalles médicos.
 SUMMARIZER_THREADS Número de hilos CPU para llama-cpp (default: 4).
-SUMMARIZER_CTX     Tamaño de contexto en tokens (default: 4096).
+SUMMARIZER_CTX     Tamaño de contexto en tokens (default: 8192).
 """
 
 import logging
@@ -78,7 +78,7 @@ class MedicalSummarizer:
         self._cfg = MODELS[model_key]
         self._llm = None
         self._n_threads = int(os.environ.get("SUMMARIZER_THREADS", "4"))
-        self._n_ctx = int(os.environ.get("SUMMARIZER_CTX", "4096"))
+        self._n_ctx = int(os.environ.get("SUMMARIZER_CTX", "8192"))
         self._system_prompt = system_prompt
         self._user_prompt = user_prompt
 
@@ -339,5 +339,34 @@ def create_summarizer() -> "MedicalSummarizer | None":
             list(MODES),
         )
         mode = "summary"
+    system_prompt = os.environ.get("SUMMARIZER_SYSTEM_PROMPT", "").strip()
+    user_prompt = os.environ.get("SUMMARIZER_USER_PROMPT", "").strip()
+
+    # Defaults de arranque si no están configurados via env ni admin
+    if not system_prompt:
+        system_prompt = (
+            "Eres un médico especialista en documentación clínica. "
+            "Tu tarea es resumir informes clínicos de forma concisa y estructurada. "
+            "Responde siempre en español. No añadas comentarios ni explicaciones fuera del resumen."
+            if mode == "summary" else
+            "Eres un médico especialista en documentación clínica. "
+            "Tu tarea es reformular informes clínicos de forma clara y estructurada, "
+            "conservando TODOS los detalles médicos: diagnósticos, fármacos, dosis, fechas y procedimientos. "
+            "Responde siempre en español. No añadas ni omitas información médica."
+        )
+    if not user_prompt:
+        user_prompt = (
+            "Resume el siguiente informe clínico desde un punto de vista médico.\n"
+            "Incluye: motivo de consulta, antecedentes relevantes, hallazgos exploratorios y analíticos, "
+            "diagnóstico principal y procedimientos realizados. Máximo 120 palabras. Sin listas, en prosa continua.\n\n"
+            "Informe:\n{text}\n\nResumen médico:"
+            if mode == "summary" else
+            "Reformula el siguiente informe clínico de forma clara y estructurada.\n"
+            "Organiza la información en estas secciones (sin encabezados, en prosa continua): "
+            "antecedentes y motivo de consulta, evolución clínica, hallazgos diagnósticos, "
+            "tratamiento y procedimientos. Conserva TODOS los datos médicos exactos.\n\n"
+            "Informe:\n{text}\n\nInforme reformulado:"
+        )
+
     logger.info("Resumidor: modelo=%s modo=%s", model_key, mode)
-    return MedicalSummarizer(model_key, mode)
+    return MedicalSummarizer(model_key, mode, system_prompt, user_prompt)

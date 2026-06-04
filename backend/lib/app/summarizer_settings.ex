@@ -18,30 +18,22 @@ defmodule App.SummarizerSettings do
   @default_mode "summary"
 
   # Defaults
-  @default_prompt_summary (
-    "Eres un médico especialista en documentación clínica. " <>
-    "Tu tarea es resumir informes clínicos de forma concisa y estructurada. " <>
-    "Responde siempre en español. No añadas comentarios ni explicaciones fuera del resumen."
-  )
-  @default_prompt_paraphrase (
-    "Eres un médico especialista en documentación clínica. " <>
-    "Tu tarea es reformular informes clínicos de forma clara y estructurada, " <>
-    "conservando TODOS los detalles médicos: diagnósticos, fármacos, dosis, fechas y procedimientos. " <>
-    "Responde siempre en español. No añadas ni omitas información médica."
-  )
-  @default_user_summary (
-    "Resume el siguiente informe clínico desde un punto de vista médico.\n" <>
-    "Incluye: motivo de consulta, antecedentes relevantes, hallazgos exploratorios y analíticos, " <>
-    "diagnóstico principal y procedimientos realizados. Máximo 120 palabras. Sin listas, en prosa continua.\n\n" <>
-    "Informe:\n{text}\n\nResumen médico:"
-  )
-  @default_user_paraphrase (
-    "Reformula el siguiente informe clínico de forma clara y estructurada.\n" <>
-    "Organiza la información en estas secciones (sin encabezados, en prosa continua): " <>
-    "antecedentes y motivo de consulta, evolución clínica, hallazgos diagnósticos, " <>
-    "tratamiento y procedimientos. Conserva TODOS los datos médicos exactos.\n\n" <>
-    "Informe:\n{text}\n\nInforme reformulado:"
-  )
+  @default_prompt_summary "Eres un médico especialista en documentación clínica. " <>
+                            "Tu tarea es resumir informes clínicos de forma concisa y estructurada. " <>
+                            "Responde siempre en español. No añadas comentarios ni explicaciones fuera del resumen."
+  @default_prompt_paraphrase "Eres un médico especialista en documentación clínica. " <>
+                               "Tu tarea es reformular informes clínicos de forma clara y estructurada, " <>
+                               "conservando TODOS los detalles médicos: diagnósticos, fármacos, dosis, fechas y procedimientos. " <>
+                               "Responde siempre en español. No añadas ni omitas información médica."
+  @default_user_summary "Resume el siguiente informe clínico desde un punto de vista médico.\n" <>
+                          "Incluye: motivo de consulta, antecedentes relevantes, hallazgos exploratorios y analíticos, " <>
+                          "diagnóstico principal y procedimientos realizados. Máximo 120 palabras. Sin listas, en prosa continua.\n\n" <>
+                          "Informe:\n{text}\n\nResumen médico:"
+  @default_user_paraphrase "Reformula el siguiente informe clínico de forma clara y estructurada.\n" <>
+                             "Organiza la información en estas secciones (sin encabezados, en prosa continua): " <>
+                             "antecedentes y motivo de consulta, evolución clínica, hallazgos diagnósticos, " <>
+                             "tratamiento y procedimientos. Conserva TODOS los datos médicos exactos.\n\n" <>
+                             "Informe:\n{text}\n\nInforme reformulado:"
 
   def start_link(_opts \\ []) do
     Agent.start_link(
@@ -79,11 +71,12 @@ defmodule App.SummarizerSettings do
   @spec set_prompts(String.t(), String.t(), String.t(), String.t()) :: :ok
   def set_prompts(prompt_summary, prompt_paraphrase, user_prompt_summary, user_prompt_paraphrase) do
     Agent.update(__MODULE__, fn state ->
-      %{state |
-        prompt_summary: prompt_summary,
-        prompt_paraphrase: prompt_paraphrase,
-        user_prompt_summary: user_prompt_summary,
-        user_prompt_paraphrase: user_prompt_paraphrase
+      %{
+        state
+        | prompt_summary: prompt_summary,
+          prompt_paraphrase: prompt_paraphrase,
+          user_prompt_summary: user_prompt_summary,
+          user_prompt_paraphrase: user_prompt_paraphrase
       }
     end)
   end

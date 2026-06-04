@@ -22,7 +22,8 @@ defmodule AppWeb.Admin.SettingsLive do
 
   @summarizer_modes [
     {"summary", "Resumen", "Resumen conciso (~120 palabras) con los puntos clave."},
-    {"paraphrase", "Paráfrasis", "Reformulación estructurada conservando todos los detalles clínicos."}
+    {"paraphrase", "Paráfrasis",
+     "Reformulación estructurada conservando todos los detalles clínicos."}
   ]
 
   @impl true
@@ -80,7 +81,12 @@ defmodule AppWeb.Admin.SettingsLive do
         if mode == "summary", do: {ps, ups}, else: {pp, upp}
 
       case Req.post("#{ai_url}/admin/summarizer",
-             json: %{model: model, mode: mode, system_prompt: system_prompt, user_prompt: user_prompt},
+             json: %{
+               model: model,
+               mode: mode,
+               system_prompt: system_prompt,
+               user_prompt: user_prompt
+             },
              receive_timeout: 120_000
            ) do
         {:ok, %{status: 200}} ->
@@ -100,7 +106,10 @@ defmodule AppWeb.Admin.SettingsLive do
           {:noreply, assign(socket, summarizer_error: body["detail"] || "Error desconocido")}
 
         {:error, reason} ->
-          {:noreply, assign(socket, summarizer_error: "No se pudo contactar con el AI engine: #{inspect(reason)}")}
+          {:noreply,
+           assign(socket,
+             summarizer_error: "No se pudo contactar con el AI engine: #{inspect(reason)}"
+           )}
       end
     else
       {:error, reason} ->

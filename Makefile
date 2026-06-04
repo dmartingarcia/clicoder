@@ -352,8 +352,8 @@ frontend-format: ## Formatear código del frontend
 frontend-install: ## Instalar dependencias del frontend
 	$(COMPOSE_DEV) run --rm frontend sh -c "npm install && chown -R $$(id -u):$$(id -g) /app/package-lock.json /app/node_modules /app/.npm-cache 2>/dev/null || true"
 
-frontend-lint: ## Lint del frontend
-	$(COMPOSE_CPU) run --rm --no-deps frontend npm run lint
+frontend-lint: ## Lint del frontend (usa volúmenes dev para leer ficheros locales)
+	$(COMPOSE_DEV) run --rm --no-deps frontend npm run lint
 
 frontend-test: ## Ejecutar tests del frontend
 	@echo "$(GREEN)Ejecutando tests del frontend...$(NC)"

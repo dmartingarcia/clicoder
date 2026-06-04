@@ -212,9 +212,15 @@ defmodule AppWeb.ConversationController do
 
       conv ->
         Repo.transaction(fn ->
-          from(r in CodeSuggestionProjection, where: r.conversation_id == ^conv.id) |> Repo.delete_all()
-          from(r in PredictedCodeProjection, where: r.conversation_id == ^conv.id) |> Repo.delete_all()
-          from(r in AnalysisCardProjection, where: r.conversation_id == ^conv.id) |> Repo.delete_all()
+          from(r in CodeSuggestionProjection, where: r.conversation_id == ^conv.id)
+          |> Repo.delete_all()
+
+          from(r in PredictedCodeProjection, where: r.conversation_id == ^conv.id)
+          |> Repo.delete_all()
+
+          from(r in AnalysisCardProjection, where: r.conversation_id == ^conv.id)
+          |> Repo.delete_all()
+
           from(r in MessageProjection, where: r.conversation_id == ^conv.id) |> Repo.delete_all()
           Repo.delete!(conv)
         end)
