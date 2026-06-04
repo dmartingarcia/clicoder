@@ -4,6 +4,9 @@
 # Uso: incluido automáticamente en make deploy
 
 services:
+  db:
+    ports: []
+
   frontend:
     build:
       target: runner
