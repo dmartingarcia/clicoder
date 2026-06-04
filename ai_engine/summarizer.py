@@ -3,7 +3,7 @@ summarizer.py — Resumen médico de informes clínicos via LLM local (GGUF/llam
 
 Variables de entorno
 --------------------
-SUMMARIZER_MODEL   Modelo a usar: "gemma3" | "phi4" | "qwen" | "none" (default: "none").
+SUMMARIZER_MODEL   Modelo a usar: "gemma3" | "gemma4" | "phi4" | "qwen" | "none" (default: "none").
                    Con "none" se devuelve el resumen estadístico básico.
 SUMMARIZER_MODE    Modo de salida: "summary" | "paraphrase" (default: "summary").
                    - summary:    resumen conciso de ~120 palabras.
@@ -32,8 +32,8 @@ MODELS = {
         "size_gb": 2.5,
     },
     "gemma4": {
-        "repo": "ggml-org/gemma-4-e4b-it-GGUF",
-        "filename": "gemma-4-e4b-it-Q4_K_M.gguf",
+        "repo": "ggml-org/gemma-4-E4B-it-GGUF",
+        "filename": "gemma-4-E4B-it-Q4_K_M.gguf",
         "display": "Gemma 4 E4B IT",
         "size_gb": 2.5,
     },
@@ -329,7 +329,7 @@ def _build_prompt(model_key: str, mode: str, text: str, system_prompt: str, user
     system = system_prompt
     user_msg = user_prompt.format(text=text)
 
-    if model_key == "gemma3":
+    if model_key in ("gemma3", "gemma4"):
         return f"<start_of_turn>user\n{system}\n\n{user_msg}<end_of_turn>\n<start_of_turn>model\n"
     if model_key in ("phi4", "qwen"):
         return (

@@ -7,7 +7,7 @@ MODEL_DIR          Directorio con los artefactos del modelo.
                    Default: ./model
 DEVICE             Dispositivo torch ('cpu', 'cuda', 'mps', …).
                    Default: cpu
-SUMMARIZER_MODEL   Modelo LLM para resúmenes médicos: "gemma3" | "phi4" | "qwen" | "none".
+SUMMARIZER_MODEL   Modelo LLM para resúmenes médicos: "gemma3" | "gemma4" | "phi4" | "qwen" | "none".
                    Default: none  (resumen estadístico básico)
 SUMMARIZER_THREADS Hilos CPU para llama-cpp. Default: 4
 SUMMARIZER_CTX     Contexto en tokens para llama-cpp. Default: 4096
