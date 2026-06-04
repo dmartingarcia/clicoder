@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { config } from '@/lib/config';
 
@@ -62,7 +63,7 @@ function ConfirmEmailContent() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center space-y-4">
         <p className="text-red-600 font-semibold">{errorMsg}</p>
-        <a href="/" className="text-blue-600 text-sm underline">Volver al inicio</a>
+        <Link href="/" className="text-blue-600 text-sm underline">Volver al inicio</Link>
       </div>
     </div>
   );

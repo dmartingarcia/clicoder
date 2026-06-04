@@ -36,20 +36,22 @@ function CodesCard({
   predictedCodes,
   validateCode,
   rejectCode,
+  verifyTrigger,
 }: {
   codes: AnalysisCode[];
   predictedCodes: PredictedCode[];
   validateCode: (id: string, code: string) => void;
   rejectCode: (id: string, code: string, reason: string) => void;
+  verifyTrigger: (codeId: string, trigger: string, verified: boolean) => void;
 }) {
   const { t } = useI18n();
   const [rejectInputs, setRejectInputs] = useState<Record<string, string>>({});
   const [showReject, setShowReject] = useState<string | null>(null);
 
-  // Match each code to its DB record for status + code_id
+  // Match each code to its DB record for status + code_id + verified_triggers
   const enriched = codes.map((c) => {
     const db = predictedCodes.find((p) => p.cie10_code === c.code);
-    return { ...c, code_id: db?.code_id, status: db?.status ?? 'pending' };
+    return { ...c, code_id: db?.code_id, status: db?.status ?? 'pending', verified_triggers: db?.verified_triggers ?? [] };
   });
 
   return (
@@ -120,7 +122,29 @@ function CodesCard({
               </div>
             </div>
 
-            <p className="text-xs text-gray-600 mb-2">{c.reason ?? c.reasoning}</p>
+            <p className="text-xs text-gray-600 mb-1">{c.reason ?? c.reasoning}</p>
+
+            {c.triggers && c.triggers.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {c.triggers.map((term) => {
+                  const isVerified = c.verified_triggers.includes(term);
+                  return (
+                    <button
+                      key={term}
+                      onClick={() => c.code_id && verifyTrigger(c.code_id, term, !isVerified)}
+                      title={isVerified ? 'Marcar como no verificado' : 'Verificar trigger'}
+                      className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+                        isVerified
+                          ? 'bg-green-50 text-green-700 border-green-300'
+                          : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                      }`}
+                    >
+                      {isVerified ? '✓ ' : ''}{term}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {c.status === 'pending' && c.code_id && (
               <div className="space-y-2">
@@ -374,11 +398,13 @@ function ChatItemView({
   predictedCodes,
   validateCode,
   rejectCode,
+  verifyTrigger,
 }: {
   item: ChatItem;
   predictedCodes: PredictedCode[];
   validateCode: (id: string, code: string) => void;
   rejectCode: (id: string, code: string, reason: string) => void;
+  verifyTrigger: (codeId: string, trigger: string, verified: boolean) => void;
 }) {
   if (item.kind === 'user') {
     return (
@@ -418,6 +444,7 @@ function ChatItemView({
           predictedCodes={predictedCodes}
           validateCode={validateCode}
           rejectCode={rejectCode}
+          verifyTrigger={verifyTrigger}
         />
       );
     case 'recommendations':
@@ -431,7 +458,7 @@ function ChatItemView({
 
 // ─── Main interface ───────────────────────────────────────────────────────────
 export function ChatInterface() {
-  const { activeConversationId, pendingConversation, chatItems, predictedCodes, isAnalyzing, engine, analyzeReport, validateCode, rejectCode, createConversation } = useConversation();
+  const { activeConversationId, pendingConversation, chatItems, predictedCodes, isAnalyzing, engine, analyzeReport, validateCode, rejectCode, verifyTrigger, createConversation } = useConversation();
   const { t } = useI18n();
   const MAX_TOKENS = 512;
   const [reportText, setReportText] = useState('');
@@ -540,6 +567,7 @@ export function ChatInterface() {
                         predictedCodes={predictedCodes}
                         validateCode={validateCode}
                         rejectCode={rejectCode}
+                        verifyTrigger={verifyTrigger}
                       />
                     ))}
                   </>

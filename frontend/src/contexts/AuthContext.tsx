@@ -38,14 +38,12 @@ function loadFromStorage(): { user: AuthUser; token: string } | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Start with null — must match SSR (no localStorage on server). Load in useEffect.
-  const [auth, setAuth] = useState<{ user: AuthUser; token: string } | null>(null);
+  // Lazy initializer: safe to read localStorage on client, returns null on SSR
+  const [auth, setAuth] = useState<{ user: AuthUser; token: string } | null>(loadFromStorage);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = loadFromStorage();
-    if (stored) setAuth(stored);
     setMounted(true);
   }, []);
 
