@@ -3,8 +3,12 @@ defmodule AppWeb.AiController do
 
   def count_tokens(conn, %{"text" => text}) when is_binary(text) do
     ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
+    req_opts = Application.get_env(:app, :ai_req_opts, [])
 
-    case Req.post("#{ai_url}/count-tokens", json: %{text: text}, receive_timeout: 60_000) do
+    case Req.post(
+           "#{ai_url}/count-tokens",
+           [json: %{text: text}, receive_timeout: 60_000] ++ req_opts
+         ) do
       {:ok, %{status: 200, body: body}} ->
         json(conn, body)
 
