@@ -470,10 +470,11 @@ stop-monitoring: ## Detener stack de monitorización
 	@echo "$(YELLOW)Deteniendo monitorización...$(NC)"
 	$(COMPOSE_MONITORING) down
 
-deploy: network-create start-proxy start-monitoring ## Deploy completo. GPU=1 para modo GPU
+deploy: network-create start-proxy start-monitoring## Deploy completo. GPU=1 para modo GPU
 	@echo "$(BLUE)Desplegando CIE-10...$(NC)"
 	$(if $(filter 1,$(GPU)),$(COMPOSE_PROD_GPU),$(COMPOSE_PROD)) build frontend backend ai_engine
 	$(if $(filter 1,$(GPU)),$(COMPOSE_PROD_GPU),$(COMPOSE_PROD)) up -d db backend frontend ai_engine
+	$(MAKE) backend-migrate
 	@echo ""
 	@echo "$(GREEN)Deploy completado:$(NC)"
 	@echo "  - Frontend:    https://$${DOMAIN:-localhost}"
