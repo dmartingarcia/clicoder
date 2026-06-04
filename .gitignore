@@ -1,6 +1,8 @@
 # Node (root – commitlint/husky)
 /node_modules/
 /package-lock.json
+/.husky/
+**/.ruff_cache/
 
 # Frontend deps (bind-mounted into Docker)
 /frontend/node_modules/

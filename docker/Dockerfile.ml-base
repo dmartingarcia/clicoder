@@ -1,5 +1,4 @@
 # Dockerfile base compartido para AI y Training
-# Ubicación: Dockerfile.ml-base
 FROM nvidia/cuda:13.1.1-cudnn-devel-ubuntu24.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive

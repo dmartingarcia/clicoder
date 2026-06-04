@@ -381,7 +381,7 @@ async def admin_summarizer(req: SummarizerConfigRequest):
             logger.info("Prompts actualizados sin recargar modelo: model=%s mode=%s", req.model, req.mode)
             return {"model": req.model, "mode": req.mode, "status": "prompts_updated"}
         except Exception as exc:
-            raise HTTPException(status_code=422, detail=str(exc))
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # Modelo o modo cambiaron → cargar nuevo primero, luego descartar el viejo
     if req.model == "none":
@@ -400,7 +400,7 @@ async def admin_summarizer(req: SummarizerConfigRequest):
         return {"model": req.model, "mode": req.mode, "status": "loaded"}
     except Exception as exc:
         logger.error("Error cargando summarizer %s: %s", req.model, exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @app.post("/count-tokens", summary="Contar tokens del tokenizador")
@@ -447,7 +447,7 @@ def _add_relative_confidence(codes: list[dict]) -> list[dict]:
     values = [c["confidence"] for c in codes]
     lo, hi = min(values), max(values)
     spread = hi - lo
-    for c, v in zip(codes, values):
+    for c, v in zip(codes, values, strict=False):
         c["relative_confidence"] = round((v - lo) / spread, 4) if spread > 1e-6 else 1.0
     return codes
 

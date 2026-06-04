@@ -287,7 +287,7 @@ build-backend: ## Construir solo backend
 
 build-base: ## Construir imagen base ML compartida (CUDA + PyTorch + Transformers)
 	@echo "$(GREEN)Construyendo imagen base ML...$(NC)"
-	docker build -t cie10-ml-base:latest -f Dockerfile.ml-base .
+	docker build -t cie10-ml-base:latest -f docker/Dockerfile.ml-base ./docker
 
 build-frontend: ## Construir solo frontend
 	@echo "$(GREEN)Construyendo frontend...$(NC)"
