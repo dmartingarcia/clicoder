@@ -211,6 +211,7 @@ class TestPredictBert:
         # Sin summarizer cargado devuelve una línea de fallback con el nº de palabras
         lines = [ln for ln in resp.text.strip().splitlines() if ln]
         import json as _json
+
         tokens = [_json.loads(ln).get("token", "") for ln in lines if "{" in ln]
         full = "".join(tokens)
         assert str(len(text.split())) in full
@@ -278,3 +279,62 @@ class TestPredictDict:
         codes_card = next(c for c in resp.json()["cards"] if c["type"] == "codes")
         for entry in codes_card["content"]:
             assert "Términos encontrados" in entry["reason"]
+
+
+# =============================================================================
+# POST /summarize/stream  — prompt overrides (language interpolation)
+# =============================================================================
+
+
+class TestSummarizeStreamPromptOverride:
+    """Verifica que /summarize/stream acepta system_prompt y user_prompt por petición."""
+
+    def test_accepts_text_without_prompt_overrides(self, client_with_bert):
+        resp = client_with_bert.post(
+            "/summarize/stream",
+            json={"text": "Paciente con neumonía bilateral"},
+        )
+        assert resp.status_code == 200
+
+    def test_accepts_system_prompt_and_user_prompt_overrides(self, client_with_bert):
+        resp = client_with_bert.post(
+            "/summarize/stream",
+            json={
+                "text": "Paciente con neumonía bilateral",
+                "system_prompt": "Eres un experto en CIE-10. Responde en English.",
+                "user_prompt": "Analiza: {text}\n\nAnálisis:",
+            },
+        )
+        assert resp.status_code == 200
+
+    def test_empty_text_returns_422(self, client_with_bert):
+        resp = client_with_bert.post(
+            "/summarize/stream",
+            json={
+                "text": "   ",
+                "system_prompt": "System",
+                "user_prompt": "User {text}",
+            },
+        )
+        assert resp.status_code == 422
+
+    def test_fallback_response_when_no_summarizer(self, client_no_model):
+        """Sin summarizer cargado devuelve el fallback estadístico, ignorando overrides."""
+        import main as m
+
+        m.summarizer = None
+        resp = client_no_model.post(
+            "/summarize/stream",
+            json={
+                "text": "Informe con cinco palabras cortas",
+                "system_prompt": "Custom system",
+                "user_prompt": "Custom user {text}",
+            },
+        )
+        assert resp.status_code == 200
+        import json as _json
+
+        lines = [ln for ln in resp.text.strip().splitlines() if ln]
+        tokens = [_json.loads(ln).get("token", "") for ln in lines if "{" in ln]
+        full = "".join(tokens)
+        assert len(full) > 0
