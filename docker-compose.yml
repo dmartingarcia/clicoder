@@ -80,16 +80,11 @@ services:
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
       - SUMMARIZER_MODEL=${SUMMARIZER_MODEL:-none}
       - SUMMARIZER_THREADS=${SUMMARIZER_THREADS:-4}
+      - SUMMARIZER_CTX=${SUMMARIZER_CTX:-8192}
     volumes:
       - ./ai_engine:/app
       - ./training/csv_import_scripts:/data
       - ./.huggingface_cache:/cache/huggingface
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/ || exit 1"]
-      interval: 10s
-      timeout: 10s
-      retries: 20
-      start_period: 30s
     networks: [clicoder]
 
   # Backend: Elixir Phoenix + Commanded

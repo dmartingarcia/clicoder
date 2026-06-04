@@ -5,7 +5,14 @@ defmodule AppWeb.AuthController do
   alias App.Accounts
   alias App.Translations
   alias App.Repo
-  alias App.Projections.{ConversationProjection, MessageProjection, AnalysisCardProjection, PredictedCodeProjection, CodeSuggestionProjection}
+
+  alias App.Projections.{
+    ConversationProjection,
+    MessageProjection,
+    AnalysisCardProjection,
+    PredictedCodeProjection,
+    CodeSuggestionProjection
+  }
 
   import Ecto.Query
 
@@ -260,9 +267,15 @@ defmodule AppWeb.AuthController do
             from(c in ConversationProjection, where: c.user_id == ^user_id, select: c.id)
             |> Repo.all()
 
-          from(r in CodeSuggestionProjection, where: r.conversation_id in ^conv_ids) |> Repo.delete_all()
-          from(r in PredictedCodeProjection, where: r.conversation_id in ^conv_ids) |> Repo.delete_all()
-          from(r in AnalysisCardProjection, where: r.conversation_id in ^conv_ids) |> Repo.delete_all()
+          from(r in CodeSuggestionProjection, where: r.conversation_id in ^conv_ids)
+          |> Repo.delete_all()
+
+          from(r in PredictedCodeProjection, where: r.conversation_id in ^conv_ids)
+          |> Repo.delete_all()
+
+          from(r in AnalysisCardProjection, where: r.conversation_id in ^conv_ids)
+          |> Repo.delete_all()
+
           from(r in MessageProjection, where: r.conversation_id in ^conv_ids) |> Repo.delete_all()
           from(c in ConversationProjection, where: c.user_id == ^user_id) |> Repo.delete_all()
           Repo.delete!(user)

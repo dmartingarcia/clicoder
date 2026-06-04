@@ -26,6 +26,7 @@ if config_env() == :prod do
       config :sentry,
         dsn: dsn,
         environment_name: :prod
+
     _ ->
       :ok
   end
