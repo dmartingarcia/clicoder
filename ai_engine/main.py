@@ -437,6 +437,7 @@ async def predict_codes(request: AnalysisRequest):
     return await _predict_bert(text)
 
 
+
 def _add_relative_confidence(codes: list[dict]) -> list[dict]:
     """Normalización min-max dentro del conjunto devuelto para comparación visual."""
     if len(codes) < 2:
@@ -471,9 +472,28 @@ async def _predict_bert(text: str):
         result = await _generate_summary(text)
         return result, time.perf_counter() - _t_start
 
-    (predictions, _t_classifier), (summary_text, _t_summary) = await asyncio.gather(
-        _timed_classifier(), _timed_summary()
+    # Paso 1: predict (necesario antes de explain)
+    (predictions, _t_classifier) = await _timed_classifier()
+
+    # Paso 2: explain + summary en paralelo (son independientes entre sí)
+    code_indices = [
+        int(classifier.code_to_idx[p["code"]])
+        for p in predictions
+        if p["code"] in classifier.code_to_idx
+    ]
+
+    async def _timed_explain():
+        return await asyncio.to_thread(classifier.explain, text, code_indices) if code_indices else {}
+
+    explanations, (summary_text, _t_summary) = await asyncio.gather(
+        _timed_explain(),
+        _timed_summary(),
     )
+
+    code_triggers = {
+        p["code"]: explanations.get(int(classifier.code_to_idx.get(p["code"], -1)), [])
+        for p in predictions
+    }
 
     _t_total = time.perf_counter() - _t0
     INFERENCE_LATENCY.labels(engine="bert").observe(_t_total)
@@ -492,6 +512,7 @@ async def _predict_bert(text: str):
                             f"— confianza {round(p['probability'] * 100, 1)}%"
                         ).strip(" —"),
                         "confidence": round(p["probability"], 4),
+                        "triggers": code_triggers.get(p["code"], []),
                         "engine": "bert",
                     }
                     for p in predictions
@@ -549,7 +570,7 @@ async def _predict_dict(text: str):  # noqa: E302
                         "description": code_descriptions.get(p["code"], ""),
                         "reason": "Términos encontrados: " + ", ".join(p["matched_terms"]),
                         "confidence": p["confidence"],
-                        "matched_terms": p["matched_terms"],
+                        "triggers": p["matched_terms"],
                         "engine": "dict",
                     }
                     for p in predictions

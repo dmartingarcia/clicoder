@@ -2,12 +2,20 @@
 # Una sola pasada forward produce probabilidades para todos los ~1767 códigos a la vez.
 
 import json
+import logging
 import sys
 from pathlib import Path
+
+try:
+    import sentry_sdk as _sentry
+except ImportError:
+    _sentry = None  # type: ignore[assignment]
 
 import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
+
+logger = logging.getLogger("cie10_engine")
 
 # letra inicial → capítulo CIE-10 (número romano)
 CHAPTER_MAP = {
@@ -52,7 +60,9 @@ def load_code_descriptions(model_dir: str) -> dict[str, str]:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
-        print(f"[warn] No se pudo cargar code_descriptions.json: {e}")
+        if _sentry:
+            _sentry.capture_exception(e)
+        logger.warning("No se pudo cargar code_descriptions.json: %s", e)
         return {}
 
 
@@ -200,6 +210,119 @@ class CIE10Classifier:
 
         predictions.sort(key=lambda x: x["probability"], reverse=True)
         return predictions[:top_k]
+
+    def explain(
+        self,
+        text: str,
+        code_indices: list[int],
+        top_k: int = 5,
+        batch_size: int = 16,
+    ) -> dict[int, list[str]]:
+        """Atribución por enmascaramiento (masking perturbation) por código predicho.
+
+        Para cada palabra del texto, la sustituye por [MASK] y mide la caída en el
+        logit del código k. Las palabras que más reducen el logit son los verdaderos
+        triggers del modelo para ese código concreto.
+
+        Sólo procesa palabras de ≥ 4 caracteres para evitar ruido de stopwords.
+        Los forward passes se agrupan en batches para eficiencia.
+        """
+        import string as _string
+
+        if not code_indices:
+            return {}
+
+        mask_id = self.tokenizer.mask_token_id
+        if mask_id is None:
+            return {idx: [] for idx in code_indices}
+
+        enc = self.tokenizer(
+            text,
+            max_length=self.config["max_length"],
+            truncation=True,
+        )
+        word_ids = enc.word_ids()  # posición token → índice de palabra (None para especiales)
+        input_ids_list = enc["input_ids"]
+        attention_mask_list = enc["attention_mask"]
+
+        # Agrupar posiciones de token por palabra
+        word_positions: dict[int, list[int]] = {}
+        for pos, wid in enumerate(word_ids):
+            if wid is not None:
+                word_positions.setdefault(wid, []).append(pos)
+
+        # Palabras de origen para display
+        raw_words = text.split()
+
+        # Filtrar palabras cortas o de puntuación pura
+        candidates = [
+            wid for wid in word_positions
+            if wid < len(raw_words)
+            and len(raw_words[wid].strip(_string.punctuation)) >= 4
+        ]
+
+        if not candidates:
+            return {idx: [] for idx in code_indices}
+
+        # Padding hasta max_length para hacer batching uniforme
+        max_len = self.config["max_length"]
+        pad_id = self.tokenizer.pad_token_id or 0
+        seq_len = len(input_ids_list)
+        padded_ids = input_ids_list + [pad_id] * (max_len - seq_len)
+        padded_mask = attention_mask_list + [0] * (max_len - seq_len)
+
+        base_ids = torch.tensor([padded_ids], dtype=torch.long, device=self.device)
+        base_mask = torch.tensor([padded_mask], dtype=torch.long, device=self.device)
+
+        try:
+            # Logits de referencia (sin máscara)
+            with torch.no_grad():
+                baseline = self.model(base_ids, base_mask)[0, code_indices].cpu()  # [K]
+
+            # importance[wid][k] = caída en logit_k al enmascarar wid
+            importance: dict[int, torch.Tensor] = {}
+
+            for batch_start in range(0, len(candidates), batch_size):
+                batch_wids = candidates[batch_start : batch_start + batch_size]
+                B = len(batch_wids)
+                batch_ids = base_ids.repeat(B, 1).clone()
+
+                for i, wid in enumerate(batch_wids):
+                    for pos in word_positions[wid]:
+                        if pos < max_len:
+                            batch_ids[i, pos] = mask_id
+
+                batch_mask = base_mask.repeat(B, 1)
+
+                with torch.no_grad():
+                    logits = self.model(batch_ids, batch_mask)[:, code_indices].cpu()  # [B, K]
+
+                for i, wid in enumerate(batch_wids):
+                    importance[wid] = (baseline - logits[i]).clamp(min=0)  # [K]
+
+            # Por cada código, ordenar palabras por importancia y devolver top_k
+            results: dict[int, list[str]] = {}
+            for k_pos, code_idx in enumerate(code_indices):
+                scored = sorted(
+                    candidates,
+                    key=lambda wid: importance[wid][k_pos].item(),
+                    reverse=True,
+                )
+                words = [
+                    raw_words[wid].strip(_string.punctuation)
+                    for wid in scored[:top_k * 2]  # margen para filtrar residuos
+                    if importance[wid][k_pos].item() > 0
+                    and len(raw_words[wid].strip(_string.punctuation)) >= 4
+                ]
+                results[code_idx] = words[:top_k]
+
+            return results
+
+        except Exception as exc:
+            if _sentry:
+                _sentry.capture_exception(exc)
+            logger.warning("explain() falló para %d códigos: %s", len(code_indices), exc)
+            return {idx: [] for idx in code_indices}
 
 
 if __name__ == "__main__":
