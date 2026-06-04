@@ -122,13 +122,13 @@ ai-combine: ## Combina los CSV aumentados (EN+DE+FR) en un único fichero de ent
 
 ai-format: ## Formatear código del AI engine (ruff format)
 	$(AI) pip install -q ruff
-	$(AI) ruff format .
+	$(AI) python -m ruff format .
 
 ai-install: ## Instalar dependencias del AI engine
 	$(AI) pip install -r requirements.txt
 
 ai-lint: ## Lint del AI engine (ruff check + format check)
-	$(COMPOSE) run --rm ai_engine sh -c "pip install -q ruff && ruff check . && ruff format --check ."
+	$(COMPOSE) run --rm ai_engine sh -c "pip install -q ruff && python -m ruff check --cache-dir /tmp/ruff . && python -m ruff format --check --cache-dir /tmp/ruff ."
 
 ai-train: ## Entrenar clasificador CIE-10 en CPU (MODEL=IIC/RigoBERTa-Clinical, requiere HF_TOKEN en .env)
 	@echo "$(BLUE)Entrenando clasificador CIE-10 (CPU)$(NC)"
@@ -473,8 +473,8 @@ stop-monitoring: ## Detener stack de monitorización
 deploy: network-create start-proxy start-monitoring## Deploy completo. GPU=1 para modo GPU
 	@echo "$(BLUE)Desplegando CIE-10...$(NC)"
 	$(if $(filter 1,$(GPU)),$(COMPOSE_PROD_GPU),$(COMPOSE_PROD)) build frontend backend ai_engine
-	$(if $(filter 1,$(GPU)),$(COMPOSE_PROD_GPU),$(COMPOSE_PROD)) up -d db backend frontend ai_engine
 	$(MAKE) backend-migrate
+	$(if $(filter 1,$(GPU)),$(COMPOSE_PROD_GPU),$(COMPOSE_PROD)) up -d db backend frontend ai_engine
 	@echo ""
 	@echo "$(GREEN)Deploy completado:$(NC)"
 	@echo "  - Frontend:    https://$${DOMAIN:-localhost}"
