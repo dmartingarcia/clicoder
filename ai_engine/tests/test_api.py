@@ -186,14 +186,13 @@ class TestPredictBert:
         assert resp.status_code == 200
         assert isinstance(resp.json()["cards"], list)
 
-    def test_returns_summary_codes_recommendations_cards(self, client_with_bert):
+    def test_returns_codes_card(self, client_with_bert):
         resp = client_with_bert.post(
             "/predict", json={"text": "Paciente con hipertensión arterial"}
         )
         card_types = [c["type"] for c in resp.json()["cards"]]
-        assert "summary" in card_types
         assert "codes" in card_types
-        assert "recommendations" in card_types
+        assert "summary" not in card_types  # summary es independiente via /summarize/stream
 
     def test_codes_card_contains_required_fields(self, client_with_bert):
         resp = client_with_bert.post(
@@ -205,11 +204,16 @@ class TestPredictBert:
             assert "confidence" in entry
             assert entry["engine"] == "bert"
 
-    def test_summary_mentions_word_count(self, client_with_bert):
+    def test_summarize_stream_returns_fallback_without_llm(self, client_with_bert):
         text = "Paciente con hipertensión arterial y diabetes"
-        resp = client_with_bert.post("/predict", json={"text": text})
-        summary = next(c for c in resp.json()["cards"] if c["type"] == "summary")
-        assert str(len(text.split())) in summary["content"]
+        resp = client_with_bert.post("/summarize/stream", json={"text": text})
+        assert resp.status_code == 200
+        # Sin summarizer cargado devuelve una línea de fallback con el nº de palabras
+        lines = [ln for ln in resp.text.strip().splitlines() if ln]
+        import json as _json
+        tokens = [_json.loads(ln).get("token", "") for ln in lines if "{" in ln]
+        full = "".join(tokens)
+        assert str(len(text.split())) in full
 
     def test_empty_text_returns_422(self, client_with_bert):
         resp = client_with_bert.post("/predict", json={"text": "   "})
@@ -251,13 +255,13 @@ class TestPredictDict:
         for entry in codes_card["content"]:
             assert entry["engine"] == "dict"
 
-    def test_codes_card_includes_matched_terms(self, client_with_dict):
+    def test_codes_card_includes_triggers(self, client_with_dict):
         resp = client_with_dict.post(
             "/predict", json={"text": "Paciente con hipertensión", "engine": "dict"}
         )
         codes_card = next(c for c in resp.json()["cards"] if c["type"] == "codes")
         for entry in codes_card["content"]:
-            assert "matched_terms" in entry
+            assert "triggers" in entry
 
     def test_missing_dict_model_returns_503(self, client_no_model):
         resp = client_no_model.post("/predict", json={"text": "Paciente", "engine": "dict"})

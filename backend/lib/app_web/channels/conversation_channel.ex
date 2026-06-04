@@ -10,7 +10,6 @@ defmodule AppWeb.ConversationChannel do
     StartConversation,
     SendMessage,
     AnalyzeReport,
-    ReceiveAIPrediction,
     ValidateCode,
     RejectCode
   }
@@ -164,8 +163,6 @@ defmodule AppWeb.ConversationChannel do
         %{"code_id" => code_id, "trigger" => trigger, "verified" => verified},
         socket
       ) do
-    import Ecto.Query
-
     code = App.Repo.get_by(App.Projections.PredictedCodeProjection, code_id: code_id)
 
     if is_nil(code) do
@@ -392,10 +389,7 @@ defmodule AppWeb.ConversationChannel do
     # Ambas tareas arrancan simultáneamente
     predict_task =
       Task.async(fn ->
-        Req.post("#{ai_url}/predict",
-          json: %{text: report_text, engine: engine},
-          receive_timeout: 60_000
-        )
+        predict_with_retry(ai_url, %{text: report_text, engine: engine}, 2)
       end)
 
     summary_task =
@@ -473,17 +467,19 @@ defmodule AppWeb.ConversationChannel do
     #   Payload: %{message_id, card_id, card_type: "summary", content: texto_completo}
     full_summary = Task.await(summary_task, 120_000)
 
+    # Siempre emitir la tarjeta final de summary (aunque esté vacía) para que el FE
+    # pueda reemplazar el buffer de streaming y quitar el indicador "generando…"
     unless full_summary == "" do
       summary_card = %{"type" => "summary", "content" => full_summary}
       persist_cards_direct(conversation_id, message_id, [summary_card])
-
-      broadcast!(socket, "analysis_card_received", %{
-        message_id: message_id,
-        card_id: UUID.uuid4(),
-        card_type: "summary",
-        content: full_summary
-      })
     end
+
+    broadcast!(socket, "analysis_card_received", %{
+      message_id: message_id,
+      card_id: UUID.uuid4(),
+      card_type: "summary",
+      content: full_summary
+    })
 
     broadcast!(socket, "analysis_complete", %{
       message_id: message_id,
@@ -528,5 +524,16 @@ defmodule AppWeb.ConversationChannel do
     Process.delete(:summary_buf)
     Process.delete(:summary_acc)
     Enum.join(tokens)
+  end
+
+  defp predict_with_retry(ai_url, body, retries) do
+    case Req.post("#{ai_url}/predict", json: body, receive_timeout: 60_000) do
+      {:error, %{reason: reason}} when retries > 0 ->
+        Logger.warning("Predict falló (#{inspect(reason)}), reintentando (#{retries} restantes)")
+        predict_with_retry(ai_url, body, retries - 1)
+
+      result ->
+        result
+    end
   end
 end

@@ -247,20 +247,34 @@ Instrumentator().instrument(app).expose(app)
 # ==================== MIDDLEWARE ====================
 
 
+_TEXT_ENDPOINTS = {"/predict", "/summarize/stream"}
+
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log detallado de requests: método, path, query params, tiempo."""
-    start_time = time.perf_counter()
+    """Log detallado de requests: método, path, query params, texto y tiempo."""
+    import json as _json
 
-    # Capturar parámetros de query
+    start_time = time.perf_counter()
     query_params = dict(request.query_params) if request.query_params else None
+
+    # Para endpoints de predicción/resumen, loguear el texto (primeros 300 chars)
+    # request.body() cachea el resultado en request._body, así el endpoint puede leerlo
+    text_preview = None
+    if request.method == "POST" and request.url.path in _TEXT_ENDPOINTS:
+        try:
+            raw = await request.body()  # Starlette cachea en _body, no consume el stream
+            data = _json.loads(raw)
+            text = data.get("text", "")
+            if text:
+                text_preview = text[:300] + ("…" if len(text) > 300 else "")
+        except Exception:
+            pass
 
     response = await call_next(request)
 
-    # Tiempo de procesamiento
     duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
-    # Log estructurado
     logger.info(
         "http_request",
         method=request.method,
@@ -269,6 +283,7 @@ async def log_requests(request: Request, call_next):
         duration_ms=duration_ms,
         query_params=query_params,
         client_host=request.client.host if request.client else None,
+        **({"text_preview": text_preview} if text_preview else {}),
     )
 
     return response

@@ -221,6 +221,14 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
       setIsAnalyzing(false);
       if (payload.predicted_codes?.length) setPredictedCodes(payload.predicted_codes);
       if (payload.engine) setEngine(payload.engine);
+      // Si quedó alguna tarjeta de summary en modo streaming, quitarle el indicador
+      setChatItems((prev) =>
+        prev.map((item) =>
+          item.kind === 'card' && item.card_id.startsWith('streaming-summary-')
+            ? { ...item, card_id: `done-summary-${item.message_id}` }
+            : item
+        )
+      );
       // Inject suggestion card so user can annotate the report text
       setChatItems((prev) => {
         if (prev.some((item) => item.kind === 'card' && item.card_type === 'suggest')) return prev;
