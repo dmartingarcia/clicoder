@@ -546,6 +546,29 @@ El toggle se expone en el \emph{backoffice} de administración (\texttt{/admin/s
 
 Esta arquitectura sigue el principio de diseño \emph{«separación de responsabilidades»}: el motor de IA no sabe nada del mecanismo de selección —simplemente atiende la petición que recibe—; el backend actúa como orquestador y centraliza la decisión de qué motor invocar; y la interfaz de administración proporciona el punto de control sin acoplarse a la lógica de predicción.
 
+\subsubsection{Representación de la confianza de las predicciones}
+\label{sec:confianza-predicciones}
+
+\paragraph{El problema.}
+Las probabilidades devueltas por un clasificador multi-label entrenado con \texttt{BCEWithLogitsLoss} son, en general, difíciles de interpretar directamente como porcentajes de confianza. La función de activación \emph{sigmoid} mapea el logit de cada clase al intervalo $(0, 1)$, y durante el entrenamiento el modelo es penalizado por alejarse de los valores objetivo $\{0, 1\}$. Como consecuencia, las predicciones positivas que superan el umbral de decisión tienden a concentrarse en el extremo superior del rango —típicamente entre 0{,}80 y 0{,}99—, mientras que las negativas se agrupan cerca de 0. Mostrar este valor directamente al usuario como un porcentaje produce una interfaz poco informativa: casi todos los códigos predichos aparecen con una confianza superior al 90\,\%, lo que impide al codificador clínico priorizar rápidamente los diagnósticos más probables.
+
+\paragraph{Causa raíz.}
+El fenómeno es inherente a la calibración del modelo. Un clasificador entrenado únicamente para minimizar la pérdida de entropía cruzada binaria no garantiza que las probabilidades de salida estén calibradas en sentido estadístico~\cite{Guo17}. La solución canónica —\emph{temperature scaling} o calibración de Platt— requeriría un conjunto de validación adicional y añade un hiperparámetro más al ciclo de entrenamiento, lo que excede el alcance de este proyecto.
+
+\paragraph{Solución adoptada: normalización relativa en tiempo de inferencia.}
+En lugar de calibrar el modelo, se optó por normalizar las puntuaciones dentro del propio conjunto de predicciones devueltas en cada consulta. Dado un conjunto de $n$ códigos predichos con probabilidades $p_1 \geq p_2 \geq \cdots \geq p_n$, se define la \emph{confianza relativa} de cada código como:
+
+\begin{equation}
+    r_i = \frac{p_i - p_n}{p_1 - p_n}, \quad i = 1, \ldots, n
+\end{equation}
+
+donde $p_1$ es la probabilidad máxima y $p_n$ la mínima del conjunto. Si todos los valores son iguales ($p_1 = p_n$), se asigna $r_i = 1$ a todos. Este valor $r_i \in [0, 1]$ no representa una probabilidad calibrada, sino la \textbf{fortaleza relativa} de cada predicción respecto a las demás en esa misma consulta.
+
+La normalización se aplica en el servicio de inferencia (\texttt{ai_engine}) inmediatamente después de construir la lista de predicciones, tanto para el motor BERT como para el clasificador de diccionario, y se incluye en la respuesta como campo \texttt{relative\_confidence} junto a la probabilidad bruta original.
+
+\paragraph{Representación visual.}
+En el \emph{frontend}, la confianza relativa se muestra como una barra de progreso de ancho proporcional a $r_i$, con código de color en tres tramos: verde ($r_i \geq 0{,}66$), amarillo ($0{,}33 \leq r_i < 0{,}66$) y naranja ($r_i < 0{,}33$). La probabilidad bruta se conserva visible como texto secundario de pequeño tamaño, de forma que el codificador avanzado pueda consultarla si lo necesita. Esta combinación permite distinguir de un vistazo qué códigos tienen mayor respaldo del modelo dentro de cada análisis, sin inducir una falsa precisión numérica.
+
 \subsection{Autenticación y seguridad}
 \label{sec:seguridad}
 

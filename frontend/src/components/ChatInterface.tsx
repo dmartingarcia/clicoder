@@ -101,9 +101,23 @@ function CodesCard({
                   {c.status === 'validated' ? t('cards.status_validated') : c.status === 'rejected' ? t('cards.status_rejected') : t('cards.pending')}
                 </Badge>
               </div>
-              <span className="text-xs font-semibold text-green-600 shrink-0">
-                {((c.confidence ?? 0) * 100).toFixed(0)}%
-              </span>
+              <div className="shrink-0 flex flex-col items-end gap-0.5 min-w-12">
+                <div className="w-full h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      (c.relative_confidence ?? 1) >= 0.66
+                        ? 'bg-green-500'
+                        : (c.relative_confidence ?? 1) >= 0.33
+                        ? 'bg-yellow-400'
+                        : 'bg-orange-400'
+                    }`}
+                    style={{ width: `${Math.round((c.relative_confidence ?? 1) * 100)}%` }}
+                  />
+                </div>
+                <span className="text-[10px] text-gray-400 tabular-nums">
+                  {((c.confidence ?? 0) * 100).toFixed(0)}%
+                </span>
+              </div>
             </div>
 
             <p className="text-xs text-gray-600 mb-2">{c.reason ?? c.reasoning}</p>
