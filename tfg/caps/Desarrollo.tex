@@ -521,11 +521,29 @@ El script \texttt{train.py} acepta los siguientes parámetros configurables por 
 El servicio de inferencia (\texttt{ai\_engine/main.py}) es una aplicación FastAPI que carga el modelo BERT al arrancar mediante el mecanismo de ciclo de vida (\texttt{lifespan}). Expone los siguientes endpoints:
 
 \begin{itemize}
-    \item \texttt{POST /predict}: recibe el texto del informe y devuelve una lista de tarjetas con resumen, códigos predichos y recomendaciones.
+    \item \texttt{POST /predict}: recibe el texto del informe y devuelve los códigos CIE-10 predichos. El resumen médico se genera por separado.
+    \item \texttt{POST /summarize/stream}: genera el resumen o paráfrasis del informe en tiempo real, devolviendo los tokens del LLM de forma incremental mediante NDJSON (\emph{newline-delimited JSON}).
     \item \texttt{GET /health}: comprueba que el servicio está en funcionamiento y que el modelo está cargado.
 \end{itemize}
 
 Si el directorio del modelo no existe al arrancar, el servicio se inicia igualmente y devuelve un error 503 en las peticiones de predicción, lo que facilita el desarrollo sin necesidad de tener el modelo entrenado.
+
+\subsubsection{Paralelización y \emph{streaming} del resumen}
+\label{sec:streaming-resumen}
+
+Un sistema de codificación clínica asistida debe minimizar la latencia percibida, especialmente cuando intervienen dos motores de inferencia con tiempos muy distintos: el clasificador BERT tarda entre 500\,ms y 2\,s, mientras que la generación del resumen por parte del LLM puede requerir entre 10\,s y 30\,s dependiendo del modelo y la longitud del informe.
+
+La arquitectura adoptada separa ambas responsabilidades en llamadas independientes y las ejecuta en paralelo mediante dos tareas Elixir asíncronas (\texttt{Task.async}):
+
+\begin{enumerate}
+    \item \textbf{Predicción de códigos} (\texttt{POST /predict}): se lanza de inmediato y, en cuanto devuelve respuesta, los códigos se persisten y se emiten al cliente vía WebSocket con el evento \texttt{analysis\_card\_received}. El codificador puede empezar a revisar los códigos mientras el resumen se sigue generando.
+
+    \item \textbf{Resumen en \emph{streaming}} (\texttt{POST /summarize/stream}): el LLM genera el resumen token a token usando \texttt{stream=True} de \texttt{llama-cpp-python}. Cada token se emite inmediatamente al cliente con el evento WebSocket \texttt{summary\_token}. El cliente muestra el texto progresivamente con un efecto \emph{typewriter}. Al completarse, se emite \texttt{analysis\_card\_received} con el texto íntegro para su persistencia en la base de datos.
+\end{enumerate}
+
+El tiempo total de espera para el usuario es $\max(t_{\text{predict}}, t_{\text{summarize}})$ en lugar de $t_{\text{predict}} + t_{\text{summarize}}$; en la práctica, los códigos aparecen varios segundos antes de que finalice el resumen. Esta mejora de la usabilidad sigue el principio de \emph{tiempo de respuesta percibido}: el usuario recibe información útil en cuanto está disponible, sin necesidad de esperar a que todos los componentes del análisis estén completos~\cite{Nielsen94}.
+
+El \emph{streaming} del resumen presenta además una ventaja psicológica: el usuario observa que el sistema está procesando activamente su consulta, lo que reduce la sensación de espera incluso cuando el tiempo total es idéntico. Este efecto está documentado en la literatura de interacción persona-ordenador bajo el concepto de \emph{feedback de progreso}~\cite{Harrison07}.
 
 \subsubsection{Selección del motor de IA mediante \emph{feature toggle}}
 \label{sec:feature-toggle}
