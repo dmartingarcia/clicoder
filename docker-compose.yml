@@ -2,7 +2,7 @@ services:
   # Imagen base compartida para ML (CUDA + PyTorch + Transformers)
   ml-base:
     build:
-      context: .
+      context: ./docker
       dockerfile: Dockerfile.ml-base
     image: cie10-ml-base:latest
 

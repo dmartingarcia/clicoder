@@ -14,7 +14,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from baseline_dict import DictClassifier, _strip_accents, build_pattern
-
 from classifier import _extract_chapter, load_code_descriptions
 
 # =============================================================================
