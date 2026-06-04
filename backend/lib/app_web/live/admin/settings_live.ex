@@ -2,6 +2,7 @@ defmodule AppWeb.Admin.SettingsLive do
   use AppWeb, :live_view
 
   alias App.AIEngineSettings
+  alias App.SummarizerSettings
 
   @engines [
     {"bert", "BERT (RigoBERTa)",
@@ -11,17 +12,76 @@ defmodule AppWeb.Admin.SettingsLive do
     {"both", "Ambos", "BERT y diccionario en paralelo. Muestra predicciones de los dos motores."}
   ]
 
+  @summarizer_models [
+    {"none", "Desactivado", "No se genera resumen ni paráfrasis."},
+    {"gemma4", "Gemma 4 E4B Q4_K_M", "Modelo más rápido (~2.5 GB). Recomendado."},
+    {"gemma3", "Gemma 3 4B IT Q4_K_M", "Modelo anterior de Google (~2.5 GB)."},
+    {"phi4", "Phi-4 Mini Instruct Q4_K_M", "Microsoft, buen equilibrio (~2.4 GB)."},
+    {"qwen", "Qwen 2.5 3B Instruct Q4_K_M", "Modelo ligero (~2.0 GB)."}
+  ]
+
+  @summarizer_modes [
+    {"summary", "Resumen", "Resumen conciso (~120 palabras) con los puntos clave."},
+    {"paraphrase", "Paráfrasis", "Reformulación estructurada conservando todos los detalles clínicos."}
+  ]
+
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, engine: AIEngineSettings.get_engine(), engines: @engines, saved: false)}
+    summ = SummarizerSettings.get()
+
+    {:ok,
+     assign(socket,
+       engine: AIEngineSettings.get_engine(),
+       engines: @engines,
+       summarizer_model: summ.model,
+       summarizer_mode: summ.mode,
+       prompt_summary: summ.prompt_summary,
+       prompt_paraphrase: summ.prompt_paraphrase,
+       summarizer_models: @summarizer_models,
+       summarizer_modes: @summarizer_modes,
+       engine_saved: false,
+       summarizer_saved: false,
+       summarizer_error: nil
+     )}
   end
 
   @impl true
   def handle_event("set_engine", %{"engine" => engine}, socket) do
     case AIEngineSettings.set_engine(engine) do
       :ok ->
-        {:noreply, assign(socket, engine: engine, saved: true)}
+        {:noreply, assign(socket, engine: engine, engine_saved: true)}
 
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, reason)}
+    end
+  end
+
+  @impl true
+  def handle_event("set_summarizer", %{"model" => model, "mode" => mode}, socket) do
+    with :ok <- SummarizerSettings.set_model(model),
+         :ok <- SummarizerSettings.set_mode(mode) do
+      ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
+
+      case Req.post("#{ai_url}/admin/summarizer",
+             json: %{model: model, mode: mode},
+             receive_timeout: 120_000
+           ) do
+        {:ok, %{status: 200}} ->
+          {:noreply,
+           assign(socket,
+             summarizer_model: model,
+             summarizer_mode: mode,
+             summarizer_saved: true,
+             summarizer_error: nil
+           )}
+
+        {:ok, %{status: _, body: body}} ->
+          {:noreply, assign(socket, summarizer_error: body["detail"] || "Error desconocido")}
+
+        {:error, reason} ->
+          {:noreply, assign(socket, summarizer_error: "No se pudo contactar con el AI engine: #{inspect(reason)}")}
+      end
+    else
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, reason)}
     end
@@ -30,13 +90,16 @@ defmodule AppWeb.Admin.SettingsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="p-6 max-w-xl">
-      <h1 class="text-2xl font-bold text-gray-800 mb-2">Configuración</h1>
-      <p class="text-gray-500 text-sm mb-6">
-        Ajustes globales del sistema. Los cambios se aplican de inmediato pero
-        se pierden al reiniciar el servidor.
-      </p>
+    <div class="p-6 max-w-xl space-y-8">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Configuración</h1>
+        <p class="text-gray-500 text-sm">
+          Ajustes globales del sistema. Los cambios se aplican de inmediato pero
+          se pierden al reiniciar el servidor.
+        </p>
+      </div>
 
+      <%!-- Motor de IA --%>
       <div class="bg-white rounded-lg shadow p-6">
         <h2 class="text-lg font-semibold text-gray-700 mb-1">Motor de IA</h2>
         <p class="text-gray-500 text-sm mb-4">
@@ -58,7 +121,7 @@ defmodule AppWeb.Admin.SettingsLive do
             >
               <div class="flex items-center gap-2">
                 <span class={[
-                  "w-3 h-3 rounded-full flex-shrink-0",
+                  "w-3 h-3 rounded-full shrink-0",
                   if(@engine == value, do: "bg-indigo-500", else: "bg-gray-300")
                 ]} />
                 <span class="font-medium text-gray-800"><%= label %></span>
@@ -71,8 +134,89 @@ defmodule AppWeb.Admin.SettingsLive do
           <% end %>
         </div>
 
-        <%= if @saved do %>
+        <%= if @engine_saved do %>
           <p class="mt-4 text-sm text-green-600">Motor actualizado correctamente.</p>
+        <% end %>
+      </div>
+
+      <%!-- Summarizer LLM --%>
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-700 mb-1">Summarizer LLM</h2>
+        <p class="text-gray-500 text-sm mb-5">
+          Modelo de lenguaje local para generar el resumen o paráfrasis del informe.
+          El cambio recarga el modelo en memoria (puede tardar 10-30 s).
+        </p>
+
+        <form phx-submit="set_summarizer" class="space-y-5">
+          <%!-- Modelo --%>
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-2">Modelo</p>
+            <div class="flex flex-col gap-2">
+              <%= for {value, label, description} <- @summarizer_models do %>
+                <label class={[
+                  "flex items-start gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors",
+                  if(@summarizer_model == value,
+                    do: "border-indigo-500 bg-indigo-50 ring-1 ring-indigo-400",
+                    else: "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
+                  )
+                ]}>
+                  <input
+                    type="radio"
+                    name="model"
+                    value={value}
+                    checked={@summarizer_model == value}
+                    class="mt-0.5 accent-indigo-600"
+                  />
+                  <div>
+                    <p class="text-sm font-medium text-gray-800"><%= label %></p>
+                    <p class="text-xs text-gray-500"><%= description %></p>
+                  </div>
+                </label>
+              <% end %>
+            </div>
+          </div>
+
+          <%!-- Modo --%>
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-2">Modo de salida</p>
+            <div class="flex flex-col gap-2">
+              <%= for {value, label, description} <- @summarizer_modes do %>
+                <label class={[
+                  "flex items-start gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors",
+                  if(@summarizer_mode == value,
+                    do: "border-indigo-500 bg-indigo-50 ring-1 ring-indigo-400",
+                    else: "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
+                  )
+                ]}>
+                  <input
+                    type="radio"
+                    name="mode"
+                    value={value}
+                    checked={@summarizer_mode == value}
+                    class="mt-0.5 accent-indigo-600"
+                  />
+                  <div>
+                    <p class="text-sm font-medium text-gray-800"><%= label %></p>
+                    <p class="text-xs text-gray-500"><%= description %></p>
+                  </div>
+                </label>
+              <% end %>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            Aplicar y recargar modelo
+          </button>
+        </form>
+
+        <%= if @summarizer_saved do %>
+          <p class="mt-4 text-sm text-green-600">Summarizer recargado correctamente.</p>
+        <% end %>
+        <%= if @summarizer_error do %>
+          <p class="mt-4 text-sm text-red-600"><%= @summarizer_error %></p>
         <% end %>
       </div>
     </div>
