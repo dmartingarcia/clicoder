@@ -10,7 +10,8 @@ defmodule AppWeb.Telemetry do
   def init(_arg) do
     children = [
       {:telemetry_poller, measurements: periodic_measurements(), period: 10_000},
-      {TelemetryMetricsPrometheus, metrics: metrics(), port: 9568}
+      {TelemetryMetricsPrometheus,
+       metrics: metrics(), port: Application.get_env(:app, :prometheus_port, 9568)}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
