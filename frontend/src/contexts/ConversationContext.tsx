@@ -28,6 +28,7 @@ export interface AnalysisCode {
   reason?: string;
   reasoning?: string;
   confidence: number;
+  relative_confidence?: number;
   // for validation (populated from predictedCodes)
   code_id?: string;
   status?: 'pending' | 'validated' | 'rejected';

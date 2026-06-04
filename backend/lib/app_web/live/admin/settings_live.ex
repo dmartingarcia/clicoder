@@ -249,7 +249,7 @@ defmodule AppWeb.Admin.SettingsLive do
           <div>
             <p class="text-sm font-medium text-gray-700 mb-1">User prompt — resumen</p>
             <p class="text-xs text-gray-400 mb-2">
-              Instrucción de usuario para el resumen. Usa <code class="bg-gray-100 px-1 rounded">{text}</code> donde debe aparecer el informe.
+              Instrucción de usuario para el resumen. Usa <code class="bg-gray-100 px-1 rounded">&#123;text&#125;</code> donde debe aparecer el informe.
             </p>
             <textarea
               name="user_prompt_summary"
@@ -261,7 +261,7 @@ defmodule AppWeb.Admin.SettingsLive do
           <div>
             <p class="text-sm font-medium text-gray-700 mb-1">User prompt — paráfrasis</p>
             <p class="text-xs text-gray-400 mb-2">
-              Instrucción de usuario para la paráfrasis. Usa <code class="bg-gray-100 px-1 rounded">{text}</code> donde debe aparecer el informe.
+              Instrucción de usuario para la paráfrasis. Usa <code class="bg-gray-100 px-1 rounded">&#123;text&#125;</code> donde debe aparecer el informe.
             </p>
             <textarea
               name="user_prompt_paraphrase"

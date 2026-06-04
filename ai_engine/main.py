@@ -437,6 +437,20 @@ async def predict_codes(request: AnalysisRequest):
     return await _predict_bert(text)
 
 
+def _add_relative_confidence(codes: list[dict]) -> list[dict]:
+    """Normalización min-max dentro del conjunto devuelto para comparación visual."""
+    if len(codes) < 2:
+        for c in codes:
+            c["relative_confidence"] = 1.0
+        return codes
+    values = [c["confidence"] for c in codes]
+    lo, hi = min(values), max(values)
+    spread = hi - lo
+    for c, v in zip(codes, values):
+        c["relative_confidence"] = round((v - lo) / spread, 4) if spread > 1e-6 else 1.0
+    return codes
+
+
 async def _predict_bert(text: str):
     if classifier is None:
         raise HTTPException(
@@ -469,7 +483,7 @@ async def _predict_bert(text: str):
             {"type": "summary", "content": summary_text},
             {
                 "type": "codes",
-                "content": [
+                "content": _add_relative_confidence([
                     {
                         "code": p["code"],
                         "description": p.get("description") or p.get("chapter_name", ""),
@@ -481,7 +495,7 @@ async def _predict_bert(text: str):
                         "engine": "bert",
                     }
                     for p in predictions
-                ],
+                ]),
             },
         ],
         "timing": {
@@ -529,7 +543,7 @@ async def _predict_dict(text: str):  # noqa: E302
             {"type": "summary", "content": summary_text},
             {
                 "type": "codes",
-                "content": [
+                "content": _add_relative_confidence([
                     {
                         "code": p["code"],
                         "description": code_descriptions.get(p["code"], ""),
@@ -539,7 +553,7 @@ async def _predict_dict(text: str):  # noqa: E302
                         "engine": "dict",
                     }
                     for p in predictions
-                ],
+                ]),
             },
         ],
         "timing": {
