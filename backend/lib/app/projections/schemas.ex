@@ -108,6 +108,7 @@ defmodule App.Projections.PredictedCodeProjection do
     field :validated_by, :string
     field :rejected_by, :string
     field :rejection_reason, :string
+    field :verified_triggers, {:array, :string}, default: []
 
     belongs_to :conversation, App.Projections.ConversationProjection
 
@@ -125,6 +126,7 @@ defmodule App.Projections.PredictedCodeProjection do
       :validated_by,
       :rejected_by,
       :rejection_reason,
+      :verified_triggers,
       :conversation_id
     ])
     |> validate_required([:cie10_code, :conversation_id])

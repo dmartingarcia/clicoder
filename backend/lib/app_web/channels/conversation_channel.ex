@@ -160,6 +160,41 @@ defmodule AppWeb.ConversationChannel do
 
   @impl true
   def handle_in(
+        "verify_trigger",
+        %{"code_id" => code_id, "trigger" => trigger, "verified" => verified},
+        socket
+      ) do
+    import Ecto.Query
+
+    code = App.Repo.get_by(App.Projections.PredictedCodeProjection, code_id: code_id)
+
+    if is_nil(code) do
+      {:reply, {:error, %{reason: "code_not_found"}}, socket}
+    else
+      new_triggers =
+        if verified do
+          Enum.uniq([trigger | code.verified_triggers || []])
+        else
+          Enum.reject(code.verified_triggers || [], &(&1 == trigger))
+        end
+
+      code
+      |> Ecto.Changeset.change(verified_triggers: new_triggers)
+      |> App.Repo.update!()
+
+      broadcast!(socket, "trigger_verified", %{
+        code_id: code_id,
+        trigger: trigger,
+        verified: verified,
+        verified_triggers: new_triggers
+      })
+
+      {:reply, {:ok, %{verified_triggers: new_triggers}}, socket}
+    end
+  end
+
+  @impl true
+  def handle_in(
         "suggest_code",
         %{"selected_text" => selected_text, "suggested_code" => suggested_code},
         socket
@@ -254,7 +289,8 @@ defmodule AppWeb.ConversationChannel do
       cie10_code: code.cie10_code,
       reasoning: code.reasoning,
       confidence: code.confidence_score,
-      status: code.status
+      status: code.status,
+      verified_triggers: code.verified_triggers || []
     }
   end
 
