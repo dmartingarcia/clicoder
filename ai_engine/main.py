@@ -185,7 +185,8 @@ async def lifespan(app: FastAPI):
                 _device_info,
             )
         except Exception as exc:
-            logger.warning("No se pudo cargar el modelo BERT: %s", exc)
+            logger.warning("No se pudo cargar el modelo BERT: %s", exc, exc_info=True)
+            sentry_sdk.capture_exception(exc)
             classifier = None
 
         # ── Diccionario classifier ────────────────────────────────────────────
