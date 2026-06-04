@@ -85,7 +85,9 @@ services:
       - ./ai_engine:/app
       - ./training/csv_import_scripts:/data
       - ./.huggingface_cache:/cache/huggingface
-    networks: [clicoder]
+    networks:
+      clicoder:
+        aliases: [ai_engine]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       interval: 5s
@@ -131,7 +133,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
-    networks: [clicoder]
+    networks:
+      clicoder:
+        aliases: [backend]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`api.${DOMAIN:-localhost}`)"
@@ -157,7 +161,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    networks: [clicoder]
+    networks:
+      clicoder:
+        aliases: [frontend]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`${DOMAIN:-localhost}`)"
