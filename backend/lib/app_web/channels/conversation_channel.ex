@@ -378,24 +378,28 @@ defmodule AppWeb.ConversationChannel do
   defp call_ai_engine(conversation_id, message_id, report_text, socket) do
     ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
     engine = App.AIEngineSettings.get_engine()
+    language = get_user_language(socket.assigns.user_id)
 
-    Logger.info("Iniciando análisis paralelo (predict + summarize/stream)",
+    summarizer_model = App.SummarizerSettings.get().model
+    with_summary = summarizer_model != "none"
+
+    Logger.info(
+      "Iniciando análisis (predict + summarize/stream, summarizer=#{summarizer_model})",
       ai_url: ai_url,
       engine: engine,
       conversation_id: conversation_id,
       message_id: message_id
     )
 
-    # Ambas tareas arrancan simultáneamente
     predict_task =
       Task.async(fn ->
         predict_with_retry(ai_url, %{text: report_text, engine: engine}, 2)
       end)
 
     summary_task =
-      Task.async(fn ->
-        do_stream_summary(ai_url, report_text, message_id, socket)
-      end)
+      if with_summary do
+        Task.async(fn -> do_stream_summary(ai_url, report_text, language, message_id, socket) end)
+      end
 
     # ── Fase 1: códigos (rápidos, llegan antes del resumen) ──────────────────
     predicted_codes =
@@ -456,30 +460,21 @@ defmodule AppWeb.ConversationChannel do
       end
 
     # ── Fase 2: resumen (los tokens ya llegaron en streaming) ────────────────
-    #
-    # Evento 1 — "summary_token": emitido por do_stream_summary/4 token a token
-    #   mientras el LLM genera. El FE lo usa para efecto typewriter.
-    #   Payload: %{message_id, token}
-    #
-    # Evento 2 — "analysis_card_received" (card_type: "summary"): emitido aquí
-    #   una vez que todo el texto está disponible. El FE reemplaza el buffer de
-    #   tokens con la tarjeta definitiva (se persiste en BD para el historial).
-    #   Payload: %{message_id, card_id, card_type: "summary", content: texto_completo}
-    full_summary = Task.await(summary_task, 120_000)
+    if with_summary do
+      full_summary = Task.await(summary_task, 120_000)
 
-    # Siempre emitir la tarjeta final de summary (aunque esté vacía) para que el FE
-    # pueda reemplazar el buffer de streaming y quitar el indicador "generando…"
-    unless full_summary == "" do
-      summary_card = %{"type" => "summary", "content" => full_summary}
-      persist_cards_direct(conversation_id, message_id, [summary_card])
+      unless full_summary == "" do
+        summary_card = %{"type" => "summary", "content" => full_summary}
+        persist_cards_direct(conversation_id, message_id, [summary_card])
+
+        broadcast!(socket, "analysis_card_received", %{
+          message_id: message_id,
+          card_id: UUID.uuid4(),
+          card_type: "summary",
+          content: full_summary
+        })
+      end
     end
-
-    broadcast!(socket, "analysis_card_received", %{
-      message_id: message_id,
-      card_id: UUID.uuid4(),
-      card_type: "summary",
-      content: full_summary
-    })
 
     broadcast!(socket, "analysis_complete", %{
       message_id: message_id,
@@ -488,12 +483,24 @@ defmodule AppWeb.ConversationChannel do
     })
   end
 
-  defp do_stream_summary(ai_url, text, message_id, socket) do
+  defp do_stream_summary(ai_url, text, language, message_id, socket) do
     Process.put(:summary_buf, "")
     Process.put(:summary_acc, [])
 
+    settings = App.SummarizerSettings.get()
+
+    {system_tmpl, user_tmpl} =
+      case settings.mode do
+        "paraphrase" -> {settings.prompt_paraphrase, settings.user_prompt_paraphrase}
+        _ -> {settings.prompt_summary, settings.user_prompt_summary}
+      end
+
+    fill = fn tmpl ->
+      tmpl |> String.replace("{language}", language) |> String.replace("{text}", text)
+    end
+
     Req.post("#{ai_url}/summarize/stream",
-      json: %{text: text},
+      json: %{text: text, system_prompt: fill.(system_tmpl), user_prompt: fill.(user_tmpl)},
       receive_timeout: 120_000,
       decode_body: false,
       into: fn {:data, chunk}, {req, resp} ->
@@ -524,6 +531,25 @@ defmodule AppWeb.ConversationChannel do
     Process.delete(:summary_buf)
     Process.delete(:summary_acc)
     Enum.join(tokens)
+  end
+
+  @locale_to_language %{
+    "es" => "español",
+    "en" => "English",
+    "fr" => "français",
+    "de" => "Deutsch",
+    "pt" => "português",
+    "ca" => "català"
+  }
+
+  defp get_user_language(user_id) do
+    locale =
+      case App.Accounts.get_user(user_id) do
+        nil -> "es"
+        user -> user.locale || "es"
+      end
+
+    Map.get(@locale_to_language, locale, "español")
   end
 
   defp predict_with_retry(ai_url, body, retries) do

@@ -356,6 +356,8 @@ class SummarizerConfigRequest(BaseModel):
 
 class SummarizeRequest(BaseModel):
     text: str
+    system_prompt: str | None = None
+    user_prompt: str | None = None
 
 
 # ==================== ENDPOINTS ====================
@@ -368,8 +370,12 @@ def health_check():
         "model": "rigoberta-cie10-flat",
         "model_loaded": classifier is not None,
         "dict_loaded": dict_classifier is not None,
-        "summarizer_model": summarizer.model_name if summarizer and hasattr(summarizer, "model_name") else "none",
-        "summarizer_loaded": summarizer.is_loaded if summarizer and hasattr(summarizer, "is_loaded") else False,
+        "summarizer_model": summarizer.model_name
+        if summarizer and hasattr(summarizer, "model_name")
+        else "none",
+        "summarizer_loaded": summarizer.is_loaded
+        if summarizer and hasattr(summarizer, "is_loaded")
+        else False,
     }
 
 
@@ -398,7 +404,9 @@ async def admin_summarizer(req: SummarizerConfigRequest):
     if model_unchanged:
         try:
             summarizer.update_prompts(req.system_prompt, req.user_prompt)
-            logger.info("Prompts actualizados sin recargar modelo: model=%s mode=%s", req.model, req.mode)
+            logger.info(
+                "Prompts actualizados sin recargar modelo: model=%s mode=%s", req.model, req.mode
+            )
             return {"model": req.model, "mode": req.mode, "status": "prompts_updated"}
         except Exception as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -457,7 +465,6 @@ async def predict_codes(request: AnalysisRequest):
     return await _predict_bert(text)
 
 
-
 def _add_relative_confidence(codes: list[dict]) -> list[dict]:
     """Normalización min-max dentro del conjunto devuelto para comparación visual."""
     if len(codes) < 2:
@@ -490,7 +497,9 @@ async def _predict_bert(text: str):
         for p in predictions
         if p["code"] in classifier.code_to_idx
     ]
-    explanations = await asyncio.to_thread(classifier.explain, text, code_indices) if code_indices else {}
+    explanations = (
+        await asyncio.to_thread(classifier.explain, text, code_indices) if code_indices else {}
+    )
 
     code_triggers = {
         p["code"]: explanations.get(int(classifier.code_to_idx.get(p["code"], -1)), [])
@@ -504,20 +513,22 @@ async def _predict_bert(text: str):
         "cards": [
             {
                 "type": "codes",
-                "content": _add_relative_confidence([
-                    {
-                        "code": p["code"],
-                        "description": p.get("description") or p.get("chapter_name", ""),
-                        "reason": (
-                            f"{p.get('chapter_name') or ('Capítulo ' + p.get('chapter', ''))} "
-                            f"— confianza {round(p['probability'] * 100, 1)}%"
-                        ).strip(" —"),
-                        "confidence": round(p["probability"], 4),
-                        "triggers": code_triggers.get(p["code"], []),
-                        "engine": "bert",
-                    }
-                    for p in predictions
-                ]),
+                "content": _add_relative_confidence(
+                    [
+                        {
+                            "code": p["code"],
+                            "description": p.get("description") or p.get("chapter_name", ""),
+                            "reason": (
+                                f"{p.get('chapter_name') or ('Capítulo ' + p.get('chapter', ''))} "
+                                f"— confianza {round(p['probability'] * 100, 1)}%"
+                            ).strip(" —"),
+                            "confidence": round(p["probability"], 4),
+                            "triggers": code_triggers.get(p["code"], []),
+                            "engine": "bert",
+                        }
+                        for p in predictions
+                    ]
+                ),
             },
         ],
         "timing": {
@@ -552,17 +563,19 @@ async def _predict_dict(text: str):  # noqa: E302
         "cards": [
             {
                 "type": "codes",
-                "content": _add_relative_confidence([
-                    {
-                        "code": p["code"],
-                        "description": code_descriptions.get(p["code"], ""),
-                        "reason": "Términos encontrados: " + ", ".join(p["matched_terms"]),
-                        "confidence": p["confidence"],
-                        "triggers": p["matched_terms"],
-                        "engine": "dict",
-                    }
-                    for p in predictions
-                ]),
+                "content": _add_relative_confidence(
+                    [
+                        {
+                            "code": p["code"],
+                            "description": code_descriptions.get(p["code"], ""),
+                            "reason": "Términos encontrados: " + ", ".join(p["matched_terms"]),
+                            "confidence": p["confidence"],
+                            "triggers": p["matched_terms"],
+                            "engine": "dict",
+                        }
+                        for p in predictions
+                    ]
+                ),
             },
         ],
         "timing": {
@@ -620,7 +633,10 @@ async def summarize_stream(request: SummarizeRequest):
     async def _stream():
         if summarizer is None:
             word_count = len(text.split())
-            yield _json.dumps({"token": f"Informe clínico de {word_count} palabras procesado."}) + "\n"
+            yield (
+                _json.dumps({"token": f"Informe clínico de {word_count} palabras procesado."})
+                + "\n"
+            )
             yield _json.dumps({"done": True}) + "\n"
             return
 
@@ -629,7 +645,11 @@ async def summarize_stream(request: SummarizeRequest):
 
         def _run():
             try:
-                for token in summarizer.summarize_stream(text):
+                for token in summarizer.summarize_stream(
+                    text,
+                    system_prompt=request.system_prompt,
+                    user_prompt=request.user_prompt,
+                ):
                     loop.call_soon_threadsafe(queue.put_nowait, {"token": token})
             except Exception as exc:
                 logger.warning("Error en streaming del summarizer: %s", exc)
