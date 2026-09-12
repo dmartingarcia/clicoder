@@ -7,7 +7,7 @@ MODEL_DIR          Directorio con los artefactos del modelo.
                    Default: ./model
 DEVICE             Dispositivo torch ('cpu', 'cuda', 'mps', …).
                    Default: cpu
-SUMMARIZER_MODEL   Modelo LLM para resúmenes médicos: "gemma3" | "gemma4" | "phi4" | "qwen" | "none".
+SUMMARIZER_MODEL   Modelo LLM para resúmenes médicos: "gemma3" | "gemma4" | "gemma4-2b" | "phi4" | "qwen" | "none".
                    Default: none  (resumen estadístico básico)
 SUMMARIZER_THREADS Hilos CPU para llama-cpp. Default: 4
 SUMMARIZER_CTX     Contexto en tokens para llama-cpp. Default: 4096
@@ -19,9 +19,10 @@ import logging
 import os
 import threading
 import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import sentry_sdk
 import structlog
@@ -141,6 +142,23 @@ dict_classifier = None  # DictClassifier (diccionario)
 summarizer = None  # MedicalSummarizer (LLM local, opcional)
 code_descriptions: dict[str, str] = {}
 
+# ==================== JOB STORE ====================
+
+_JOB_TTL = 600  # segundos — los resultados se guardan 10 min tras completar
+_jobs: dict[str, dict[str, Any]] = {}
+
+
+async def _cleanup_expired_jobs() -> None:
+    """Tarea en background que limpia jobs expirados cada 60 s."""
+    while True:
+        await asyncio.sleep(60)
+        now = time.time()
+        expired = [jid for jid, j in list(_jobs.items()) if j["expires_at"] < now]
+        for jid in expired:
+            _jobs.pop(jid, None)
+        if expired:
+            logger.info("Jobs expirados eliminados: %d", len(expired))
+
 
 # ==================== LIFESPAN ====================
 
@@ -247,7 +265,9 @@ async def lifespan(app: FastAPI):
         summarizer = None
         SUMMARIZER_LOADED.set(0)
 
+    _cleanup_task = asyncio.create_task(_cleanup_expired_jobs())
     yield
+    _cleanup_task.cancel()
 
 
 # ==================== APP ====================
@@ -265,7 +285,7 @@ Instrumentator().instrument(app).expose(app)
 # ==================== MIDDLEWARE ====================
 
 
-_TEXT_ENDPOINTS = {"/predict", "/summarize/stream"}
+_TEXT_ENDPOINTS = {"/predict", "/summarize/stream", "/jobs/predict", "/jobs/summarize"}
 
 
 @app.middleware("http")
@@ -687,3 +707,108 @@ async def summarize_stream(request: SummarizeRequest):
         thread.join(timeout=5)
 
     return StreamingResponse(_stream(), media_type="application/x-ndjson")
+
+
+# ==================== ASYNC JOB ENDPOINTS ====================
+
+
+def _new_job() -> tuple[str, dict[str, Any]]:
+    """Crea un job en estado pending y lo registra en _jobs."""
+    job_id = uuid.uuid4().hex
+    job: dict[str, Any] = {
+        "status": "pending",
+        "result": None,
+        "error": None,
+        "expires_at": time.time() + _JOB_TTL,
+    }
+    _jobs[job_id] = job
+    return job_id, job
+
+
+@app.post("/jobs/predict", summary="Predicción asíncrona — devuelve job_id inmediatamente")
+async def submit_predict_job(request: AnalysisRequest):
+    """Encola la predicción y devuelve un ``job_id``.
+
+    Elixir puede hacer GET /jobs/{job_id} para recuperar el resultado
+    cuando esté listo, aunque la conexión original se haya cortado.
+    Los resultados se guardan durante 10 minutos tras completar.
+    """
+    text = request.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="El texto no puede estar vacío.")
+
+    job_id, job = _new_job()
+
+    async def _run():
+        try:
+            if request.engine == "dict":
+                job["result"] = await _predict_dict(text)
+            elif request.engine == "both":
+                job["result"] = await _predict_both(text)
+            else:
+                job["result"] = await _predict_bert(text)
+            job["status"] = "done"
+        except HTTPException as exc:
+            job["error"] = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+            job["status"] = "error"
+        except Exception as exc:
+            job["error"] = str(exc)
+            job["status"] = "error"
+        finally:
+            job["expires_at"] = time.time() + _JOB_TTL
+
+    asyncio.create_task(_run())
+    return {"job_id": job_id, "status": "pending"}
+
+
+@app.post("/jobs/summarize", summary="Resumen asíncrono — devuelve job_id inmediatamente")
+async def submit_summarize_job(request: SummarizeRequest):
+    """Encola el resumen y devuelve un ``job_id``.
+
+    El resultado es ``{"text": "..."}`` cuando status == "done".
+    Los resultados se guardan durante 10 minutos tras completar.
+    """
+    text = request.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="El texto no puede estar vacío.")
+
+    job_id, job = _new_job()
+
+    async def _run():
+        try:
+            if summarizer is None:
+                word_count = len(text.split())
+                job["result"] = {"text": f"Informe clínico de {word_count} palabras procesado."}
+            else:
+                summary_text = await asyncio.to_thread(summarizer.summarize, text)
+                job["result"] = {"text": summary_text}
+            job["status"] = "done"
+        except Exception as exc:
+            job["error"] = str(exc)
+            job["status"] = "error"
+        finally:
+            job["expires_at"] = time.time() + _JOB_TTL
+
+    asyncio.create_task(_run())
+    return {"job_id": job_id, "status": "pending"}
+
+
+@app.get("/jobs/{job_id}", summary="Consultar estado y resultado de un job")
+async def get_job(job_id: str):
+    """Devuelve el estado del job.
+
+    - ``status: "pending"`` — en proceso, vuelve a consultar en unos segundos.
+    - ``status: "done"``    — result contiene la respuesta completa.
+    - ``status: "error"``   — error contiene el mensaje de error.
+
+    Devuelve 404 si el job no existe o ha expirado (>10 min desde que completó).
+    """
+    job = _jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job no encontrado o expirado.")
+    return {
+        "job_id": job_id,
+        "status": job["status"],
+        "result": job["result"],
+        "error": job["error"],
+    }
