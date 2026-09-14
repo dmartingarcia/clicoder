@@ -1,10 +1,12 @@
 import asyncio
+import json
 import random
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-app = FastAPI(title="CIE-10 AI Engine (MOCK)", version="mock-2.0.0")
+app = FastAPI(title="CIE-10 AI Engine", version="1.0.0")
 
 KEYWORD_CODES: list[tuple[list[str], dict]] = [
     (
@@ -127,22 +129,41 @@ FALLBACK_CODES = [
 ]
 
 
-def analyze_text(text: str) -> list[dict]:
+def _add_relative_confidence(codes: list[dict]) -> list[dict]:
+    """Normalización min-max de las confianzas dentro del conjunto (igual que producción)."""
+    if len(codes) < 2:
+        for c in codes:
+            c["relative_confidence"] = 1.0
+        return codes
+    values = [c["confidence"] for c in codes]
+    lo, hi = min(values), max(values)
+    spread = hi - lo
+    for c in codes:
+        c["relative_confidence"] = round((c["confidence"] - lo) / spread, 4) if spread > 1e-6 else 1.0
+    return codes
+
+
+def analyze_text(text: str, engine: str = "bert") -> list[dict]:
     text_lower = text.lower()
     matched: list[dict] = []
     seen_codes: set[str] = set()
 
     for keywords, code_entry in KEYWORD_CODES:
-        if any(kw in text_lower for kw in keywords):
-            code = code_entry["code"]
-            if code not in seen_codes:
-                matched.append(code_entry)
-                seen_codes.add(code)
+        hits = [kw for kw in keywords if kw in text_lower]
+        if hits and code_entry["code"] not in seen_codes:
+            item = dict(code_entry)  # copia para no mutar la plantilla compartida
+            item["triggers"] = hits
+            item["engine"] = engine
+            matched.append(item)
+            seen_codes.add(code_entry["code"])
 
     if not matched:
-        matched = FALLBACK_CODES.copy()
+        item = dict(FALLBACK_CODES[0])
+        item["triggers"] = []
+        item["engine"] = engine
+        matched = [item]
 
-    return matched[:5]
+    return _add_relative_confidence(matched[:10])
 
 
 def build_summary(text: str, codes: list[dict]) -> str:
@@ -188,33 +209,61 @@ def build_recommendations(codes: list[dict]) -> str:
 
 class AnalysisRequest(BaseModel):
     text: str
+    engine: str = "bert"
 
 
-@app.get("/")
+class TokenCountRequest(BaseModel):
+    text: str
+
+
+class SummarizeRequest(BaseModel):
+    text: str
+    system_prompt: str | None = None
+    user_prompt: str | None = None
+    mode: str = "summary"
+
+
+@app.get("/", summary="Health check")
 def health_check():
-    return {"status": "online", "model": "MOCK-no-GPU", "mode": "development"}
+    return {
+        "status": "online",
+        "model": "MOCK-no-GPU",
+        "model_loaded": True,
+        "dict_loaded": True,
+        "summarizer_model": "mock",
+        "summarizer_loaded": True,
+    }
 
 
-@app.post("/predict")
+@app.post("/count-tokens", summary="Contar tokens (aproximado, mock)")
+async def count_tokens(request: TokenCountRequest):
+    # Aproximación sencilla para el contador del frontend.
+    words = len(request.text.split())
+    return {"token_count": int(words / 0.75) + 2}
+
+
+@app.post("/predict", summary="Predecir códigos CIE-10 (mock)")
 async def predict_codes(request: AnalysisRequest):
+    text = request.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="El texto no puede estar vacío.")
     await asyncio.sleep(random.uniform(0.3, 0.9))
+    engine = request.engine if request.engine in ("bert", "dict") else "bert"
+    codes = analyze_text(text, engine=engine)
+    return {"cards": [{"type": "codes", "content": codes}]}
 
-    codes = analyze_text(request.text)
 
-    cards = [
-        {
-            "type": "summary",
-            "content": build_summary(request.text, codes),
-        },
-        {
-            "type": "codes",
-            "content": codes,
-        },
-        {
-            "type": "recommendations",
-            "content": build_recommendations(codes),
-        },
-    ]
+@app.post("/summarize/stream", summary="Resumen médico en streaming (NDJSON, mock)")
+async def summarize_stream(request: SummarizeRequest):
+    text = request.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="El texto no puede estar vacío.")
 
-    # Legacy field kept for backwards compatibility
-    return {"cards": cards, "codes": codes}
+    async def _stream():
+        summary = build_summary(text, analyze_text(text))
+        for word in summary.split(" "):
+            await asyncio.sleep(0.02)
+            yield json.dumps({"token": word + " "}) + "\n"
+        yield json.dumps({"done": True}) + "\n"
+
+    return StreamingResponse(_stream(), media_type="application/x-ndjson")
