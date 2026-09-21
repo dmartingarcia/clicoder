@@ -71,6 +71,20 @@ services:
       - "traefik.http.routers.maintenance.priority=1"
       - "traefik.http.services.maintenance.loadbalancer.server.port=80"
 
+  # Cloudflare Tunnel — ingreso sin puertos abiertos en el VPS.
+  # El token se genera en dash.cloudflare.com → Zero Trust → Networks → Tunnels.
+  # Las rutas (DOMAIN, api.DOMAIN, grafana.DOMAIN) se configuran en el dashboard
+  # de Cloudflare apuntando a https://cie10_traefik:443 (noTLSVerify: true).
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.1
+    container_name: cie10_cloudflared
+    restart: always
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate --metrics 0.0.0.0:20241 run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks: [clicoder]
+
 networks:
   proxy:
   clicoder:
