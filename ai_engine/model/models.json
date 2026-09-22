@@ -1,0 +1,44 @@
+{
+  "descripcion": "Catálogo de modelos publicados en Hugging Face. Cada entrada nombra los ficheros tal como están en el repositorio remoto y recoge sus cifras, para poder elegir sin descargarlos todos.",
+  "repo": "dmartingarcia/cie10-rigoberta-classifier",
+  "nota_medicion": "Las métricas 'comparables' salen todas de una misma pasada de evaluación en precisión reducida (ensemble_eval.py), que es lo que las hace comparables entre modelos. Las 'titulares' del modelo de producción proceden del guion en precisión completa (eval_test.py) y son las que cita la memoria. Difieren en la tercera cifra decimal. No mezclar unas con otras al citar.",
+  "modelos": {
+    "produccion": {
+      "checkpoint": "classifier.pt",
+      "thresholds": "thresholds.json",
+      "descripcion": "Modelo del paso 36. Es el que documenta la memoria y el que sirve el sistema por defecto.",
+      "entrenamiento": "20260530T030233Z",
+      "umbral": 0.3,
+      "fusion_threshold": 2.9,
+      "titulares": {
+        "f1_micro_val": 0.4945,
+        "f1_micro_test": 0.4887,
+        "map_test": 0.4373
+      },
+      "comparables": {
+        "f1_micro_test": 0.4872,
+        "map_test": 0.4342,
+        "map_test_con_diccionario": 0.5446
+      }
+    },
+    "zlpr-map": {
+      "checkpoint": "classifier-zlpr-map.pt",
+      "thresholds": "thresholds-zlpr-map.json",
+      "descripcion": "Pérdida de ordenación ZLPR con selección de checkpoint por MAP. Mejor MAP medido de toda la serie de experimentos.",
+      "entrenamiento": "20260921T091919Z",
+      "umbral": 0.2,
+      "fusion_threshold": 2.1,
+      "titulares": {
+        "f1_micro_val": 0.4848,
+        "f1_micro_test": null,
+        "map_test": null
+      },
+      "comparables": {
+        "f1_micro_test": 0.4972,
+        "map_test": 0.4535,
+        "map_test_con_diccionario": 0.5535
+      }
+    }
+  },
+  "nota_fusion": "La fusión con el diccionario no es un modelo aparte: es una combinación en tiempo de ejecución entre cualquiera de estos checkpoints y baseline_dict.json, gobernada por fusion_beta y fusion_threshold en config.json. Sube el MAP unos 11 pp sobre el modelo solo, sea cual sea el que se elija."
+}

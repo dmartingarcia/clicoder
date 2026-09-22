@@ -15,6 +15,7 @@ SUMMARIZER_CTX     Contexto en tokens para llama-cpp. Default: 4096
 
 import asyncio
 import glob
+import json
 import logging
 import os
 import threading
@@ -439,6 +440,132 @@ def health_check():
         "summarizer_loaded": summarizer.is_loaded
         if summarizer and hasattr(summarizer, "is_loaded")
         else False,
+    }
+
+
+class ModelLoadRequest(BaseModel):
+    """Petición de cambio de modelo activo."""
+
+    name: str
+    """Nombre del modelo en el catálogo (models.json)."""
+
+
+def _model_dir() -> str:
+    return os.environ.get("MODEL_DIR", "./model")
+
+
+def _catalogo_modelos() -> dict:
+    """Catálogo de modelos publicados, o vacío si no se ha descargado."""
+    ruta = Path(_model_dir()) / "models.json"
+    if not ruta.exists():
+        return {}
+    try:
+        with open(ruta, encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("models.json ilegible: %s", exc)
+        return {}
+
+
+@app.get("/admin/models", summary="Modelos disponibles y cuál está cargado")
+async def admin_list_models():
+    """Lista el catálogo indicando cuáles están descargados y cuál sirve ahora mismo.
+
+    Un modelo del catálogo puede no estar en disco: pesa algo más de 2 GB y se descarga por
+    separado. Por eso se informa de ambas cosas, disponible y cargado, en lugar de solo una:
+    sin esa distinción, intentar activar uno ausente fallaría sin explicación.
+    """
+    catalogo = _catalogo_modelos()
+    activo = classifier.config.get("model_file") if classifier else None
+    modelos = []
+    for nombre, meta in catalogo.get("modelos", {}).items():
+        fichero = Path(_model_dir()) / meta["checkpoint"]
+        modelos.append(
+            {
+                "name": nombre,
+                "checkpoint": meta["checkpoint"],
+                "description": meta.get("descripcion", ""),
+                "metrics": meta.get("comparables", {}),
+                "downloaded": fichero.exists(),
+                "loaded": meta["checkpoint"] == activo,
+            }
+        )
+    return {
+        "models": modelos,
+        "loaded_checkpoint": activo,
+        "note": catalogo.get("nota_medicion", ""),
+    }
+
+
+@app.post("/admin/models", summary="Cargar otro modelo en caliente")
+async def admin_load_model(req: ModelLoadRequest):
+    """Sustituye el modelo activo sin reiniciar el servicio.
+
+    Se construye el clasificador nuevo entero y solo cuando ha cargado correctamente se pone
+    en lugar del anterior, de modo que un fallo de carga deja el servicio sirviendo con el
+    que ya tenía en vez de dejarlo sin ninguno.
+
+    Cambia también el umbral y el umbral de fusión, que son propios de cada modelo: el de
+    fusión vive en el espacio de la puntuación combinada, así que heredar el del modelo
+    anterior degradaría los resultados de forma silenciosa.
+    """
+    global classifier
+
+    catalogo = _catalogo_modelos()
+    meta = catalogo.get("modelos", {}).get(req.name)
+    if meta is None:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": f"Modelo desconocido: {req.name}",
+                "disponibles": sorted(catalogo.get("modelos", {})),
+            },
+        )
+
+    destino = Path(_model_dir()) / meta["checkpoint"]
+    if not destino.exists():
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": f"El modelo '{req.name}' no está descargado.",
+                "solucion": f"make model-download NAME={req.name}",
+            },
+        )
+
+    overrides = {
+        "model_file": meta["checkpoint"],
+        "thresholds_file": meta.get("thresholds", ""),
+        "threshold": meta.get("umbral"),
+        "fusion_threshold": meta.get("fusion_threshold"),
+    }
+    overrides = {k: v for k, v in overrides.items() if v not in (None, "")}
+
+    _t0 = time.perf_counter()
+    try:
+        from classifier import CIE10Classifier
+
+        nuevo = await asyncio.to_thread(
+            CIE10Classifier,
+            _model_dir(),
+            os.environ.get("DEVICE", "cpu"),
+            overrides,
+        )
+    except Exception as exc:
+        logger.error("No se pudo cargar el modelo '%s': %s", req.name, exc)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": f"Fallo al cargar '{req.name}': {exc}"},
+        ) from exc
+
+    # Swap: hasta esta línea el modelo anterior seguía atendiendo peticiones.
+    classifier = nuevo
+    _t = time.perf_counter() - _t0
+    logger.info("Modelo cambiado a '%s' en %.1f s", req.name, _t)
+    return {
+        "name": req.name,
+        "checkpoint": meta["checkpoint"],
+        "status": "loaded",
+        "timing": {"load_ms": round(_t * 1000, 2)},
     }
 
 
