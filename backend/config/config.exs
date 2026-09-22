@@ -54,7 +54,9 @@ config :logger, :default_formatter,
     :reason,
     :classifier_ms,
     :summarizer_ms,
-    :total_ms
+    :total_ms,
+    :explain_ms,
+    :method
   ]
 
 # Use Jason for JSON parsing in Phoenix
