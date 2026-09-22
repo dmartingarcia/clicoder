@@ -1,0 +1,199 @@
+{
+  "baseline": {
+    "val": {
+      "map_reachable": 0.5587401391478581,
+      "map_strict": 0.44689621521309825
+    },
+    "test": {
+      "map_reachable": 0.5554962504752231,
+      "map_strict": 0.4542390654745763
+    }
+  },
+  "best_val": {
+    "lambda": 0.0,
+    "gamma": 0.0,
+    "beta": 0.0,
+    "map_strict_val": 0.44689621521309825,
+    "map_strict_test": 0.4542390654745763,
+    "map_reachable_test": 0.5554962504752231
+  },
+  "grid": [
+    {
+      "lambda": 0.0,
+      "gamma": 0.0,
+      "beta": 0.0,
+      "map_strict_val": 0.44689621521309825,
+      "map_strict_test": 0.4542390654745763,
+      "map_reachable_test": 0.5554962504752231
+    },
+    {
+      "lambda": 0.0,
+      "gamma": 0.25,
+      "beta": 0.0,
+      "map_strict_val": 0.4441312963377945
+    },
+    {
+      "lambda": 0.0,
+      "gamma": 0.5,
+      "beta": 0.0,
+      "map_strict_val": 0.43819342724303095
+    },
+    {
+      "lambda": 0.0,
+      "gamma": 0.75,
+      "beta": 0.0,
+      "map_strict_val": 0.4293892148108717
+    },
+    {
+      "lambda": 0.0,
+      "gamma": 1.0,
+      "beta": 0.0,
+      "map_strict_val": 0.41907442075459106
+    },
+    {
+      "lambda": 0.25,
+      "gamma": 0.0,
+      "beta": 0.0,
+      "map_strict_val": 0.44422088051979364
+    },
+    {
+      "lambda": 0.25,
+      "gamma": 0.25,
+      "beta": 0.0,
+      "map_strict_val": 0.4425551186865642
+    },
+    {
+      "lambda": 0.25,
+      "gamma": 0.5,
+      "beta": 0.0,
+      "map_strict_val": 0.43985706745185316
+    },
+    {
+      "lambda": 0.25,
+      "gamma": 0.75,
+      "beta": 0.0,
+      "map_strict_val": 0.4362405534701668
+    },
+    {
+      "lambda": 0.25,
+      "gamma": 1.0,
+      "beta": 0.0,
+      "map_strict_val": 0.43113329532023603
+    },
+    {
+      "lambda": 0.5,
+      "gamma": 0.0,
+      "beta": 0.0,
+      "map_strict_val": 0.4326373814344067
+    },
+    {
+      "lambda": 0.5,
+      "gamma": 0.25,
+      "beta": 0.0,
+      "map_strict_val": 0.42814732215754725
+    },
+    {
+      "lambda": 0.5,
+      "gamma": 0.5,
+      "beta": 0.0,
+      "map_strict_val": 0.4214964056981935
+    },
+    {
+      "lambda": 0.5,
+      "gamma": 0.75,
+      "beta": 0.0,
+      "map_strict_val": 0.41227541470674967
+    },
+    {
+      "lambda": 0.5,
+      "gamma": 1.0,
+      "beta": 0.0,
+      "map_strict_val": 0.40432271414044096
+    },
+    {
+      "lambda": 0.75,
+      "gamma": 0.0,
+      "beta": 0.0,
+      "map_strict_val": 0.41967574924672524
+    },
+    {
+      "lambda": 0.75,
+      "gamma": 0.25,
+      "beta": 0.0,
+      "map_strict_val": 0.40516717096212507
+    },
+    {
+      "lambda": 0.75,
+      "gamma": 0.5,
+      "beta": 0.0,
+      "map_strict_val": 0.3859730858999919
+    },
+    {
+      "lambda": 0.75,
+      "gamma": 0.75,
+      "beta": 0.0,
+      "map_strict_val": 0.3662925912032029
+    },
+    {
+      "lambda": 0.75,
+      "gamma": 1.0,
+      "beta": 0.0,
+      "map_strict_val": 0.34144941807657303
+    },
+    {
+      "lambda": 1.0,
+      "gamma": 0.0,
+      "beta": 0.0,
+      "map_strict_val": 0.3963041918113201
+    },
+    {
+      "lambda": 1.0,
+      "gamma": 0.25,
+      "beta": 0.0,
+      "map_strict_val": 0.37188512434849835
+    },
+    {
+      "lambda": 1.0,
+      "gamma": 0.5,
+      "beta": 0.0,
+      "map_strict_val": 0.3392142914207731
+    },
+    {
+      "lambda": 1.0,
+      "gamma": 0.75,
+      "beta": 0.0,
+      "map_strict_val": 0.3039853885038321
+    },
+    {
+      "lambda": 1.0,
+      "gamma": 1.0,
+      "beta": 0.0,
+      "map_strict_val": 0.27353291983673456
+    }
+  ],
+  "label": "zlprmap",
+  "stats_split": "val",
+  "rerank_val": {
+    "map_reachable": 0.5587401391478581,
+    "map_strict": 0.44689621521309825
+  },
+  "rerank_test": {
+    "map_reachable": 0.5554962504752231,
+    "map_strict": 0.4542390654745763
+  },
+  "ablacion": {
+    "solo_calibracion": {
+      "lambda": 0.0,
+      "gamma": 0.0,
+      "beta": 0.0,
+      "map_strict_val": 0.44689621521309825,
+      "map_strict_test": 0.4542390654745763,
+      "map_reachable_test": 0.5554962504752231
+    }
+  },
+  "f1": {
+    "thr": -1.5723966407537513,
+    "f1_micro_val": 0.4871536523929471,
+    "f1_micro_test": 0.4944909651829
+  }
+}

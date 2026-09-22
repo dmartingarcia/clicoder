@@ -1,0 +1,83 @@
+{
+  "descripcion": "Barrido definitivo de la fusion modelo+diccionario. s_c = logit_c + beta*conf(bloque(c)). beta elegido por MAP estricto en validacion.",
+  "beta_grid": [
+    {
+      "beta": 0,
+      "map_strict_val": 0.4459448016101624
+    },
+    {
+      "beta": 0.5,
+      "map_strict_val": 0.4638820918410223
+    },
+    {
+      "beta": 1,
+      "map_strict_val": 0.4816328912871345
+    },
+    {
+      "beta": 2,
+      "map_strict_val": 0.5093183618551425
+    },
+    {
+      "beta": 4,
+      "map_strict_val": 0.540857914009245
+    },
+    {
+      "beta": 6,
+      "map_strict_val": 0.5504049167436548
+    },
+    {
+      "beta": 8,
+      "map_strict_val": 0.5493537349608905
+    },
+    {
+      "beta": 12,
+      "map_strict_val": 0.545186862228516
+    },
+    {
+      "beta": 16,
+      "map_strict_val": 0.5422377588110603
+    },
+    {
+      "beta": 24,
+      "map_strict_val": 0.5395946679956498
+    },
+    {
+      "beta": 32,
+      "map_strict_val": 0.5388236547409284
+    },
+    {
+      "beta": 64,
+      "map_strict_val": 0.5364973268481119
+    }
+  ],
+  "modelos": {
+    "prod": {
+      "val": {
+        "map_strict_solo": 0.43434436214503197,
+        "map_strict_fusion": 0.5473216857589903
+      },
+      "test": {
+        "map_strict_solo": 0.43417134805051877,
+        "map_strict_fusion": 0.5446404233949711
+      },
+      "umbral_fusion": 2.900000000000004,
+      "f1_micro_val_fusion": 0.596144578313253,
+      "f1_micro_test_fusion": 0.5970895861755343
+    },
+    "zlprmap": {
+      "val": {
+        "map_strict_solo": 0.4459448016101624,
+        "map_strict_fusion": 0.5504049167436548
+      },
+      "test": {
+        "map_strict_solo": 0.4535145919323394,
+        "map_strict_fusion": 0.55347589633491
+      },
+      "umbral_fusion": 2.100000000000003,
+      "f1_micro_val_fusion": 0.6026097271648873,
+      "f1_micro_test_fusion": 0.6110737502802063
+    }
+  },
+  "beta_elegido": 6,
+  "diccionario_solo_map_strict_test": 0.14515501993262195
+}
