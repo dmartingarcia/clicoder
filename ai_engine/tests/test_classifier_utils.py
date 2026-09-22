@@ -45,7 +45,26 @@ class TestExtractChapter:
         for letter in ("V", "W", "X", "Y"):
             assert _extract_chapter(f"{letter}01") == "XX"
 
-    def test_unknown_letter_returns_none(self):
+    def test_d_codes_split_between_neoplasms_and_blood(self):
+        # C00-D49 son neoplasias (cap. II); D50-D89, enfermedades de la sangre (cap. III).
+        # Mapear la D entera al capítulo II etiquetaba una anemia como neoplasia.
+        assert _extract_chapter("D48.9") == "II"
+        # En CIE-10-ES el capitulo II llega hasta D49, no hasta D48 (limite de la CIE-10 OMS).
+        assert _extract_chapter("D49.0") == "II"
+        assert _extract_chapter("D49.59") == "II"
+        assert _extract_chapter("D50.9") == "III"
+        assert _extract_chapter("D89") == "III"
+
+    def test_h_codes_split_between_eye_and_ear(self):
+        # H00-H59 son ojo (cap. VII); H60-H95, oído (cap. VIII).
+        assert _extract_chapter("H25.9") == "VII"
+        assert _extract_chapter("H60.531") == "VIII"
+        assert _extract_chapter("H95") == "VIII"
+
+    def test_u_codes_are_special_purpose_chapter(self):
+        assert _extract_chapter("U07.1") == "XXII"
+
+    def test_code_outside_every_range_returns_none(self):
         assert _extract_chapter("U999") is None
 
     def test_empty_string_returns_none(self):
@@ -136,8 +155,8 @@ class TestDictClassifier:
     def patterns_file(self, tmp_path):
         """A minimal patterns JSON: I10 → 'hipertension', J45 → 'asma'."""
         data = {
-            "I10": ["hipertension", "tension arterial alta"],
-            "J45": ["asma", "broncoespasmo"],
+            "I10": [["hipertension", 1.0], ["tension arterial alta", 0.6]],
+            "J45": [["asma", 1.0], ["broncoespasmo", 0.6]],
         }
         p = tmp_path / "patterns.json"
         p.write_text(json.dumps(data), encoding="utf-8")
@@ -165,11 +184,19 @@ class TestDictClassifier:
 
         assert results == []
 
-    def test_predict_confidence_is_1(self, clf):
+    def test_predict_confidence_is_strongest_match(self, clf):
         with patch("baseline_dict.lemmatize", side_effect=lambda t: t.lower()):
             results = clf.predict("asma bronquial severa")
 
-        assert all(r["confidence"] == 1.0 for r in results)
+        j45 = next(r for r in results if r["code"] == "J45")
+        assert j45["confidence"] == 1.0
+
+    def test_predict_confidence_uses_weaker_match_when_thats_all_that_hit(self, clf):
+        with patch("baseline_dict.lemmatize", side_effect=lambda t: t.lower()):
+            results = clf.predict("tension arterial alta")
+
+        i10 = next(r for r in results if r["code"] == "I10")
+        assert i10["confidence"] == 0.6
 
     def test_predict_includes_matched_terms(self, clf):
         with patch("baseline_dict.lemmatize", side_effect=lambda t: t.lower()):
@@ -180,7 +207,7 @@ class TestDictClassifier:
         assert all(t in ["asma", "broncoespasmo"] for t in j45["matched_terms"])
 
     def test_predict_limits_matched_terms_to_3(self, tmp_path):
-        data = {"X99": ["uno", "dos", "tres", "cuatro", "cinco"]}
+        data = {"X99": [["uno", 1.0], ["dos", 1.0], ["tres", 1.0], ["cuatro", 1.0], ["cinco", 1.0]]}
         p = tmp_path / "big.json"
         p.write_text(json.dumps(data), encoding="utf-8")
         clf = DictClassifier(str(p))

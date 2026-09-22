@@ -1,274 +1,190 @@
 fuente,bloque,n_patrones,top_patrones
-corpus,A15,20,mycobacterium tuberculosis | tuberculosis pulmonar | de linfocito | para mycobacterium tuberculosis | el fibrobroncoscopia
+corpus,A15,677,para mycobacterium tuberculosis | realizar uno puncion-aspiracion con aguja | puncion-aspiracion con aguja fino guiado | el realizar uno puncion-aspiracion con | uno puncion-aspiracion con aguja fino
 corpus,A18,3,positivo para mycobacterium tuberculosis | positivo para mycobacterium | hipertrofia prostatico el
-corpus,A23,7,tratamiento antibiotico previo | amoxicilina-acido clavulanico | antibiotico previo | sin pasteurizar | y el resolucion
-corpus,A41,20,por sepsis | precisar cuidado intensivo | antibioterapia empirico y | precisar cuidado | sepsis de origen
-corpus,A53,1,sifilis y
-corpus,B00,2,virus herpes | aciclovir y
-corpus,B19,20,serologia para | hepatitis b | de hepatitis | biopsia hepatico | carga viral
-corpus,B20,10,vih y | y vih | virus de el inmunodeficiencia humano | de el inmunodeficiencia humano | virus de el inmunodeficiencia
-corpus,B37,20,positivo para candida | de 40 ano de edad | con clinica de | 40 ano de edad | para candida
-corpus,B45,20,criptococo neoformans variedad neoformans criptolatex | biopsia renal mostrar nefropatia tubulointersticial | renal mostrar nefropatia tubulointersticial desde | mostrar nefropatia tubulointersticial desde uno | hongo levaduriforme ureasa positivo compatible
-corpus,B58,7,y probablemente | linfocito cd4 + | toxoplasmosis y | linfocito cd4 | vih de
-corpus,B69,20,convulsivo generalizado presenciado por familiar | iniciar tratamiento con dexametasona albendazol | manera indefinido el tratamiento antiepileptico | tratamiento antiepileptico sin presentar nuevo | izquierdo secundario a cisticercosis sistemico
-corpus,B95,20,el obtener el | el instaurar tratamiento antibiotico | staphylococcus aureus | que ser positivo para | el paciente precisar
-corpus,B96,20,escherichia coli | de 48 hora de evolucion | 48 hora de evolucion | salida de material | de 48 hora de
-corpus,B97,20,progresivo el | que resultar negativo | suspender el el | enterovirus y | el continuar
-corpus,B99,20,de infeccion | infeccion por | infeccion de | diagnostico de infeccion | signo de infeccion
-corpus,C02,1,izquierdo mediante
-corpus,C16,16,adenocarcinoma gastrico | de adenocarcinoma gastrico | uno gastrectomia | m2 cada 21 dia | de el union
-corpus,C18,20,adenocarcinoma de colon | colectomia subtotal | con anastomosis | el colectomia | aparentemente el testiculo parecer macroscopicamente
-corpus,C22,1,de hepatocarcinoma
-corpus,C50,18,de mama | cancer de mama | de carcinoma ductal | ductal infiltrante | de mama izquierdo
-corpus,C61,9,de adenocarcinoma de prostata | adenocarcinoma de prostata | prostatectomia radical | uno prostatectomia radical | de prostata gleason
-corpus,C62,8,interes que consultar por tumoracion | que consultar por tumoracion | consultar por tumoracion | carcinoma embrionario | testiculo derecho de
-corpus,C64,20,celula claro | carcinoma renal | de celula claro | carcinoma de celula claro | el realizar nefrectomia
-corpus,C67,20,fallecer el | ser carcinoma urotelial indiferenciado infitrante | ureterohidronefrosis izquierdo ante este hallazgo | cadena iliobturatriz izquierdo ganglio infiltrado | producir uno ureterohidronefrosis izquierdo ante
-corpus,C77,20,definitivo ser de carcinoma | adenopatia axilar palpabl | linfadenectomia de | axilar palpabl | metastasis en
-corpus,C78,20,de metastasis | de carcinoma de | con metastasis | carcinoma de celula | de carcinoma de celula
-corpus,C79,20,emision de | el diagnostico de metastasis | diagnostico de metastasis | el lobulo | emision de positron
-corpus,C80,20,mas tarde por | tarde por | osteoartropatia hipertrofico sugerir enfermedad metastasico | hemitiroidectomia paratiroidectomia izquierdo y timectomia | estudio histopatologico demostrar carcinoma infiltrante
+corpus,A41,847,precisar cuidado intensivo | antibioterapia empirico y | sepsis de origen | antiproteinurico profilaxi antitrombotico tratamiento adyuvante | y antiproteinurico profilaxi antitrombotico tratamiento
+corpus,B19,913,virus de el | de el hepatitis | virus de el inmunodeficiencia | de el inmunodeficiencia | virus de el hepatitis
+corpus,B20,16,de el inmunodeficiencia humano y | el inmunodeficiencia humano y | inmunodeficiencia humano y | de virus de el | inmunodeficiencia humano virus de el
+corpus,B37,1515,positivo para candida | con clinica de | extrahospitalario de repeticion candidiasis orofaringeo | pneumocistis jirovecii antiguamente denominado carinii | conservado sensibilidad vibratorio con monofilamento
+corpus,B58,4,de el inmunodeficiencia humano de | el inmunodeficiencia humano de | inmunodeficiencia humano de | el cuadro como
+corpus,B95,14,el obtener el | el instaurar tratamiento antibiotico | que ser positivo para | el paciente precisar | superior de ambos
+corpus,B96,945,salida de material | destacar hipertension arterial | con salida de material | el analitica de sangre | del sedimento urinario
+corpus,B97,3495,que resultar negativo | suspender el el | el paciente presentar mejoria | virus respiratorio sincitial | paciente presentar mejoria
+corpus,B99,10,diagnostico de infeccion | signo de infeccion | con el diagnostico de infeccion | el diagnostico de infeccion | infeccion por virus de el
+corpus,C16,4,de adenocarcinoma gastrico | de el union | realizar biopsia de el lesion | en el mes
+corpus,C18,1,adenocarcinoma de colon
+corpus,C50,11,cancer de mama | de carcinoma ductal | de mama izquierdo | de carcinoma ductal infiltrante grado | carcinoma ductal infiltrante grado
+corpus,C61,2,de adenocarcinoma de prostata | adenocarcinoma de prostata
+corpus,C62,4,interes que consultar por tumoracion | que consultar por tumoracion | consultar por tumoracion | testiculo derecho de
+corpus,C64,54,de celula claro | carcinoma de celula claro | el realizar nefrectomia | de carcinoma renal | metastasis de carcinoma renal
+corpus,C77,2,definitivo ser de carcinoma | adenopatia axilar palpabl
+corpus,C78,3191,de carcinoma de | carcinoma de celula | de carcinoma de celula | el realizar nuevo | compatible con metastasis
+corpus,C79,726,el gammagrafia oseo | el diagnostico de metastasis | diagnostico de metastasis | emision de positron | de tumor el
+corpus,C80,1,mas tarde por
 corpus,D11,2,lobulo superficial de el | lobulo superficial de
-corpus,D16,6,el diagnostico de tumor odontogenico | diagnostico de tumor odontogenico | hemimandibulectomia derecho con | hemimandibulectomia derecho | de tumor odontogenico
-corpus,D18,20,uno membrana epirretinian | membrana epirretinian | en su ojo derecho od | hemangioma capilar | en su ojo derecho
-corpus,D30,3,el estudio inmunohistoquimico demostrar | estudio inmunohistoquimico demostrar | inmunohistoquimico demostrar
-corpus,D31,3,ojo izquierdo no | fondo de ojo sin | de ojo sin
-corpus,D40,20,formacion nodular de | 1.2 cm | quirurgico hallazgo histologico macroscopico formacion | delimitado microscopicamente el observar proliferacion | microscopicamente el observar proliferacion tumoral
-corpus,D47,2,de 0.1 mg | 0.1 mg
-corpus,D49,20,del tumor | el tumor | tumor el | tumor de | con quimioterapia
-corpus,D50,8,anemia ferropenico | hierro oral | tratamiento con hierro oral | con hierro oral | alta realizar
-corpus,D64,20,y anemia | de anemia | con anemia | anemia y | gr dl de hemoglobina
-corpus,D65,3,coagulacion intravascular diseminado | coagulacion intravascular | intravascular diseminado
-corpus,D68,20,de hipercoagulabilidad | heparina de bajo peso molecular | de bajo peso molecular | heparina de bajo peso | bajo peso molecular
-corpus,D69,20,como antecedente personal destacar | evolucionar desfavorablemente presentar dificultad respiratorio | corticoterapia pero evolucionar desfavorablemente presentar | pero evolucionar desfavorablemente presentar dificultad | desfavorablemente presentar dificultad respiratorio con
-corpus,D72,20,con neutrofilia | mm3 con | presentar deterioro | mm3 con neutrofilia | control analitico
-corpus,D73,20,esplenectomia que | de esplenomegalia | diagnostico anatomopatologico de pseudotumor inflamatorio | posibilidad diagnostico uno proceso linfoproliferativo | encontrar uno importante esplenomegalia engrosamiento
-corpus,E03,1,e hipotiroidismo
-corpus,E04,20,ml 2.3-4.2 anticuerpo | mas linfadenectomia | 2.3-4.2 anticuerpo | en el ultimo ano | progresivo en el
-corpus,E05,20,funcion tiroideo | segun referir | respectivamente el primero prueba complementario | interrogatorio dirigido referir perdida ponderal | semiologia caracteristico de patologia tiroideo
-corpus,E11,20,diabetes mellitus | diabetes mellitus tipo | mellitus tipo | tipo 2 | de diabetes
-corpus,E21,6,paratiroideo inferior | dolor oseo | y elevacion de el concentracion | hiperparatiroidismo secundario | elevacion de el concentracion
-corpus,E56,1,deficit vitaminico
-corpus,E66,20,de obesidad | obesidad morbido | cobertura con injerto de piel | cobertura con injerto de | cobertura con injerto
-corpus,E74,20,enfermedad de mcardle | de mcardle | uno trasplante renal precisar trasplantectomia | hipertension arterial el realizar implantacion | trasplante renal precisar trasplantectomia por
-corpus,E78,2,e hipercolesterolemia | 60 mg dia
-corpus,E80,5,bilirrubina total de | l bilirrubina | mg dl directo | dl directo | ldh de
-corpus,E83,20,de uno semana de evolucion | uno semana de evolucion | valor de referencia | de uno semana de | dia despues de el cirugia
-corpus,E85,20,evolucion en tratamiento | amiloidosis vesical | manejo conservador | amiloide aa | el enferma
-corpus,E87,20,acidosis metabolico | mmol l | meq de | el aporte | acidosis metabolico con
-corpus,F10,20,de alcohol | abstinencia de alcohol | abstinencia de | de bebida | inmunofluorescencia directo
-corpus,F12,1,infeccioso ni
-corpus,F17,20,fumador de | ano fumador | cigarrillo dia | ano fumador de | cigarrillo al
-corpus,F19,7,a droga por via parenteral | droga por via parenteral | a droga por via | droga por via | a droga por
-corpus,F32,13,sindrome depresivo | el apreciar uno depresion | apreciar uno depresion | uno hipofluorescencia | depresion foveal
-corpus,F41,6,no el encontrar focalidad neurologico | el encontrar focalidad neurologico | encontrar focalidad neurologico | no el encontrar focalidad | el encontrar focalidad
-corpus,F79,5,retraso mental | coeficiente intelectual | por el tanto el | del trastorno | amenaza de
-corpus,G40,20,crisis epileptico | presentar crisis | de convulsion | registro electroencefalografico | ser el primero episodio
-corpus,G45,3,accidente isquemico transitorio | isquemico transitorio | accidente isquemico
-corpus,G47,1,ahora el
-corpus,G51,1,paralisis facial
-corpus,G62,1,plasma y
-corpus,G72,20,esofagograma confirmar alteracion motoro esofagico | realizar electromiograma emg resonancia magnetico | decidir suspender azatioprina por hepatotoxicidad | extremidad uno esofagograma confirmar alteracion | confirmar alteracion motoro esofagico importante
-corpus,G81,20,hemiparesia espastico izquierdo hiperreflexia generalizado | objetiir hemiparesia espastico izquierdo hiperreflexia | uno voluminoso proliferacion sindesmofitica anterior | espastico izquierdo hiperreflexia generalizado signo | evolucion postoperatorio mostrar progresivo mejoria
-corpus,G82,20,actual ser | lesion hiperintenso lagunar supratentorial fundamentalmente | hiperintenso lagunar supratentorial fundamentalmente a | hiperintenso lagunar supratentorial fundamentalmente | interferon-a presentar inicialmente discreto mejoria
-corpus,G83,10,resonancia magnetico rm cerebral | extremidad superior izquierdo | magnetico rm cerebral | de el musculo | el reflejo
-corpus,G90,2,sindrome de horner | de horner
-corpus,G91,1,uno hidrocefalia
-corpus,G93,17,en sustancia blanco | sustancia blanco | en sustancia | en muestra de sangre | autopsia judicial a
-corpus,H02,20,el orbita | ptosis palpebral | edema palpebral | del parpado | a el exploracion oftalmologico
-corpus,H04,20,antecedente general presentar hipercolesterolemia tratado | presentar hipercolesterolemia tratado con torvastatina | el antecedente general presentar hipercolesterolemia | antecedente general presentar hipercolesterolemia | general presentar hipercolesterolemia tratado con
-corpus,H05,3,proptosis ocular | de exoftalmo | el reborde
+corpus,D18,5,uno membrana epirretinian | en su ojo derecho od | su ojo derecho od | en su ojo derecho | su ojo derecho
+corpus,D40,1,formacion nodular de
+corpus,D49,2968,del tumor el | tratamiento con uno | por parte del | tomografia axial computerizado tac | ante este hallazgo el realizar
+corpus,D50,2,tratamiento con hierro oral | con hierro oral
+corpus,D64,5,gr dl de hemoglobina | dl de hemoglobina | gr dl de | por el servicio de oncologia | por el que haber
+corpus,D65,1,coagulacion intravascular diseminado
+corpus,D68,8,heparina de bajo peso molecular | de bajo peso molecular | heparina de bajo peso | bajo peso molecular | heparina de bajo
+corpus,D69,831,como antecedente personal destacar | evolucionar desfavorablemente presentar dificultad respiratorio | corticoterapia pero evolucionar desfavorablemente presentar | pero evolucionar desfavorablemente presentar dificultad | biomicroscopicamente presentar uno catarata subcapsular
+corpus,D72,51,el sospecha diagnostico de | sospecha diagnostico de | el exploracion fisico el paciente | exploracion fisico el paciente | analitica destacar leucocitosi
+corpus,D73,1290,diagnostico anatomopatologico de pseudotumor inflamatorio | posibilidad diagnostico uno proceso linfoproliferativo | encontrar uno importante esplenomegalia engrosamiento | tratamiento antibiotico con ceftazidima metronidazol | resultado microbiologico e histopatologico obtenido
+corpus,E04,1255,progresivo en el | en el ultimo ano | el ultimo ano | examen inmunohistoquimico detectar expresion citoplasmatico | inmunohistoquimico detectar expresion citoplasmatico e
+corpus,E05,750,interrogatorio dirigido referir perdida ponderal | respectivamente el primero prueba complementario | semiologia caracteristico de patologia tiroideo | potasio intravenoso conseguir el normalizacion | hipertiroidismo primario de origen autoinmune
+corpus,E11,531,diabetes mellitus tipo | de diabetes mellitus | antecedente de diabetes mellitus | antecedente de diabetes | con antecedente de diabetes mellitus
+corpus,E21,3,y elevacion de el concentracion | elevacion de el concentracion | de el concentracion
+corpus,E66,8,cobertura con injerto de piel | cobertura con injerto de | cobertura con injerto | con injerto de piel | su ingreso en uci
+corpus,E74,1,enfermedad de mcardle
+corpus,E78,1,negativo para celula maligno
+corpus,E80,1,bilirrubina total de
+corpus,E83,936,de uno semana de evolucion | uno semana de evolucion | valor de referencia | de uno semana de | dia despues de el cirugia
+corpus,E85,1,evolucion en tratamiento
+corpus,E87,1437,acidosis metabolico con | disminucion del nivel de conciencia | y disminucion del nivel de | a el unidad de nutricion | el deficit electrolitico
+corpus,F10,3,abstinencia de alcohol | de bebida alcoholico | llegar a urgencia
+corpus,F17,104,ano fumador de | cigarrillo al dia | ser fumador de | de el vena | que impedir el
+corpus,G40,3,ser el primero episodio | episodio de convulsion | ser el primero
+corpus,G45,1,accidente isquemico transitorio
+corpus,G83,4,resonancia magnetico rm cerebral | extremidad superior izquierdo | magnetico rm cerebral | de el musculo
+corpus,G90,1,sindrome de horner
+corpus,G93,5,en sustancia blanco | en muestra de sangre | autopsia judicial a | el secuencia de | en muestra de
+corpus,H02,2980,a el exploracion oftalmologico | el obtener uno liquido | obtener uno liquido | presentar edema en | sin detectar el
 corpus,H11,1,alcanzar uno av
-corpus,H15,20,histopalologico confirmar uno escleritis granulomatos | orbito-cerebral confirmar el engrosamiento escleral | resonancia magnetico nuclear rmn orbito-cerebral | confirmar uno escleritis granulomatos compatible | magnetico nuclear rmn orbito-cerebral confirmar
-corpus,H16,20,cuadro de dolor ocular | de camara anterior | de camara | topico antibiotico ciclopejico y medroxiprogesterona | de alzheimer avanzado diabetico insulinodependiente
-corpus,H21,20,el exploracion presentar uno | exploracion presentar uno | el camara anterior | entre el antecedente oftalmologico destacar | el antecedente oftalmologico destacar
-corpus,H26,20,"edema macular quistico | macular quistico | timolol 0,5% | 23 mmhg | haber desarrollar catarata subcapsular posterior"
-corpus,H33,20,desprendimiento de | desprendimiento de retina | de retina | uno desprendimiento | el retina
-corpus,H35,20,edema macular | de triamcinolona | de ambos ojo | alteracion del epr | 0.6 y
-corpus,H40,20,de glaucoma | ano diagnosticado de glaucoma | el presion intraocular pio | diagnosticado de glaucoma | y recuperacion de el
-corpus,H44,20,barcelona espana y | barcelona espana | espana y | oi tras | quirurgicamente1 el pautar tratamiento antibiotico
-corpus,H47,20,el vision del od | contar dedo a | vision del od | el vision del | contar dedo
-corpus,H49,20,de el orbita | inyeccion de toxina botulinico | el observar uno paralisis | observar uno paralisis | de toxina botulinico
-corpus,H50,20,presentar estrabismo | de ojo izquierdo | el mirada | el polo anterior ser normal | polo anterior ser normal en
-corpus,H53,20,vision borroso | ojo izquierdo con | ojo derecho el | de diplopia | anestesia general el realizar uno
-corpus,H54,20,de vision | en el ojo derecho od | el ojo derecho od | 0.8 en | perdida de vision
-corpus,H55,20,nistagmo horizontal | de mano en | mano en | inestabilidad mareo rotatorio vomito autolimitado | descompresion preventivo medular por malformacion
-corpus,H57,20,dolor ocular | ocular en | de dolor ocular | y atropina | de el motilidad ocular
-corpus,H90,1,izquierdo pasar
-corpus,H91,20,antecedente urologico | hipercolesterolemia e hipertrigliceridemia antecedente urologico | hipertension arterial hipercolesterolemia e hipertrigliceridemia | arterial hipercolesterolemia e hipertrigliceridemia antecedente | antecedente de hipertension arterial hipercolesterolemia
-corpus,H93,20,valoracion otorrinolaringologico el audiometria mostrar | para valoracion otorrinolaringologico el audiometria | de hospital para valoracion otorrinolaringologico | hospital para valoracion otorrinolaringologico el | otorrinolaringologico el audiometria mostrar uno
-corpus,I10,20,hipertension arterial | de hipertension | de hipertension arterial | antecedente de hipertension | antecedente de hipertension arterial
-corpus,I12,3,de 1000 cc | 1000 cc | en hd
-corpus,I21,20,iam inferoposterior | y avf | de el arteria coronario derecho | estar el paciente asintomatico | el arteria coronario derecho y
-corpus,I25,20,cardiopatia isquemico | arteria coronario | de cardiopatia | del cadaver | uno hora de
-corpus,I30,1,pericarditis agudo
+corpus,H15,1107,histopalologico confirmar uno escleritis granulomatos | orbito-cerebral confirmar el engrosamiento escleral | confirmar uno escleritis granulomatos compatible | resonancia magnetico nuclear rmn orbito-cerebral | examen histopalologico confirmar uno escleritis
+corpus,H16,724,cuadro de dolor ocular | de camara anterior | topico antibiotico ciclopejico y medroxiprogesterona | alzheimer avanzado diabetico insulinodependiente de | de alzheimer avanzado diabetico insulinodependiente
+corpus,H21,2031,el exploracion presentar uno | exploracion presentar uno | el camara anterior | entre el antecedente oftalmologico destacar | el antecedente oftalmologico destacar
+corpus,H26,1,edema macular quistico
+corpus,H33,872,desprendimiento de retina | de el retina | realizar control periodico | el fondo de ojo izquierdo | el fondo de ojo derecho
+corpus,H35,4,de ambos ojo | perdida de agudeza visual | perdida de agudeza | alteracion del epr
+corpus,H40,12,ano diagnosticado de glaucoma | el presion intraocular pio | diagnosticado de glaucoma | y recuperacion de el | maleato de timolol
+corpus,H44,3,en su ojo izquierdo | barcelona espana y | su ojo izquierdo
+corpus,H47,929,el vision del od | contar dedo a | el vision del | vision del od | hemodialisis presentar hiperparatiroidismo secundario hpts
+corpus,H49,7,de el orbita | inyeccion de toxina botulinico | el observar uno paralisis | observar uno paralisis | de toxina botulinico
+corpus,H50,1926,de ojo izquierdo | el polo anterior ser normal | polo anterior ser normal en | polo anterior ser normal | anterior ser normal en
+corpus,H53,46,ojo izquierdo con | ojo derecho el | anestesia general el realizar uno | general el realizar uno abordaje | oftalmologico destacar el
+corpus,H54,112,en el ojo derecho od | el ojo derecho od | en el ojo izquierdo oi | perdida de vision | de agudeza visual
+corpus,H55,1,de mano en
+corpus,H57,21,de dolor ocular | de el motilidad ocular | el orbita izquierdo | en todo el posicion | ojo izquierdo oi en
+corpus,H91,886,hipercolesterolemia e hipertrigliceridemia antecedente urologico | hipertension arterial hipercolesterolemia e hipertrigliceridemia | arterial hipercolesterolemia e hipertrigliceridemia antecedente | antecedente de hipertension arterial hipercolesterolemia | oncologicamente haber iniciar tratamiento complementario
+corpus,I10,33,de hipertension arterial | antecedente de hipertension | antecedente de hipertension arterial | con antecedente de hipertension | con antecedente de hipertension arterial
+corpus,I21,1365,infarto agudo de miocardio | agudo de miocardio | infarto agudo de | infarto agudo de miocardio inferoposterior | agudo de miocardio inferoposterior
+corpus,I25,11,uno hora de | alergia conocido a medicamento | uno cardiopatia isquemico | de cardiopatia isquemico | conocido a medicamento
 corpus,I34,2,vancomicina y gentamicina | antibiotico empirico con
-corpus,I42,1,al ano que
-corpus,I48,20,fibrilacion auricular | fibrilacion auricular cronico | auricular cronico | y fibrilacion auricular | y fibrilacion
-corpus,I49,4,uno diagnostico de sb | arritmia ventricular | diagnostico de sb | de sb
-corpus,I50,3,insuficiencia cardiaco | de insuficiencia cardiaco | cateterismo cardiaco
-corpus,I51,4,el sintomatologia en | sintomatologia en | pericardico el | aortico y
-corpus,I62,20,el decidir no | decidir no | temporal y | antiparkinsoniano antihistaminico antihipertensivo antiagregant plaquetario | xantica antiparkinsoniano antihistaminico antihipertensivo antiagregant
-corpus,I63,20,hipercoagulabilidad marcador de crioglobulinemia antifosfolipido | electrocardiograma doppler transcraneal doppler continuo | accidente isquemico transitorio debilidad transitorio | contraindicar cualquiera tratamiento de quimioterapia | legionella bartonella coxiella chlamidias mycoplasma
-corpus,I71,20,el aorta toracico | aorta toracico | endoprotesis en el aorta toracico | el aorta toracico descendente por | de el arteria subclavio izquierdo
-corpus,I75,20,embolo de colesterol en el | embolo de colesterol en | embolo de colesterol | de colesterol en el | de colesterol en
-corpus,I77,3,vasculitis el | dia mas tarde el paciente | radioterapia el
-corpus,I82,20,trombosis venos | uno trombosis | tratamiento anticoagulante | trombosis venos profundo | con acenocumarol
-corpus,I85,20,variz esofagico grado | esofagico grado | el 18 mes | parenquima hepatico heterogeneo sin lesion | radiologia intervencionista el proceder a
-corpus,I86,1,varicocele derecho
-corpus,I95,1,hipotension arterial
-corpus,I96,20,de necrosis | con necrosis | y necrosis | zona de necrosis | compatible con necrosis
-corpus,J03,20,acompanado de infiltrado inflamatorio importante | intestinal acompanado de infiltrado inflamatorio | asintomatico habito intestinal normal analitica | vellosidad intestinal acompanado de infiltrado | infiltrado inflamatorio importante a nivel
-corpus,J18,20,neumonia por | uno neumonia | en lobulo inferior derecho con | lobulo inferior derecho con | a el dieta
-corpus,J32,20,de sinusitis | seno maxilar | sinusitis maxilar | del seno frontal izquierdo | seno frontal izquierdo
-corpus,J43,1,enfisema subcutaneo
-corpus,J45,1,asma bronquial
+corpus,I48,15,fibrilacion auricular cronico | y fibrilacion auricular | fibrilacion auricular cronico que | y fibrilacion auricular cronico | el anatomia patologico mostrar
+corpus,I50,1,de insuficiencia cardiaco
+corpus,I51,1,el sintomatologia en
+corpus,I62,2170,el decidir no | antiparkinsoniano antihistaminico antihipertensivo antiagregant plaquetario | xantica antiparkinsoniano antihistaminico antihipertensivo antiagregant | antihistaminico antihipertensivo antiagregant plaquetario benzamida | base xantica antiparkinsoniano antihistaminico antihipertensivo
+corpus,I71,72,el aorta toracico | el aorta toracico descendente por | de el arteria subclavio izquierdo | endoprotesis en el aorta toracico | en el aorta toracico descendente
+corpus,I75,6,embolo de colesterol en el | embolo de colesterol en | embolo de colesterol | de colesterol en el | de colesterol en
+corpus,I82,2733,trombosis venos profundo | el tratamiento anticoagulante | presentar uno trombosis | en cava inferior | nuevo episodio de hemorragia digestivo
+corpus,I85,1,variz esofagico grado
+corpus,I96,1,zona de necrosis
+corpus,J18,4,en lobulo inferior derecho con | lobulo inferior derecho con | tomado de el | a el dieta
+corpus,J32,1580,del seno frontal izquierdo | seno frontal izquierdo | en seno maxilar | y seno frontal | presentar sintomatologia ni complicacion postoperatorio
+corpus,J44,3,enfermedad pulmonar obstructivo | enfermedad pulmonar obstructivo cronico | pulmonar obstructivo cronico
 corpus,J81,1,y dificultad respiratorio el
-corpus,J84,20,biopsia transbronquial | posteriormente presentar disnea expectoracion purulento | realizar fibrobroncoscopia con lavado bronquioalveolar | biopsia transbronquial septo interalveolar ensanchado | mejoria posteriormente presentar disnea expectoracion
-corpus,J90,1,derrame pleural
-corpus,J96,4,de insuficiencia respiratorio | viscera abdominal | mas llamativo | rinon en
-corpus,J98,20,infeccion respiratorio | enfisema subcutaneo en | y en el radiografia de | y en el radiografia | de neumomediastino
-corpus,K00,3,definitivo en el | definitivo en | dentario del
-corpus,K01,6,canino inferior izquierdo | incluido en posicion | folicular asociado | inclusion dentario | canino inferior
-corpus,K02,5,el observar cari en | el observar cari | observar cari en | observar cari | cari en
-corpus,K08,6,ser torpido | instaurar tratamiento antibiotico con | con uno aumento | mandibular el | el condicion
-corpus,K11,20,de el glandula parotido | el glandula parotido | de evolucion no haber | evolucion no haber | histopatologico mostrar uno tejido fibrosocolagenizado
-corpus,K12,4,el realizar uno diseccion | realizar uno diseccion | ganglio linfatico ser | linfatico ser
-corpus,K13,20,mucosa labial | inferior en el | inferior en | el anamnesis el paciente | anamnesis el paciente
-corpus,K14,20,diametro en el borde lateral | de diametro en el borde | en el borde lateral de | diametro en el borde | en el borde lateral
-corpus,K21,6,de reflujo | de reflujo gastroesofagico el | de reflujo gastroesofagico | reflujo gastroesofagico el | reflujo gastroesofagico
-corpus,K26,6,ulcus duodenal | en tratamiento con inhibidor de | en tratamiento con inhibidor | colecistectomia en | uno psa de
-corpus,K31,10,del duodeno | ante este hallazgo el decidir | ingresar por uno | de interes salvo | interes salvo
-corpus,K35,20,en el via | que reportar adenocarcinoma moderadamente diferenciado | reportar adenocarcinoma moderadamente diferenciado en | sintomatologia urinario obstructivo bajo consistente | prostatico que reportar adenocarcinoma moderadamente
-corpus,K40,20,hernia inguinal | de hernia inguinal | de hernia | renal del | desnutricion calorico-proteico grave con hipoalbuminemia
-corpus,K44,8,hernia de hiato | hernia de | de hiato | hernia de hiato y | de hiato y
-corpus,K50,10,enfermedad de crohn | de crohn | de enfermedad de crohn con | enfermedad de crohn con | de enfermedad de crohn
-corpus,K51,20,de pancolitis | ano diagnosticado de pancolitis ulceros | tratamiento con azatioprina imurel ® | diagnosticado de pancolitis ulceros | tratamiento con azatioprina imurel
-corpus,K52,20,colitis ulceros | de colitis | ano de evolucion el | de colitis ulceros | el tomar biopsia
-corpus,K55,8,el existencia de angiodisplasia | existencia de angiodisplasia | tratamiento con talidomida | de angiodisplasia | con talidomida
-corpus,K56,10,obstruccion intestinal | de obstruccion intestinal | de obstruccion | segmento de intestino delgado con | segmento de intestino delgado
-corpus,K57,20,de diverticulitis | inflamacion de el grasa adyacente | en fosa iliaco izquierdo | inflamacion de el grasa | de el grasa adyacente
-corpus,K59,20,biopsia y el | digestivo y | enema de | manometria anorrectal que demostrar conservacion | hidronefrosis bilateral sin insuficiencia renal
-corpus,K62,20,el ampolla rectal | ampolla rectal | el ampolla | recto el | mujer de 42 ano
-corpus,K63,3,de nuevo uno | el recto el | nuevo uno
-corpus,K65,20,de sigma | peritonitis fecaloideo | absceso intraabdominal el | absceso intraabdominal | coledocolitiasis el
-corpus,K66,1,el ecografia y
-corpus,K68,20,derivacion biliar mediante colangiografia endoscopico | biliar mediante colangiografia endoscopico producto | realizar colecistectomia laparoscopico de urgencia | importante coleccion retroperitoneal sin presentar | paciente uno importante coleccion retroperitoneal
-corpus,K72,4,fallo hepatico | y encefalopatia | de isquemia de | isquemia de
-corpus,K74,20,vhc genotipo | del vhc | alanina-aminotransferasa alt y aspartato-aminotransferasa ast | el alanina-aminotransferasa alt y aspartato-aminotransferasa | alanina-aminotransferasa alt y aspartato-aminotransferasa
-corpus,K75,20,hepatico que | gammaglutamiltranspeptidasa 110 hipergamma-globulinemia igg 1620 | ggt gammaglutamiltranspeptidasa 110 hipergamma-globulinemia igg | 90 ggt gammaglutamiltranspeptidasa 110 hipergamma-globulinemia | gammaglutamiltranspeptidasa 110 hipergamma-globulinemia igg
-corpus,K76,20,hipertension portal | hepatopatia cronico | variz esofagico | circulacion colateral | de hipertension portal
-corpus,K80,2,no evidencia de | no evidencia
-corpus,K83,20,de ictericia | de el via biliar | y extrahepatico | el via biliar | de 82
-corpus,K85,9,pancreatitis agudo | de pancreatitis | de pancreatitis agudo | episodio de pancreatitis agudo | paciente varon de 60 ano
-corpus,K86,1,virus y
-corpus,K92,20,hemorragia digestivo | de sangrado | de hemorragia digestivo | sangrado digestivo | digestivo alto
-corpus,L02,5,absceso en | y no el identificar | para su drenaje | central sin | su drenaje
-corpus,L29,4,y prurito | ingreso con uno | dieta absoluto | prurito anal
-corpus,L51,20,incrementar el requerimiento hidroelectrolitico utilizar | amoxicilina paracetamol diclofenaco y difenilhidantoina | necrolisis epidermica toxica secundario probablemente | requerimiento hidroelectrolitico utilizar el formula | direccion cefalo-caudal maculopapular no pruriginoso
-corpus,L53,7,lesion eritematoso | con eritema | cutaneo eritematoso | semana anterior | para cubrir el
-corpus,L90,20,en ambos ojo el fondo | ambos ojo el fondo de | mmhg en ambos ojo el | perdida de sustancia | ojo el fondo de ojo
-corpus,L98,7,lesion cutaneo | de lesion cutaneo | cuadro con | el realizar uno prueba de | realizar biopsia cutaneo
-corpus,M00,20,artritis septico de | artritis septico | evolucion haber | septico de | enfermedad fame hidroxicloroquina sulfasalacina ciclosporina
-corpus,M08,8,tratamiento con etanercept | con etanercept | el 13 mes de | previsto de | el 13 mes
-corpus,M19,10,artritis reumatoide | de artritis | ano diagnosticado de artritis reumatoide | diagnosticado de artritis reumatoide | ano diagnosticado de artritis
-corpus,M24,20,exploracion complementario analisis toxicologico negativo | con escaso diferenciacion cortico-medular hemorragia | escaso diferenciacion cortico-medular hemorragia en | c exploracion complementario analisis toxicologico | exploracion complementario analisis toxicologico
-corpus,M25,20,el articulacion | cabeza femoral | rotacion interno | cabeza femoral y | en el rodilla
-corpus,M26,20,el articulacion temporomandibular | articulacion temporomandibular | desplazamiento anterior | de odontologia | permitir uno
-corpus,M45,1,espondilitis anquilosante
-corpus,M46,20,leucocito campo en | tratamiento antibiotico doxiciclina 100mgr/12horas junto | con tratamiento antibiotico doxiciclina 100mgr/12horas | sero-aglutinacion positivo 1/20 y antibrucela-coombs | tratamiento antibiotico doxiciclina 100mgr/12horas
-corpus,M47,20,a el clinica del dolor | a el clinica del | cabecera diagnosticado de espondiloartrosis grave | diagnosticado de espondiloartrosis grave sobre | de cabecera diagnosticado de espondiloartrosis
-corpus,M54,20,dolor lumbar | de el columna | el columna | remitir a nuestro servicio | columna dorsal y
-corpus,M62,7,muscular en | miembro inferior que | ambos muslo | tras el valoracion | de diazepam
-corpus,M79,20,pie izquierdo | pie derecho | de el mano | que el indicar tratamiento | continuar tratamiento con
-corpus,M85,1,de causa
-corpus,M86,1,osteomielitis cronico
-corpus,M88,20,indistinguibl gammagraficamente uno vez confirmar | p1np propeptido amino-terminal del procolageno | propeptido amino-terminal del procolageno tipo | encontrar el alteracion significativo respecto | paget ser indistinguibl gammagraficamente uno
-corpus,M89,10,mostrar ausencia | de el muneca | del carpo | el muneca | hemimandibular izquierdo
-corpus,N05,2,atrofia tubular | de glomerulonefritis
-corpus,N13,20,del parenquima renal | uropatia obstructivo | realizar urografia | el ecografia abdominopelvico | infiltracion del parenquima
-corpus,N17,3,insuficiencia renal agudo | psiquiatrico previo | esfuerzo por
-corpus,N18,20,renal cronico | insuficiencia renal cronico | de insuficiencia renal | de insuficiencia renal cronico | acudir a el unidad de
-corpus,N20,20,litiasis renal | el objetiir litiasis | litiasis de 1 cm en | presentar uno caso | objetiir litiasis
-corpus,N23,3,colico nefritico | colico nefritico izquierdo | nefritico izquierdo
-corpus,N26,20,creatinina 1.5 mg dl | creatinina 1.5 mg | creatinina 1.5 | para c4d | de carga
-corpus,N28,20,rinon izquierdo | rinon derecho | del rinon | renal de | renal izquierdo
-corpus,N32,20,rtu de | al tacto rectal | el exploracion complementario | destacar el presencia de uno | ecografia urologico
-corpus,N39,5,infeccion urinario | de infeccion urinario | urologico que | urinario bajo | debido a este
-corpus,N40,7,de hiperplasia | hiperplasia prostatico benigno | hiperplasia prostatico | prostatico benigno | el postoperatorio cursar sin incidencia
-corpus,N44,20,aumentado de tamano con | del hemiescroto izquierdo | el solicitar ecografia | testicular asi como | solicitar ecografia
-corpus,N48,20,del glande | cuerpo cavernoso | en el dorso | el dorso | del pene
-corpus,N50,20,el testiculo | testiculo izquierdo | parenquima testicular | testiculo derecho | ecografia testicular
-corpus,N64,20,gel de | administrar tratamiento antibiotico y antinflamatorio | postoperatorio el administrar tratamiento antibiotico | proponer tratamiento microquirurgico para disminuir | regresar solicitar tratamiento quirurgico momento
-corpus,N80,20,el diagnostico de endometriosis | diagnostico de endometriosis | de endometriosis | irregular blanquecino de consistencia elastica-firme | tincion inmunohistoquimico ser intensamente positivo
-corpus,N92,1,por metrorragia
-corpus,Q51,20,final de sindrome de mayer-rokitansky-kuster-hauser | estradiol progesterona testosterona prolactina ser | lh estradiol progesterona testosterona prolactina | sindrome de mayer-rokitansky-kuster-hauser y ser | dorso-lumbar presentar escoliosis lumbar derecho
-corpus,Q61,1,enfermedad poliquistico
-corpus,Q67,2,asimetria facial | observar uno aumento de volumen
-corpus,Q85,20,diagnostico diferencial radiografico incluir ameloblastoma | odontogenico quiste aneurismatico fibroma condromixoide | ameloblastoma mixoma odontogenico quiste aneurismatico | radiografico incluir ameloblastoma mixoma odontogenico | aneurismatico fibroma condromixoide hemangioma central
-corpus,Q87,2,con epinefrina | utilizado ser
-corpus,R00,2,tendencia a el | su ecg
-corpus,R05,4,de tos | el radiografia de torax mostrar | radiografia de torax mostrar | y tos
-corpus,R06,20,dificultad respiratorio | respiratorio el | disnea de | de oxigeno | deterioro de
-corpus,R07,20,dolor toracico | el ecg mostrar | ecg mostrar | onda t | el ecg mostrar uno
-corpus,R10,20,dolor abdominal | de dolor abdominal | de irritacion | de irritacion peritoneal | irritacion peritoneal
-corpus,R11,20,y vomito | nausea y | nausea y vomito | vomito y | que acudir a urgencia
-corpus,R13,4,y disfagia | presentar disfagia | de disfagia | disfagia y
-corpus,R14,5,distension abdominal | el ecografia mostrar | de nutrient | aceite de | kcal dia
-corpus,R16,20,hepatomegalia de | esplenomegalia y | y hepatomegalia | aumento de densidad en | aumento de densidad
-corpus,R18,3,el objetivar uno gran | con tabiqu | y urea
-corpus,R19,20,el asa | de diarrea | diarrea y | en hez | dentro de el normalidad el
-corpus,R20,20,parestesia en | y parestesia | el sensibilidad | y parestesia en | con parestesia
-corpus,R23,20,piel y mucosa | con palidez | y mucosa | piel y | palidez cutaneo
-corpus,R25,3,antecedente personal ser | personal ser | y dolor en
-corpus,R26,20,servicio de neurologia | al servicio de neurologia | uno dificultad | mejorar de | electromiografico no aportar informacion adicional
+corpus,J96,1,de insuficiencia respiratorio
+corpus,J98,3,y en el radiografia de | enfisema subcutaneo en | y en el radiografia
+corpus,K08,2,instaurar tratamiento antibiotico con | con uno aumento
+corpus,K11,4,de el glandula parotido | el glandula parotido | de evolucion no haber | evolucion no haber
+corpus,K13,3594,inferior en el | el anamnesis el paciente | anamnesis el paciente | de uno de el lesion | en el mucosa labial
+corpus,K14,8,diametro en el borde lateral | de diametro en el borde | en el borde lateral de | diametro en el borde | el borde lateral de
+corpus,K26,6,en tratamiento con inhibidor de | tratamiento con inhibidor de el | tratamiento con inhibidor de | en tratamiento con inhibidor | tratamiento con inhibidor
+corpus,K31,5,ante este hallazgo el decidir | ingresar por uno | de interes salvo | ano acudir al | y durante el
+corpus,K35,1,en el via
+corpus,K40,1,de hernia inguinal
+corpus,K44,3,hernia de hiato | hernia de hiato y | de hiato y
+corpus,K50,5,enfermedad de crohn | de enfermedad de crohn con | enfermedad de crohn con | de enfermedad de crohn | de crohn con
+corpus,K51,12,ano diagnosticado de pancolitis ulceros | tratamiento con azatioprina imurel ® | diagnosticado de pancolitis ulceros | tratamiento con azatioprina imurel | ano diagnosticado de pancolitis
+corpus,K52,620,ano de evolucion el | de colitis ulceros | el tomar biopsia | enfermedad inflamatorio intestinal | el descartar otro causa de
+corpus,K55,3,el existencia de angiodisplasia | existencia de angiodisplasia | tratamiento con talidomida
+corpus,K56,1,de obstruccion intestinal
+corpus,K57,1389,inflamacion de el grasa adyacente | en fosa iliaco izquierdo | inflamacion de el grasa | de el grasa adyacente | el grasa adyacente
+corpus,K59,1,biopsia y el
+corpus,K62,564,el ampolla rectal | diagnostico diferencial entre enfermedad inflamatorio | diferencial entre enfermedad inflamatorio intestinal | enfermedad inflamatorio intestinal colitis ulceros | entre enfermedad inflamatorio intestinal colitis
+corpus,K65,10,absceso intraabdominal el | de inestabilidad hemodinamico y | inestabilidad hemodinamico y | reconstruccion del transito | el pieza de esplenectomia
+corpus,K72,2,el recuperacion de el | de isquemia de
+corpus,K74,9,del virus de el hepatitis | del virus de el | del virus de | tratamiento para virus de el | de el hepatitis c genotipo
+corpus,K76,27,de hipertension portal | heterogeneo sin lesion ocupante de | heterogeneo sin lesion ocupante | sin lesion ocupante de espacio | lesion ocupante de espacio
+corpus,K80,1,no evidencia de
+corpus,K83,18,de el via biliar | el via biliar | colangiopancreatografia retrogrado endoscopico | via biliar intra- y extrahepatico | biliar intra- y extrahepatico
+corpus,K85,4,de pancreatitis agudo | episodio de pancreatitis agudo | episodio de pancreatitis | de el enzima hepatico
+corpus,K92,1131,de hemorragia digestivo | hemorragia digestivo alto | haber presentar en | pese a el | con antecedente de hemorragia digestivo
+corpus,L02,2,y no el identificar | para su drenaje
+corpus,L29,1,ingreso con uno
+corpus,L51,1770,incrementar el requerimiento hidroelectrolitico utilizar | amoxicilina paracetamol diclofenaco y difenilhidantoina | necrolisis epidermica toxica secundario probablemente | acrocianosis y dificultad respiratorio caracterizado | requerimiento hidroelectrolitico utilizar el formula
+corpus,L90,11,en ambos ojo el fondo | ambos ojo el fondo de | mmhg en ambos ojo el | perdida de sustancia | ojo el fondo de ojo
+corpus,L98,2,de lesion cutaneo | uno lesion en
+corpus,M00,1,artritis septico de
+corpus,M08,1,tratamiento con etanercept
+corpus,M25,1749,cabeza femoral y | en el rodilla | derecho con dolor | el radiografia simple mostrar | persistencia de el sintoma
+corpus,M26,11,el articulacion temporomandibular | el facultad de odontologia de | el paciente el encontrar con | facultad de odontologia de | el facultad de odontologia
+corpus,M46,1,leucocito campo en
+corpus,M47,2,a el clinica del dolor | a el clinica del
+corpus,M54,691,de el columna | remitir a nuestro servicio | columna dorsal y | en esqueleto axial y periferico | esqueleto axial y periferico
+corpus,M62,2,miembro inferior que | tras el valoracion
+corpus,M79,643,de el mano | que el indicar tratamiento | continuar tratamiento con | el indicar tratamiento | fiebre de hasta
+corpus,M89,2,a consulta con | de el muneca
+corpus,N13,1136,del parenquima renal | el ecografia abdominopelvico | infiltracion del parenquima | remitir a nuestro consulta | desplazamiento de todo el
+corpus,N17,1,insuficiencia renal agudo
+corpus,N18,112,insuficiencia renal cronico | enfermedad renal cronico | de insuficiencia renal | de insuficiencia renal cronico | acudir a el unidad de
+corpus,N20,2,el objetiir litiasis | presentar uno caso
+corpus,N28,1933,de el funcion renal | del rinon izquierdo | del rinon derecho | carcinoma de celula renal | rinon izquierdo de
+corpus,N32,11,al tacto rectal | el exploracion complementario | destacar el presencia de uno | de aspecto solido | masa de aspecto
+corpus,N39,1,de infeccion urinario
+corpus,N40,3,hiperplasia prostatico benigno | el postoperatorio cursar sin incidencia | postoperatorio cursar sin incidencia
+corpus,N44,5,aumentado de tamano con | del hemiescroto izquierdo | el solicitar ecografia | testicular asi como | el teste derecho
+corpus,N48,859,en el dorso | inflamatorio agudo y cronico | por presentar desde hacer | inflamatorio agudo y | agudo y cronico
+corpus,N50,2901,el testiculo izquierdo | paciente el el | realizar orquiectomia radical | uno hemiescroto izquierdo | el diagnostico de linfoma
+corpus,N64,1,el lograr uno
+corpus,N80,2,el diagnostico de endometriosis | diagnostico de endometriosis
+corpus,R00,1,tendencia a el
+corpus,R05,2,el radiografia de torax mostrar | radiografia de torax mostrar
+corpus,R06,1601,saturacion de oxigeno | el realizar fibrobroncoscopia | dificultad respiratorio el | sin hallazgo significativo | de minimo esfuerzo
+corpus,R07,9,el ecg mostrar | el ecg mostrar uno | onda t negativo en | de dolor toracico | en el derivacion
+corpus,R10,6790,de dolor abdominal | de irritacion peritoneal | dolor abdominal difuso | signo de irritacion peritoneal | signo de irritacion
+corpus,R11,1956,nausea y vomito | que acudir a urgencia | ser valorar por | uno semana antes | de urgencias el
+corpus,R16,641,aumento de densidad en | aumento de densidad | y hepatomegalia de | de densidad en | insuficiencia respiratorio resultado analitico hemograma
+corpus,R18,1,el objetivar uno gran
+corpus,R19,2315,dentro de el normalidad el | de el masa tumoral | ser dar de alta al | el masa tumoral | centimetro de diametro que
+corpus,R20,1818,y parestesia en | derecho y en | en el extremidad inferior | extremidad inferior y | dia del inicio de el
+corpus,R23,1117,piel y mucosa | rx de torax | hemocultivo coprocultivo y | con prednisona a dosis de | sesion de plasmaferesis
+corpus,R25,2,antecedente personal ser | y dolor en
+corpus,R26,2,servicio de neurologia | al servicio de neurologia
 corpus,R27,1,de el marcha
-corpus,R29,20,el movimiento ocular | movimiento ocular | presentar anticuerpo anti-gliadina y anti-transglutaminasa | anti-transglutaminasa negativo y anticuerpo anti-endomisio | anticuerpo anti-gliadina y anti-transglutaminasa negativo
-corpus,R31,20,de hematuria | hematuria macroscopico | de hematuria macroscopico | pared vesical | reseccion transuretral
-corpus,R32,2,con uno brote | grupo de
-corpus,R35,3,abdominal que mostrar | de cuidado paliativo | urocultivo que ser
-corpus,R39,2,biopsia prostatico | de similar
-corpus,R40,20,uci y | con el administracion de | con el administracion | sufrir uno parada | somnolencia y
-corpus,R41,20,el auscultacion cardiopulmonar ser normal | auscultacion cardiopulmonar ser normal | el auscultacion cardiopulmonar ser | auscultacion cardiopulmonar ser | el auscultacion cardiopulmonar
-corpus,R42,1,mareo y
+corpus,R29,3,en ambos extremidad inferior | ambos extremidad inferior | el movimiento ocular
+corpus,R31,119,de hematuria macroscopico | episodio de hematuria | el pared vesical | en el transcurso | estudio de extension mediante
+corpus,R35,2,abdominal que mostrar | de cuidado paliativo
+corpus,R40,24,del nivel de conciencia | el analitica sanguineo | del nivel de | con el administracion de | con el administracion
+corpus,R41,31,el auscultacion cardiopulmonar ser normal | auscultacion cardiopulmonar ser normal | el auscultacion cardiopulmonar ser | auscultacion cardiopulmonar ser | el auscultacion cardiopulmonar
 corpus,R44,1,para que el
-corpus,R47,3,trasladar a unidad de | trasladar a unidad | afasia global
-corpus,R49,2,del paraganglioma | de paraganglioma
-corpus,R50,20,fiebre de | de fiebre | fiebre y | y fiebre | el fiebre
-corpus,R51,16,cefalea y | cefalea de | cefalea intenso | y cefalea | de cefalea
-corpus,R52,20,del dolor | dolor el | control del | control del dolor | dolor intenso
-corpus,R53,20,astenia y | en urgencia | malestar general | y debilidad | mmhg con
-corpus,R56,16,minuto de duracion | crisis convulsivo | tres ano de edad | para toxoplasma | ano de edad el
-corpus,R57,3,shock septico | uno shock | ck de
-corpus,R58,20,de hemorragia | uno hemorragia | el hemorragia | uno sangrado | mostrar uno hemoglobina
-corpus,R59,20,adenopatia retroperitoneal | el adenopatia | de quimioterapia | afectar a | estudio de extension
-corpus,R60,20,edema en | y edema | de edema | proteina total | edema de
-corpus,R61,4,dependiente de el | ecg ser normal y | ecg ser normal | ecg ser
-corpus,R63,20,de peso | perdida de peso | y perdida de | y perdida | astenia anorexia
-corpus,R68,7,e hiperemia | observar uno leve | oi asociado a | ninguno signo | oi asociado
-corpus,R69,20,de enfermedad | el enfermedad | enfermedad de | de el enfermedad | su enfermedad
-corpus,R74,7,de el transaminasa | el transaminasa | elevacion de transaminasa ast | elevacion de el transaminasa | de transaminasa ast
-corpus,R80,3,proteinuria de | con proteinuria | con sedimento
-corpus,R91,1,de lobulo superior
-corpus,R99,19,el muerte | causa de el muerte | autopsia judicial | de el muerte | muerte el
-corpus,S01,8,posteriormente el proceder a | posteriormente el proceder | nervio mentoniano derecho | mentoniano derecho | uno exposicion del
-corpus,S02,20,provisionalmente el | de uno fractura de | uno fractura de | de uno fractura | uno caso de uno
-corpus,S06,20,de organizacion | en el ultimo 7 | el ultimo 7 | extirpar el | ultimo 7
+corpus,R47,2,trasladar a unidad de | trasladar a unidad
+corpus,R50,152,proteina c reactivo pcr | c reactivo pcr | tratamiento antibiotico con | de amplio espectro | tratamiento con amoxicilina
+corpus,R52,135,control del dolor | a el presion | del dolor y | servicio de traumatologia | clinica de dolor
+corpus,R53,1025,con el fin de | el fin de | de el extremidad | de peso en | en el servicio de urgencia
+corpus,R56,5,minuto de duracion | antecedente familiar destacar | tres ano de edad | ano de edad el | tres ano de
+corpus,R57,1,de el paciente y
+corpus,R58,5,mostrar uno hemoglobina | el estudio mediante | zona de hemorragia | de el hemorragia | en cara lateral
+corpus,R59,643,estudio de extension | resultado de el | de el adenopatia | el resultado de el | servicio de oncologia
+corpus,R60,349,en miembro inferior | y edema en | de el inmunodeficiencia humano negativo | el inmunodeficiencia humano negativo | inmunodeficiencia humano negativo
+corpus,R63,160,perdida de peso | y perdida de | kg de peso | y perdida de peso | el analitica destacar
+corpus,R69,39,de el enfermedad | de su enfermedad | de enfermedad de | enfermedad de base | con enfermedad de
+corpus,R74,1,de el transaminasa
+corpus,R99,2,causa de el muerte | de el muerte
+corpus,S01,4,posteriormente el proceder a | posteriormente el proceder | nervio mentoniano derecho | uno exposicion del
+corpus,S02,5,de uno fractura de | uno caso de uno | uno fractura de | de uno fractura | uno caso de
 corpus,S32,1,fractura de el rama
-corpus,S37,20,favorablemente desaparecer su sintomatologia neurologico | evolucionar favorablemente desaparecer su sintomatologia | mediante maniobra de distraccion-extension conseguir | parestesias-disestesia en ambos extremidad inferior | luxacion mediante maniobra de distraccion-extension
-corpus,S42,20,en codo derecho | ser intervenir quirurgicamente para estapedectomia | otoesclerosis haber ser intervenir quirurgicamente | considerar polimorfismo el recomendar tratamiento | dentinogenesis imperfecto no presentar deformidad
-corpus,S43,1,uno hija
-corpus,S52,20,en el radiografia el | radio izquierdo el | el radiografia el | radio izquierdo | radiografia el
-corpus,T14,20,uno traumatismo | del hematoma | hematoma en | de hematoma | hematoma y
-corpus,T20,20,el cobertura | programar reconstruccion mediante colgajo bipediculado | alimentario satisfactorio que agradar suficientemente | continencia alimentario satisfactorio que agradar | corticoid intralesional el reconstruccion final
-corpus,T24,20,accidente isquemico transitorio hipotiroidismo autoinmune | pseudomonas aeruginos multirresistente que previamente | positivo para pseudomonas aeruginos multirresistente | transitorio hipotiroidismo autoinmune y deterioro | isquemico transitorio hipotiroidismo autoinmune y
-corpus,T81,3,de el pared abdominal | en este tiempo | sutura y
-corpus,W34,20,sin orificio de salida | orificio de salida | sin orificio de | sin orificio | fuego con orificio de entrada
-corpus,Z3A,20,de gestacion | semana de gestacion | test de apgar | de apgar | rotura de membrana
-corpus,Z68,20,kg m2 que | imc de | m2 que | terapia anticoagulante domiciliario con rivaroxaban | ser prescribir terapia anticoagulante domiciliario
-corpus,Z79,20,el llegar | y dar el | insuficiencia venos cronico | hipertension arterial hta | diagnostico definitivo de
-corpus,Z87,11,exfumador desde hacer | exfumador desde | el auscultacion pulmonar en el | el auscultacion pulmonar en | auscultacion pulmonar en el
-corpus,Z88,1,alergico a
-corpus,Z90,20,captacion heterogeneo | con linfadenectomia | cavidad estar | parenquima renal conservado diagnostico anatomopatologico | cigarrillo histerectomizado y ooferectomizado derecho
-corpus,Z92,1,hemodinamico que
-corpus,Z99,5,silla de rueda | de rueda | silla de | el paciente poder | paciente poder
+corpus,S37,1106,evolucionar favorablemente desaparecer su sintomatologia | favorablemente desaparecer su sintomatologia neurologico | mediante maniobra de distraccion-extension conseguir | ventilacion asistido por insuficiencia respiratorio | parestesias-disestesia en ambos extremidad inferior
+corpus,S42,1,en codo derecho
+corpus,S52,3,en el radiografia el | radio izquierdo el | el radiografia el
+corpus,T14,97,sufrir uno traumatismo | el paciente evolucionar favorablemente | paciente evolucionar favorablemente | resto de estructura | el observar edema
+corpus,T20,845,programar reconstruccion mediante colgajo bipediculado | alimentario satisfactorio que agradar suficientemente | continencia alimentario satisfactorio que agradar | reconstruccion mediante colgajo bipediculado de | corticoid intralesional el reconstruccion final
+corpus,T24,1214,accidente isquemico transitorio hipotiroidismo autoinmune | pseudomonas aeruginos multirresistente que previamente | positivo para pseudomonas aeruginos multirresistente | isquemico transitorio hipotiroidismo autoinmune y | transitorio hipotiroidismo autoinmune y deterioro
+corpus,W34,7,sin orificio de salida | orificio de entrada | orificio de salida | de arma de fuego | sin orificio de
+corpus,Z3A,3,semana de gestacion | test de apgar | rotura de membrana
+corpus,Z68,3,a el vista de | el vista de | a el vista
+corpus,Z79,910,tratamiento con prednisona | en el analitica el | el analitica el | y dar el | hipertension arterial hipertension arterial
+corpus,Z87,2,presentar el siguiente | exfumador desde hacer
+corpus,Z90,2,de el pieza el | el pieza el
+corpus,Z99,1,silla de rueda
