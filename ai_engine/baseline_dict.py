@@ -37,7 +37,7 @@ import unicodedata
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import average_precision_score, f1_score, precision_score, recall_score
 from sklearn.preprocessing import MultiLabelBinarizer
 from tqdm import tqdm
 
@@ -47,6 +47,21 @@ from tqdm import tqdm
 # ---------------------------------------------------------------------------
 
 LEMMA_VERSION = 2  # v2: añadida expansión de abreviaturas clínicas
+SYNONYM_FILTER_VERSION = 3  # v3: patrones cacheados como (pattern, confianza)
+CORPUS_FILTER_VERSION = 3  # v3: patrones cacheados como (pattern, confianza)
+
+# ---------------------------------------------------------------------------
+# Confianza por fuente — cuánto se fía cada patrón según su procedencia.
+# diagnoses/procedures/chemicals son descripciones oficiales del catálogo;
+# clinical distingue el término real anotado (alta) de sus variantes por
+# sinónimo (más ruidosas); corpus usa directamente la precisión estadística
+# calculada para ese n-grama en vez de un valor fijo.
+# ---------------------------------------------------------------------------
+CONF_DIAGNOSES = 1.0
+CONF_PROCEDURES = 0.9
+CONF_CHEMICALS = 0.85
+CONF_CLINICAL_ORIGINAL = 0.95
+CONF_CLINICAL_SYNONYM = 0.6
 
 # ---------------------------------------------------------------------------
 # Abreviaturas clínicas españolas
@@ -283,26 +298,31 @@ def _save_cache(path: str, data):
 # ---------------------------------------------------------------------------
 
 
-def find_similar_words(word: str, min_sim: float = 0.65, max_n: int = 5) -> list[str]:
+def find_similar_words(word: str, min_sim: float = 0.80, max_n: int = 5) -> list[str]:
     """
     Encuentra palabras similares usando los word vectors de es_core_news_lg.
     Solo devuelve palabras en minúsculas, sin números, longitud >= 4.
+    Descarta candidatos que son substring uno del otro (variantes morfológicas
+    tipo "cloruro"/"tricloruro", no sinónimos reales).
     """
     nlp_vec = _get_nlp_vectors()
     lex = nlp_vec.vocab[word]
     if not lex.has_vector:
         return []
+    word_lower = word.lower()
     try:
         queries = np.asarray([lex.vector], dtype=np.float32)
-        keys, _rows, scores = nlp_vec.vocab.vectors.most_similar(queries, n=max_n + 5)
+        keys, _rows, scores = nlp_vec.vocab.vectors.most_similar(queries, n=max_n + 15)
         result = []
         for key, score in zip(keys[0], scores[0], strict=False):
             candidate = nlp_vec.vocab.strings[key].lower()
             if (
-                candidate != word.lower()
+                candidate != word_lower
                 and float(score) >= min_sim
                 and len(candidate) >= 4
                 and candidate.isalpha()
+                and word_lower not in candidate
+                and candidate not in word_lower
             ):
                 result.append(candidate)
                 if len(result) >= max_n:
@@ -314,7 +334,7 @@ def find_similar_words(word: str, min_sim: float = 0.65, max_n: int = 5) -> list
 
 def build_synonym_map(
     terms: set[str],
-    min_sim: float = 0.65,
+    min_sim: float = 0.80,
     max_n: int = 5,
     cache_file: str | None = None,
 ) -> dict[str, list[str]]:
@@ -345,7 +365,6 @@ def build_synonym_map(
         syns = find_similar_words(token, min_sim=min_sim, max_n=max_n)
         if syns:
             syn_map[token] = syns
-
     print(f"  [synonyms] {len(syn_map)} tokens con sinónimos")
     if cache_file:
         _save_cache(cache_file, syn_map)
@@ -430,7 +449,8 @@ def _build_block_patterns(
     min_len: int,
     cache_dir: str | None,
     cache_key_parts: list,
-) -> dict[str, list[re.Pattern]]:
+    confidence: float,
+) -> dict[str, list[tuple[re.Pattern, float]]]:
     """
     Lematiza cada descripción (con caché) y compila patrones con word boundaries.
     pairs: [(block, raw_description), ...]
@@ -455,15 +475,17 @@ def _build_block_patterns(
             _save_cache(cache_file, list(lemma_map.items()))
             print(f"  [cache] guardado en {cache_file}")
 
-    block_patterns: dict[str, list[re.Pattern]] = {}
+    block_patterns: dict[str, list[tuple[re.Pattern, float]]] = {}
     for block, raw_desc in pairs:
         norm = lemma_map.get(raw_desc, "")
         if len(norm) >= min_len:
-            block_patterns.setdefault(block, []).append(build_pattern(norm))
+            block_patterns.setdefault(block, []).append((build_pattern(norm), confidence))
     return block_patterns
 
 
-def load_diagnoses(path: str, min_len: int, cache_dir: str | None) -> dict[str, list[re.Pattern]]:
+def load_diagnoses(
+    path: str, min_len: int, cache_dir: str | None
+) -> dict[str, list[tuple[re.Pattern, float]]]:
     df = pd.read_csv(path)
     df.columns = df.columns.str.strip()
     stat = os.stat(path)
@@ -478,10 +500,13 @@ def load_diagnoses(path: str, min_len: int, cache_dir: str | None) -> dict[str, 
         min_len,
         cache_dir,
         [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION],
+        confidence=CONF_DIAGNOSES,
     )
 
 
-def load_procedures(path: str, min_len: int, cache_dir: str | None) -> dict[str, list[re.Pattern]]:
+def load_procedures(
+    path: str, min_len: int, cache_dir: str | None
+) -> dict[str, list[tuple[re.Pattern, float]]]:
     df = pd.read_csv(path)
     df.columns = df.columns.str.strip()
     stat = os.stat(path)
@@ -510,10 +535,13 @@ def load_procedures(path: str, min_len: int, cache_dir: str | None) -> dict[str,
         min_len,
         cache_dir,
         [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION],
+        confidence=CONF_PROCEDURES,
     )
 
 
-def load_chemicals(path: str, min_len: int, cache_dir: str | None) -> dict[str, list[re.Pattern]]:
+def load_chemicals(
+    path: str, min_len: int, cache_dir: str | None
+) -> dict[str, list[tuple[re.Pattern, float]]]:
     df = pd.read_csv(path)
     df.columns = df.columns.str.strip()
     stat = os.stat(path)
@@ -530,16 +558,20 @@ def load_chemicals(path: str, min_len: int, cache_dir: str | None) -> dict[str, 
         min_len,
         cache_dir,
         [path, stat.st_size, stat.st_mtime, min_len, LEMMA_VERSION],
+        confidence=CONF_CHEMICALS,
     )
 
 
-def extract_ngrams(lemma_text: str, min_n: int = 2, max_n: int = 5) -> list[str]:
-    """Extrae todos los n-gramas de palabras de un texto ya lematizado."""
+def extract_ngrams(lemma_text: str, min_n: int = 3, max_n: int = 5) -> list[str]:
+    """Extrae n-gramas de un texto lematizado, descartando los que llevan dígitos."""
     tokens = lemma_text.split()
     ngrams = []
     for n in range(min_n, min(max_n + 1, len(tokens) + 1)):
         for i in range(len(tokens) - n + 1):
-            ngrams.append(" ".join(tokens[i : i + n]))
+            window = tokens[i : i + n]
+            if any(any(c.isdigit() for c in tok) for tok in window):
+                continue
+            ngrams.append(" ".join(window))
     return ngrams
 
 
@@ -547,12 +579,13 @@ def load_corpus(
     train_path: str,
     min_len: int,
     cache_dir: str | None,
-    min_freq: int = 2,
-    min_precision: float = 0.5,
+    min_freq: int = 3,
+    min_precision: float = 0.75,
+    ngram_min: int = 3,
     ngram_max: int = 5,
-    exclusive: bool = False,
+    exclusive: bool = True,
     max_patterns: int = 0,
-) -> tuple[dict[str, list[re.Pattern]], dict[str, list[str]]]:
+) -> tuple[dict[str, list[tuple[re.Pattern, float]]], dict[str, list[str]]]:
     """
     Extrae n-gramas discriminativos de las notas de entrenamiento.
 
@@ -583,10 +616,12 @@ def load_corpus(
         min_len,
         min_freq,
         min_precision,
+        ngram_min,
         ngram_max,
         exclusive,
         max_patterns,
         LEMMA_VERSION,
+        CORPUS_FILTER_VERSION,
     ]
     patterns_cache_file = None
     if cache_dir:
@@ -620,7 +655,9 @@ def load_corpus(
     labels_list = [parse_labels(lbl) for lbl in df["labels"]]
 
     # Índice nota → conjunto de n-gramas únicos
-    note_ngrams: list[set[str]] = [set(extract_ngrams(lt, max_n=ngram_max)) for lt in lemma_texts]
+    note_ngrams: list[set[str]] = [
+        set(extract_ngrams(lt, min_n=ngram_min, max_n=ngram_max)) for lt in lemma_texts
+    ]
 
     # Recuento global: cuántas notas contienen cada n-grama
     ngram_total: dict[str, int] = {}
@@ -658,23 +695,26 @@ def load_corpus(
             best = max(block_scores.items(), key=lambda x: x[1][1] * x[1][0])
             exclusive_map[ng] = best[0]
 
-    block_patterns: dict[str, list[re.Pattern]] = {}
-    block_phrases: dict[str, list[tuple[int, str]]] = {}  # block → [(freq, ng)]
+    block_patterns: dict[str, list[tuple[re.Pattern, float]]] = {}
+    block_phrases: dict[str, list[tuple[int, float, str]]] = {}  # block → [(freq, precision, ng)]
 
     for ng, block_scores in ng_candidates.items():
-        for block, (freq, _) in block_scores.items():
+        for block, (freq, precision) in block_scores.items():
             if exclusive and exclusive_map[ng] != block:
                 continue
-            block_phrases.setdefault(block, []).append((freq, ng))
+            block_phrases.setdefault(block, []).append((freq, precision, ng))
 
     top_patterns: dict[str, list[str]] = {}
     for block, freq_phrases in block_phrases.items():
-        freq_phrases.sort(key=lambda x: (-x[0], -len(x[1])))
+        freq_phrases.sort(key=lambda x: (-x[0], -len(x[2])))
         if max_patterns > 0:
             freq_phrases = freq_phrases[:max_patterns]
-        phrases = [ng for _, ng in freq_phrases]
-        block_patterns[block] = [build_pattern(ng) for ng in phrases]
-        top_patterns[block] = phrases[:5]
+        # Confianza = precisión estadística del n-grama para este bloque (0.75–1.0
+        # con los defaults actuales), no un valor fijo por fuente.
+        block_patterns[block] = [
+            (build_pattern(ng), precision) for _, precision, ng in freq_phrases
+        ]
+        top_patterns[block] = [ng for _, _, ng in freq_phrases[:5]]
 
     result = (block_patterns, top_patterns)
     if patterns_cache_file:
@@ -687,9 +727,9 @@ def load_clinical(
     task_x_paths: list[str],
     min_len: int,
     cache_dir: str | None,
-    syn_similarity: float = 0.65,
+    syn_similarity: float = 0.80,
     syn_max: int = 5,
-) -> dict[str, list[re.Pattern]]:
+) -> dict[str, list[tuple[re.Pattern, float]]]:
     """
     Extrae términos clínicos reales de las anotaciones CodiESP task_x
     (DIAGNOSTICO + PROCEDIMIENTO) y los expande con sinónimos léxicos
@@ -724,7 +764,7 @@ def load_clinical(
     # Construir mapa de sinónimos (con caché)
     syn_cache_file = None
     if cache_dir:
-        syn_key = _cache_key(*stats, syn_similarity, syn_max, LEMMA_VERSION)
+        syn_key = _cache_key(*stats, syn_similarity, syn_max, LEMMA_VERSION, SYNONYM_FILTER_VERSION)
         syn_cache_file = _cache_path(cache_dir, "synonyms_clinical", syn_key)
     syn_map = build_synonym_map(
         all_terms, min_sim=syn_similarity, max_n=syn_max, cache_file=syn_cache_file
@@ -733,24 +773,28 @@ def load_clinical(
     # Lematizar términos + expandir con sinónimos (con caché)
     patterns_cache_file = None
     if cache_dir:
-        pat_key = _cache_key(*stats, syn_similarity, syn_max, min_len, LEMMA_VERSION)
+        pat_key = _cache_key(
+            *stats, syn_similarity, syn_max, min_len, LEMMA_VERSION, SYNONYM_FILTER_VERSION
+        )
         patterns_cache_file = _cache_path(cache_dir, "patterns_clinical", pat_key)
     cached_patterns = _load_cache(patterns_cache_file) if patterns_cache_file else None
     if cached_patterns is not None:
         print(f"  [cache] patrones cargados desde {patterns_cache_file}")
         return cached_patterns
 
-    # Generar patrones expandidos
-    block_patterns: dict[str, list[re.Pattern]] = {}
+    # Generar patrones expandidos. expand_term() devuelve [original, *sinónimos]:
+    # el término real anotado por CodiEsp es más fiable que sus variantes generadas.
+    block_patterns: dict[str, list[tuple[re.Pattern, float]]] = {}
     all_blocks_terms = list(block_terms.items())
     for block, terms in tqdm(all_blocks_terms, desc="  clinical patterns", unit="block"):
-        patterns = []
+        patterns: list[tuple[re.Pattern, float]] = []
         seen_phrases: set[str] = set()
         for term in terms:
-            for phrase in expand_term(term, syn_map):
+            for i, phrase in enumerate(expand_term(term, syn_map)):
                 if phrase not in seen_phrases and len(phrase) >= min_len:
                     seen_phrases.add(phrase)
-                    patterns.append(build_pattern(phrase))
+                    conf = CONF_CLINICAL_ORIGINAL if i == 0 else CONF_CLINICAL_SYNONYM
+                    patterns.append((build_pattern(phrase), conf))
         if patterns:
             block_patterns[block] = patterns
 
@@ -767,12 +811,13 @@ def load_clinical(
 
 def predict(
     texts: list[str],
-    block_patterns: dict[str, list[re.Pattern]],
+    block_patterns: dict[str, list[tuple[re.Pattern, float]]],
     split: str,
     mlb_classes: set[str],
 ) -> tuple[list[list[str]], int]:
     """
-    Predice bloques para cada texto.
+    Predice bloques para cada texto (match/no-match, ignora la confianza:
+    la evaluación de P/R/F1 no depende de ella).
     Devuelve (predicciones, n_ignorados) donde n_ignorados son bloques
     predichos pero no presentes en el MLBinarizer (fuera del universo CodiESP).
     """
@@ -782,7 +827,7 @@ def predict(
         norm_text = lemmatize(text)
         predicted = []
         for block, patterns in block_patterns.items():
-            if any(p.search(norm_text) for p in patterns):
+            if any(p.search(norm_text) for p, _ in patterns):
                 if block in mlb_classes:
                     predicted.append(block)
                 else:
@@ -796,6 +841,22 @@ def predict(
 # ---------------------------------------------------------------------------
 
 
+def compute_map(Y_true: np.ndarray, Y_pred: np.ndarray) -> float:
+    """
+    MAP por documento (average_precision_score fila a fila), documentos sin
+    gold excluidos. El diccionario da confianza fija (1.0) a todo match, así
+    que no hay ranking real entre códigos predichos — a diferencia del MAP de
+    BERT (probabilidades continuas), este valor se degrada a una medida de
+    precisión por documento, no a un ranking.
+    """
+    aps = [
+        average_precision_score(yt, yp.astype(float))
+        for yt, yp in zip(Y_true, Y_pred, strict=False)
+        if yt.sum() > 0
+    ]
+    return float(np.mean(aps)) if aps else 0.0
+
+
 def print_metrics(Y_true, Y_pred, split: str, source: str, n_ignored: int = 0):
     p_micro = precision_score(Y_true, Y_pred, average="micro", zero_division=0)
     r_micro = recall_score(Y_true, Y_pred, average="micro", zero_division=0)
@@ -803,12 +864,14 @@ def print_metrics(Y_true, Y_pred, split: str, source: str, n_ignored: int = 0):
     p_macro = precision_score(Y_true, Y_pred, average="macro", zero_division=0)
     r_macro = recall_score(Y_true, Y_pred, average="macro", zero_division=0)
     f1_macro = f1_score(Y_true, Y_pred, average="macro", zero_division=0)
+    map_doc = compute_map(Y_true, Y_pred)
     n_pred = int(Y_pred.sum())
     n_true = int(Y_true.sum())
 
     print(f"\n[result] dict/{source}  split={split}")
     print(f"  micro — P={p_micro:.3f}  R={r_micro:.3f}  F1={f1_micro:.3f}")
     print(f"  macro — P={p_macro:.3f}  R={r_macro:.3f}  F1={f1_macro:.3f}")
+    print(f"  MAP por documento: {map_doc:.3f}")
     print(f"  predicciones: {n_pred}  verdaderos: {n_true}", end="")
     if n_ignored:
         print(f"  ignorados (fuera CodiESP): {n_ignored}", end="")
@@ -824,6 +887,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_file", default="/data/codiesp_csvs/codiesp_D_source_train.csv")
     parser.add_argument("--val_file", default="/data/codiesp_csvs/codiesp_D_source_validation.csv")
+    parser.add_argument(
+        "--test_file",
+        default="/data/codiesp_csvs/codiesp_D_source_test.csv",
+        help="Test de CodiEsp — nunca se usa para construir patrones, mide generalización real",
+    )
     parser.add_argument("--diagnoses_file", default="/data/cie10-csvs/cie10-es-diagnoses.csv")
     parser.add_argument("--procedures_file", default="/data/cie10-csvs/cie10-es-procedures.csv")
     parser.add_argument("--chemicals_file", default="/data/cie10-csvs/cie10-es-chemicals.csv")
@@ -862,8 +930,8 @@ def main():
     parser.add_argument(
         "--syn_similarity",
         type=float,
-        default=0.65,
-        help="Similitud mínima para expansión de sinónimos (0–1, default 0.65)",
+        default=0.80,
+        help="Similitud mínima para expansión de sinónimos (0–1, default 0.80)",
     )
     parser.add_argument(
         "--syn_max",
@@ -874,14 +942,20 @@ def main():
     parser.add_argument(
         "--corpus_min_freq",
         type=int,
-        default=2,
-        help="Frecuencia mínima de un n-grama en notas con su bloque (default 2)",
+        default=3,
+        help="Frecuencia mínima de un n-grama en notas con su bloque (default 3)",
     )
     parser.add_argument(
         "--corpus_min_precision",
         type=float,
-        default=0.5,
-        help="Fracción mínima de apariciones del n-grama en notas de su bloque (default 0.5)",
+        default=0.75,
+        help="Fracción mínima de apariciones del n-grama en notas de su bloque (default 0.75)",
+    )
+    parser.add_argument(
+        "--corpus_ngram_min",
+        type=int,
+        default=3,
+        help="Mínimo número de palabras por n-grama (default 3)",
     )
     parser.add_argument(
         "--corpus_ngram_max",
@@ -890,10 +964,12 @@ def main():
         help="Máximo número de palabras por n-grama (default 5)",
     )
     parser.add_argument(
-        "--corpus_exclusive",
-        action="store_true",
-        help="Asigna cada n-grama solo al bloque con mayor precision (reduce falsos positivos)",
+        "--corpus_non_exclusive",
+        dest="corpus_exclusive",
+        action="store_false",
+        help="Permite que un n-grama contamine varios bloques (por defecto va solo al de mayor precisión)",
     )
+    parser.set_defaults(corpus_exclusive=True)
     parser.add_argument(
         "--corpus_max_patterns",
         type=int,
@@ -933,16 +1009,27 @@ def main():
 
     cache_dir = None if args.no_cache else args.cache_dir
 
-    # Cargar splits
+    # Cargar splits. test nunca se usa para construir patrones (ni siquiera
+    # 'clinical', que sí usa las etiquetas de val) — es la única métrica sin fuga.
     splits = {}
-    for name, path in [("train", args.train_file), ("val", args.val_file)]:
-        df = pd.read_csv(path)
+    for name, path in [
+        ("train", args.train_file),
+        ("val", args.val_file),
+        ("test", args.test_file),
+    ]:
+        try:
+            df = pd.read_csv(path)
+        except FileNotFoundError:
+            if name == "test":
+                print(f"[data] test SKIP — archivo no encontrado: {path}")
+                continue
+            raise
         df.columns = df.columns.str.strip()
         df.dropna(subset=["text", "labels"], inplace=True)
         splits[name] = df
         print(f"[data] {name}={len(df)}")
 
-    # MLBinarizer sobre la unión de bloques de ambos splits
+    # MLBinarizer sobre la unión de bloques de todos los splits cargados
     all_labels = [parse_labels(lbl) for df in splits.values() for lbl in df["labels"]]
     all_blocks = sorted({b for lbls in all_labels for b in lbls})
     mlb_classes = set(all_blocks)
@@ -987,6 +1074,7 @@ def main():
             cache_dir,
             min_freq=args.corpus_min_freq,
             min_precision=args.corpus_min_precision,
+            ngram_min=args.corpus_ngram_min,
             ngram_max=args.corpus_ngram_max,
             exclusive=args.corpus_exclusive,
             max_patterns=args.corpus_max_patterns,
@@ -995,7 +1083,7 @@ def main():
 
     # Acumular top patrones para el reporte final, y patrones por fuente para combined
     report_rows: list[dict] = []
-    all_loaded: dict[str, dict[str, list[re.Pattern]]] = {}  # source → block_patterns
+    all_loaded: dict[str, dict[str, list[tuple[re.Pattern, float]]]] = {}  # source → block_patterns
 
     all_individual = ["diagnoses", "procedures", "chemicals", "clinical", "corpus"]
     if args.only_combined:
@@ -1061,24 +1149,28 @@ def main():
     # Fuente combinada: unión de todos los patrones cargados
     if run_combined and all_loaded:
         # Corpus selectivo: si está activo, los patrones de corpus solo se añaden
-        # para bloques que clinical NO cubre. Así corpus actúa de relleno del 14%
-        # de recall que clinical no alcanza sin contaminar los bloques que clinical
-        # ya resuelve bien.
-        corpus_selective = (
-            args.corpus_selective and "corpus" in all_loaded and "clinical" in all_loaded
+        # para bloques que NINGUNA otra fuente cubre (diagnoses/procedures/chemicals/
+        # clinical son más fiables — catálogo oficial o anotación real — así que
+        # corpus actúa solo de relleno del recall que ninguna de ellas alcanza,
+        # sin contaminar con ruido estadístico los bloques que ya están bien resueltos.
+        corpus_selective = args.corpus_selective and "corpus" in all_loaded and len(all_loaded) > 1
+        covered_blocks = (
+            {b for src, bp in all_loaded.items() if src != "corpus" for b in bp}
+            if corpus_selective
+            else set()
         )
-        clinical_blocks = set(all_loaded["clinical"].keys()) if corpus_selective else set()
         if corpus_selective:
-            n_filtered = sum(1 for b in all_loaded["corpus"] if b in clinical_blocks)
+            n_filtered = sum(1 for b in all_loaded["corpus"] if b in covered_blocks)
             print(
-                f"\n[combined] corpus selectivo — filtrando {n_filtered} bloques ya cubiertos por clinical"
+                f"\n[combined] corpus selectivo — filtrando {n_filtered} bloques "
+                "ya cubiertos por otras fuentes"
             )
 
         print(f"\n[combined] unión de {list(all_loaded.keys())}")
-        combined: dict[str, list[re.Pattern]] = {}
+        combined: dict[str, list[tuple[re.Pattern, float]]] = {}
         for src, bp in all_loaded.items():
             for block, patterns in bp.items():
-                if corpus_selective and src == "corpus" and block in clinical_blocks:
+                if corpus_selective and src == "corpus" and block in covered_blocks:
                     continue
                 combined.setdefault(block, []).extend(patterns)
         n_blocks = len(combined)
@@ -1100,8 +1192,10 @@ def main():
             inner = pat.pattern[2:-2]  # quita \b de inicio y fin
             return re.sub(r"\\(.)", r"\1", inner)
 
+        # Cada entrada es [frase, confianza] — ver DictClassifier para el formato de carga.
         phrases_map = {
-            block: [_pat_to_phrase(p) for p in patterns] for block, patterns in combined.items()
+            block: [[_pat_to_phrase(p), round(conf, 3)] for p, conf in patterns]
+            for block, patterns in combined.items()
         }
         os.makedirs(os.path.dirname(os.path.abspath(args.save_dict)), exist_ok=True)
         with open(args.save_dict, "w") as f:
@@ -1124,42 +1218,48 @@ class DictClassifier:
     """
     Clasificador de diccionario listo para usar en API.
 
-    Carga los patrones guardados con --save_dict y expone predict(text).
-    La confianza es 1.0 para cualquier match (sistema determinista); se incluyen
-    los términos que dispararon cada código para trazabilidad.
+    Carga los patrones guardados con --save_dict y expone predict(text). Cada
+    patrón lleva su propia confianza según su procedencia (ver CONF_* y la
+    precisión estadística de 'corpus'); la confianza del código es la del
+    patrón más fiable que hizo match, y los términos que lo dispararon se
+    listan de mayor a menor confianza para trazabilidad.
     """
 
     def __init__(self, patterns_path: str):
         import json
 
         with open(patterns_path) as f:
-            data: dict[str, list[str]] = json.load(f)
-        # Recompilar las frases como patrones regex con word boundaries
-        self._phrases: dict[str, list[str]] = data
+            data: dict[str, list[list]] = json.load(f)
+        # data: {block: [[frase, confianza], ...]}
+        self._phrases: dict[str, list[str]] = {
+            block: [p for p, _ in entries] for block, entries in data.items()
+        }
+        self._confidences: dict[str, list[float]] = {
+            block: [c for _, c in entries] for block, entries in data.items()
+        }
         self._patterns: dict[str, list[re.Pattern]] = {
-            block: [build_pattern(p) for p in phrases] for block, phrases in data.items()
+            block: [build_pattern(p) for p, _ in entries] for block, entries in data.items()
         }
 
     def predict(self, text: str) -> list[dict]:
         """
         Devuelve lista de {code, confidence, matched_terms} ordenada por código.
 
-        confidence=1.0 para todos los matches (regla determinista).
-        matched_terms lista los primeros 3 términos que dispararon el código,
+        confidence = confianza del patrón más fiable que hizo match.
+        matched_terms lista hasta 3 términos, de mayor a menor confianza,
         útil para explicar al usuario por qué se predijo ese bloque.
         """
         ltext = lemmatize(text)
         results = []
         for block, patterns in self._patterns.items():
-            matched = [
-                self._phrases[block][i] for i, pat in enumerate(patterns) if pat.search(ltext)
-            ]
-            if matched:
+            hits = [i for i, pat in enumerate(patterns) if pat.search(ltext)]
+            if hits:
+                hits.sort(key=lambda i: -self._confidences[block][i])
                 results.append(
                     {
                         "code": block,
-                        "confidence": 1.0,
-                        "matched_terms": matched[:3],
+                        "confidence": self._confidences[block][hits[0]],
+                        "matched_terms": [self._phrases[block][i] for i in hits[:3]],
                     }
                 )
         results.sort(key=lambda x: x["code"])
