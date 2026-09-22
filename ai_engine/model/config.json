@@ -5,5 +5,7 @@
   "max_length": 512,
   "threshold": 0.3,
   "threshold_configured": 0.3,
-  "full_codes": true
+  "full_codes": true,
+  "fusion_beta": 6.0,
+  "fusion_threshold": 2.9
 }
