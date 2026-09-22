@@ -13,7 +13,7 @@
 alias App.Repo
 alias App.Accounts.User
 
-admin_email = System.get_env("SEED_ADMIN_EMAIL", "myadminuser@ciecoder.app")
+admin_email = System.get_env("SEED_ADMIN_EMAIL", "myadminuser@clicoder.app")
 admin_password = System.get_env("SEED_ADMIN_PASSWORD", "password123!")
 
 unless Repo.get_by(User, email: admin_email) do
