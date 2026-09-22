@@ -39,6 +39,8 @@ ai_engine/model/thresholds.json
 **/.transformers_cache
 **/transformers_cache
 ai_engine/model/baseline_cache/
+# Caché de logits de los experimentos de fusión: reproducible con rerank_map.py
+ai_engine/model/logits_cache/
 ai_engine/snapshots
 **/cache
 
