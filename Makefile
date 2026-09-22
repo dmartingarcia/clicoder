@@ -1,4 +1,4 @@
-.PHONY: ai-augment ai-baseline-dict ai-combine ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy stop-monitoring stop-proxy traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 -include .env
 export
@@ -10,6 +10,7 @@ COMPOSE_MOCK       = docker compose -f docker-compose.yml -f docker-compose.mock
 COMPOSE_MONITORING     = docker compose -f docker-compose.monitoring.yml
 COMPOSE_MONITORING_DEV = docker compose -f docker-compose.monitoring.yml -f docker-compose.monitoring.dev.yml
 COMPOSE_PROXY      = docker compose -f docker-compose-proxy.yml
+COMPOSE_TUNNEL     = docker compose -f docker-compose-proxy.yml --profile tunnel
 COMPOSE_DEV        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.dev.yml
 COMPOSE_DEV_GPU    = docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.dev.yml
 COMPOSE_PROD       = docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.prod.yml
@@ -80,6 +81,7 @@ ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 en CPU (clinical+corp
 	$(COMPOSE_CPU) run --rm ai_engine python baseline_dict.py \
 		--train_file        /data/codiesp_csvs/codiesp_D_source_train.csv \
 		--val_file          /data/codiesp_csvs/codiesp_D_source_validation.csv \
+		--test_file         /data/codiesp_csvs/codiesp_D_source_test.csv \
 		--diagnoses_file    /data/cie10-csvs/cie10-es-diagnoses.csv \
 		--procedures_file   /data/cie10-csvs/cie10-es-procedures.csv \
 		--chemicals_file    /data/cie10-csvs/cie10-es-chemicals.csv \
@@ -91,8 +93,7 @@ ai-baseline-dict: ## Calcular y guardar diccionario CIE-10 en CPU (clinical+corp
 		--save_dict         /app/model/baseline_dict.json \
 		$(if $(SOURCES),--sources $(SOURCES),) \
 		$(if $(MIN_LEN),--min_phrase_len $(MIN_LEN),) \
-		$(if $(MIN_BLOCK_PRECISION),--min_block_precision $(MIN_BLOCK_PRECISION),) \
-		$(if $(FULL_CODES),--full_codes,) \
+		$(if $(CORPUS_MIN_PRECISION),--corpus_min_precision $(CORPUS_MIN_PRECISION),) \
 		$(if $(NO_ABBREVS),--no_expand_abbrevs,)
 
 ai-baseline-dict-gpu: ## Calcular y guardar diccionario CIE-10 en GPU (clinical+corpus+combined -> model/baseline_dict.json)
@@ -100,6 +101,7 @@ ai-baseline-dict-gpu: ## Calcular y guardar diccionario CIE-10 en GPU (clinical+
 	$(COMPOSE) run --rm ai_engine python baseline_dict.py \
 		--train_file        /data/codiesp_csvs/codiesp_D_source_train.csv \
 		--val_file          /data/codiesp_csvs/codiesp_D_source_validation.csv \
+		--test_file         /data/codiesp_csvs/codiesp_D_source_test.csv \
 		--diagnoses_file    /data/cie10-csvs/cie10-es-diagnoses.csv \
 		--procedures_file   /data/cie10-csvs/cie10-es-procedures.csv \
 		--chemicals_file    /data/cie10-csvs/cie10-es-chemicals.csv \
@@ -111,8 +113,7 @@ ai-baseline-dict-gpu: ## Calcular y guardar diccionario CIE-10 en GPU (clinical+
 		--save_dict         /app/model/baseline_dict.json \
 		$(if $(SOURCES),--sources $(SOURCES),) \
 		$(if $(MIN_LEN),--min_phrase_len $(MIN_LEN),) \
-		$(if $(MIN_BLOCK_PRECISION),--min_block_precision $(MIN_BLOCK_PRECISION),) \
-		$(if $(FULL_CODES),--full_codes,) \
+		$(if $(CORPUS_MIN_PRECISION),--corpus_min_precision $(CORPUS_MIN_PRECISION),) \
 		$(if $(NO_ABBREVS),--no_expand_abbrevs,)
 
 ai-combine: ## Combina los CSV aumentados (EN+DE+FR) en un único fichero de entrenamiento
@@ -126,6 +127,9 @@ ai-format: ## Formatear código del AI engine (ruff format)
 
 ai-install: ## Instalar dependencias del AI engine
 	$(AI) pip install -r requirements.txt
+
+ai-test: ## Tests del AI engine (pytest). Uso: make ai-test [ARGS="-k chapter -v"]
+	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c "pip install -q -r requirements-dev.txt && python -m pytest tests/ -q -p no:cacheprovider $(ARGS)"
 
 ai-lint: ## Lint del AI engine (ruff check + format check)
 	$(COMPOSE) run --rm ai_engine sh -c "pip install -q ruff && python -m ruff check --cache-dir /tmp/ruff . && python -m ruff format --check --cache-dir /tmp/ruff ."
@@ -165,6 +169,15 @@ ai-train: ## Entrenar clasificador CIE-10 en CPU (MODEL=IIC/RigoBERTa-Clinical, 
 		$(if $(UNFREEZE_LAYERS),--unfreeze_layers $(UNFREEZE_LAYERS),) \
 		$(if $(UNFREEZE_LR_RATIO),--unfreeze_lr_ratio $(UNFREEZE_LR_RATIO),) \
 		$(if $(LAMBDA_HIER),--lambda_hier $(LAMBDA_HIER),) \
+		$(if $(SELECT_METRIC),--select_metric $(SELECT_METRIC),) \
+		$(if $(RANK_LOSS_WEIGHT),--rank_loss_weight $(RANK_LOSS_WEIGHT),) \
+		$(if $(RDROP_ALPHA),--rdrop_alpha $(RDROP_ALPHA),) \
+		$(if $(EMA_DECAY),--ema_decay $(EMA_DECAY),) \
+		$(if $(SEED),--seed $(SEED),) \
+		$(if $(PUSH_TO_HUB),--push_to_hub,) \
+		$(if $(DISTILL_FROM),--distill_from $(DISTILL_FROM),) \
+		$(if $(DISTILL_ALPHA),--distill_alpha $(DISTILL_ALPHA),) \
+		$(if $(HF_REPO_OVERRIDE),--hf_repo $(HF_REPO_OVERRIDE),) \
 		--device auto
 	@echo "$(GREEN)Modelo guardado en ai_engine/model/$(NC)"
 	@echo "$(BLUE)Generando gráfico comparativo de runs...$(NC)"
@@ -206,11 +219,35 @@ ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
 		$(if $(UNFREEZE_LAYERS),--unfreeze_layers $(UNFREEZE_LAYERS),) \
 		$(if $(UNFREEZE_LR_RATIO),--unfreeze_lr_ratio $(UNFREEZE_LR_RATIO),) \
 		$(if $(LAMBDA_HIER),--lambda_hier $(LAMBDA_HIER),) \
+		$(if $(SELECT_METRIC),--select_metric $(SELECT_METRIC),) \
+		$(if $(RANK_LOSS_WEIGHT),--rank_loss_weight $(RANK_LOSS_WEIGHT),) \
+		$(if $(RDROP_ALPHA),--rdrop_alpha $(RDROP_ALPHA),) \
+		$(if $(EMA_DECAY),--ema_decay $(EMA_DECAY),) \
+		$(if $(SEED),--seed $(SEED),) \
+		$(if $(PUSH_TO_HUB),--push_to_hub,) \
+		$(if $(DISTILL_FROM),--distill_from $(DISTILL_FROM),) \
+		$(if $(DISTILL_ALPHA),--distill_alpha $(DISTILL_ALPHA),) \
+		$(if $(HF_REPO_OVERRIDE),--hf_repo $(HF_REPO_OVERRIDE),) \
 		--device cuda
 	@echo "$(GREEN)Modelo guardado en ai_engine/model/$(NC)"
 	@echo "$(BLUE)Generando gráfico comparativo de runs...$(NC)"
 	$(COMPOSE) run --rm ai_engine python plot_runs.py
 	@echo "$(GREEN)Gráfico guardado en ai_engine/model/all_trainings_graph.png$(NC)"
+
+ai-eval-test: ## Evaluar sobre el test de CodiEsp. Uso: make ai-eval-test [GPU=1] [DEVICE=cpu|cuda] [THRESHOLD=0.3]
+	@echo "$(BLUE)Evaluando modelo sobre el conjunto de test...$(NC)"
+	$(if $(GPU),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python eval_test.py \
+		--test_file $(or $(TEST_FILE),/data/codiesp_csvs/codiesp_D_source_test.csv) \
+		--device $(or $(DEVICE),auto) \
+		--threshold $(or $(THRESHOLD),0.3)
+	@echo "$(GREEN)Resultados en ai_engine/model/eval_test.json$(NC)"
+
+ai-tfg-figures: ## Generar las figuras de datos del TFG (lee model/eval_test.json). Uso: make ai-tfg-figures [GPU=1]
+	@echo "$(BLUE)Generando figuras del TFG...$(NC)"
+	$(if $(GPU),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python plot_tfg_figures.py
+	@echo "$(BLUE)Copiando a tfg/figs/...$(NC)"
+	cp ai_engine/model/tfg_*.png tfg/figs/
+	@echo "$(GREEN)Figuras actualizadas en tfg/figs/$(NC)"
 
 audit: audit-python audit-js audit-backend ## Auditar CVEs en todas las dependencias
 
@@ -272,9 +309,9 @@ backend-test: ## Ejecutar tests del backend
 	@echo "$(GREEN)Ejecutando tests...$(NC)"
 	$(COMPOSE) exec -e MIX_ENV=test backend mix test
 
-build: build-base ## Construir todos los contenedores
+build: build-base ## Construir todos los contenedores. GPU=1 para modo GPU
 	@echo "$(GREEN)Construyendo contenedores...$(NC)"
-	$(COMPOSE) build
+	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) build
 
 build-ai: ## Construir solo AI engine. GPU=1 para modo GPU
 	@echo "$(GREEN)Construyendo AI engine...$(NC)"
@@ -357,7 +394,9 @@ frontend-lint: ## Lint del frontend (usa volúmenes dev para leer ficheros local
 
 frontend-test: ## Ejecutar tests del frontend
 	@echo "$(GREEN)Ejecutando tests del frontend...$(NC)"
-	$(COMPOSE_CPU) run --rm --no-deps frontend npm test
+# El stage por defecto es el de producción, que no instala devDependencies y por tanto no
+# tiene vitest. Los tests necesitan el stage de desarrollo, que sí las trae.
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm --no-deps frontend npm test
 
 logs: ## Ver logs (pregunta por servicio o todos)
 	@echo "$(GREEN)Servicios disponibles:$(NC)"
@@ -443,6 +482,18 @@ stop-proxy: ## Detener proxy Traefik
 	@echo "$(YELLOW)Deteniendo Traefik...$(NC)"
 	$(COMPOSE_PROXY) down
 
+start-tunnel: network-create ## Arrancar Cloudflare Tunnel (requiere CLOUDFLARE_TUNNEL_TOKEN en .env)
+	@[ -n "$${CLOUDFLARE_TUNNEL_TOKEN}" ] || (echo "$(YELLOW)CLOUDFLARE_TUNNEL_TOKEN no definido en .env$(NC)" && exit 1)
+	@echo "$(BLUE)Arrancando Cloudflare Tunnel...$(NC)"
+	$(COMPOSE_TUNNEL) up -d cloudflared
+	@echo "$(GREEN)Tunnel activo. Configurar rutas en: https://dash.cloudflare.com → Zero Trust → Networks → Tunnels$(NC)"
+	@echo "$(GREEN)  Apuntar cada ruta a https://cie10_traefik:443 (noTLSVerify: true)$(NC)"
+
+stop-tunnel: ## Detener Cloudflare Tunnel
+	@echo "$(YELLOW)Deteniendo Cloudflare Tunnel...$(NC)"
+	$(COMPOSE_TUNNEL) stop cloudflared
+	$(COMPOSE_TUNNEL) rm -f cloudflared
+
 traefik-passwd: ## Generar hash htpasswd para el dashboard. Vars: USER=admin PASSWORD=changeme
 	@echo "$(BLUE)Generando hash htpasswd...$(NC)"
 	@hash=$$(docker run --rm httpd:alpine htpasswd -nbm $(or $(USER),admin) $(or $(PASSWORD),changeme)); \
@@ -470,17 +521,19 @@ stop-monitoring: ## Detener stack de monitorización
 	@echo "$(YELLOW)Deteniendo monitorización...$(NC)"
 	$(COMPOSE_MONITORING) down
 
-deploy: network-create start-proxy start-monitoring## Deploy completo. GPU=1 para modo GPU
+deploy: network-create start-proxy start-monitoring ## Deploy completo. GPU=1 para GPU, TUNNEL=1 para Cloudflare Tunnel
 	@echo "$(BLUE)Desplegando CIE-10...$(NC)"
 	$(if $(filter 1,$(GPU)),$(COMPOSE_PROD_GPU),$(COMPOSE_PROD)) build frontend backend ai_engine
 	$(MAKE) backend-migrate
 	$(if $(filter 1,$(GPU)),$(COMPOSE_PROD_GPU),$(COMPOSE_PROD)) up -d db backend frontend ai_engine
+	$(if $(filter 1,$(TUNNEL)),$(MAKE) start-tunnel,)
 	@echo ""
 	@echo "$(GREEN)Deploy completado:$(NC)"
 	@echo "  - Frontend:    https://$${DOMAIN:-localhost}"
 	@echo "  - Backend API: https://api.$${DOMAIN:-localhost}"
 	@echo "  - Grafana:     https://grafana.$${DOMAIN:-localhost}"
-	@echo "  - Traefik:     https://"
+	@echo "  - Traefik:     https://traefik.$${DOMAIN:-localhost}"
+	@if [ "$(TUNNEL)" = "1" ]; then echo "  - Tunnel:      activo (rutas en Cloudflare dashboard)"; fi
 
 shell: ## Abrir shell interactivo (pregunta por contenedor)
 	@echo "$(GREEN)Contenedores disponibles:$(NC)"

@@ -28,7 +28,9 @@ Con todas las opciones:
 import argparse
 import json
 import os
+import random
 import time
+from contextlib import contextmanager
 from datetime import UTC
 from pathlib import Path
 
@@ -54,33 +56,33 @@ os.environ.setdefault("TQDM_DISABLE", "0")
 
 # ==================== CIE-10 METADATA ====================
 
-CHAPTER_MAP = {
-    "A": "I",
-    "B": "I",
-    "C": "II",
-    "D": "II",
-    "E": "IV",
-    "F": "V",
-    "G": "VI",
-    "H": "VII",
-    "I": "IX",
-    "J": "X",
-    "K": "XI",
-    "L": "XII",
-    "M": "XIII",
-    "N": "XIV",
-    "O": "XV",
-    "P": "XVI",
-    "Q": "XVII",
-    "R": "XVIII",
-    "S": "XIX",
-    "T": "XIX",
-    "V": "XX",
-    "W": "XX",
-    "X": "XX",
-    "Y": "XX",
-    "Z": "XXI",
-}
+# Rangos de categoría (3 caracteres) → capítulo CIE-10. La letra inicial no basta: la D se
+# reparte entre neoplasias (C00-D49) y sangre (D50-D89), y la H entre ojo (H00-H59) y oído
+# (H60-H95). Debe mantenerse en sincronía con CHAPTER_RANGES de classifier.py.
+CHAPTER_RANGES: list[tuple[str, str, str]] = [
+    ("I", "A00", "B99"),
+    ("II", "C00", "D49"),
+    ("III", "D50", "D89"),
+    ("IV", "E00", "E89"),
+    ("V", "F01", "F99"),
+    ("VI", "G00", "G99"),
+    ("VII", "H00", "H59"),
+    ("VIII", "H60", "H95"),
+    ("IX", "I00", "I99"),
+    ("X", "J00", "J99"),
+    ("XI", "K00", "K95"),
+    ("XII", "L00", "L99"),
+    ("XIII", "M00", "M99"),
+    ("XIV", "N00", "N99"),
+    ("XV", "O00", "O9A"),
+    ("XVI", "P00", "P96"),
+    ("XVII", "Q00", "Q99"),
+    ("XVIII", "R00", "R99"),
+    ("XIX", "S00", "T88"),
+    ("XX", "V00", "Y99"),
+    ("XXI", "Z00", "Z99"),
+    ("XXII", "U00", "U85"),
+]
 
 CIE10_CHAPTERS = {
     "I": {"name": "Ciertas enfermedades infecciosas y parasitarias"},
@@ -104,11 +106,19 @@ CIE10_CHAPTERS = {
     "XIX": {"name": "Traumatismos, envenenamientos y otras consecuencias"},
     "XX": {"name": "Causas externas de morbilidad y mortalidad"},
     "XXI": {"name": "Factores que influyen en el estado de salud"},
+    "XXII": {"name": "Códigos para propósitos especiales"},
 }
 
 
 def extract_chapter(code: str):
-    return CHAPTER_MAP.get(code[0].upper()) if code else None
+    """Capítulo CIE-10 de un código, resolviendo los rangos que comparten letra inicial."""
+    if not code:
+        return None
+    category = code.strip().upper()[:3].ljust(3, "0")
+    for chapter, lo, hi in CHAPTER_RANGES:
+        if lo <= category <= hi:
+            return chapter
+    return None
 
 
 # ==================== DATA ====================
@@ -125,7 +135,7 @@ def parse_labels(label_str: str, full: bool = False, chapters: bool = False):
         return []
     codes = [c.strip().upper() for c in str(label_str).split(";") if c.strip()]
     if chapters:
-        return list({CHAPTER_MAP[c[0]] for c in codes if c and c[0] in CHAPTER_MAP})
+        return list({ch for c in codes if (ch := extract_chapter(c))})
     return [truncate_code(c, full) for c in codes]
 
 
@@ -173,6 +183,7 @@ class CIE10Dataset(Dataset):
         chapters: bool = False,
         sliding_window: bool = False,
         chunk_overlap: int = 64,
+        teacher_probs=None,
     ):
         self.texts = texts
         self.label_strings = label_strings
@@ -184,6 +195,8 @@ class CIE10Dataset(Dataset):
         self.chapters = chapters
         self.sliding_window = sliding_window  # True → encode full text as overlapping chunks
         self.chunk_overlap = chunk_overlap  # stride in tokens between consecutive chunks
+        # (n_docs, num_labels) con las probabilidades del profesor, o None si no hay destilación
+        self.teacher_probs = teacher_probs
 
     def __len__(self):
         return len(self.texts)
@@ -220,11 +233,14 @@ class CIE10Dataset(Dataset):
         ):
             if code in self.code_to_idx:
                 vec[self.code_to_idx[code]] = 1.0
-        return {
+        item = {
             "input_ids": input_ids,
             "attention_mask": attention_mask,
             "labels": vec,
         }
+        if self.teacher_probs is not None:
+            item["teacher"] = torch.from_numpy(self.teacher_probs[idx])
+        return item
 
 
 def build_pretrain_loader(
@@ -665,6 +681,98 @@ def evaluate(model, loader, device, threshold=0.5):
     }
 
 
+def compute_teacher_probs(
+    ckpt_paths, texts, tokenizer, model_name, max_length, batch_size, device, code_to_idx
+):
+    """Promedio de las probabilidades de varios checkpoints sobre `texts` (destilación).
+
+    Los checkpoints deben compartir exactamente el espacio de códigos del run actual;
+    si no, el promedio mezclaría índices que representan códigos distintos.
+    """
+    n = len(texts)
+    acc = np.zeros((n, len(code_to_idx)), dtype=np.float32)
+    for path in ckpt_paths:
+        print(f"[distill] profesor: {os.path.basename(path)}")
+        ck = torch.load(path, map_location="cpu", weights_only=False)
+        if ck["code_to_idx"] != code_to_idx:
+            raise ValueError(
+                f"{os.path.basename(path)} tiene un espacio de códigos distinto al de este run; "
+                "no se puede promediar."
+            )
+        teacher = FlatClassifier(model_name, len(code_to_idx), dropout=0.0, freeze_layers=0)
+        teacher.load_state_dict(ck["model_state_dict"])
+        teacher.to(device).eval()
+        with torch.no_grad(), _autocast_ctx(device):
+            for i in range(0, n, batch_size):
+                chunk = texts[i : i + batch_size]
+                enc = tokenizer(
+                    chunk,
+                    max_length=max_length,
+                    padding="max_length",
+                    truncation=True,
+                    return_tensors="pt",
+                )
+                logits = teacher(enc["input_ids"].to(device), enc["attention_mask"].to(device))
+                acc[i : i + len(chunk)] += torch.sigmoid(logits).float().cpu().numpy()
+        del teacher, ck
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+    acc /= len(ckpt_paths)
+    print(f"[distill] {len(ckpt_paths)} profesores promediados sobre {n} documentos")
+    return acc
+
+
+def _previous_bests(runs_csv):
+    """Mejor val_f1_micro y mejor val_map_macro registrados hasta ahora en el CSV de runs."""
+    import csv as _csv
+
+    best = {"f1": None, "map": None}
+    if not runs_csv.exists():
+        return best
+    with open(runs_csv, newline="") as f:
+        for r in _csv.DictReader(f):
+            r = {(k or "").strip(): (v or "").strip() for k, v in r.items()}
+            for key, col in (("f1", "val_f1_micro"), ("map", "val_map_macro")):
+                try:
+                    v = float(r.get(col, ""))
+                except ValueError:
+                    continue
+                if best[key] is None or v > best[key]:
+                    best[key] = v
+    return best
+
+
+def push_to_hub(output_dir, model_filename, thresholds_filename, repo_id):
+    """Publica el checkpoint como classifier.pt en el repo de Hugging Face.
+
+    Mismos nombres de destino que `make model-upload`, para que `make model-download`
+    y el arranque del motor sigan encontrando los artefactos donde esperan.
+    """
+    import os
+
+    from huggingface_hub import HfApi
+
+    token = os.environ.get("HUGGING_FACE_HUB_TOKEN") or os.environ.get("HF_TOKEN")
+    if not token:
+        print("[hub] ERROR: sin HUGGING_FACE_HUB_TOKEN en el entorno; no se publica")
+        return
+    api = HfApi(token=token)
+    uploads = [
+        (output_dir / model_filename, "classifier.pt"),
+        (output_dir / thresholds_filename, "thresholds.json"),
+        (output_dir / "code_descriptions.json", "code_descriptions.json"),
+    ]
+    for local, remote in uploads:
+        if not local.exists():
+            print(f"[hub] aviso: falta {local.name}, se omite")
+            continue
+        print(f"[hub] subiendo {local.name} → {repo_id}/{remote}")
+        api.upload_file(
+            path_or_fileobj=str(local), path_in_repo=remote, repo_id=repo_id, repo_type="model"
+        )
+    print(f"[hub] publicado: https://huggingface.co/{repo_id}")
+
+
 def _autocast_ctx(device):
     """
     Devuelve un context manager de mixed precision según el device:
@@ -738,6 +846,94 @@ class AsymmetricLoss(nn.Module):
         return -(lo_pos + lo_neg).mean()
 
 
+def zlpr_loss(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+    """Pérdida listwise dentro del documento (ZLPR).
+
+        L = log(1 + Σ_{j∈neg} e^{z_j}) + log(1 + Σ_{i∈pos} e^{−z_i})
+
+    La BCE trata cada código como un problema independiente: optimiza que la
+    probabilidad de cada clase esté bien calibrada, no que los códigos correctos de un
+    informe queden por encima de los incorrectos DE ESE MISMO informe. El MAP mide
+    exactamente eso último, así que la métrica y la pérdida están desalineadas. Esta
+    pérdida cierra esa brecha: es mínima cuando todos los positivos del documento
+    superan a todos sus negativos, sin exigir ningún valor absoluto concreto.
+
+    Se calcula en float32: el logsumexp recorre 1767 términos y bf16 pierde precisión.
+    """
+    z = logits.float()
+    t = targets.float()
+    neg = z.masked_fill(t >= 0.5, -1e9)  # solo negativos
+    pos = (-z).masked_fill(t < 0.5, -1e9)  # solo positivos, con el signo cambiado
+    zero = torch.zeros_like(z[..., :1])  # el "1 +" del logaritmo
+    neg_term = torch.logsumexp(torch.cat([neg, zero], dim=-1), dim=-1)
+    pos_term = torch.logsumexp(torch.cat([pos, zero], dim=-1), dim=-1)
+    return (neg_term + pos_term).mean()
+
+
+def rdrop_loss(logits_a: torch.Tensor, logits_b: torch.Tensor) -> torch.Tensor:
+    """Divergencia KL simétrica entre dos pasadas con máscaras de dropout distintas.
+
+    R-Drop penaliza que el modelo conteste cosas distintas al mismo informe según qué
+    neuronas se apaguen. Es regularización que no usa las etiquetas, de modo que aprovecha
+    los 500 documentos sin depender de cuántos positivos tenga cada código — el punto débil
+    de este corpus. Cada clase es una Bernoulli independiente, así que la divergencia se
+    promedia sobre las clases para quedar en la misma escala que la BCE.
+    """
+    eps = 1e-6
+    pa = torch.sigmoid(logits_a.float()).clamp(eps, 1 - eps)
+    pb = torch.sigmoid(logits_b.float()).clamp(eps, 1 - eps)
+    kl_ab = pa * (pa.log() - pb.log()) + (1 - pa) * ((1 - pa).log() - (1 - pb).log())
+    kl_ba = pb * (pb.log() - pa.log()) + (1 - pb) * ((1 - pb).log() - (1 - pa).log())
+    return 0.5 * (kl_ab + kl_ba).mean()
+
+
+class WeightEMA:
+    """Media móvil exponencial de los pesos entrenables.
+
+    Promediar las salidas de varias ejecuciones sube el MAP, pero multiplica el coste de
+    inferencia y por eso no cabe en el VPS. La EMA persigue el mismo efecto —reducir la
+    varianza de los pesos— dentro de UNA sola trayectoria: los puntos que promedia están
+    en la misma cuenca por construcción y el resultado sigue siendo un único modelo.
+
+    Solo se siguen los parámetros entrenables: los congelados no cambian, así que su media
+    sería ellos mismos. Los que aparecen con el descongelado progresivo se incorporan al
+    vuelo, con su valor del momento como punto de partida.
+    """
+
+    def __init__(self, model: nn.Module, decay: float):
+        self.decay = decay
+        self.shadow = {
+            n: p.detach().clone().float() for n, p in model.named_parameters() if p.requires_grad
+        }
+
+    @torch.no_grad()
+    def update(self, model: nn.Module):
+        for n, p in model.named_parameters():
+            if not p.requires_grad:
+                continue
+            if n in self.shadow:
+                self.shadow[n].mul_(self.decay).add_(p.detach().float(), alpha=1.0 - self.decay)
+            else:
+                self.shadow[n] = p.detach().clone().float()
+
+    @contextmanager
+    def applied(self, model: nn.Module):
+        """Sustituye temporalmente los pesos del modelo por los de la media móvil."""
+        backup = {}
+        with torch.no_grad():
+            for n, p in model.named_parameters():
+                if n in self.shadow:
+                    backup[n] = p.detach().clone()
+                    p.copy_(self.shadow[n].to(p.dtype))
+        try:
+            yield
+        finally:
+            with torch.no_grad():
+                for n, p in model.named_parameters():
+                    if n in backup:
+                        p.copy_(backup[n])
+
+
 def compute_pos_weight(train_loader, num_labels: int, device, cap: float = 50.0):
     """
     Calcula pos_weight por clase = (#negativos) / (#positivos) para BCEWithLogitsLoss.
@@ -793,6 +989,11 @@ def train(
     unfreeze_lr_ratio=0.1,
     lambda_hier=0.0,
     hier_pairs=None,
+    select_metric="f1_micro",
+    distill_alpha=0.5,
+    rank_loss_weight=0.0,
+    rdrop_alpha=0.0,
+    ema_decay=0.0,
 ):
     # Solo parámetros con requires_grad=True: los congelados quedan fuera del optimizer
     # para poder añadirlos como nuevo param group al descongelarlos (add_param_group)
@@ -805,7 +1006,8 @@ def train(
 
     # Scheduler
     if lr_schedule == "plateau":
-        # ReduceLROnPlateau: baja el LR cuando el F1-micro no mejora durante patience//2 épocas.
+        # ReduceLROnPlateau: baja el LR cuando la métrica de selección no mejora durante
+        # patience//2 épocas.
         # Más adaptativo que cosine: no decae a 0 arbitrariamente sino solo cuando hay estancamiento.
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="max", factor=0.5, patience=max(1, patience // 2)
@@ -840,7 +1042,15 @@ def train(
     else:
         hier_child = hier_parent = None
 
-    best_f1 = -1.0
+    ema = WeightEMA(model, ema_decay) if ema_decay > 0.0 else None
+    if ema is not None:
+        print(f"[ema] media móvil de pesos  decay={ema_decay}  (se evalúa y guarda la EMA)")
+    if rank_loss_weight > 0.0:
+        print(f"[loss] + ZLPR listwise por documento  peso={rank_loss_weight}")
+    if rdrop_alpha > 0.0:
+        print(f"[loss] + R-Drop  alpha={rdrop_alpha}  (dos pasadas por batch)")
+
+    best_score = -1.0
     best_state = None
     no_improve = 0
     history = []  # [{epoch, train_loss, val_f1_micro, val_f1_macro}]
@@ -849,6 +1059,9 @@ def train(
     n_batches = len(train_loader)
     print(f"\n{'=' * 60}")
     print(f"  epochs={epochs}  patience={patience}  grad_accum={grad_accum}")
+    print(f"  select_metric={select_metric}  (checkpoint y scheduler)")
+    if getattr(train_loader.dataset, "teacher_probs", None) is not None:
+        print(f"  destilación activa  alpha={distill_alpha}  (peso de las etiquetas duras)")
     print(f"  batches/epoch={n_batches}  opt_steps/epoch={n_batches // grad_accum}")
     print(f"{'=' * 60}")
 
@@ -858,126 +1071,180 @@ def train(
         m, s = divmod(m, 60)
         return f"{h}h{m:02d}m{s:02d}s" if h else f"{m}m{s:02d}s"
 
+    def _eval_and_snapshot(current_best):
+        """Evalúa en validación y, si mejora, devuelve una copia de los pesos actuales."""
+        m = evaluate(model, val_loader, device, threshold=threshold)
+        state = None
+        if m[select_metric] > current_best:
+            state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+        return m, state
+
     train_start = time.time()
 
-    for epoch in range(1, epochs + 1):
-        model.train()
-        epoch_loss = 0.0
-        epoch_start = time.time()
-        step_times = []
-        optimizer.zero_grad()
+    # El descongelado progresivo añade parámetros (y sus momentos de Adam) en mitad del
+    # entrenamiento, así que el pico de memoria no llega al principio sino a la época 30,
+    # 60, 90... Si la GPU se agota ahí, se conserva el mejor checkpoint alcanzado en vez de
+    # perder la ejecución entera: los artefactos se escriben igual con lo que haya.
+    try:
+        for epoch in range(1, epochs + 1):
+            model.train()
+            epoch_loss = 0.0
+            epoch_start = time.time()
+            step_times = []
+            optimizer.zero_grad()
 
-        for step, batch in enumerate(train_loader):
-            step_start = time.time()
-            with autocast:
-                logits = model(
-                    batch["input_ids"].to(device),
-                    batch["attention_mask"].to(device),
-                    doc_chunk_counts=batch.get("doc_chunk_counts"),
-                )
-                labels = batch["labels"].to(device)
-                if label_smoothing > 0.0:
-                    # One-sided label smoothing: solo suaviza los positivos (1 → 1-ε).
-                    # Los negativos se mantienen en 0. Así no interactúa con pos_weight:
-                    # si se suavizara también el 0 → ε/2, pos_weight amplificaría ese
-                    # gradiente espúreo sobre 497 negativos por código, aplastando la señal
-                    # real y haciendo que el modelo prediga todo como positivo.
-                    labels = labels * (1.0 - label_smoothing)
-                bce_loss = loss_fn(logits, labels)
-                if hier_child is not None:
-                    # Penalizar cuando logit_hijo > logit_padre: relu(child - parent).
-                    # Asimétrico: no penaliza si padre > hijo (consistente). No modifica la
-                    # arquitectura — solo presiona al modelo a activar el padre cuando activa el hijo.
-                    hier_loss = torch.relu(logits[:, hier_child] - logits[:, hier_parent]).mean()
-                    loss = (bce_loss + lambda_hier * hier_loss) / grad_accum
-                else:
-                    loss = bce_loss / grad_accum
-            loss.backward()
-            epoch_loss += loss.item() * grad_accum
+            for step, batch in enumerate(train_loader):
+                step_start = time.time()
+                with autocast:
+                    logits = model(
+                        batch["input_ids"].to(device),
+                        batch["attention_mask"].to(device),
+                        doc_chunk_counts=batch.get("doc_chunk_counts"),
+                    )
+                    labels = batch["labels"].to(device)
+                    if label_smoothing > 0.0:
+                        # One-sided label smoothing: solo suaviza los positivos (1 → 1-ε).
+                        # Los negativos se mantienen en 0. Así no interactúa con pos_weight:
+                        # si se suavizara también el 0 → ε/2, pos_weight amplificaría ese
+                        # gradiente espúreo sobre 497 negativos por código, aplastando la señal
+                        # real y haciendo que el modelo prediga todo como positivo.
+                        labels = labels * (1.0 - label_smoothing)
+                    bce_loss = loss_fn(logits, labels)
+                    extra = {}
+                    if rdrop_alpha > 0.0:
+                        # Segunda pasada sobre el MISMO batch: mismo texto, otra máscara de
+                        # dropout. La diferencia entre ambas salidas es lo que se penaliza.
+                        logits_b = model(
+                            batch["input_ids"].to(device),
+                            batch["attention_mask"].to(device),
+                            doc_chunk_counts=batch.get("doc_chunk_counts"),
+                        )
+                        bce_loss = 0.5 * (bce_loss + loss_fn(logits_b, labels))
+                        extra["rdrop"] = rdrop_alpha * rdrop_loss(logits, logits_b)
+                    if rank_loss_weight > 0.0:
+                        extra["zlpr"] = rank_loss_weight * zlpr_loss(logits, labels)
+                    if "teacher" in batch:
+                        # Destilación: además de las etiquetas binarias, imitar las
+                        # probabilidades del profesor. Sin pos_weight — los objetivos blandos
+                        # ya llevan la información de ordenación que interesa al MAP.
+                        soft_loss = nn.functional.binary_cross_entropy_with_logits(
+                            logits, batch["teacher"].to(device)
+                        )
+                        bce_loss = distill_alpha * bce_loss + (1.0 - distill_alpha) * soft_loss
+                    total = bce_loss + sum(extra.values())
+                    if hier_child is not None:
+                        # Penalizar cuando logit_hijo > logit_padre: relu(child - parent).
+                        # Asimétrico: no penaliza si padre > hijo (consistente). No modifica la
+                        # arquitectura — solo presiona al modelo a activar el padre cuando activa el hijo.
+                        hier_loss = torch.relu(
+                            logits[:, hier_child] - logits[:, hier_parent]
+                        ).mean()
+                        total = total + lambda_hier * hier_loss
+                    loss = total / grad_accum
+                loss.backward()
+                epoch_loss += loss.item() * grad_accum
 
-            if step % grad_accum == 0 or step == len(train_loader):
-                nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                optimizer.step()
-                if lr_schedule == "cosine":
-                    scheduler.step()
-                optimizer.zero_grad()
+                if step % grad_accum == 0 or step == len(train_loader):
+                    nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    optimizer.step()
+                    if lr_schedule == "cosine":
+                        scheduler.step()
+                    optimizer.zero_grad()
+                    if ema is not None:
+                        ema.update(model)
 
-            step_times.append(time.time() - step_start)
+                step_times.append(time.time() - step_start)
 
-            log_every = max(1, n_batches // 4)
-            if step % log_every == 0:
-                avg_step = sum(step_times) / len(step_times)
-                remaining = avg_step * (n_batches - step)
-                print(
-                    f"  epoch {epoch}/{epochs}  step {step}/{n_batches}"
-                    f"  loss={loss.item() * grad_accum:.4f}"
-                    f"  {avg_step:.1f}s/step  epoch ETA {fmt_seconds(remaining)}"
-                )
+                log_every = max(1, n_batches // 4)
+                if step % log_every == 0:
+                    avg_step = sum(step_times) / len(step_times)
+                    remaining = avg_step * (n_batches - step)
+                    detail = "".join(f"  {k}={v.item():.4f}" for k, v in extra.items())
+                    print(
+                        f"  epoch {epoch}/{epochs}  step {step}/{n_batches}"
+                        f"  loss={loss.item() * grad_accum:.4f}"
+                        f"  bce={bce_loss.item():.4f}{detail}"
+                        f"  {avg_step:.1f}s/step  epoch ETA {fmt_seconds(remaining)}"
+                    )
 
-        epoch_elapsed = time.time() - epoch_start
-        epoch_times.append(epoch_elapsed)
+            epoch_elapsed = time.time() - epoch_start
+            epoch_times.append(epoch_elapsed)
 
-        avg_loss = epoch_loss / n_batches
-        m = evaluate(model, val_loader, device, threshold=threshold)
-        history.append(
-            {
-                "epoch": epoch,
-                "train_loss": avg_loss,
-                **{f"val_{k}": v for k, v in m.items()},
-                "epoch_seconds": round(epoch_elapsed, 1),
-            }
-        )
+            avg_loss = epoch_loss / n_batches
+            # Con EMA activa se evalúa —y se guarda— la media móvil, no los pesos del último
+            # paso: es la media la que se quiere llevar a producción.
+            if ema is not None:
+                with ema.applied(model):
+                    m, snapshot = _eval_and_snapshot(best_score)
+            else:
+                m, snapshot = _eval_and_snapshot(best_score)
+            history.append(
+                {
+                    "epoch": epoch,
+                    "train_loss": avg_loss,
+                    **{f"val_{k}": v for k, v in m.items()},
+                    "epoch_seconds": round(epoch_elapsed, 1),
+                }
+            )
 
-        avg_epoch_time = sum(epoch_times) / len(epoch_times)
-        epochs_left = epochs - epoch
-        total_eta = avg_epoch_time * epochs_left
-        elapsed_total = time.time() - train_start
+            avg_epoch_time = sum(epoch_times) / len(epoch_times)
+            epochs_left = epochs - epoch
+            total_eta = avg_epoch_time * epochs_left
+            elapsed_total = time.time() - train_start
 
-        current_lr = optimizer.param_groups[0]["lr"]
-        print(
-            f"  epoch {epoch}/{epochs}  loss={avg_loss:.4f}  lr={current_lr:.2e}"
-            f"  P={m['p_micro']:.3f}  R={m['r_micro']:.3f}  F1={m['f1_micro']:.3f} (micro)"
-            f"  |  P={m['p_macro']:.3f}  R={m['r_macro']:.3f}  F1={m['f1_macro']:.3f} (macro)"
-            f"  |  MAP={m['map_macro']:.3f}"
-            f"  [{fmt_seconds(epoch_elapsed)}/epoch  elapsed {fmt_seconds(elapsed_total)}"
-            f"  ETA {fmt_seconds(total_eta)}]"
-        )
+            current_lr = optimizer.param_groups[0]["lr"]
+            print(
+                f"  epoch {epoch}/{epochs}  loss={avg_loss:.4f}  lr={current_lr:.2e}"
+                f"  P={m['p_micro']:.3f}  R={m['r_micro']:.3f}  F1={m['f1_micro']:.3f} (micro)"
+                f"  |  P={m['p_macro']:.3f}  R={m['r_macro']:.3f}  F1={m['f1_macro']:.3f} (macro)"
+                f"  |  MAP={m['map_macro']:.3f}"
+                f"  [{fmt_seconds(epoch_elapsed)}/epoch  elapsed {fmt_seconds(elapsed_total)}"
+                f"  ETA {fmt_seconds(total_eta)}]"
+            )
 
-        if lr_schedule == "plateau":
-            scheduler.step(m["f1_micro"])
+            if lr_schedule == "plateau":
+                scheduler.step(m[select_metric])
 
-        if m["f1_micro"] > best_f1:
-            best_f1 = m["f1_micro"]
-            best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
-            no_improve = 0
-            print(f"  → new best: {best_f1:.4f}  (saved)")
-        else:
-            no_improve += 1
-            print(f"  → no improvement ({no_improve}/{patience})")
-            if no_improve >= patience:
-                print("  Early stopping.")
-                break
-
-        # Progressive unfreezing: cada unfreeze_every épocas, activar el siguiente bloque
-        # de capas con LR reducido. Resetear no_improve para dar margen al modelo tras
-        # descongelar nuevos parámetros.
-        if unfreeze_every > 0 and epoch % unfreeze_every == 0:
-            new_params = model.unfreeze_next_group(unfreeze_layers)
-            if new_params:
-                new_lr = lr * unfreeze_lr_ratio
-                optimizer.add_param_group(
-                    {
-                        "params": new_params,
-                        "lr": new_lr,
-                        "weight_decay": weight_decay,
-                    }
-                )
+            if snapshot is not None:
+                best_score = m[select_metric]
+                best_state = snapshot
                 no_improve = 0
-                print(
-                    f"  [unfreeze] nuevo param group  lr={new_lr:.2e}  (early stopping reseteado)"
-                )
+                print(f"  → new best {select_metric}: {best_score:.4f}  (saved)")
+            else:
+                no_improve += 1
+                print(f"  → no improvement ({no_improve}/{patience})")
+                if no_improve >= patience:
+                    print("  Early stopping.")
+                    break
 
-    print(f"\n  Best val F1-micro: {best_f1:.4f}")
+            # Progressive unfreezing: cada unfreeze_every épocas, activar el siguiente bloque
+            # de capas con LR reducido. Resetear no_improve para dar margen al modelo tras
+            # descongelar nuevos parámetros.
+            if unfreeze_every > 0 and epoch % unfreeze_every == 0:
+                new_params = model.unfreeze_next_group(unfreeze_layers)
+                if new_params:
+                    new_lr = lr * unfreeze_lr_ratio
+                    optimizer.add_param_group(
+                        {
+                            "params": new_params,
+                            "lr": new_lr,
+                            "weight_decay": weight_decay,
+                        }
+                    )
+                    no_improve = 0
+                    print(
+                        f"  [unfreeze] nuevo param group  lr={new_lr:.2e}  (early stopping reseteado)"
+                    )
+    except torch.OutOfMemoryError as exc:
+        print(f"\n  [abort] memoria de GPU agotada en la época {epoch}: {exc}")
+        print(f"  Se conserva el mejor {select_metric} alcanzado: {best_score:.4f}")
+        torch.cuda.empty_cache()
+    except KeyboardInterrupt:
+        print(
+            f"\n  [abort] interrumpido en la época {epoch}. Mejor {select_metric}: {best_score:.4f}"
+        )
+
+    print(f"\n  Best val {select_metric}: {best_score:.4f}")
     return best_state or model.state_dict(), history
 
 
@@ -1164,7 +1431,78 @@ def main():
         "Penaliza cuando logit_hijo > logit_padre para pares (código 4+chars, padre 3chars) "
         "que existan en el label set. Valores típicos: 0.1–1.0.",
     )
+    parser.add_argument(
+        "--push_to_hub",
+        action="store_true",
+        help="Publicar el checkpoint en Hugging Face si mejora el mejor F1 o el mejor MAP "
+        "registrado en training_runs.csv (default: no publicar, solo informar).",
+    )
+    parser.add_argument(
+        "--hf_repo",
+        default="dmartingarcia/cie10-rigoberta-classifier",
+        help="Repo de Hugging Face destino de --push_to_hub.",
+    )
+    parser.add_argument(
+        "--distill_from",
+        nargs="*",
+        default=None,
+        help="Rutas a checkpoints .pt cuyo promedio de probabilidades actúa como profesor. "
+        "El alumno entrena contra ese promedio además de contra las etiquetas del corpus, "
+        "con coste de inferencia de un solo modelo.",
+    )
+    parser.add_argument(
+        "--distill_alpha",
+        type=float,
+        default=0.5,
+        help="Peso de las etiquetas duras frente al profesor (default: 0.5). "
+        "1.0 = solo etiquetas (sin destilación); 0.0 = solo profesor.",
+    )
+    parser.add_argument(
+        "--select_metric",
+        default="f1_micro",
+        choices=["f1_micro", "f1_macro", "map_macro"],
+        help="Métrica de validación que decide el mejor checkpoint y guía al scheduler "
+        "plateau (default: f1_micro). map_macro optimiza directamente el MAP de CodiEsp, "
+        "que es independiente del umbral.",
+    )
+    parser.add_argument(
+        "--rank_loss_weight",
+        type=float,
+        default=0.0,
+        help="Peso del término ZLPR listwise por documento, que optimiza directamente la "
+        "ordenación que mide el MAP (default: 0 = desactivado). Se SUMA a la BCE; con la "
+        "BCE ya convergida en torno a 0.03, un peso de 0.1 deja ambos términos en la misma "
+        "escala.",
+    )
+    parser.add_argument(
+        "--rdrop_alpha",
+        type=float,
+        default=0.0,
+        help="Peso de la divergencia KL simétrica entre dos pasadas con dropout distinto "
+        "(R-Drop). Duplica el coste por batch. Default: 0 = desactivado.",
+    )
+    parser.add_argument(
+        "--ema_decay",
+        type=float,
+        default=0.0,
+        help="Decaimiento de la media móvil exponencial de los pesos (p. ej. 0.999). Se "
+        "evalúa y se guarda la media, no el último paso. Default: 0 = desactivado.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Semilla para torch/numpy/random. Sin ella cada ejecución es un sorteo "
+        "independiente, que es lo que permite medir el ruido estocástico.",
+    )
     args = parser.parse_args()
+
+    if args.seed is not None:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
+        print(f"[seed] {args.seed}")
 
     # Device — prioridad: CUDA > MPS (Apple GPU) > CPU
     if args.device == "auto":
@@ -1208,7 +1546,7 @@ def main():
     if args.sliding_window:
         print(f"[data] sliding_window=True  chunk_overlap={args.chunk_overlap} tokens")
 
-    def make_loader(df, shuffle):
+    def make_loader(df, shuffle, teacher_probs=None):
         ds = CIE10Dataset(
             df["text"].tolist(),
             df["labels"].tolist(),
@@ -1219,6 +1557,7 @@ def main():
             chapters=args.chapters,
             sliding_window=args.sliding_window,
             chunk_overlap=args.chunk_overlap,
+            teacher_probs=teacher_probs,
         )
         collate = sliding_window_collate if args.sliding_window else None
         return DataLoader(
@@ -1229,7 +1568,23 @@ def main():
             collate_fn=collate,
         )
 
-    train_loader = make_loader(train_df, shuffle=True)
+    teacher_probs = None
+    if args.distill_from:
+        if args.sliding_window:
+            raise SystemExit("--distill_from no es compatible con --sliding_window")
+        print(f"\n[distill] calculando profesor a partir de {len(args.distill_from)} checkpoints")
+        teacher_probs = compute_teacher_probs(
+            args.distill_from,
+            train_df["text"].astype(str).tolist(),
+            tokenizer,
+            args.model_name,
+            args.max_length,
+            args.batch_size,
+            device,
+            code_to_idx,
+        )
+
+    train_loader = make_loader(train_df, shuffle=True, teacher_probs=teacher_probs)
     val_loader = make_loader(val_df, shuffle=False)
 
     # Model
@@ -1291,6 +1646,11 @@ def main():
         unfreeze_lr_ratio=args.unfreeze_lr_ratio,
         lambda_hier=args.lambda_hier,
         hier_pairs=hier_pairs,
+        select_metric=args.select_metric,
+        distill_alpha=args.distill_alpha,
+        rank_loss_weight=args.rank_loss_weight,
+        rdrop_alpha=args.rdrop_alpha,
+        ema_decay=args.ema_decay,
     )
 
     # Save
@@ -1355,8 +1715,8 @@ def main():
 
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
-    # Guardar modelo con timestamp y F1 para no machacar versiones anteriores
-    model_filename = f"classifier_{timestamp}_f1={fm['f1_micro']:.4f}.pt"
+    # Guardar modelo con timestamp, F1 y MAP para no machacar versiones anteriores
+    model_filename = f"classifier_{timestamp}_f1={fm['f1_micro']:.4f}_map={map_macro:.4f}.pt"
     torch.save(
         {
             "code_to_idx": code_to_idx,
@@ -1401,6 +1761,7 @@ def main():
         )
     print("[save] config.json")
     runs_csv = output_dir / "training_runs.csv"
+    prev_best = _previous_bests(runs_csv)  # antes de añadir la fila de este run
     row = {
         "timestamp": timestamp,
         "model_name": args.model_name,
@@ -1445,13 +1806,25 @@ def main():
         "chunk_overlap": args.chunk_overlap if args.sliding_window else "",
         "pretrain_epochs": args.pretrain_epochs,
         "lambda_hier": args.lambda_hier,
+        "select_metric": args.select_metric,
+        "rank_loss_weight": args.rank_loss_weight,
+        "rdrop_alpha": args.rdrop_alpha,
+        "ema_decay": args.ema_decay,
+        "seed": args.seed if args.seed is not None else "",
     }
     fieldnames = list(row.keys())
     if runs_csv.exists():
         with open(runs_csv, newline="") as f:
             existing_reader = csv.DictReader(f)
-            existing_fields = existing_reader.fieldnames or []
-            old_rows = list(existing_reader)
+            # Las cabeceras de ficheros antiguos pueden venir con padding de alineación
+            # (" model_name"). Sin normalizar, al reescribir con la cabecera nueva las
+            # claves no casan y DictWriter rellena TODAS las filas viejas con restval="",
+            # borrando el histórico.
+            existing_fields = [(k or "").strip() for k in (existing_reader.fieldnames or [])]
+            old_rows = [
+                {(k or "").strip(): (v.strip() if isinstance(v, str) else v) for k, v in r.items()}
+                for r in existing_reader
+            ]
         new_fields = [k for k in fieldnames if k not in existing_fields]
         if new_fields:
             # Rewrite file with extended header; old rows get empty string for new cols
@@ -1469,6 +1842,30 @@ def main():
             writer.writeheader()
             writer.writerow(row)
     print("[save] training_runs.csv  (append)")
+
+    # ---- ¿Mejora el mejor run anterior? → candidato a publicar en Hugging Face ----
+    better_f1 = prev_best["f1"] is None or fm["f1_micro"] > prev_best["f1"]
+    better_map = prev_best["map"] is None or map_macro > prev_best["map"]
+    print(
+        "\n[hub] mejor anterior — "
+        f"F1={prev_best['f1'] if prev_best['f1'] is not None else float('nan'):.4f}  "
+        f"MAP={prev_best['map'] if prev_best['map'] is not None else float('nan'):.4f}"
+    )
+    print(
+        f"[hub] este run       — F1={fm['f1_micro']:.4f}{'  (mejor)' if better_f1 else ''}  "
+        f"MAP={map_macro:.4f}{'  (mejor)' if better_map else ''}"
+    )
+    if better_f1 or better_map:
+        print(
+            "[hub] supera al mejor anterior. Para publicarlo:\n"
+            f"      make model-upload BEST_PT={model_filename} BEST_THR={thr_path.name}"
+        )
+        if args.push_to_hub:
+            push_to_hub(output_dir, model_filename, thr_path.name, args.hf_repo)
+        else:
+            print("[hub] no se publica: falta --push_to_hub")
+    else:
+        print("[hub] no mejora ni F1 ni MAP → no se publica")
 
     # ---- Historial de épocas (para gráfico comparativo multi-run) ----
     history_path = output_dir / f"training_history_{timestamp}.json"
