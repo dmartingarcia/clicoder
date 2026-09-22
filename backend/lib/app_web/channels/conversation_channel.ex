@@ -354,14 +354,16 @@ defmodule AppWeb.ConversationChannel do
 
     if codes != [] do
       Task.start(fn ->
-        case Req.post("#{ai_url}/explain",
-               json: %{
-                 text: report_text,
-                 codes: codes,
-                 method: App.AIEngineSettings.get_explain_method()
-               },
-               receive_timeout: 180_000
-             ) do
+        peticion = [
+          json: %{
+            text: report_text,
+            codes: codes,
+            method: App.AIEngineSettings.get_explain_method()
+          },
+          receive_timeout: 180_000
+        ]
+
+        case Req.post("#{ai_url}/explain", peticion ++ req_opts()) do
           {:ok, %{status: 200, body: body}} ->
             triggers = body["triggers"] || %{}
             persist_triggers(conversation_id, message_id, triggers)
@@ -580,7 +582,7 @@ defmodule AppWeb.ConversationChannel do
       tmpl |> String.replace("{language}", language) |> String.replace("{text}", text)
     end
 
-    Req.post("#{ai_url}/summarize/stream",
+    peticion = [
       json: %{text: text, system_prompt: fill.(system_tmpl), user_prompt: fill.(user_tmpl)},
       receive_timeout: 120_000,
       decode_body: false,
@@ -606,7 +608,9 @@ defmodule AppWeb.ConversationChannel do
 
         {:cont, {req, resp}}
       end
-    )
+    ]
+
+    Req.post("#{ai_url}/summarize/stream", peticion ++ req_opts())
 
     tokens = Enum.reverse(Process.get(:summary_acc, []))
     Process.delete(:summary_buf)
@@ -633,8 +637,12 @@ defmodule AppWeb.ConversationChannel do
     Map.get(@locale_to_language, locale, "español")
   end
 
+  # Opciones de transporte inyectables: vacías en producción, con el plug de Req.Test en
+  # pruebas. Sin esto la integración con el motor de IA no se puede ejercitar sin una red.
+  defp req_opts, do: Application.get_env(:app, :ai_req_opts, [])
+
   defp predict_with_retry(ai_url, body, retries) do
-    case Req.post("#{ai_url}/predict", json: body, receive_timeout: 60_000) do
+    case Req.post("#{ai_url}/predict", [json: body, receive_timeout: 60_000] ++ req_opts()) do
       {:error, %{reason: reason}} when retries > 0 ->
         Logger.warning("Predict falló (#{inspect(reason)}), reintentando (#{retries} restantes)")
         predict_with_retry(ai_url, body, retries - 1)

@@ -410,4 +410,347 @@ defmodule AppWeb.ConversationChannelTest do
       assert_reply ref, :ok, %{status: "rejected"}
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Verificación de términos explicativos
+  # ---------------------------------------------------------------------------
+
+  describe "handle_in verify_trigger" do
+    setup do
+      user = user_fixture()
+      conv = conversation_fixture(user)
+      socket = connect_socket(user)
+
+      {:ok, _reply, joined} =
+        subscribe_and_join(
+          socket,
+          AppWeb.ConversationChannel,
+          "conversation:#{conv.conversation_id}"
+        )
+
+      codigo =
+        %App.Projections.PredictedCodeProjection{
+          code_id: UUID.uuid4(),
+          conversation_id: conv.id,
+          cie10_code: "I10",
+          reasoning: "hipertensión",
+          confidence_score: 0.9,
+          status: "pending",
+          verified_triggers: []
+        }
+        |> App.Repo.insert!()
+
+      %{socket: joined, code: codigo}
+    end
+
+    test "marcar un término lo añade a los verificados", %{socket: socket, code: code} do
+      ref =
+        push(socket, "verify_trigger", %{
+          "code_id" => code.code_id,
+          "trigger" => "hipertensión",
+          "verified" => true
+        })
+
+      assert_reply ref, :ok, %{verified_triggers: ["hipertensión"]}
+    end
+
+    test "desmarcarlo lo retira", %{socket: socket, code: code} do
+      push(socket, "verify_trigger", %{
+        "code_id" => code.code_id,
+        "trigger" => "hipertensión",
+        "verified" => true
+      })
+
+      ref =
+        push(socket, "verify_trigger", %{
+          "code_id" => code.code_id,
+          "trigger" => "hipertensión",
+          "verified" => false
+        })
+
+      assert_reply ref, :ok, %{verified_triggers: []}
+    end
+
+    test "marcar dos veces el mismo término no lo duplica", %{socket: socket, code: code} do
+      for _ <- 1..2 do
+        push(socket, "verify_trigger", %{
+          "code_id" => code.code_id,
+          "trigger" => "hipertensión",
+          "verified" => true
+        })
+      end
+
+      ref =
+        push(socket, "verify_trigger", %{
+          "code_id" => code.code_id,
+          "trigger" => "otra cosa",
+          "verified" => true
+        })
+
+      assert_reply ref, :ok, %{verified_triggers: terminos}
+      assert Enum.count(terminos, &(&1 == "hipertensión")) == 1
+    end
+
+    test "un código inexistente devuelve error en vez de reventar", %{socket: socket} do
+      ref =
+        push(socket, "verify_trigger", %{
+          "code_id" => UUID.uuid4(),
+          "trigger" => "lo que sea",
+          "verified" => true
+        })
+
+      assert_reply ref, :error, %{reason: "code_not_found"}
+    end
+
+    test "la verificación se difunde a los demás clientes", %{socket: socket, code: code} do
+      push(socket, "verify_trigger", %{
+        "code_id" => code.code_id,
+        "trigger" => "hipertensión",
+        "verified" => true
+      })
+
+      assert_broadcast "trigger_verified", %{code_id: _, verified: true}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Validación y rechazo de códigos
+  # ---------------------------------------------------------------------------
+
+  describe "handle_in validate_code y reject_code" do
+    setup do
+      user = user_fixture()
+      conv = conversation_fixture(user)
+      socket = connect_socket(user)
+
+      {:ok, _reply, joined} =
+        subscribe_and_join(
+          socket,
+          AppWeb.ConversationChannel,
+          "conversation:#{conv.conversation_id}"
+        )
+
+      %{socket: joined, conv: conv}
+    end
+
+    # La proyección de una conversación puede existir sin que su agregado se haya iniciado
+    # (por ejemplo si se restauró la tabla de lectura sin el registro de eventos). El canal
+    # tiene que rechazar la operación en vez de escribir un estado que el agregado desconoce,
+    # porque eso dejaría la lectura y la fuente de verdad contando cosas distintas.
+    test "validar sobre una conversación sin iniciar se rechaza", %{socket: socket} do
+      ref =
+        push(socket, "validate_code", %{
+          "code_id" => UUID.uuid4(),
+          "cie10_code" => "I10"
+        })
+
+      assert_reply ref, :error, %{reason: razon}
+      assert razon =~ "conversation_not_started"
+    end
+
+    test "rechazar sobre una conversación sin iniciar se rechaza igual", %{socket: socket} do
+      ref =
+        push(socket, "reject_code", %{
+          "code_id" => UUID.uuid4(),
+          "cie10_code" => "I10",
+          "reason" => "no procede"
+        })
+
+      assert_reply ref, :error, %{reason: razon}
+      assert razon =~ "conversation_not_started"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Integración con el motor de IA (con el transporte simulado)
+  # ---------------------------------------------------------------------------
+
+  describe "analyze_report contra el motor de IA" do
+    setup do
+      user = user_fixture()
+      # Unirse a un identificador nuevo despacha StartConversation: el agregado tiene que
+      # existir para que analyze_report no se rechace, y una proyección insertada a mano
+      # no lo crea.
+      socket = connect_socket(user)
+
+      {:ok, _reply, joined} =
+        subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{UUID.uuid4()}")
+
+      %{socket: joined, user: user}
+    end
+
+    test "una predicción correcta emite la tarjeta de códigos", %{socket: socket} do
+      Req.Test.stub(App.AIEngineMock, fn conn ->
+        Req.Test.json(conn, %{
+          "cards" => [
+            %{
+              "type" => "codes",
+              "content" => [
+                %{"code" => "I10", "description" => "Hipertensión", "confidence" => 0.91}
+              ]
+            }
+          ],
+          "timing" => %{"classifier_ms" => 350}
+        })
+      end)
+
+      push(socket, "analyze_report", %{"report_text" => "Paciente hipertenso"})
+
+      assert_broadcast "analysis_card_received", %{card_type: "codes"}, 2_000
+    end
+
+    test "si el motor no responde, el canal no se cae", %{socket: socket} do
+      Req.Test.stub(App.AIEngineMock, fn conn ->
+        Req.Test.transport_error(conn, :econnrefused)
+      end)
+
+      ref = push(socket, "analyze_report", %{"report_text" => "Paciente hipertenso"})
+
+      # La petición se acepta igual: el análisis es asíncrono y su fallo se comunica
+      # por el canal, no como error de la llamada que lo inicia.
+      assert_reply ref, :ok, %{status: "analysis_started"}
+    end
+
+    test "una respuesta sin tarjetas no rompe la persistencia", %{socket: socket} do
+      Req.Test.stub(App.AIEngineMock, fn conn ->
+        Req.Test.json(conn, %{"cards" => [], "timing" => %{}})
+      end)
+
+      ref = push(socket, "analyze_report", %{"report_text" => "Informe vacío"})
+      assert_reply ref, :ok, %{status: "analysis_started"}
+    end
+  end
+
+  describe "resumen en streaming" do
+    setup do
+      user = user_fixture()
+      socket = connect_socket(user)
+
+      {:ok, _reply, joined} =
+        subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{UUID.uuid4()}")
+
+      App.SummarizerSettings.set_model("gemma4")
+      on_exit(fn -> App.SummarizerSettings.set_model("none") end)
+
+      %{socket: joined, user: user}
+    end
+
+    test "emite un evento por cada token recibido", %{socket: socket} do
+      Req.Test.stub(App.AIEngineMock, fn conn ->
+        case conn.request_path do
+          "/predict" ->
+            Req.Test.json(conn, %{"cards" => [], "timing" => %{}})
+
+          "/summarize/stream" ->
+            # El motor responde NDJSON: un objeto JSON por línea, para que el cliente
+            # pueda pintar el texto según llega en vez de esperar al final.
+            conn
+            |> Plug.Conn.put_resp_content_type("application/x-ndjson")
+            |> Plug.Conn.send_resp(
+              200,
+              ~s({"token":"Paciente "}\n{"token":"con neumonía"}\n{"done":true}\n)
+            )
+
+          _ ->
+            Req.Test.json(conn, %{})
+        end
+      end)
+
+      push(socket, "analyze_report", %{"report_text" => "Paciente con neumonía"})
+
+      assert_broadcast "summary_token", %{token: "Paciente "}, 3_000
+      assert_broadcast "summary_token", %{token: "con neumonía"}, 3_000
+    end
+
+    test "una línea mal formada no interrumpe el resto", %{socket: socket} do
+      Req.Test.stub(App.AIEngineMock, fn conn ->
+        case conn.request_path do
+          "/summarize/stream" ->
+            conn
+            |> Plug.Conn.put_resp_content_type("application/x-ndjson")
+            |> Plug.Conn.send_resp(200, ~s(esto no es json\n{"token":"válido"}\n))
+
+          _ ->
+            Req.Test.json(conn, %{"cards" => [], "timing" => %{}})
+        end
+      end)
+
+      push(socket, "analyze_report", %{"report_text" => "Informe"})
+
+      assert_broadcast "summary_token", %{token: "válido"}, 3_000
+    end
+  end
+
+  describe "términos explicativos en segunda llamada" do
+    setup do
+      user = user_fixture()
+      socket = connect_socket(user)
+
+      {:ok, _reply, joined} =
+        subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{UUID.uuid4()}")
+
+      %{socket: joined, user: user}
+    end
+
+    test "los términos llegan por su propio evento y completan la tarjeta", %{socket: socket} do
+      Req.Test.stub(App.AIEngineMock, fn conn ->
+        case conn.request_path do
+          "/predict" ->
+            Req.Test.json(conn, %{
+              "cards" => [
+                %{
+                  "type" => "codes",
+                  "content" => [%{"code" => "J18.9", "description" => "Neumonía"}]
+                }
+              ],
+              "timing" => %{}
+            })
+
+          "/explain" ->
+            Req.Test.json(conn, %{
+              "method" => "gradiente_filtrado",
+              "triggers" => %{
+                "J18.9" => [%{"term" => "neumonía", "source" => "bert", "weight" => 0.8}]
+              },
+              "timing" => %{"explain_ms" => 1200}
+            })
+
+          _ ->
+            Req.Test.json(conn, %{})
+        end
+      end)
+
+      push(socket, "analyze_report", %{"report_text" => "Paciente con neumonía basal"})
+
+      # Primero llegan los códigos, y después los términos: es justo el desacoplamiento
+      # que evita que el usuario espere doce segundos para ver una lista que ya existe.
+      assert_broadcast "analysis_card_received", %{card_type: "codes"}, 3_000
+      assert_broadcast "triggers_received", %{method: "gradiente_filtrado"}, 5_000
+    end
+
+    test "si la explicación falla, los códigos siguen entregados", %{socket: socket} do
+      Req.Test.stub(App.AIEngineMock, fn conn ->
+        case conn.request_path do
+          "/predict" ->
+            Req.Test.json(conn, %{
+              "cards" => [
+                %{"type" => "codes", "content" => [%{"code" => "I10", "description" => "HTA"}]}
+              ],
+              "timing" => %{}
+            })
+
+          "/explain" ->
+            Req.Test.transport_error(conn, :econnrefused)
+
+          _ ->
+            Req.Test.json(conn, %{})
+        end
+      end)
+
+      push(socket, "analyze_report", %{"report_text" => "Paciente hipertenso"})
+
+      assert_broadcast "analysis_card_received", %{card_type: "codes"}, 3_000
+      refute_broadcast "triggers_received", %{}, 500
+    end
+  end
 end

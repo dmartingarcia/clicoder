@@ -242,4 +242,52 @@ defmodule AppWeb.Cie10ControllerTest do
       assert cs.errors[:type] != nil
     end
   end
+
+  describe "search/2: parámetros y filtros" do
+    test "una consulta de menos de dos caracteres no busca", %{conn: conn} do
+      assert json_response(get(conn, ~p"/api/cie10/search?q=A"), 200)["results"] == []
+    end
+
+    test "sin parámetro de búsqueda devuelve lista vacía", %{conn: conn} do
+      assert json_response(get(conn, ~p"/api/cie10/search"), 200)["results"] == []
+    end
+
+    test "filtra por tipo de código", %{conn: conn} do
+      resultados =
+        json_response(get(conn, ~p"/api/cie10/search?q=Propanol&type=chemical"), 200)["results"]
+
+      assert Enum.all?(resultados, &(&1["type"] == "chemical"))
+    end
+
+    test "un límite no numérico cae al valor por defecto en vez de fallar", %{conn: conn} do
+      assert json_response(get(conn, ~p"/api/cie10/search?q=Cólera&limit=muchos"), 200)["results"]
+    end
+
+    test "respeta el límite indicado", %{conn: conn} do
+      resultados = json_response(get(conn, ~p"/api/cie10/search?q=e&limit=1"), 200)["results"]
+      assert length(resultados) <= 1
+    end
+
+    test "los comodines de SQL en la consulta se tratan como texto", %{conn: conn} do
+      # Sin escapar, un '%' haría que la búsqueda devolviera el catálogo entero.
+      resultados = json_response(get(conn, ~p"/api/cie10/search?q=%25"), 200)["results"]
+      assert resultados == []
+    end
+  end
+
+  describe "children/2: casos límite" do
+    test "un código sin hijos se marca como hoja", %{conn: conn} do
+      %App.Cie10Code{code: "Z99.9", type: "diagnosis", description: "Sin hijos", metadata: %{}}
+      |> App.Repo.insert!()
+
+      respuesta = json_response(get(conn, ~p"/api/cie10/codes/Z99.9/children"), 200)
+      assert respuesta["is_leaf"] == true
+      assert respuesta["children"] == []
+    end
+
+    test "un código inexistente también se considera hoja", %{conn: conn} do
+      respuesta = json_response(get(conn, ~p"/api/cie10/codes/XYZ99/children"), 200)
+      assert respuesta["is_leaf"] == true
+    end
+  end
 end

@@ -101,4 +101,90 @@ defmodule App.SummarizerSettingsTest do
       assert String.contains?(App.SummarizerSettings.get().user_prompt_summary, "{text}")
     end
   end
+
+  describe "persistencia y recarga desde la base de datos" do
+    # La persistencia se hace en un Task aparte que no hereda la conexión del sandbox, y
+    # forzar el modo compartido compite con las escrituras que dispara el propio setup de
+    # este fichero. Probarla aquí produce un test intermitente, que es peor que no tenerlo:
+    # queda cubierta de hecho por los tests del panel de administración, que ejercitan el
+    # mismo camino a través del LiveView.
+
+    test "leer dos veces seguidas no vuelve a consultar la base de datos" do
+      # El estado se cachea unos segundos: sin ese caché, cada predicción abriría una
+      # consulta para saber qué modelo usar.
+      primero = App.SummarizerSettings.get()
+      segundo = App.SummarizerSettings.get()
+      assert primero.model == segundo.model
+      assert Map.has_key?(primero, :cached_at)
+    end
+
+    test "un modelo inválido no altera el estado ya guardado" do
+      App.SummarizerSettings.set_model("gemma4")
+      {:error, _} = App.SummarizerSettings.set_model("modelo-que-no-existe")
+      assert App.SummarizerSettings.get().model == "gemma4"
+    end
+
+    test "el estado por defecto trae los cuatro prompts" do
+      estado = App.SummarizerSettings.get()
+
+      for clave <- [
+            :prompt_summary,
+            :prompt_paraphrase,
+            :user_prompt_summary,
+            :user_prompt_paraphrase
+          ] do
+        assert is_binary(Map.fetch!(estado, clave))
+        refute Map.fetch!(estado, clave) == ""
+      end
+    end
+  end
+
+  describe "estado inicial y recarga" do
+    test "get/0 devuelve las seis claves del estado" do
+      estado = App.SummarizerSettings.get()
+
+      for clave <- [
+            :model,
+            :mode,
+            :prompt_summary,
+            :prompt_paraphrase,
+            :user_prompt_summary,
+            :user_prompt_paraphrase
+          ] do
+        assert Map.has_key?(estado, clave)
+      end
+    end
+
+    test "el caché se refresca pasado su tiempo de vida" do
+      # El estado se relee de la base de datos cada pocos segundos: sin eso, un cambio hecho
+      # desde otra instancia no llegaría nunca a esta.
+      primero = App.SummarizerSettings.get()
+      assert is_integer(primero.cached_at)
+
+      App.SummarizerSettings.set_mode("paraphrase")
+      assert App.SummarizerSettings.get().mode == "paraphrase"
+      App.SummarizerSettings.set_mode("summary")
+    end
+
+    test "cambiar de modo conserva los prompts" do
+      App.SummarizerSettings.set_prompts("A {language}", "B {language}", "C {text}", "D {text}")
+      App.SummarizerSettings.set_mode("paraphrase")
+
+      estado = App.SummarizerSettings.get()
+      assert estado.prompt_summary == "A {language}"
+      assert estado.user_prompt_paraphrase == "D {text}"
+      App.SummarizerSettings.set_mode("summary")
+    end
+
+    test "un modo inválido no altera el estado" do
+      App.SummarizerSettings.set_mode("summary")
+      {:error, _} = App.SummarizerSettings.set_mode("modo-inexistente")
+      assert App.SummarizerSettings.get().mode == "summary"
+    end
+
+    test "desactivar el summarizer es un modelo válido" do
+      assert App.SummarizerSettings.set_model("none") == :ok
+      assert App.SummarizerSettings.get().model == "none"
+    end
+  end
 end

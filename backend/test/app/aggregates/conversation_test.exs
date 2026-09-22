@@ -355,4 +355,83 @@ defmodule App.Aggregates.ConversationTest do
       assert "J45.0" in updated.rejected_codes
     end
   end
+
+  describe "reconstrucción del estado a partir de los eventos" do
+    # El agregado se reconstruye reproduciendo su historial: si un `apply` pierde un dato,
+    # las decisiones posteriores se toman sobre un estado que no corresponde a lo ocurrido.
+    test "rechazar un código lo añade a la lista de rechazados" do
+      conv =
+        %Conversation{conversation_id: "c1"}
+        |> Conversation.apply(%CodeRejected{
+          conversation_id: "c1",
+          code_id: "x",
+          cie10_code: "I10",
+          rejection_reason: "no procede",
+          rejected_by: "codificador",
+          rejected_at: DateTime.utc_now()
+        })
+
+      assert "I10" in conv.rejected_codes
+    end
+
+    test "validar un código lo añade a la lista de validados" do
+      conv =
+        %Conversation{conversation_id: "c1"}
+        |> Conversation.apply(%CodeValidated{
+          conversation_id: "c1",
+          code_id: "x",
+          cie10_code: "E11.9",
+          validated_by: "codificador",
+          validation_timestamp: DateTime.utc_now()
+        })
+
+      assert "E11.9" in conv.validated_codes
+    end
+
+    test "recibir la predicción cierra el análisis pendiente" do
+      conv =
+        %Conversation{conversation_id: "c1", pending_analysis: true}
+        |> Conversation.apply(%AIPredictionReceived{conversation_id: "c1"})
+
+      refute conv.pending_analysis
+    end
+
+    test "pedir un análisis lo marca como pendiente" do
+      conv =
+        %Conversation{conversation_id: "c1"}
+        |> Conversation.apply(%AnalysisRequested{conversation_id: "c1"})
+
+      assert conv.pending_analysis
+    end
+
+    test "un mensaje queda registrado en el agregado" do
+      conv =
+        %Conversation{conversation_id: "c1"}
+        |> Conversation.apply(%MessageSent{
+          conversation_id: "c1",
+          message_id: "m1",
+          user_id: "u1",
+          content: "informe",
+          timestamp: DateTime.utc_now()
+        })
+
+      assert [%{message_id: "m1", content: "informe"}] = conv.messages
+    end
+  end
+
+  describe "rechazo de un código ya validado" do
+    test "no se puede rechazar lo que ya se validó" do
+      conv = %Conversation{conversation_id: "c1", validated_codes: ["I10"]}
+
+      cmd = %RejectCode{
+        conversation_id: "c1",
+        code_id: "x",
+        cie10_code: "I10",
+        rejection_reason: "cambio de opinión",
+        rejected_by: "codificador"
+      }
+
+      assert {:error, :cannot_reject_validated_code} = Conversation.execute(conv, cmd)
+    end
+  end
 end

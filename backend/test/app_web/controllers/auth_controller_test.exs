@@ -229,4 +229,143 @@ defmodule AppWeb.AuthControllerTest do
       assert conn.status == 401
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Derechos RGPD: portabilidad (art. 20) y supresión (art. 17)
+  # ---------------------------------------------------------------------------
+
+  describe "export/2" do
+    test "devuelve los datos del usuario y sus conversaciones", %{conn: conn} do
+      user = user_fixture()
+      conv = conversation_fixture(user)
+
+      %App.Projections.MessageProjection{
+        message_id: UUID.uuid4(),
+        conversation_id: conv.id,
+        user_id: to_string(user.id),
+        content: "Informe de prueba",
+        message_type: "user",
+        timestamp: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+      |> App.Repo.insert!()
+
+      conn =
+        conn
+        |> then(fn c ->
+          {k, v} = auth_header(user)
+          put_req_header(c, k, v)
+        end)
+        |> get(~p"/api/users/export")
+
+      datos = json_response(conn, 200)
+      assert datos["user"]["email"] == user.email
+      assert length(datos["conversations"]) == 1
+      assert hd(hd(datos["conversations"])["messages"])["content"] == "Informe de prueba"
+    end
+
+    test "sin conversaciones devuelve la lista vacía", %{conn: conn} do
+      user = user_fixture()
+
+      conn =
+        conn
+        |> then(fn c ->
+          {k, v} = auth_header(user)
+          put_req_header(c, k, v)
+        end)
+        |> get(~p"/api/users/export")
+
+      assert json_response(conn, 200)["conversations"] == []
+    end
+
+    test "sin autenticación devuelve 401", %{conn: conn} do
+      assert conn |> get(~p"/api/users/export") |> Map.fetch!(:status) == 401
+    end
+  end
+
+  describe "delete_account/2" do
+    test "borra al usuario y todo lo que cuelga de él", %{conn: conn} do
+      user = user_fixture()
+      conv = conversation_fixture(user)
+
+      %App.Projections.MessageProjection{
+        message_id: UUID.uuid4(),
+        conversation_id: conv.id,
+        user_id: to_string(user.id),
+        content: "dato personal",
+        message_type: "user",
+        timestamp: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+      |> App.Repo.insert!()
+
+      conn =
+        conn
+        |> then(fn c ->
+          {k, v} = auth_header(user)
+          put_req_header(c, k, v)
+        end)
+        |> delete(~p"/api/users/account")
+
+      assert json_response(conn, 200)["ok"] == true
+
+      # El derecho de supresión no se cumple borrando solo la fila del usuario: los mensajes
+      # y las conversaciones contienen datos clínicos y tienen que irse con él.
+      refute App.Repo.get(App.Accounts.User, user.id)
+      assert App.Repo.aggregate(App.Projections.ConversationProjection, :count) == 0
+      assert App.Repo.aggregate(App.Projections.MessageProjection, :count) == 0
+    end
+
+    test "no toca los datos de otros usuarios", %{conn: conn} do
+      victima = user_fixture()
+      otro = user_fixture()
+      conversation_fixture(otro)
+
+      conn
+      |> then(fn c ->
+        {k, v} = auth_header(victima)
+        put_req_header(c, k, v)
+      end)
+      |> delete(~p"/api/users/account")
+
+      assert App.Repo.get(App.Accounts.User, otro.id)
+      assert App.Repo.aggregate(App.Projections.ConversationProjection, :count) == 1
+    end
+
+    test "sin autenticación devuelve 401", %{conn: conn} do
+      assert conn |> delete(~p"/api/users/account") |> Map.fetch!(:status) == 401
+    end
+  end
+
+  describe "update_locale/2 casos adicionales" do
+    test "rechaza un idioma que la interfaz no sabe servir", %{conn: conn} do
+      user = user_fixture()
+
+      conn =
+        conn
+        |> then(fn c ->
+          {k, v} = auth_header(user)
+          put_req_header(c, k, v)
+        end)
+        |> put(~p"/api/users/locale", %{"locale" => "klingon"})
+
+      assert json_response(conn, 422)["error"]
+      # El idioma anterior se conserva: un valor inválido no deja al usuario peor que antes.
+      assert App.Repo.get(App.Accounts.User, user.id).locale == "es"
+    end
+
+    test "acepta los cinco idiomas de la interfaz", %{conn: conn} do
+      user = user_fixture()
+
+      for locale <- App.Accounts.idiomas_admitidos() do
+        respuesta =
+          build_conn()
+          |> then(fn c ->
+            {k, v} = auth_header(user)
+            put_req_header(c, k, v)
+          end)
+          |> put(~p"/api/users/locale", %{"locale" => locale})
+
+        assert json_response(respuesta, 200)["locale"] == locale
+      end
+    end
+  end
 end

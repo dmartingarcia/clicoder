@@ -31,6 +31,18 @@ defmodule App.Accounts do
 
   def get_user(id), do: Repo.get(User, id)
 
+  # Los idiomas que la interfaz sabe servir. Guardar cualquier otro no falla en el momento,
+  # pero deja al usuario con una interfaz que cae al idioma por defecto y con los correos en
+  # un idioma que nadie eligió, así que se rechaza al entrar en vez de degradar en silencio.
+  @idiomas_admitidos ~w(es en fr it de)
+
+  @doc "Idiomas admitidos por la interfaz."
+  def idiomas_admitidos, do: @idiomas_admitidos
+
+  def update_locale(_user_id, locale) when locale not in @idiomas_admitidos do
+    {:error, :unsupported_locale}
+  end
+
   def update_locale(user_id, locale) do
     case get_user(user_id) do
       nil ->

@@ -52,6 +52,9 @@ defmodule App.MixProject do
       {:ecto_sql, "~> 3.13"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_live_dashboard, "~> 0.8.3"},
+      # Requerido por Phoenix.LiveViewTest para inspeccionar el HTML renderizado;
+      # sin él no se pueden probar las vistas del backoffice.
+      {:lazy_html, ">= 0.1.0", only: :test},
       {:ecto_psql_extras, "~> 0.8"},
       {:swoosh, "~> 1.16"},
       {:req, "~> 0.5"},
