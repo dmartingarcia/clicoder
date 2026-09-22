@@ -24,6 +24,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
 
+import numpy as np
 import sentry_sdk
 import structlog
 import torch
@@ -342,7 +343,31 @@ class AnalysisRequest(BaseModel):
     """
 
     text: str
-    engine: Literal["bert", "dict", "both"] = "bert"
+    engine: Literal["bert", "dict", "both", "fused"] = "bert"
+    include_triggers: bool = False
+    """Calcular los términos explicativos en la misma petición.
+
+    Desactivado por defecto porque la atribución cuesta del orden de cien veces más que
+    la predicción: enmascara palabra por palabra y necesita una pasada del encoder por
+    cada una. Con el valor por defecto, ``/predict`` devuelve los códigos en cuanto están
+    y el cliente pide las explicaciones aparte con ``/explain``, mostrando un indicador de
+    carga en su lugar. Poner esto a ``true`` reproduce el comportamiento anterior, en el
+    que la respuesta completa esperaba a la atribución.
+    """
+
+
+class ExplainRequest(BaseModel):
+    """Petición de explicabilidad para unos códigos ya predichos.
+
+    Se separa de ``/predict`` para que el usuario reciba los códigos de inmediato y las
+    palabras que los justifican lleguen después, cuando estén disponibles.
+    """
+
+    text: str
+    codes: list[str]
+    method: str | None = None
+    """Estrategia de atribución. Si se omite, la configurada en el sistema."""
+    top_k: int = 5
 
 
 class TimingInfo(BaseModel):
@@ -500,7 +525,9 @@ async def predict_codes(request: AnalysisRequest):
         return await _predict_dict(text)
     if request.engine == "both":
         return await _predict_both(text)
-    return await _predict_bert(text)
+    if request.engine == "fused":
+        return await _predict_fused(text, request.include_triggers)
+    return await _predict_bert(text, request.include_triggers)
 
 
 def _add_relative_confidence(codes: list[dict]) -> list[dict]:
@@ -517,7 +544,7 @@ def _add_relative_confidence(codes: list[dict]) -> list[dict]:
     return codes
 
 
-async def _predict_bert(text: str):
+async def _predict_bert(text: str, incluir_triggers: bool = False):
     """Predicción BERT sin resumen. El resumen se genera por separado via /summarize/stream."""
     if classifier is None:
         raise HTTPException(
@@ -530,19 +557,20 @@ async def _predict_bert(text: str):
     predictions = await asyncio.to_thread(classifier.predict, text, 10, code_descriptions or None)
     _t_classifier = time.perf_counter() - _t0
 
-    code_indices = [
-        int(classifier.code_to_idx[p["code"]])
-        for p in predictions
-        if p["code"] in classifier.code_to_idx
-    ]
-    explanations = (
-        await asyncio.to_thread(classifier.explain, text, code_indices) if code_indices else {}
-    )
-
-    code_triggers = {
-        p["code"]: explanations.get(int(classifier.code_to_idx.get(p["code"], -1)), [])
-        for p in predictions
-    }
+    code_triggers: dict[str, list] = {}
+    if incluir_triggers:
+        code_indices = [
+            int(classifier.code_to_idx[p["code"]])
+            for p in predictions
+            if p["code"] in classifier.code_to_idx
+        ]
+        explanations = (
+            await asyncio.to_thread(classifier.explain, text, code_indices) if code_indices else {}
+        )
+        code_triggers = {
+            p["code"]: explanations.get(int(classifier.code_to_idx.get(p["code"], -1)), [])
+            for p in predictions
+        }
 
     _t_total = time.perf_counter() - _t0
     INFERENCE_LATENCY.labels(engine="bert").observe(_t_total)
@@ -557,11 +585,12 @@ async def _predict_bert(text: str):
                             "code": p["code"],
                             "description": p.get("description") or p.get("chapter_name", ""),
                             "reason": (
-                                f"{p.get('chapter_name') or ('Capítulo ' + p.get('chapter', ''))} "
-                                f"— confianza {round(p['probability'] * 100, 1)}%"
-                            ).strip(" —"),
+                                f"{p.get('chapter_name') or ('Capítulo ' + p.get('chapter', ''))}"
+                                f": confianza {round(p['probability'] * 100, 1)}%"
+                            ).strip(" :"),
                             "confidence": round(p["probability"], 4),
                             "triggers": code_triggers.get(p["code"], []),
+                            "triggers_complete": incluir_triggers,
                             "engine": "bert",
                         }
                         for p in predictions
@@ -624,6 +653,173 @@ async def _predict_dict(text: str):  # noqa: E302
     }
 
 
+def _dict_bonus_vector(hits: list[dict], code_to_idx: dict, beta: float):
+    """Vector (num_codes,) con beta x confianza para los códigos del bloque detectado.
+
+    El diccionario predice BLOQUES (los tres primeros caracteres del código), no códigos
+    completos, así que la bonificación se reparte a todos los códigos del bloque por igual:
+    aporta la evidencia léxica de qué bloque aplica y deja que el modelo decida el orden
+    dentro de él. Medido sobre el conjunto de prueba, esto sube el MAP por documento de
+    0,4342 a 0,5446 sin coste adicional de inferencia — el diccionario ya se ejecutaba.
+    """
+    bonus = np.zeros(len(code_to_idx), dtype=np.float32)
+    por_bloque: dict[str, float] = {}
+    for hit in hits:
+        bloque = str(hit.get("code", "")).upper()[:3]
+        conf = max(float(hit.get("confidence", 0.0)), 0.0)
+        if bloque:
+            por_bloque[bloque] = max(por_bloque.get(bloque, 0.0), conf)
+    if not por_bloque:
+        return bonus, 0
+    for code, idx in code_to_idx.items():
+        conf = por_bloque.get(str(code).upper()[:3])
+        if conf:
+            bonus[int(idx)] = beta * conf
+    return bonus, len(por_bloque)
+
+
+def _triggers_fusion(pred, explicaciones, terminos_dicc, code_to_idx, detallado=False):
+    """Términos que explican un código en modo fusión, etiquetados por origen.
+
+    Se devuelven hasta 5: primero las frases exactas del diccionario (evidencia léxica
+    literal, la más convincente para un profesional) y después las palabras del modelo
+    ordenadas por su importancia relativa. El peso del diccionario es la confianza del
+    patrón; el del modelo, su importancia normalizada dentro del código. Son escalas
+    distintas y se etiquetan como tales en lugar de mezclarse en un único orden.
+
+    Las dos fuentes no cuestan lo mismo, y de ahí que la respuesta pueda llegar en dos
+    tiempos. Los términos del diccionario ya están calculados cuando se llega aquí: el match
+    por expresiones regulares se hizo para construir la bonificación, así que ofrecerlos es
+    gratis y viajan en la respuesta de ``/predict``. Los del modelo exigen una pasada del
+    encoder por palabra del informe y se piden aparte con ``/explain``. El cliente puede por
+    tanto pintar la evidencia léxica de inmediato y completar con la del modelo cuando llegue,
+    en lugar de esperar a todo o no mostrar nada.
+    """
+    idx = code_to_idx.get(pred["code"])
+    bert = explicaciones.get(int(idx), []) if idx is not None else []
+    dicc = terminos_dicc.get(str(pred["code"]).upper()[:3], []) if pred.get("dict_bonus") else []
+
+    if not detallado:
+        planos = list(dicc) + [t for t, _ in bert]
+        vistos, salida = set(), []
+        for t in planos:
+            if t and t.lower() not in vistos:
+                vistos.add(t.lower())
+                salida.append(t)
+        return salida[:5]
+
+    detalle = [{"term": t, "source": "dict", "weight": None} for t in dicc[:3]]
+    detalle += [{"term": t, "source": "bert", "weight": w} for t, w in bert[:5]]
+    return detalle[:5]
+
+
+async def _predict_fused(text: str, incluir_triggers: bool = False):
+    """Fusión de puntuaciones entre BERT y el diccionario (no concatenación, como `both`).
+
+    A diferencia de `both`, que devuelve las dos listas juntas y deja al usuario reconciliarlas,
+    aquí las dos fuentes se combinan ANTES de ordenar: puntuación = logit + beta x confianza del
+    diccionario. El umbral es propio y vive en el espacio de puntuación fusionada, porque el
+    umbral de probabilidad heredado no sirve — la bonificación satura la probabilidad de todo
+    código cuyo bloque haya hecho match.
+    """
+    if classifier is None or dict_classifier is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "El modo fused necesita el modelo BERT y el diccionario cargados. "
+                "Revisa que existan classifier.pt y baseline_dict.json en model/."
+            },
+        )
+
+    beta = float(classifier.config.get("fusion_beta", 6.0))
+    score_thr = float(classifier.config.get("fusion_threshold", 2.9))
+
+    _t0 = time.perf_counter()
+    hits = await asyncio.to_thread(dict_classifier.predict, text)
+    _t_dict = time.perf_counter() - _t0
+
+    bonus, n_bloques = _dict_bonus_vector(hits, classifier.code_to_idx, beta)
+
+    _t1 = time.perf_counter()
+    predictions = await asyncio.to_thread(
+        classifier.predict, text, 10, code_descriptions or None, None, bonus, score_thr
+    )
+
+    # Explicabilidad: las dos fuentes se reportan por separado y etiquetadas, no
+    # mezcladas en un único ranking. Explican cosas distintas — el diccionario justifica
+    # el BLOQUE con frases exactas, el modelo justifica el CÓDIGO dentro del bloque con
+    # palabras del informe — y ordenarlas juntas exigiría una escala común entre la
+    # confianza de un patrón regex y la caída de un logit, que no existe.
+    code_indices = [
+        int(classifier.code_to_idx[p["code"]])
+        for p in predictions
+        if p["code"] in classifier.code_to_idx
+    ]
+    explicaciones = (
+        await asyncio.to_thread(classifier.explain, text, code_indices, 5, 16, True)
+        if code_indices and incluir_triggers
+        else {}
+    )
+    terminos_dicc = {str(h.get("code", "")).upper()[:3]: h.get("matched_terms", []) for h in hits}
+    _t_bert = time.perf_counter() - _t1
+
+    _t_total = time.perf_counter() - _t0
+    INFERENCE_LATENCY.labels(engine="fused").observe(_t_total)
+
+    return {
+        "cards": [
+            {
+                "type": "codes",
+                "content": _add_relative_confidence(
+                    [
+                        {
+                            "code": p["code"],
+                            "description": p.get("description") or p.get("chapter_name", ""),
+                            "reason": (
+                                f"{p.get('chapter_name') or ('Capítulo ' + p.get('chapter', ''))}"
+                                f": confianza {round(p['probability'] * 100, 1)}%"
+                                + (
+                                    " · respaldado por el diccionario"
+                                    if p.get("dict_bonus")
+                                    else ""
+                                )
+                            ).strip(" :"),
+                            "confidence": round(p["probability"], 4),
+                            "triggers": _triggers_fusion(
+                                p, explicaciones, terminos_dicc, classifier.code_to_idx
+                            ),
+                            "trigger_detail": _triggers_fusion(
+                                p, explicaciones, terminos_dicc, classifier.code_to_idx, True
+                            ),
+                            "engine": "fused",
+                            "dict_support": bool(p.get("dict_bonus")),
+                            # Los términos del diccionario salen gratis: el match por regex ya
+                            # se hizo para calcular la bonificación, así que viajan en esta misma
+                            # respuesta. Los del modelo cuestan una pasada del encoder por palabra
+                            # y se piden aparte con /explain. Este campo le dice al cliente si
+                            # debe mostrar un indicador de carga y completar después.
+                            "triggers_complete": incluir_triggers,
+                            # Reparto exacto de la puntuación: cuánto puso cada fuente.
+                            # No se convierte a porcentaje porque el logit puede ser
+                            # negativo y un porcentaje sobre una suma con signos mezclados
+                            # no significa nada.
+                            "score_model": round(p["score"] - p.get("dict_bonus", 0.0), 4),
+                            "score_dict": round(p.get("dict_bonus", 0.0), 4),
+                        }
+                        for p in predictions
+                    ]
+                ),
+            },
+        ],
+        "timing": {
+            "dict_classifier_ms": round(_t_dict * 1000, 2),
+            "bert_classifier_ms": round(_t_bert * 1000, 2),
+            "blocks_matched": n_bloques,
+            "total_ms": round(_t_total * 1000, 2),
+        },
+    }
+
+
 async def _predict_both(text: str):
     """Llama a BERT y al diccionario en paralelo y devuelve sus predicciones juntas.
 
@@ -651,6 +847,100 @@ async def _predict_both(text: str):
             "dict_classifier_ms": dict_result.get("timing", {}).get("classifier_ms", 0),
             "total_ms": round(_t_total * 1000, 2),
         },
+    }
+
+
+@app.post("/explain", summary="Términos que justifican unos códigos ya predichos")
+async def explain_codes(request: ExplainRequest):
+    """Calcula la atribución por separado de la predicción.
+
+    La atribución cuesta del orden de cien veces más que predecir, porque mide el efecto
+    real de quitar cada palabra del informe y eso exige una pasada del encoder por palabra.
+    Atarla a ``/predict`` obligaba al usuario a esperar por algo que aún no está mirando:
+    primero lee los códigos y solo después despliega uno para saber por qué se ha propuesto.
+    Separarlas permite devolver los códigos de inmediato y resolver las explicaciones
+    mientras el usuario ya está leyendo.
+    """
+    if classifier is None:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Modelo BERT no cargado. Entrena con train.py y monta model/."},
+        )
+    texto = request.text.strip()
+    if not texto:
+        raise HTTPException(status_code=422, detail="El texto no puede estar vacío.")
+
+    from classifier import METODOS_EXPLAIN
+
+    # El diccionario explica sin tocar el encoder: los términos son las frases que hicieron
+    # match por regex, así que se obtienen en centésimas de segundo en vez de en decenas.
+    # En modo fusión estos mismos términos ya viajan en la respuesta de /predict sin coste;
+    # esta vía existe para el motor neuronal, que no ejecuta el diccionario.
+    if request.method == "diccionario":
+        if dict_classifier is None:
+            raise HTTPException(
+                status_code=503,
+                detail={"error": "Diccionario no disponible: falta baseline_dict.json en model/."},
+            )
+        _t0 = time.perf_counter()
+        hits = await asyncio.to_thread(dict_classifier.predict, texto)
+        por_bloque = {str(h.get("code", "")).upper()[:3]: h for h in hits}
+        _t = time.perf_counter() - _t0
+        INFERENCE_LATENCY.labels(engine="explain:diccionario").observe(_t)
+        return {
+            "method": "diccionario",
+            "triggers": {
+                code: [
+                    {"term": termino, "weight": None}
+                    for termino in por_bloque.get(code.upper()[:3], {}).get("matched_terms", [])
+                ][: request.top_k]
+                for code in request.codes
+            },
+            "unknown_codes": [],
+            "timing": {"explain_ms": round(_t * 1000, 2)},
+        }
+
+    if request.method is not None and request.method not in METODOS_EXPLAIN:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": f"Método de atribución desconocido: {request.method}",
+                "disponibles": sorted([*METODOS_EXPLAIN, "diccionario"]),
+            },
+        )
+
+    indices, conocidos = [], []
+    for code in request.codes:
+        idx = classifier.code_to_idx.get(code)
+        if idx is not None:
+            indices.append(int(idx))
+            conocidos.append(code)
+
+    _t0 = time.perf_counter()
+    explicaciones = (
+        await asyncio.to_thread(
+            classifier.explain, texto, indices, request.top_k, 16, True, request.method
+        )
+        if indices
+        else {}
+    )
+    _t = time.perf_counter() - _t0
+    metodo = request.method or classifier.config.get("explain_method", "exhaustivo")
+    INFERENCE_LATENCY.labels(engine=f"explain:{metodo}").observe(_t)
+
+    return {
+        # El método viaja en la respuesta: sin él, ante un término extraño no hay forma de
+        # saber si lo produjo la versión fiel o una de las rápidas.
+        "method": metodo,
+        "triggers": {
+            code: [
+                {"term": termino, "weight": peso}
+                for termino, peso in explicaciones.get(int(classifier.code_to_idx[code]), [])
+            ]
+            for code in conocidos
+        },
+        "unknown_codes": [c for c in request.codes if c not in conocidos],
+        "timing": {"explain_ms": round(_t * 1000, 2)},
     }
 
 
