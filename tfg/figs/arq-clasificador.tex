@@ -1,0 +1,42 @@
+% Arquitectura del clasificador plano multilabel CIE-10
+% Uso: \input{figs/arq-clasificador} dentro de figure+\centering+\resizebox{\textwidth}{!}{...}
+% Flujo: informe → tokenizador → encoder RigoBERTa-Clinical → [CLS] → dropout → lineal → sigmoide → umbral
+
+\begin{tikzpicture}[
+  every node/.style={font=\small\sffamily},
+  io/.style={draw=palered!80, fill=palered!10, thick, rectangle, rounded corners=3pt,
+             minimum width=2.1cm, minimum height=1.0cm, align=center},
+  enc/.style={draw=aquaESI!80, fill=aquaESI!15, thick, rectangle, rounded corners=3pt,
+              minimum width=3.0cm, minimum height=1.7cm, align=center},
+  blk/.style={draw=gray!60, fill=gray!10, thick, rectangle, rounded corners=3pt,
+              minimum width=1.9cm, minimum height=1.0cm, align=center},
+  res/.style={draw=ocre!80, fill=ocre!18, thick, rectangle, rounded corners=3pt,
+              minimum width=2.1cm, minimum height=1.0cm, align=center},
+  arr/.style={->, >=Stealth, thick},
+  node distance=0.65cm
+]
+
+\node[io] (inp) {Informe\\clínico};
+\node[blk, right=of inp] (tok) {Tokenizador\\\scriptsize $\leq$512 tokens};
+\node[enc, right=of tok] (enc) {\textbf{Encoder}\\RigoBERTa-Clinical\\\scriptsize XLM-R-large, 24 capas\\\scriptsize freeze=20 (4 entrenables)};
+\node[blk, right=of enc] (cls) {token [CLS]\\\scriptsize 1024-d};
+\node[blk, right=of cls] (drp) {Dropout\\\scriptsize 0,3};
+\node[blk, right=of drp] (lin) {Capa lineal\\\scriptsize 1024$\to$1767};
+\node[res, right=of lin] (sig) {Sigmoide\\\scriptsize por código};
+\node[res, right=of sig] (thr) {Umbral 0,3\\\scriptsize $\to$ códigos};
+
+\draw[arr] (inp) -- (tok);
+\draw[arr] (tok) -- (enc);
+\draw[arr] (enc) -- (cls);
+\draw[arr] (cls) -- (drp);
+\draw[arr] (drp) -- (lin);
+\draw[arr] (lin) -- (sig);
+\draw[arr] (sig) -- (thr);
+
+% Nota: preentrenamiento débil antes del fine-tuning
+\node[draw=turquesa!70, fill=turquesa!12, thick, rectangle, rounded corners=3pt,
+      align=center, font=\scriptsize\sffamily, below=1.1cm of enc, text width=4.6cm]
+      (pre) {\textbf{Preentrenamiento débil}\\descripciones CIE-10-ES + \emph{snippets} del task\_X\\$\rightarrow$ \emph{fine-tuning} sobre CodiEsp};
+\draw[arr, turquesa!80, dashed] (pre) -- (enc);
+
+\end{tikzpicture}

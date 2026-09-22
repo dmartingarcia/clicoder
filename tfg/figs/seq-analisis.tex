@@ -1,59 +1,62 @@
--% Diagrama de secuencia — Análisis de informe clínico
+-% Diagrama de secuencia, Análisis de informe clínico
 % Uso: \input{figs/seq-analisis} dentro de figure+\centering+\resizebox{\textwidth}{!}{...}
 %
 % Participantes (x): Usuario=0, Frontend=3.6, Backend=7.2, AI Engine=11
 % Tiempo (y): crece hacia abajo (negativo en tikz)
 
 \begin{tikzpicture}[
-  every node/.style={font=\small\sffamily},
-  % Cabecera de participante
-  phead/.style={
-    draw=aquaESI!80, fill=aquaESI!20, thick,
-    rectangle, rounded corners=3pt,
-    minimum width=2.4cm, minimum height=0.75cm, align=center
-  },
-  % Línea de vida
-  life/.style={draw=gray!40, thick, dashed},
-  % Mensaje síncrono (flecha llena)
-  sync/.style={->, >=Stealth, thick, aquaESI!80},
-  % Mensaje de retorno (flecha discontinua)
-  ret/.style={->, >=Stealth, dashed, thick, gray!60},
-  % Nota lateral
-  note/.style={
-    draw=ocre!60, fill=ocre!10,
-    rectangle, rounded corners=2pt,
-    font=\scriptsize\sffamily, inner sep=3pt, align=left
-  },
-  % Etiqueta de mensaje
-  msglbl/.style={font=\scriptsize\sffamily, fill=white,
-                 inner sep=1pt, above, midway}
+ every node/.style={font=\small\sffamily},
+ % Cabecera de participante
+ phead/.style={
+ draw=aquaESI!80, fill=aquaESI!20, thick,
+ rectangle, rounded corners=3pt,
+ minimum width=2.4cm, minimum height=0.75cm, align=center
+ },
+ % Línea de vida
+ life/.style={draw=gray!40, thick, dashed},
+ % Mensaje síncrono (flecha llena)
+ sync/.style={->, >=Stealth, thick, aquaESI!80},
+ % Mensaje de retorno (flecha discontinua)
+ ret/.style={->, >=Stealth, dashed, thick, gray!60},
+ % Nota lateral
+ note/.style={
+ draw=ocre!60, fill=ocre!10,
+ rectangle, rounded corners=2pt,
+ font=\scriptsize\sffamily, inner sep=3pt, align=left
+ },
+ % Etiqueta de mensaje
+ msglbl/.style={font=\scriptsize\sffamily, fill=white,
+ inner sep=1pt, above, midway}
 ]
 
 %% ---- COORDENADAS X de cada participante ----
-\def\xu{0}      % Usuario
-\def\xf{3.6}    % Frontend
-\def\xb{7.2}    % Backend
-\def\xa{11.0}   % AI Engine
+\def\xu{0} % Usuario
+\def\xf{3.6} % Frontend
+\def\xb{7.2} % Backend
+\def\xa{11.0} % AI Engine
 
 %% ---- CABECERAS ----
-\node[phead] at (\xu, 0)  {\textbf{Usuario}};
-\node[phead] at (\xf, 0)  {\textbf{Frontend}};
-\node[phead] at (\xb, 0)  {\textbf{Backend}};
-\node[phead] at (\xa, 0)  {\textbf{AI Engine}};
+\node[phead] at (\xu, 0) {\textbf{Usuario}};
+\node[phead] at (\xf, 0) {\textbf{Frontend}};
+\node[phead] at (\xb, 0) {\textbf{Backend}};
+\node[phead] at (\xa, 0) {\textbf{AI Engine}};
 
 %% ---- LÍNEAS DE VIDA ----
-\draw[life] (\xu,-0.38) -- (\xu,-10.2);
-\draw[life] (\xf,-0.38) -- (\xf,-10.2);
-\draw[life] (\xb,-0.38) -- (\xb,-10.2);
-\draw[life] (\xa,-0.38) -- (\xa,-10.2);
+\draw[life] (\xu,-0.38) -- (\xu,-13.0);
+\draw[life] (\xf,-0.38) -- (\xf,-13.0);
+\draw[life] (\xb,-0.38) -- (\xb,-13.0);
+\draw[life] (\xa,-0.38) -- (\xa,-13.0);
 
 %% ---- ACTIVACIONES (barras sobre línea de vida) ----
 % Backend activo durante la llamada al AI Engine
 \filldraw[draw=aquaESI!70, fill=aquaESI!25]
-  (\xb-0.12,-2.2) rectangle (\xb+0.12,-6.8);
-% AI Engine activo durante inferencia
+ (\xb-0.12,-2.2) rectangle (\xb+0.12,-11.6);
+% AI Engine activo durante la predicción
 \filldraw[draw=turquesa!70, fill=turquesa!20]
-  (\xa-0.12,-2.8) rectangle (\xa+0.12,-5.8);
+ (\xa-0.12,-2.8) rectangle (\xa+0.12,-5.8);
+% AI Engine activo durante la atribución, mucho más larga
+\filldraw[draw=turquesa!70, fill=turquesa!20]
+ (\xa-0.12,-8.0) rectangle (\xa+0.12,-10.8);
 
 %% ---- MENSAJES ----
 
@@ -65,34 +68,45 @@
 
 % 3. Backend: despacha comando (auto-mensaje)
 \draw[sync, rounded corners=4pt]
-  (\xb,-2.4) -- ++(0.6,0) -- ++(0,-0.55) -- node[right, font=\scriptsize\sffamily]
-  {3: dispatch(AnalyzeReport)} ++(-0.6,0);
+ (\xb,-2.4) -- ++(0.6,0) -- ++(0,-0.55) -- node[right, font=\scriptsize\sffamily]
+ {3: dispatch(AnalyzeReport)} ++(-0.6,0);
 
 % 4. Backend → AI Engine
-\draw[sync] (\xb,-3.6) -- node[msglbl]{4:\enspace POST /predict \{text\}} (\xa,-3.6);
+\draw[sync] (\xb,-3.6) -- node[msglbl]{4:\enspace POST /predict + /summarize/stream (paralelo)} (\xa,-3.6);
 
 % 5. AI Engine → Backend (respuesta)
 \draw[ret] (\xa,-5.2) -- node[msglbl]{5:\enspace \{codes, confidence\_scores\}} (\xb,-5.2);
 
 % 6. Backend: despacha evento (auto-mensaje)
 \draw[sync, rounded corners=4pt]
-  (\xb,-6.0) -- ++(0.6,0) -- ++(0,-0.55) -- node[right, font=\scriptsize\sffamily]
-  {6: dispatch(ReceiveAIPrediction) → Event Store} ++(-0.6,0);
+ (\xb,-5.9) -- ++(0.6,0) -- ++(0,-0.5) -- node[right, font=\scriptsize\sffamily]
+ {6: dispatch(ReceiveAIPrediction) → Event Store} ++(-0.6,0);
 
-% 7. Backend → Frontend: tarjeta resumen
-\draw[ret] (\xb,-7.4) -- node[msglbl]{7:\enspace [WS] card:summary} (\xf,-7.4);
+% 7. Backend → Frontend: tarjeta de códigos
+\draw[ret] (\xb,-6.9) -- node[msglbl]{7:\enspace [WS] analysis\_card\_received: codes} (\xf,-6.9);
 
-% 8. Backend → Frontend: tarjeta códigos
-\draw[ret] (\xb,-8.2) -- node[msglbl]{8:\enspace [WS] card:codes} (\xf,-8.2);
+% 8. Backend → AI Engine: atribución en segunda llamada, no bloquea
+\draw[sync] (\xb,-7.8) -- node[msglbl]{8:\enspace POST /explain (no bloquea)} (\xa,-7.8);
 
-% 9. Backend → Frontend: tarjeta recomendaciones
-\draw[ret] (\xb,-9.0) -- node[msglbl]{9:\enspace [WS] card:recommendations} (\xf,-9.0);
+% 9. Backend → Frontend: resumen en streaming (token a token)
+\draw[ret] (\xb,-8.7) -- node[msglbl]{9:\enspace [WS] summary\_token ($\times$N)} (\xf,-8.7);
 
-% 10. Frontend → Usuario
-\draw[ret] (\xf,-9.8) -- node[msglbl]{10:\enspace muestra tarjetas de análisis} (\xu,-9.8);
+% 10. Backend → Frontend: resumen completo
+\draw[ret] (\xb,-9.5) -- node[msglbl]{10:\enspace [WS] card summary + analysis\_complete} (\xf,-9.5);
 
-%% ---- NOTA LATERAL ----
+% 11. AI Engine → Backend: términos explicativos
+\draw[ret] (\xa,-11.0) -- node[msglbl]{11:\enspace \{triggers, method\}} (\xb,-11.0);
+
+% 12. Backend → Frontend: términos, cuando llegan
+\draw[ret] (\xb,-11.8) -- node[msglbl]{12:\enspace [WS] triggers\_received} (\xf,-11.8);
+
+% 13. Frontend → Usuario
+\draw[ret] (\xf,-12.6) -- node[msglbl]{13:\enspace completa los términos de cada código} (\xu,-12.6);
+
+%% ---- NOTAS LATERALES ----
 \node[note, right=0.3cm] at (\xa,-4.4)
-  {Inferencia BERT\\(GPU)};
+ {Inferencia BERT\\y resumen (LLM)};
+\node[note, right=0.3cm] at (\xa,-9.4)
+ {Atribución por\\enmascarado:\\dos órdenes de\\magnitud más lenta\\que la predicción};
 
 \end{tikzpicture}

@@ -37,6 +37,7 @@ Almacena los usuarios registrados en el sistema.
 \texttt{confirmation\_token} & \texttt{varchar}       & NULLABLE          & Token de confirmación por email. \\
 \texttt{confirmed\_at}       & \texttt{timestamptz}   & NULLABLE          & Fecha de confirmación de la cuenta. \\
 \texttt{locale}              & \texttt{varchar}       & DEFAULT \texttt{'es'} & Idioma preferido (\texttt{es} o \texttt{en}). \\
+\texttt{is\_admin}           & \texttt{boolean}       & NOT NULL, DEFAULT \texttt{false} & Distingue a los administradores con acceso al \emph{backoffice}. \\
 \texttt{inserted\_at}        & \texttt{timestamptz}   & NOT NULL          & Fecha de creación. \\
 \texttt{updated\_at}         & \texttt{timestamptz}   & NOT NULL          & Fecha de última modificación. \\
 \hline
@@ -110,7 +111,7 @@ Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para 
 \hline
 \texttt{id}               & \texttt{uuid}    & PK, NOT NULL           & Identificador interno. \\
 \texttt{card\_id}         & \texttt{varchar} & UNIQUE, NOT NULL       & UUID de la tarjeta. \\
-\texttt{card\_type}       & \texttt{varchar} & NOT NULL               & Tipo: \texttt{summary}, \texttt{codes} o \texttt{recommendations}. \\
+\texttt{card\_type}       & \texttt{varchar} & NOT NULL               & Tipo: \texttt{summary} o \texttt{codes}. \\
 \texttt{content}          & \texttt{text}    & NOT NULL               & JSON (tipo \texttt{codes}) o texto libre. \\
 \texttt{position}         & \texttt{integer} & NOT NULL               & Orden de renderizado dentro del mensaje. \\
 \texttt{message\_id}      & \texttt{varchar} & NOT NULL, INDEX        & UUID del mensaje al que pertenece. \\
@@ -235,6 +236,6 @@ Los eventos registrados son: \texttt{ConversationStarted}, \texttt{MessageSent},
 \begin{itemize}
     \item Un \textbf{usuario} tiene cero o más \textbf{conversaciones}.
     \item Una \textbf{conversación} tiene cero o más \textbf{mensajes}, \textbf{tarjetas de análisis}, \textbf{códigos predichos} y \textbf{sugerencias de código}. Al eliminar una conversación, todos sus registros dependientes se eliminan en cascada.
-    \item Un \textbf{mensaje} de tipo \texttt{analysis} tiene exactamente tres \textbf{tarjetas de análisis}: \texttt{summary} (posición 0), \texttt{codes} (posición 1) y \texttt{recommendations} (posición 2).
+    \item Un \textbf{mensaje} de tipo \texttt{analysis} tiene dos \textbf{tarjetas de análisis}: \texttt{summary} (posición 0) y \texttt{codes} (posición 1).
     \item Un \textbf{código predicho} hace referencia a un código del \textbf{catálogo CIE-10-ES} a través del campo \texttt{cie10\_code}, aunque no existe una clave foránea explícita para permitir predicciones de códigos aún no importados al catálogo.
 \end{itemize}

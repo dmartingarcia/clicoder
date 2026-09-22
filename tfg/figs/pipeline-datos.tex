@@ -1,0 +1,30 @@
+% Pipeline de datos: adquisición -> CSV -> preprocesado -> particiones -> entrenamiento
+% Uso: \input{figs/pipeline-datos} dentro de figure+\centering+\resizebox{...}{!}{...}
+
+\begin{tikzpicture}[
+  every node/.style={font=\small\sffamily},
+  src/.style={draw=palered!80, fill=palered!10, thick, rectangle, rounded corners=3pt,
+              minimum width=2.8cm, minimum height=1.1cm, align=center},
+  csvn/.style={draw=gray!60, fill=gray!10, thick, rectangle, rounded corners=3pt,
+               minimum width=3.0cm, minimum height=1.1cm, align=center},
+  proc/.style={draw=aquaESI!80, fill=aquaESI!15, thick, rectangle, rounded corners=3pt,
+               minimum width=2.8cm, minimum height=1.2cm, align=center},
+  fin/.style={draw=ocre!80, fill=ocre!15, thick, rectangle, rounded corners=3pt,
+              minimum width=2.6cm, minimum height=1.2cm, align=center},
+  arr/.style={->, >=Stealth, thick},
+]
+\node[src] (ecie) at (0,1.3) {eCIE-maps\\\scriptsize \emph{scraping} (Sanidad)};
+\node[src] (codi) at (0,-1.3) {CodiEsp\\\scriptsize descarga (IberLEF)};
+\node[csvn] (ccsv) at (3.6,1.3) {\texttt{cie10-*.csv}\\\scriptsize diag./proc./fármacos};
+\node[csvn] (dcsv) at (3.6,-1.3) {\texttt{codiesp\_*.csv}\\\scriptsize notas + anotaciones};
+\node[proc] (pre) at (7.3,0) {Preprocesado\\\scriptsize limpieza +\\formato multilabel};
+\node[csvn] (spl) at (10.7,0) {Particiones\\\scriptsize train / val / test};
+\node[fin] (trn) at (13.7,0) {Entrenamiento\\\scriptsize del clasificador};
+
+\draw[arr] (ecie) -- (ccsv);
+\draw[arr] (codi) -- (dcsv);
+\draw[arr] (ccsv) -- (pre);
+\draw[arr] (dcsv) -- (pre);
+\draw[arr] (pre) -- (spl);
+\draw[arr] (spl) -- (trn);
+\end{tikzpicture}

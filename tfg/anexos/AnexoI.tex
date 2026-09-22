@@ -9,7 +9,7 @@ La elección de un VPS frente a proveedores cloud gestionados responde principal
 
 La simplicidad operativa es el segundo factor. No hay clúster que gestionar, ni \emph{control plane}, ni herramientas adicionales: \texttt{provision.sh} + \texttt{make setup} + \texttt{make deploy} y el sistema está en funcionamiento. El número de piezas que pueden fallar es mínimo.
 
-La portabilidad futura no se compromete: todos los servicios están dockerizados y la única pieza específica del entorno es el fichero \texttt{docker-compose.cpu.yml}. Si en el futuro el volumen de usuarios justifica el coste de un clúster cloud o Kubernetes, la migración no requiere cambios en ningún componente de la aplicación.
+La portabilidad futura no se compromete: todos los servicios están dockerizados y las únicas piezas específicas del entorno son los ficheros de superposición de Docker Compose (\texttt{docker-compose.prod.yml}, \texttt{docker-compose.cpu.yml} y \texttt{docker-compose-proxy.yml}) junto con el script \texttt{provision.sh}. Si en el futuro el volumen de usuarios justifica el coste de un clúster cloud o Kubernetes, la migración no requiere cambios en ningún componente de la aplicación.
 
 \section{Infraestructura}
 
@@ -22,6 +22,15 @@ El servidor es un VPS de Contabo\footnote{\url{https://contabo.com}} ubicado en 
     \item \textbf{Traefik v3}: proxy inverso, terminación TLS y enrutamiento por dominio.
 \end{itemize}
 
+La Figura~\ref{fig:infra-prod} resume la topología resultante, desde la entrada del tráfico por Cloudflare hasta los contenedores de la aplicación.
+
+\begin{figure}[ht]
+\centering
+\resizebox{0.85\textwidth}{!}{\input{figs/infra-prod}}
+\caption{Arquitectura de producción: el tráfico entra por Cloudflare (WAF, DDoS y TLS de borde) y llega al VPS, donde Traefik actúa de proxy inverso con TLS de Let's Encrypt y enruta a los servicios Docker (frontend, backend, motor de IA en CPU y PostgreSQL), monitorizados con Prometheus y Grafana.}
+\label{fig:infra-prod}
+\end{figure}
+
 \section{Aprovisionamiento}
 
 El script \texttt{provision.sh} automatiza la puesta en marcha de un servidor desde cero:
@@ -30,8 +39,9 @@ El script \texttt{provision.sh} automatiza la puesta en marcha de un servidor de
 # 1. Crear usuario `app` sin privilegios
 # 2. Generar clave SSH ed25519 y añadirla a GitHub (pausa interactiva)
 # 3. Instalar Docker Engine via get.docker.com
-# 4. Clonar el repositorio en /home/app/CIE-10
-# 5. Copiar .env.example -> .env (para edición manual de credenciales)
+# 4. Instalar y configurar fail2ban (jails sshd y traefik-auth)
+# 5. Clonar el repositorio en /home/app/CIE-10
+# 6. Copiar .env.example -> .env (para edición manual de credenciales)
 \end{lstlisting}
 
 Tras ejecutar \texttt{provision.sh}, el operador edita el fichero \texttt{.env} con las credenciales reales (base de datos, SMTP, claves de aplicación, token de HuggingFace) y lanza el despliegue.
@@ -55,7 +65,7 @@ Traefik se despliega como un servicio Docker independiente definido en \texttt{d
 \begin{lstlisting}[language=bash, caption={Fragmento de configuración de Traefik.}, label=lst:traefik-config]
 # Entrypoints: HTTP (:80) redirige permanentemente a HTTPS (:443)
 # Let's Encrypt: certificados TLS via HTTP challenge, renovación automática
-# Red Docker: escucha en la red `ciecoder` y descubre servicios por labels
+# Red Docker: escucha en la red `clicoder` y descubre servicios por labels
 # Dashboard: protegido con Basic Auth y rate-limiting
 \end{lstlisting}
 
@@ -72,6 +82,12 @@ El dominio \texttt{clicoder.app} está configurado con el proxy de Cloudflare ac
 \end{itemize}
 
 Esta capa de protección es complementaria a Traefik: Cloudflare actúa en el borde de la red, antes de que el paquete llegue al servidor, mientras que Traefik gestiona el enrutamiento y TLS una vez que el tráfico ya ha pasado por el proxy.
+
+\subsection{Cloudflare Tunnel}
+
+Como alternativa al proxy DNS, el despliegue admite un \textbf{túnel de Cloudflare} (\texttt{cloudflared}), que se activa con \texttt{make start-tunnel} y requiere un \texttt{CLOUDFLARE\_TUNNEL\_TOKEN} en el fichero \texttt{.env}. El contenedor establece una conexión \emph{saliente} y persistente hacia la red de Cloudflare, de modo que el tráfico entrante se entrega a través de ese túnel.
+
+La diferencia operativa es relevante: con el túnel el servidor \textbf{no necesita exponer los puertos 80 y 443}, por lo que la ocultación de la dirección IP deja de depender de la configuración del DNS y pasa a ser una propiedad estructural del despliegue. Reduce así la superficie de ataque directa sobre el VPS. El mismo fichero \texttt{docker-compose-proxy.yml} define además un servicio de \emph{página de mantenimiento} (nginx) que permite servir un aviso estático mientras la aplicación está detenida.
 
 \section{Protección con Fail2ban}
 
@@ -133,4 +149,4 @@ Cloud solo CPU        & Nodos CPU (frontend + backend)                & $\sim$14
 \footnotetext[3]{Cloud SQL PostgreSQL, 4\,vCPU / 16\,GB RAM, estimado para europe-west4. Fuente: \url{https://cloud.google.com/sql/pricing}}
 \footnotetext[4]{Instancia n1-standard-8 (8\,vCPU, 30\,GB RAM) para alojar el modelo RigoBERTa-Clinical en CPU ($\sim$13\,GB de RAM en inferencia).}
 
-La GPU no es estrictamente necesaria para servir tráfico: el motor de IA ya opera en modo CPU en el VPS actual con latencia inferior a 1\,s por informe. Sin embargo, la opción cloud en CPU sigue siendo mas de 40 veces más cara que el VPS, dado que las instancias de aplicación son pequeñas pero el modelo requiere un nodo con suficiente RAM ($\sim$13\,GB) para cargarse íntegramente. En ambos escenarios cloud el coste está dominado por componentes que en el VPS se comparten en un único nodo sin sobrecoste.
+La GPU no es estrictamente necesaria para servir tráfico: el motor de IA ya opera en modo CPU en el VPS actual con latencia inferior a 1\,s por informe. Sin embargo, la opción cloud en CPU sigue siendo más de 40 veces más cara que el VPS, dado que las instancias de aplicación son pequeñas pero el modelo requiere un nodo con suficiente RAM ($\sim$13\,GB) para cargarse íntegramente. En ambos escenarios cloud el coste está dominado por componentes que en el VPS se comparten en un único nodo sin sobrecoste.

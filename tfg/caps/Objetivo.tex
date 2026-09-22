@@ -1,21 +1,17 @@
 \chapter{Objetivo}
 \label{cap:Objetivo}
 
-El objetivo de este trabajo es el \textbf{diseño e implementación de un sistema de codificación clínica automática en el estándar CIE-10-ES} capaz de asignar, a partir de informes de alta hospitalaria en español, uno o más códigos de diagnósticos y procedimientos, siguiendo la nomenclatura CIE-10-ES.
+El objetivo de este trabajo es el \textbf{diseño e implementación de un sistema de codificación clínica automática en el estándar CIE-10-ES} capaz de asignar, a partir de informes de alta hospitalaria en español, uno o más códigos de diagnóstico siguiendo la nomenclatura CIE-10-ES. La codificación de procedimientos (CIE-10-ES-PCS) queda explícitamente fuera del alcance de este trabajo y se plantea como línea futura.
 
-El resultado del proyecto es un prototipo funcional compuesto por un modelo de clasificación multilabel basado en BERT, un servicio de inferencia accesible mediante una API REST y una página web para interactuar con dicha API.
+El resultado del proyecto es un prototipo funcional compuesto por un modelo de clasificación multilabel basado en BERT, un módulo de generación de resúmenes clínicos mediante un modelo de lenguaje ligero, un servicio de inferencia accesible mediante una API REST y una página web para interactuar con dicha API.
 
 El corpus CodiEsp~\cite{miranda2020} es el conjunto de datos de referencia para la codificación clínica automática en español. Proporciona informes clínicos anotados con sus correspondientes códigos CIE-10-ES tanto para diagnósticos como para procedimientos, e incluye las palabras del texto identificadas como evidencia de cada código.
 
-También se requerirá la adquisición del catálogo oficial de códigos CIE-10-ES, que contiene las descripciones en español de todos los códigos válidos, mediante técnicas de scraping sobre el portal eCIE-maps~\cite{eciemaps2024} del Ministerio de Sanidad, dado que no existe ningún formato de descarga pública estructurada.
+También se requerirá la adquisición del catálogo oficial de códigos CIE-10-ES, que contiene las descripciones en español de todos los códigos válidos, mediante técnicas de \emph{scraping} sobre el portal eCIE-maps~\cite{eciemaps2024} del Ministerio de Sanidad, dado que no existe ningún formato de descarga pública estructurada.
 
-Como se describe en la introducción, la complejidad del sistema —con 68.069 códigos posibles— hace inviable su manejo manual sin errores y sin apoyo tecnológico. Este sistema tendrá la finalidad de asistir en el proceso, y en ningún caso sustituir a un codificador, sino ofrecerle una propuesta de codificación con nivel de confianza asociado, de modo que se pueda centrar en los casos ambiguos o de baja certeza.
+El sistema busca asistir al codificador, nunca sustituirlo, ofreciéndole una propuesta de codificación con un nivel de confianza asociado para que centre su atención en los casos ambiguos o de baja certeza.
 
 El sistema se entrena y evalúa exclusivamente con los conjuntos de datos mencionados, por lo que su rendimiento fuera de ese dominio no está garantizado.
-
-Los lenguajes empleados son Python para el clasificador, Elixir para el backend y TypeScript para el frontend.
-
-Las principales librerías empleadas son HuggingFace Transformers y PyTorch; el entrenamiento requiere acceso a GPU/TPU.
 
 \section{Objetivos secundarios}
 
@@ -23,17 +19,21 @@ Dado que el sistema se puede descomponer de forma natural en módulos independie
 
 \begin{enumerate}
 
-    \item \textbf{Adquisición y construcción de las fuentes de datos.} Obtención del corpus CodiEsp y del diccionario oficial CIE-10-ES; este objetivo incluye el diseño e implementación de los scripts de \emph{scraping} sobre el portal eCIE-maps~\cite{eciemaps2024}, la carga del corpus en una base de datos y la generación de los ficheros CSV que alimentan las fases posteriores.
+ \item \textbf{Adquisición y construcción de las fuentes de datos.} Obtención del corpus CodiEsp y del diccionario oficial CIE-10-ES; este objetivo incluye el diseño e implementación de los scripts de \emph{scraping} sobre el portal eCIE-maps~\cite{eciemaps2024}, la carga del corpus en una base de datos y la generación de los ficheros CSV que alimentan las fases posteriores.
 
-    \item \textbf{Módulo de preprocesamiento y gestión del corpus.} Módulo encargado de la carga, limpieza y transformaciones de las anotaciones al formato multilabel requerido por el modelo.
+ \item \textbf{Módulo de preprocesamiento y gestión del corpus.} Módulo encargado de la carga, limpieza y transformaciones de las anotaciones al formato multilabel requerido por el modelo.
 
-    \item \textbf{Análisis de datos.} Análisis estadístico de las diferentes fuentes de datos, caracterizando la longitud, la distribución de etiquetas, el solapamiento entre particiones y la relación entre las descripciones oficiales de los códigos y su presencia en el corpus. Este análisis fundamenta las decisiones de diseño del modelo y las futuras estrategias de entrenamiento.
+ \item \textbf{Análisis estadístico de las fuentes de datos.} Análisis estadístico de las diferentes fuentes de datos, caracterizando la longitud, la distribución de etiquetas, el solapamiento entre particiones y la relación entre las descripciones oficiales de los códigos y su presencia en el corpus. Este análisis fundamenta las decisiones de diseño del modelo y las futuras estrategias de entrenamiento.
 
-    \item \textbf{Módulo clasificador multilabel.} Componente central del sistema. Estará constituido por un modelo BERT preentrenado en español con dominio clínico y ajustado mediante \emph{fine-tuning} sobre el corpus CodiEsp. Incorpora una cabeza de clasificación multilabel con función de pérdida adaptada a la distribución de larga cola de la CIE-10 y umbrales de decisión por código calibrados sobre el conjunto de validación.
+ \item \textbf{Módulo clasificador multilabel.} Componente central del sistema. Estará constituido por un modelo BERT preentrenado en español con dominio clínico y ajustado mediante \emph{fine-tuning} sobre el corpus CodiEsp. Incorpora una cabeza de clasificación multilabel con función de pérdida adaptada a la distribución de larga cola de la CIE-10 y una estrategia de umbral de decisión calibrada sobre el conjunto de validación.
 
-    \item \textbf{Servicio de inferencia (API REST).} Componente que expone las capacidades del modelo mediante una interfaz REST documentada. Para cada informe de entrada devolverá la lista de códigos predichos junto con su puntuación de confianza, permitiendo que un codificador humano filtre y valide los resultados antes de su registro definitivo.
+ \item \textbf{Backend de gestión y trazabilidad.} Servicio central que orquesta el flujo de análisis entre la interfaz y el motor de IA, gestiona la autenticación y el ciclo de vida de los usuarios, y registra de forma inmutable cada acción realizada sobre un análisis (envío, predicción, validación y rechazo de códigos) para garantizar la trazabilidad clínica exigida por los requisitos.
 
-    \item \textbf{Interfaz web de demostración.} Página web que permite a los usuarios cargar informes clínicos en español y visualizar las predicciones del sistema en tiempo real, facilitando la evaluación e interacción con el prototipo.
+ \item \textbf{Servicio de inferencia (API REST).} Componente que expone las capacidades del modelo mediante una interfaz REST documentada. Para cada informe de entrada devolverá la lista de códigos predichos junto con su puntuación de confianza, permitiendo que un codificador humano filtre y valide los resultados antes de su registro definitivo.
+
+ \item \textbf{Módulo de generación de resúmenes.} Componente que produce, mediante un modelo de lenguaje generativo ligero ejecutable en CPU, un resumen o paráfrasis del informe clínico que se presenta junto a los códigos predichos para agilizar la revisión del codificador.
+
+ \item \textbf{Interfaz web de demostración.} Página web que permite a los usuarios cargar informes clínicos en español y visualizar las predicciones del sistema en tiempo real, facilitando la evaluación e interacción con el prototipo.
 \end{enumerate}
 
 \section{Requisitos}
@@ -43,18 +43,19 @@ A continuación se especifican los requisitos que debe cumplir el sistema, disti
 \subsection{Requisitos funcionales}
 
 \begin{itemize}
-    \item \textbf{1. Entrada de datos:} Aceptar como entrada textos clínicos en español en formato libre, sin requerir marcado ni estructura predefinida.
-    \item \textbf{2. Predicción de códigos:} Predecir uno o más códigos CIE-10-ES, tanto de diagnóstico como de procedimiento para cada texto de entrada.
-    \item \textbf{3. Puntuación de confianza:} Devolver una puntuación de confianza por cada código predicho, para priorizar la revisión humana de los casos de baja certeza.
-    \item \textbf{4. Inferencia por lotes:} Soportar el procesamiento de múltiples textos de manera simultánea, devolviendo los resultados en el mismo orden que las entradas recibidas.
-    \item \textbf{5. API REST:} Exponer las funcionalidades a través de una API REST documentada con al menos un endpoint de inferencia y uno de comprobación del estado del servicio.
+ \item \textbf{1. Entrada de datos:} Aceptar como entrada textos clínicos en español en formato libre, sin requerir marcado ni estructura predefinida.
+ \item \textbf{2. Predicción de códigos:} Predecir uno o más códigos CIE-10-ES de diagnóstico para cada texto de entrada.
+ \item \textbf{3. Puntuación de confianza:} Devolver una puntuación de confianza por cada código predicho, para priorizar la revisión humana de los casos de baja certeza.
+ \item \textbf{4. Inferencia por lotes:} Admitir el procesamiento de múltiples textos de manera simultánea, devolviendo los resultados en el mismo orden que las entradas recibidas.
+ \item \textbf{5. API REST:} Exponer las funcionalidades a través de una API REST documentada con al menos un endpoint de inferencia y uno de comprobación del estado del servicio.
 \end{itemize}
 
 \subsection{Requisitos no funcionales}
 
 \begin{itemize}
-    \item \textbf{1. Rendimiento:} El sistema debe alcanzar un rendimiento igual o superior al de los modelos descritos en el experimento CodiEsp~\cite{miranda2020}, que actúa como benchmark de referencia. El objetivo es obtener resultados competitivos con los de los mejores sistemas participantes basados en modelos de lenguaje.
-    \item \textbf{2. Latencia:} La inferencia debe completarse en un tiempo que no impida la integración en flujos de trabajo clínicos y distintas integraciones con otros sistemas, situándose por debajo del segundo por documento tanto en GPU como en CPU de gama alta (verificado en GPU NVIDIA, Ryzen 7900X y Apple M4).
-    \item \textbf{3. Modularidad:} Los diferentes módulos del sistema deben tener interfaces bien definidas y ser sustituibles de forma independiente, de modo que, por ejemplo, el modelo base pueda cambiarse sin modificar el servicio de inferencia.
-    \item \textbf{4. Trazabilidad:} El sistema debe registrar para cada predicción la versión del modelo empleada y el identificador del informe procesado, en línea con los principios de auditabilidad del Reglamento UE 2017/745~\cite{eu2017745} aplicable al software de apoyo a la decisión clínica.
+ \item \textbf{1. Rendimiento:} El sistema debe situarse dentro del rango de resultados de los sistemas participantes en el \emph{benchmark} CodiEsp~\cite{miranda2020}, que actúa como referencia, medido con la métrica oficial de la tarea (MAP por documento) sobre el mismo conjunto de prueba.
+ \item \textbf{2. Latencia:} La inferencia debe completarse en un tiempo que no impida la integración en flujos de trabajo clínicos y distintas integraciones con otros sistemas, situándose por debajo del segundo por documento tanto en GPU como en CPU de gama alta (verificado en GPU NVIDIA, Ryzen 7900X y Apple M4).
+ \item \textbf{3. Modularidad:} Los diferentes módulos del sistema deben tener interfaces bien definidas y ser sustituibles de forma independiente, de modo que, por ejemplo, el modelo base pueda cambiarse sin modificar el servicio de inferencia.
+ \item \textbf{4. Trazabilidad:} El sistema debe registrar para cada predicción la versión del modelo empleada y el identificador del informe procesado, en línea con los principios de auditabilidad del Reglamento UE 2017/745~\cite{eu2017745} aplicable al software de apoyo a la decisión clínica.
+ \item \textbf{5. Privacidad y protección de datos:} El tratamiento de los informes clínicos y de los datos de usuario debe ajustarse al Reglamento General de Protección de Datos (RGPD)~\cite{RGPD16}: minimización de datos, cifrado en tránsito y ejercicio de los derechos de supresión y portabilidad.
 \end{itemize}

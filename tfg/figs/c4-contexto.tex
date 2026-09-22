@@ -1,0 +1,22 @@
+% C4 nivel 1 (contexto): actores y sistemas externos
+% Uso: \input{figs/c4-contexto} dentro de figure+\centering+\resizebox{...}{!}{...}
+
+\begin{tikzpicture}[
+  every node/.style={font=\small\sffamily},
+  actor/.style={draw=aquaESI!80, fill=aquaESI!12, thick, rectangle, rounded corners=3pt,
+                minimum width=3.0cm, minimum height=1.2cm, align=center},
+  sys/.style={draw=ocre!85, fill=ocre!15, very thick, rectangle, rounded corners=5pt,
+              minimum width=4.2cm, minimum height=1.7cm, align=center},
+  extn/.style={draw=gray!60, fill=gray!12, thick, rectangle, rounded corners=3pt,
+               minimum width=3.4cm, minimum height=1.3cm, align=center},
+  arr/.style={->, >=Stealth, thick},
+  brr/.style={<->, >=Stealth, thick},
+  lbl/.style={font=\scriptsize\sffamily, fill=white, inner sep=1.5pt, align=center},
+]
+\node[actor] (cod) at (0,0) {Codificador\\clínico};
+\node[sys] (sys) at (5.6,0) {\textbf{Sistema de codificación}\\\textbf{CIE-10-ES}};
+\node[extn] (ecie) at (11.2,0) {eCIE-maps\\\scriptsize Ministerio de Sanidad};
+
+\draw[brr] (cod) -- node[lbl, above]{envía informes,\\revisa códigos} (sys);
+\draw[arr] (sys) -- node[lbl, above]{obtiene el catálogo\\(fase de adquisición)} (ecie);
+\end{tikzpicture}

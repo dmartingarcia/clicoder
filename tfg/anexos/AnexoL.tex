@@ -7,13 +7,13 @@ Este anexo describe la técnica de \emph{back-translation} (retrotraducción) ap
 \section{Motivación: el problema de la escasez de datos}
 % ---------------------------------------------------------------------------
 
-El clasificador CIE-10 del proyecto debe asignar etiquetas de un vocabulario de \textbf{1767 códigos} a notas clínicas en español. El conjunto de entrenamiento de CodiEsp cuenta únicamente con \textbf{500 documentos}. La ratio documentos/clases es de $\approx 0{,}28$, lo que significa que la mayoría de códigos aparece en muy pocas notas de entrenamiento.
+El clasificador CIE-10 del proyecto debe asignar etiquetas de un vocabulario de \textbf{1.767 códigos} a notas clínicas en español. El conjunto de entrenamiento de CodiEsp cuenta únicamente con \textbf{500 documentos}. La ratio documentos/clases es de $\approx 0{,}28$, lo que significa que la mayoría de códigos aparece en muy pocas notas de entrenamiento.
 
 Esta situación genera dos patologías complementarias:
 
 \begin{itemize}
   \item \textbf{Subajuste por clase minoritaria.} Los códigos que aparecen en dos o tres documentos no proporcionan señal estadística suficiente para que el modelo aprenda sus representaciones.
-  \item \textbf{Sobreajuste global.} Con 500 ejemplos y un codificador de 24 capas (560 M de parámetros), el modelo tiende a memorizar el corpus en lugar de generalizar.
+  \item \textbf{Sobreajuste global.} Con 500 ejemplos y un \emph{encoder} de 24 capas ($\sim$600\,M de parámetros), el modelo tiende a memorizar el corpus en lugar de generalizar.
 \end{itemize}
 
 La técnica habitual para abordar la escasez de datos en NLP cuando no se dispone de más datos anotados es la \textbf{aumentación de datos}: generar nuevas muestras sintéticas que preserven la etiqueta original pero aporten variedad léxica y sintáctica.
@@ -37,19 +37,19 @@ Desde la perspectiva del aprendizaje estadístico, añadir ejemplos retrotraduci
 
 \begin{itemize}
   \item \textbf{Amplía la distribución de entrada.} El modelo ve la misma nota expresada con diferentes frases, reduciendo la dependencia hacia formulaciones concretas presentes solo en el entrenamiento.
-  \item \textbf{Reduce el sobreajuste.} Al duplicar el tamaño del dataset con variantes distintas, la ratio parámetros/ejemplos mejora sin necesidad de reducir la capacidad del modelo.
-  \item \textbf{Beneficia especialmente a las clases minoritarias.} Cada código raro que aparece en un documento pasa a aparecer también en su versión retrotraducida, duplicando la señal de entrenamiento para esa clase.
+  \item \textbf{Reduce el sobreajuste.} Al cuadruplicar el tamaño del dataset con variantes distintas, la ratio parámetros/ejemplos mejora sin necesidad de reducir la capacidad del modelo.
+  \item \textbf{Beneficia especialmente a las clases minoritarias.} Cada código raro que aparece en un documento pasa a aparecer también en sus tres versiones retrotraducidas, cuadruplicando la señal de entrenamiento para esa clase.
 \end{itemize}
 
-Con tres pivotes independientes (EN, DE, FR) el corpus de entrenamiento pasa de \textbf{500 a 2000 documentos} sin coste de anotación: cada pivote añade 500 documentos retrotraducidos, sumando 1500 variantes a las 500 originales.
+Con tres pivotes independientes (EN, DE, FR) el corpus de entrenamiento pasa de \textbf{500 a 2.000 documentos} sin coste de anotación: cada pivote añade 500 documentos retrotraducidos, sumando 1500 variantes a las 500 originales.
 
-\subsection{Elección del segundo pivote: alemán frente a francés}
+\subsection{Orden de los pivotes: por qué el alemán antes que el francés}
 
-Para maximizar la utilidad de un segundo pivote se evaluaron francés (FR) y alemán (DE). El criterio determinante es la \textbf{distancia lingüística} respecto al español: a mayor distancia, mayor recomposición sintáctica durante la retrotraducción y, por tanto, mayor variedad léxica en los ejemplos generados.
+Fijado el inglés como primer pivote, quedaba decidir el orden en que incorporar los dos restantes, francés (FR) y alemán (DE). El criterio determinante es la \textbf{distancia lingüística} respecto al español: a mayor distancia, mayor recomposición sintáctica durante la retrotraducción y, por tanto, mayor variedad léxica en los ejemplos generados.
 
 El francés es una lengua romance que comparte con el español raíces latinas y una gran parte del vocabulario médico especializado (\emph{hematoma}, \emph{diagnóstico}, \emph{paciente}…). La retrotraducción ES→FR→ES tiende a devolver textos muy similares al original, con variación limitada que apenas aporta información nueva al modelo.
 
-El alemán, en cambio, pertenece a la rama germánica. Sus estructuras sintácticas y su formación de compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) obligan al motor de traducción a reformular las oraciones de forma más profunda al retraducir al español, generando paráfrasis más diversas. Azure Translator dispone de alta calidad para el par ES$\leftrightarrow$DE en textos clínicos, comparable al par ES$\leftrightarrow$EN. Por estos motivos se eligió \textbf{alemán (DE)} como segundo pivote.
+El alemán, en cambio, pertenece a la rama germánica. Sus estructuras sintácticas y su formación de compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) obligan al motor de traducción a reformular las oraciones de forma más profunda al retraducir al español, generando paráfrasis más diversas. Azure Translator dispone de alta calidad para el par ES$\leftrightarrow$DE en textos clínicos, comparable al par ES$\leftrightarrow$EN. Por estos motivos se incorporó \textbf{alemán (DE)} como segundo pivote y \textbf{francés (FR)} como tercero. Los tres se generaron finalmente, de modo que el corpus aumentado combina los 500 documentos originales con las 500 variantes de cada pivote; la Tabla~\ref{tab:bt-quality} confirma la previsión, con el francés como el pivote de menor variación (mediana de $0{,}0$ caracteres) y el alemán el de mayor recomposición en palabras ($+5{,}9$ de media).
 
 % ---------------------------------------------------------------------------
 \section{Servicio empleado: Azure Translator}
@@ -95,7 +95,7 @@ Si el crédito gratuito se agotase antes de completar las notas, el script permi
 
 \subsection{Distribución de códigos antes y después}
 
-El corpus de entrenamiento de CodiEsp contiene 500 documentos con una media de \textbf{11,28 etiquetas por documento}, cubriendo los 1767 códigos del catálogo CIE-10-ES. La distribución de frecuencias es marcadamente sesgada: el \textbf{56,5\,\%} de los códigos aparece exactamente una vez, y el \textbf{88,7\,\%} tiene cinco o menos apariciones. Solo 200 códigos (11,3\,\%) superan las cinco ocurrencias.
+El corpus de entrenamiento de CodiEsp contiene 500 documentos con una media de \textbf{11,28 etiquetas por documento}, cubriendo los 1.767 códigos presentes en el conjunto de entrenamiento. La distribución de frecuencias es marcadamente sesgada: el \textbf{56,5\,\%} de los códigos aparece exactamente una vez, y el \textbf{88,7\,\%} tiene cinco o menos apariciones. Solo 200 códigos (11,3\,\%) superan las cinco ocurrencias.
 
 \begin{table}[h]
 \centering
@@ -132,7 +132,7 @@ Caracteres totales          & 1.158.623 & $\approx$2.320.000 & $\approx$3.479.00
 \end{tabular}
 \end{table}
 
-La retrotraducción duplica el número de ejemplos por código sin coste de anotación. Para los 999 códigos que aparecen una sola vez, pasar a dos ejemplos supone una mejora relativa del 100\,\% en la señal de entrenamiento: con un único ejemplo el gradiente solo puede ajustar la proyección del embedding hacia esa etiqueta; con dos formulaciones distintas del mismo concepto, el modelo aprende a activar la misma salida ante representaciones diferentes, lo que equivale a capturar la invarianza semántica del código.
+La retrotraducción cuadruplica el número de ejemplos por código sin coste de anotación. Para los 999 códigos que aparecen una sola vez, pasar a cuatro ejemplos (el original más los tres pivotes) multiplica por cuatro la señal disponible en la señal de entrenamiento: con un único ejemplo el gradiente solo puede ajustar la proyección del embedding hacia esa etiqueta; con dos formulaciones distintas del mismo concepto, el modelo aprende a activar la misma salida ante representaciones diferentes, lo que equivale a capturar la invarianza semántica del código.
 
 \subsection{Calidad de la traducción}
 
@@ -233,7 +233,7 @@ Añadir al fichero \texttt{.env} del proyecto:
 
 \begin{lstlisting}[language=bash]
 AZURE_TRANSLATOR_KEY=<clave_obtenida_en_el_portal>
-AZURE_TRANSLATOR_REGION=westeurope   # West Europe; ajustar segun la region elegida al crear el recurso
+AZURE_TRANSLATOR_REGION=westeurope   # West Europe; ajustar a la region del recurso creado
 PIVOT_LANGS=EN
 \end{lstlisting}
 
@@ -301,7 +301,7 @@ Cada pivote genera un fichero independiente con 500 notas originales + 500 aumen
 make ai-combine
 \end{lstlisting}
 
-El script toma el corpus original y añade las variantes aumentadas de cada pivote (EN, DE, FR), produciendo \texttt{codiesp\_D\_source\_train\_augmented\_all.csv} con \textbf{2000 documentos} (500 originales + 1500 aumentados). A continuación, entrenar con el corpus completo requiere únicamente pasar el fichero combinado como \texttt{TRAIN\_FILE}:
+El script toma el corpus original y añade las variantes aumentadas de cada pivote (EN, DE, FR), produciendo \texttt{codiesp\_D\_source\_train\_augmented\_all.csv} con \textbf{2.000 documentos} (500 originales + 1500 aumentados). A continuación, entrenar con el corpus completo requiere únicamente pasar el fichero combinado como \texttt{TRAIN\_FILE}:
 
 \begin{lstlisting}[language=bash, breaklines=true, breakatwhitespace=false]
 make ai-train-gpu \
@@ -312,4 +312,6 @@ make ai-train-gpu \
   2>&1 | tee -a /tmp/train_paso32.log
 \end{lstlisting}
 
-El corpus de entrenamiento crece de 500 a 2000 documentos (4×) sin modificar la arquitectura ni los hiperparámetros. Se espera que la mejora sea más pronunciada en F1-macro, que es la métrica más sensible a los códigos raros.
+El corpus de entrenamiento crece de 500 a 2.000 documentos (4×) sin modificar la arquitectura ni los hiperparámetros. La hipótesis de partida era que la mejora fuese más pronunciada en F1-macro, que es la métrica más sensible a los códigos raros.
+
+\paragraph{Resultado y decisión.} La hipótesis no se confirmó. Ninguna de las ejecuciones con corpus aumentado superó la referencia entrenada con los 500 documentos originales: el mejor resultado con aumentación fue F1-micro~0,4766 (paso~35d) frente a 0,4888 de la configuración de referencia, y el resto quedó más abajo (0,4668 en el paso~33 y 0,4518 en el 34b). El diagnóstico, detallado en el Anexo~\ref{cap:AnexoF} y en la sección de experimentos, es doble: por un lado los hiperparámetros de calendario (\texttt{UNFREEZE\_EVERY}, \texttt{GRAD\_ACCUM}) no se reescalaron al cambiar el tamaño del corpus; por otro, y de forma más determinante, el entrenamiento pasa a realizarse sobre texto retrotraducido mientras la validación sigue siendo español original, lo que introduce un desajuste de distribución que penaliza la evaluación. En consecuencia, \textbf{el modelo de producción se entrena sobre los 500 documentos originales} y la aumentación queda documentada como línea explorada y descartada, no como parte del sistema entregado.

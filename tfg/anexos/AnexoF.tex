@@ -11,7 +11,7 @@ El desarrollo del clasificador atravesó varias fases que se corresponden con lo
 
 \subsection{Fase 0: análisis de la arquitectura jerárquica}
 
-El \emph{notebook} \texttt{0\_clasificador\_jerarquico\_Introducción.ipynb} exploró la hipótesis de entrenar clasificadores independientes por nivel jerárquico (capítulo → bloque → código específico). Esta aproximación se descartó por la propagación de errores entre niveles, tal como se justifica en el ADR-05 (\ref{cap:AnexoE}).
+El \emph{notebook} \texttt{0\_clasificador\_jerarquico\_Introducción.ipynb} exploró la hipótesis de entrenar clasificadores independientes por nivel jerárquico (capítulo → bloque → código específico). Esta aproximación se descartó por la propagación de errores entre niveles, tal como se justifica en el ADR-05 (Anexo~\ref{cap:AnexoE}).
 
 \subsection{Fase 1: RoBERTa-BSC base (evaluación)}
 
@@ -21,17 +21,17 @@ El \emph{notebook} \texttt{1\_clasificador\_jerarquico\_RoBERTa.ipynb} evaluó \
 
 El \emph{notebook} \texttt{2\_clasificador\_jerarquico\_RigoBERTa.ipynb} introdujo \texttt{IIC/RigoBERTa-2.0}~\cite{vacaserrano2022rigoberta}, versión de propósito general de RigoBERTa sobre arquitectura XLM-RoBERTa-large. Este modelo se evaluó conceptualmente como punto de partida previo a la variante clínica.
 
-\subsection{Fase 3: mmBERT — primeros entrenamientos experimentales}
+\subsection{Fase 3: mmBERT (primeros entrenamientos experimentales)}
 
-El \emph{notebook} \texttt{5\_clasificador\_jerarquico\_mmBert.ipynb} inició los experimentos con entrenamiento real sobre el corpus CodiEsp~\cite{miranda2020}. Se realizaron 8 ejecuciones con \texttt{jhu-clsp/mmBERT-base} sobre 809 códigos de bloque, con F1 micro entre 0{,}06 y 0{,}15.
+El \emph{notebook} \texttt{5\_clasificador\_jerarquico\_mmBert.ipynb} inició los experimentos con entrenamiento real sobre el corpus CodiEsp~\cite{miranda2020}. Se realizaron 8 ejecuciones con \texttt{jhu-clsp/mmBERT-base} sobre 809 códigos de bloque, con F1-micro entre 0{,}03 y 0{,}15.
 
 \subsection{Fase 4: ModernBERT (evaluación)}
 
-El \emph{notebook} \texttt{4\_clasificador\_jerarquico\_ModernBert.ipynb} evaluó la arquitectura ModernBERT~\cite{warner2024modernbert}, que obtuvo un F1-micro de 0{,}601 en pruebas de nivel~1. No se entrenó a fondo por restricciones de tiempo; queda identificado como candidato para iteraciones futuras (véase \ref{cap:AnexoA}).
+El \emph{notebook} \texttt{4\_clasificador\_jerarquico\_ModernBert.ipynb} evaluó la arquitectura ModernBERT~\cite{warner2024modernbert}, que obtuvo un F1-micro de 0{,}601 en pruebas de nivel~1. No se entrenó a fondo por restricciones de tiempo; queda identificado como candidato para iteraciones futuras (véase el Anexo~\ref{cap:AnexoA}).
 
-\subsection{Fase 5: IIC/RigoBERTa-Clinical — entrenamiento intensivo}
+\subsection{Fase 5: IIC/RigoBERTa-Clinical (entrenamiento intensivo)}
 
-A partir de la ejecución 9 se adoptó \texttt{IIC/RigoBERTa-Clinical}~\cite{garciasubies2026rigobertaclinical} como modelo base. La fase 5 comprende 38 ejecuciones en las que se ajustaron progresivamente los hiperparámetros: tasa de aprendizaje, congelación de capas, descongelación progresiva, \emph{dropout}, \emph{pos\_weight\_cap}, \emph{label smoothing} y umbral de clasificación. El F1 micro pasó de 0{,}32 (primera ejecución) a 0{,}489 (mejor ejecución).
+A partir de la ejecución 9 se adoptó \texttt{IIC/RigoBERTa-Clinical}~\cite{garciasubies2026rigobertaclinical} como modelo base. La fase 5 comprende 53 ejecuciones (de la 9 a la 62, excluida la 20, dedicada al Longformer-BSC) en las que se ajustaron progresivamente los hiperparámetros: tasa de aprendizaje, congelación de capas, descongelación progresiva, \emph{dropout}, \emph{pos\_weight\_cap}, \emph{label smoothing} y umbral de clasificación. El F1-micro pasó de 0{,}32 (primera ejecución) a 0{,}4945 (mejor ejecución, la desplegada en producción).
 
 \subsection{Fase 6: análisis de nivel 2}
 
@@ -39,7 +39,7 @@ El \emph{notebook} \texttt{7\_clasificador\_jerarquico\_analisis\_nivel\_2.ipynb
 
 \section{Evolución de los entrenamientos}
 
-La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de las 46 ejecuciones registradas.
+La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de las 62 ejecuciones de esta fase de optimización del F1-micro: 8 con mmBERT, 1 de comparación con Longformer-BSC (descartado por coste computacional, véase el Anexo~\ref{cap:AnexoA}) y 53 con RigoBERTa-Clinical. A ellas se suman dieciséis ejecuciones dirigidas al MAP: las seis de la sección~\ref{sec:anexoF-map} (control, ajuste, ampliación del promedio y destilación) y las diez de las secciones siguientes (tres del paso~40, tres de continuación, dos semillas adicionales y dos réplicas de control). El registro completo suma 78 ejecuciones.
 
 \begin{table}[h]
 \centering
@@ -47,28 +47,314 @@ La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de las 46
 \label{tab:training-evolution}
 \begin{tabular}{clcrcc}
 \hline
-\textbf{Ejec.} & \textbf{Modelo} & \textbf{Códigos} & \textbf{Épocas} & \textbf{F1 micro} & \textbf{Observación} \\
+\textbf{Ejec.} & \textbf{Modelo} & \textbf{Códigos} & \textbf{Épocas} & \textbf{F1-micro} & \textbf{Observación} \\
 \hline
-1  & mmBERT             & 809   & 19  & 0{,}061 & Línea base inicial \\
-8  & mmBERT             & 809   & 20  & 0{,}150 & Mejor mmBERT \\
-9  & RigoBERTa-Clinical & 809   & 20  & 0{,}320 & Cambio de modelo (+170\%) \\
-19 & RigoBERTa-Clinical & 809   & 141 & 0{,}427 & Mejor con 809 códigos \\
-21 & RigoBERTa-Clinical & 1767  & 79  & 0{,}327 & Expansión a espacio completo \\
-27 & RigoBERTa-Clinical & 1767  & 60  & 0{,}470 & Introducción descongelación prog. \\
-39 & RigoBERTa-Clinical & 1767  & 96  & 0{,}481 & Ajuste umbral y \emph{pos\_weight} \\
-44 & RigoBERTa-Clinical & 1767  & 150 & 0{,}489 & Modelo desplegado en producción \\
-46 & RigoBERTa-Clinical & 1767  & 110 & 0{,}483 & Ejecución de verificación posterior \\
+1 & mmBERT & 809 & 19 & 0{,}061 & Línea base inicial \\
+8 & mmBERT & 809 & 20 & 0{,}150 & Mejor mmBERT \\
+9 & RigoBERTa-Clinical & 809 & 20 & 0{,}320 & Cambio de modelo (+113\% sobre mmBERT) \\
+18 & RigoBERTa-Clinical & 809 & 133 & 0{,}430 & Mejor con 809 códigos \\
+21 & RigoBERTa-Clinical & 1767 & 79 & 0{,}327 & Expansión a espacio completo \\
+27 & RigoBERTa-Clinical & 1767 & 60 & 0{,}470 & Introducción descongelación prog. \\
+39 & RigoBERTa-Clinical & 1767 & 96 & 0{,}481 & Ajuste umbral y \emph{pos\_weight} \\
+44 & RigoBERTa-Clinical & 1767 & 150 & 0{,}489 & Configuración 32b de referencia \\
+55 & RigoBERTa-Clinical & 1767 & 150 & 0{,}4945 & Referencia de evaluación: \texttt{20260530T030233Z} (paso 36) \\
+68 & RigoBERTa-Clinical & 1767 & 112 & 0{,}5028 & Mejor ejecución registrada hasta la fecha \\
 \hline
 \end{tabular}
 \end{table}
 
 \section{Comparativa de ejecuciones}
 
-La Figura~\ref{fig:all-trainings} muestra la comparativa de F1 micro y F1 macro de todas las ejecuciones, a diferentes umbrales de clasificación (0{,}2, 0{,}3 y 0{,}5), junto con el número de épocas ejecutadas y la longitud máxima de secuencia empleada.
+La Figura~\ref{fig:all-trainings} muestra la comparativa de F1-micro y F1-macro de todas las ejecuciones, a diferentes umbrales de clasificación (0{,}2, 0{,}3 y 0{,}5), junto con el número de épocas ejecutadas y la longitud máxima de secuencia empleada.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{figs/all_trainings_graph}
-\caption{Comparativa de F1 micro y F1 macro en todas las ejecuciones del proceso de entrenamiento.}
+\caption{Comparativa de F1-micro y F1-macro en todas las ejecuciones del proceso de entrenamiento.}
 \label{fig:all-trainings}
 \end{figure}
+
+\section{Optimización específica del MAP}
+\label{sec:anexoF-map}
+
+Las 62~ejecuciones anteriores optimizaron el F1-micro, por las razones expuestas en el capítulo de desarrollo. El MAP por documento, sin embargo, es la métrica oficial del \emph{benchmark} CodiEsp y la única homogénea con los sistemas participantes, por lo que se realizó una serie de experimentos dirigidos específicamente a mejorarla.
+
+\subsection{Variabilidad estocástica como referencia}
+
+Antes de atribuir una mejora a cualquier cambio es necesario conocer el ruido del proceso. Dos ejecuciones con configuración \textbf{idéntica} (\texttt{20260530T030233Z} y \texttt{20260530T134649Z}) obtuvieron MAP de 0{,}5442 y 0{,}5317 en validación: una dispersión de \textbf{1{,}35~puntos porcentuales} atribuible únicamente a la inicialización aleatoria y al no determinismo del entrenamiento en GPU. Conviene precisar que esa cifra está medida sobre el MAP de validación restringido al vocabulario del modelo, que es la métrica que registraba el entrenamiento en ese momento, y sobre dos ejecuciones. La subsección~\ref{sec:anexoF-distribuciones} la sustituye por una estimación con cinco réplicas sobre la métrica que de verdad decide, el MAP del \emph{gold} completo en prueba: desviación típica de 0{,}0051 y rango de 1{,}06~pp. Con cualquiera de las dos lecturas la conclusión operativa es la misma: ninguna diferencia inferior al punto porcentual puede considerarse una mejora real a partir de una sola ejecución.
+
+\subsection{Selección de checkpoint por MAP}
+
+Hasta este punto, el mejor \emph{checkpoint} y el planificador \texttt{ReduceLROnPlateau} se gobernaban por el F1-micro de validación. Se incorporó el parámetro \texttt{--select\_metric} para poder guiarlos por el MAP, y se registró además el MAP de cada época en el historial de entrenamiento, que hasta entonces no se almacenaba.
+
+El análisis del historial de la ejecución de control mostró que el margen disponible era pequeño: el MAP máximo (0{,}5501, época~88) apenas superaba en 0{,}24~pp al MAP de la época elegida por F1 (0{,}5477, época~103), y permanecía prácticamente plano entre las épocas~70 y~124. La ejecución completa confirmó que el cambio es contraproducente: guiar el planificador por una métrica plana degrada la trayectoria de aprendizaje completa.
+
+\subsection{Calibración entre clases}
+
+El MAP evalúa el \emph{ranking} de códigos dentro de cada documento, de modo que el \texttt{pos\_weight} por clase (que desplaza los \emph{logits} de cada código en distinta magnitud) podría estar distorsionando esa comparación. Se redujo \texttt{pos\_weight\_cap} de 10 a 3, con resultado también negativo tanto en MAP como en F1. La Tabla~\ref{tab:map-experiments} recoge ambos experimentos junto con la ejecución de control.
+
+\begin{table}[h]
+\centering
+\caption{Experimentos dirigidos a mejorar el MAP. Todos parten de la configuración de producción (paso~36).}
+\label{tab:map-experiments}
+\begin{tabular}{llcc}
+\hline
+\textbf{Ejec.} & \textbf{Cambio respecto a producción} & \textbf{MAP val} & \textbf{F1-micro val} \\
+\hline
+37ctrl & Ninguno (control, otra semilla) & 0{,}5477 & 0{,}4884 \\
+37a & \texttt{select\_metric=map\_macro} & 0{,}5365 & 0{,}4902 \\
+37b & \texttt{select\_metric=map\_macro} + \texttt{pos\_weight\_cap=3} & 0{,}5202 & 0{,}4743 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Observación incidental: promediado de las ejecuciones}
+
+Una variabilidad de 1{,}35~pp sugiere que reducir la varianza puede ser más rentable que perseguir configuraciones marginalmente mejores. Para comprobarlo se promediaron las probabilidades de salida de los tres \emph{checkpoints} anteriores, con los resultados de la Tabla~\ref{tab:map-ensemble}. Conviene subrayar qué es y qué no es esta prueba: los tres \emph{checkpoints} no se entrenaron para combinarse, sino que persiguen objetivos distintos (un control y dos variantes que, individualmente, resultaron peores). No se trata, por tanto, de un sistema de combinación diseñado ni evaluado como tal, sino de una comprobación posterior sobre los modelos disponibles. Por ese motivo el resultado no se reporta como resultado de este trabajo ni se emplea en la comparación con el \emph{benchmark}, que utiliza el modelo de producción.
+
+\begin{table}[h]
+\centering
+\caption{MAP por documento sobre el conjunto de prueba: modelos individuales frente a su promedio. El promedio no constituye un sistema propuesto (véase el texto).}
+\label{tab:map-ensemble}
+\begin{tabular}{lcc}
+\hline
+\textbf{Modelo} & \textbf{MAP (gold completo)} & \textbf{MAP (vocabulario)} \\
+\hline
+Producción (paso~36) & 0{,}4373 & 0{,}5365 \\
+Mejor individual (37a) & 0{,}4389 & 0{,}5393 \\
+Promedio de los 3 & 0{,}4683 & 0{,}5728 \\
+\hline
+\end{tabular}
+\end{table}
+
+El promedio supera al modelo de producción en 3{,}1~pp de MAP sobre el gold completo y al mejor modelo individual en 2{,}9~pp, por encima del umbral de significancia establecido, y el efecto se reproduce en validación. El coste sería triplicar el tiempo de inferencia y el espacio de almacenamiento, incompatible con el requisito de latencia del sistema. La conclusión que cabe extraer es metodológica: existe margen de mejora por esta vía, y diseñar y evaluar una combinación de modelos de forma rigurosa queda planteado como trabajo futuro.
+
+\subsection{Destilación del promedio}
+
+El promediado deja una pregunta abierta: si la ganancia existe pero no cabe en el VPS, ¿puede transferirse a un único modelo? La vía estándar es la destilación de conocimiento~\cite{hinton2015distilling}: entrenar un clasificador nuevo (alumno) contra las probabilidades que produce el promedio (profesor), en lugar de contra las etiquetas binarias del corpus. La hipótesis es que las probabilidades del profesor contienen información que las etiquetas no tienen (sobre todo en los negativos, donde el orden relativo entre códigos plausibles y códigos absurdos es precisamente lo que mide el MAP) y que el alumno puede aprenderla conservando el coste de inferencia de un solo modelo.
+
+Se amplió primero el promedio de tres a cinco ejecuciones (Tabla~\ref{tab:map-distill}) y se entrenó el alumno con una pérdida mixta $\alpha \cdot \mathcal{L}_{\text{blanda}} + (1-\alpha) \cdot \mathcal{L}_{\text{dura}}$ con $\alpha = 0{,}5$, siendo $\mathcal{L}_{\text{blanda}}$ la entropía cruzada binaria contra las probabilidades del profesor.
+
+\begin{table}[h]
+\centering
+\caption{Destilación del promedio de cinco ejecuciones. MAP por documento sobre el gold completo.}
+\label{tab:map-distill}
+\begin{tabular}{lcc}
+\hline
+\textbf{Modelo} & \textbf{MAP validación} & \textbf{MAP prueba} \\
+\hline
+Producción (paso~36) & 0{,}4359 & 0{,}4373 \\
+Cinco ejecuciones previas disponibles (rango)$^{*}$ & 0{,}4166--0{,}4442 & 0{,}4192--0{,}4421 \\
+Promedio de las cinco & 0{,}4715 & 0{,}4778 \\
+Alumno destilado & 0{,}4299 & 0{,}4354 \\
+\hline
+\end{tabular}
+
+\vspace{2mm}
+{\footnotesize $^{*}$ Dos de esas cinco ejecuciones no eran réplicas de la configuración de producción sino variantes descartadas, lo que rebajaba la media del grupo. La subsección~\ref{sec:anexoF-distribuciones} documenta el error y rehace la comparación con el grupo corregido.}
+\end{table}
+
+El alumno no recupera nada de la ganancia: su MAP de prueba queda dentro del rango de las ejecuciones individuales y 4{,}2~pp por debajo del profesor. El diagnóstico está en las probabilidades del profesor sobre el conjunto de entrenamiento, que es donde el alumno aprende: la probabilidad media asignada a los códigos positivos es del 97~\% y el 99{,}5~\% de ellos supera el 0{,}9. Con 500 documentos y 150~épocas, los profesores han memorizado el corpus de entrenamiento, de modo que sus probabilidades \emph{son} las etiquetas binarias y la pérdida blanda no aporta señal adicional. La estructura fina de los negativos, que era la apuesta del experimento, tampoco basta: con $\alpha=0{,}5$ y probabilidades negativas del orden de $10^{-3}$, ese término queda aplastado por la contribución de los positivos.
+
+La lección no es que la destilación no funcione, sino que no funciona \emph{en este régimen}: exige un profesor que generalice sobre los datos que ve el alumno, y con 500 documentos el profesor no generaliza sobre ellos, los memoriza. Destilar sobre un corpus no etiquetado y disjunto del de entrenamiento (donde el profesor sí produciría probabilidades informativas) es la variante que quedaría por probar, y requiere textos clínicos adicionales de los que este trabajo no dispone.
+
+\subsection{Alinear la pérdida con la métrica}
+\label{sec:anexoF-alineacion}
+
+Los experimentos anteriores comparten un supuesto que conviene revisar: todos ajustan el proceso de entrenamiento (qué \emph{checkpoint} se elige, cómo se pondera cada clase, con qué semilla se arranca) manteniendo intacta la función de pérdida. Y esa función es una entropía cruzada binaria que trata cada uno de los 1767 códigos como un problema independiente: optimiza que la probabilidad de cada código esté bien calibrada por separado. El MAP mide algo distinto, que los códigos correctos de un informe queden por encima de los incorrectos \emph{de ese mismo informe}. Ningún ajuste de hiperparámetros puede corregir esa desalineación, porque el objetivo que se minimiza sigue siendo otro. A esto se suma el diagnóstico acumulado en las secciones anteriores: el ruido entre semillas idénticas (en torno a 1~pp sobre el conjunto de prueba, según la estimación con réplicas de la subsección~\ref{sec:anexoF-distribuciones}) es del orden del efecto de cualquier cambio de hiperparámetro ensayado, y lo único que ha movido el MAP de verdad (promediar varias ejecuciones, $+4{,}05$~pp) es inviable en producción por coste de inferencia.
+
+De ahí salen tres ejecuciones, cada una atacando uno de esos tres diagnósticos. Todas parten de la configuración de producción y modifican un solo elemento, de forma que sus efectos sean atribuibles por separado, y ninguna altera el coste de inferencia: los tres cambios viven exclusivamente en el entrenamiento.
+
+\subsubsection*{Ejecución 40a: pérdida listwise por documento (ZLPR)}
+
+\textbf{Diagnóstico que ataca.} La desalineación entre pérdida y métrica.
+
+\textbf{Mecanismo.} Se añade a la entropía cruzada el término~\cite{su2022zlpr}
+\[
+\mathcal{L}_{\text{ZLPR}} = \log\Big(1 + \sum_{j \in \text{neg}} e^{z_j}\Big) + \log\Big(1 + \sum_{i \in \text{pos}} e^{-z_i}\Big),
+\]
+mínimo cuando todos los códigos correctos de un documento superan a todos los incorrectos del mismo documento, sin exigir ningún valor absoluto concreto a ninguno. Es la traducción directa del MAP a una función derivable. El peso, 0{,}1, se fijó midiendo ambos términos en una ejecución de prueba de una época: con ese factor la entropía cruzada aporta 0{,}74 y el término de ordenación 1{,}02, escalas comparables.
+
+\textbf{Qué se espera.} Es la única de las tres que actúa sobre la causa y no sobre un síntoma, así que es la candidata con mayor recorrido: una mejora de 2~a~4~pp de MAP la situaría por encima del ruido. El riesgo simétrico es que empeore el F1-micro, porque una pérdida que solo exige orden relativo no obliga a calibrar las probabilidades, y el F1 depende de un umbral absoluto. Un resultado con MAP claramente mejor y F1 algo peor sería informativo, no un fracaso: el umbral se reajusta después con el barrido de validación.
+
+\textbf{Qué la refutaría.} Un MAP dentro del rango del grupo de referencia indicaría que con 500 documentos el modelo no tiene capacidad de aprender orden fino aunque se le pida explícitamente, y que el cuello de botella es la cantidad de datos, no el objetivo.
+
+\subsubsection*{Ejecución 40b: media móvil exponencial de los pesos}
+
+\textbf{Diagnóstico que ataca.} Que la única ganancia real medida hasta ahora venga de reducir varianza, y que la forma conocida de hacerlo (promediar ejecuciones) no quepa en el VPS.
+
+\textbf{Mecanismo.} Se mantiene una media móvil de los pesos entrenables a lo largo del entrenamiento y se evalúa y guarda esa media, no los pesos del último paso. Persigue el mismo efecto que el promediado de modelos, pero dentro de una sola trayectoria: los puntos que promedia están en la misma cuenca de la función de pérdida por construcción, y el resultado sigue siendo un único modelo con el coste de inferencia de siempre. El decaimiento, $0{,}99$, se fija a partir de los pasos reales del optimizador: 500 documentos con \emph{batch} efectivo de 32 dan unos 15 pasos por época, de modo que $0{,}99$ promedia una ventana de unos 100 pasos (siete épocas), mientras que el $0{,}999$ habitual en corpus grandes abarcaría media ejecución y quedaría permanentemente rezagado.
+
+\textbf{Qué se espera.} Es la apuesta más conservadora y la de mayor valor práctico si sale: recupera parte de los $+4{,}05$~pp del promediado sin ninguno de sus costes. La expectativa razonable es una fracción de esa ganancia, del orden de 1~a~2~pp, porque promedia puntos correlacionados de una misma trayectoria en lugar de modelos independientes. Debería además reducir la dispersión entre ejecuciones, que es en sí mismo un resultado útil: gran parte de la dificultad de esta serie de experimentos viene de que el ruido tapa los efectos.
+
+\textbf{Qué la refutaría.} Una media que iguale o empeore al último \emph{checkpoint} indicaría que la trayectoria no oscila alrededor de un óptimo sino que sigue avanzando hasta el final, en cuyo caso promediar solo introduce retraso.
+
+\subsubsection*{Ejecución 40c: R-Drop}
+
+\textbf{Diagnóstico que ataca.} La escasez de datos: 500 documentos para 1767 códigos, la mayoría de ellos con menos de tres ejemplos positivos.
+
+\textbf{Mecanismo.} Cada informe se procesa dos veces con máscaras de \emph{dropout} distintas y se penaliza la divergencia entre ambas salidas~\cite{wu2021rdrop}. Es regularización que no consume etiquetas: aprovecha los documentos disponibles sin depender de cuántos positivos tenga cada código. La divergencia se promedia sobre las clases en lugar de sumarse, lo que la deja tres órdenes de magnitud por debajo de la convención habitual; $\alpha=5$ se fijó con la misma ejecución de prueba, para que la regularización pese en torno a una cuarta parte de la entropía cruzada.
+
+\textbf{Qué se espera.} Es la más indirecta de las tres (mejora la generalización en general, no el orden dentro del documento en particular), así que se espera un efecto menor, de 0~a~2~pp, y con más probabilidad de quedar dentro del ruido. Se incluye porque es el único de los tres mecanismos que ataca la limitación de fondo del problema, y porque su coste es únicamente de entrenamiento: duplica el tiempo por lote, pero no cambia nada en inferencia.
+
+\textbf{Qué la refutaría.} Cualquier resultado dentro del rango de control, que es el desenlace más probable de los tres.
+
+\subsubsection*{Condiciones de ejecución y criterio de decisión}
+
+Las tres se lanzan en paralelo sobre la misma GPU (RTX 4080, 16~GB), cada una con su propio directorio de salida para que no compitan por los mismos artefactos ni sobrescriban la configuración de producción. Con las tres simultáneas la ocupación de memoria es de 12{,}3~GB y el tiempo por paso pasa de unos 0{,}25~s a 0{,}6-0{,}9~s, de modo que la concurrencia no reduce el tiempo total de cómputo: reparte el mismo trabajo, con la ventaja de que los tres resultados llegan a la vez y son comparables entre sí.
+
+El criterio de decisión se fija \emph{antes} de ver los resultados, para que la comparación no se acomode a ellos: una ejecución solo cuenta como mejora si su MAP supera el \textbf{máximo} del grupo de referencia (0{,}4442 en validación y 0{,}4421 en prueba), no su media. Con una dispersión de 2~pp entre semillas idénticas, superar la media es indistinguible de haber tenido suerte con el sorteo. Y una ejecución que supere ese listón no se dará por buena hasta repetirse con otra semilla: es exactamente el error que esta serie de experimentos ha aprendido a evitar.
+
+\subsubsection*{Resultados}
+
+La Tabla~\ref{tab:map-paso40} recoge el MAP por documento de las tres ejecuciones sobre validación y prueba, junto con la ejecución de producción medida en la misma pasada y el rango del grupo de referencia. Todas las cifras proceden de la misma evaluación y son por tanto comparables entre sí; difieren en la tercera cifra decimal de las reportadas en otras secciones porque la inferencia se realiza con precisión reducida.
+
+\begin{table}[h]
+\centering
+\caption{Paso 40: MAP por documento sobre el gold completo. El grupo de referencia es el que se empleó en el momento de estos experimentos; la subsección~\ref{sec:anexoF-distribuciones} lo corrige.}
+\label{tab:map-paso40}
+\begin{tabular}{lccc}
+\hline
+\textbf{Ejecución} & \textbf{MAP validación} & \textbf{MAP prueba} & \textbf{F1-micro prueba} \\
+\hline
+Producción & 0{,}4343 & 0{,}4342 & 0{,}4872 \\
+Ejecuciones previas disponibles (rango)$^{*}$ & 0{,}4166--0{,}4442 & 0{,}4192--0{,}4421 & n/d \\
+\hline
+40a (ZLPR) & 0{,}4369 & \textbf{0{,}4440} & \textbf{0{,}4917} \\
+40b (media móvil) & 0{,}4342 & 0{,}4313 & 0{,}4747 \\
+40c (R-Drop) & 0{,}4237 & 0{,}4294 & 0{,}4813 \\
+\hline
+\end{tabular}
+
+\vspace{2mm}
+{\footnotesize $^{*}$ Dos de esas cinco ejecuciones no eran réplicas de la configuración de producción sino variantes descartadas, lo que rebajaba la media del grupo. La subsección~\ref{sec:anexoF-distribuciones} documenta el error y rehace la comparación con el grupo corregido.}
+\end{table}
+
+\textbf{40c (R-Drop) queda refutada} en los términos previstos: su MAP cae dentro del rango de control en ambos conjuntos. La regularización adicional no compensa en un régimen donde el modelo ya está fuertemente restringido (solo cuatro capas entrenables de veinticuatro al comenzar) y el \emph{dropout} de 0{,}3 ya cumple ese papel.
+
+\textbf{40b (media móvil) queda refutada por la razón concreta que se había anticipado}: se estableció de antemano que la media fallaría si la trayectoria, en lugar de oscilar alrededor de un óptimo, seguía avanzando hasta el final. Eso es exactamente lo que ocurrió: la ejecución agotó las 150~épocas sin activar nunca la parada temprana, con su mejor F1 en la época~144, de modo que la trayectoria nunca llegó a estabilizarse en torno a un óptimo y promediar los pesos de las siete épocas anteriores solo introduce retraso respecto al punto más avanzado. La media móvil es una herramienta para trayectorias que han convergido, y esta no lo había hecho.
+
+\textbf{40a (ZLPR) supera el criterio sobre el conjunto de prueba} (0{,}4440 frente al máximo de control de 0{,}4421) y lo hace sin el efecto adverso que se temía: el F1-micro no solo no se degrada, sino que es el mejor de las cuatro ejecuciones. Que la pérdida de ordenación mejore simultáneamente el orden y la clasificación por umbral sugiere que ambos objetivos no competían tanto como se suponía. Sobre validación, en cambio, el resultado se queda en 0{,}4369, por debajo del máximo de control. Con una dispersión entre semillas de unos 2~pp, una ventaja de 0{,}19~pp en un solo conjunto y de una sola ejecución no basta para declarar una mejora, y así se hace constar.
+
+Hay además una razón para pensar que la ejecución no llegó a su techo. La parada temprana y el planificador se gobiernan por el F1-micro, y bajo esta pérdida ambas métricas dejan de moverse a la vez: el entrenamiento se detuvo en la época~59 de~150 con el F1 estancado desde la~39, pero con el MAP de validación en 0{,}554 y todavía en ascenso. El \emph{checkpoint} guardado es el del mejor F1, no el del mejor MAP. La sección~\ref{sec:anexoF-map} había descartado gobernar la selección por el MAP porque, bajo entropía cruzada, esa métrica era plana entre las épocas~70 y~124 y guiaba mal al planificador; bajo una pérdida que empuja el MAP explícitamente, esa objeción deja de aplicarse. De ahí las dos ejecuciones de continuación: una que repite 40a con selección por MAP y otra que la repite con semilla distinta, para separar el efecto real del sorteo.
+
+\subsubsection*{Ejecuciones de continuación}
+
+Las dos ejecuciones de continuación separan la variabilidad aleatoria del efecto real, y cada una cae del lado que el criterio previo había fijado. La Tabla~\ref{tab:map-paso41} recoge sus resultados junto a la referencia.
+
+\begin{table}[h]
+\centering
+\caption{Ejecuciones de continuación de 40a: MAP por documento sobre el gold completo. El rango de control es el mismo de la Tabla~\ref{tab:map-paso40}.}
+\label{tab:map-paso41}
+\begin{tabular}{lccc}
+\hline
+\textbf{Ejecución} & \textbf{MAP validación} & \textbf{MAP prueba} & \textbf{F1-micro prueba} \\
+\hline
+Ejecuciones previas disponibles (rango)$^{*}$ & 0{,}4166--0{,}4442 & 0{,}4192--0{,}4421 & n/d \\
+40a original & 0{,}4369 & 0{,}4440 & 0{,}4917 \\
+\hline
+41a: 40a con semilla fija & 0{,}4257 & 0{,}4326 & 0{,}4801 \\
+41b: 40a con \texttt{select\_metric=map\_macro} & \textbf{0{,}4451} & \textbf{0{,}4533} & \textbf{0{,}4931} \\
+\hline
+\end{tabular}
+
+\vspace{2mm}
+{\footnotesize $^{*}$ Dos de esas cinco ejecuciones no eran réplicas de la configuración de producción sino variantes descartadas, lo que rebajaba la media del grupo. La subsección~\ref{sec:anexoF-distribuciones} documenta el error y rehace la comparación con el grupo corregido.}
+\end{table}
+
+\textbf{41a refuta a 40a.} Repetida con otra semilla y sin ningún otro cambio, la ejecución cae dentro del rango de control en los dos conjuntos (0,4257 en validación y 0,4326 en prueba). La ventaja de 0,19~pp que 40a mostraba sobre el máximo de control era, por tanto, atribuible al azar. Es el desenlace que la sección anterior se había comprometido a aceptar, y la razón por la que se exigía la replicación antes de dar nada por bueno: sin ella, 40a habría entrado en la memoria como una mejora que no existe.
+
+\textbf{41b supera el criterio en los dos conjuntos.} Gobernar la selección del \emph{checkpoint} y el planificador por el MAP, en lugar de por el F1-micro, da 0,4451 en validación (máximo de control 0,4442) y 0,4533 en prueba (máximo 0,4421), esto es 1,12~pp por encima del control y 0,93~pp por encima de la propia 40a. Mejora además el F1-micro de prueba respecto al modelo de producción (0,4931 frente a 0,4872), de modo que la mejora de ordenación no se paga con la clasificación por umbral. Es el único cambio de toda la serie de experimentos que pasa el criterio fijado de antemano, y confirma la hipótesis con la que se diseñó: la objeción de la sección~\ref{sec:anexoF-map} contra seleccionar por MAP (que bajo entropía cruzada esa métrica es plana y guía mal al planificador) deja de aplicarse cuando la pérdida empuja el MAP de forma explícita.
+
+\textbf{No se da por consolidado con una sola ejecución.} El mismo criterio que permite descartar 40a obliga a no aceptar 41b hasta replicarla, y la replicación no la sostuvo: repetida con otra semilla, la misma configuración obtuvo 0{,}4383 sobre prueba frente a los 0{,}4535 de la original. Un segundo falso positivo, con la misma forma que el primero. La conclusión metodológica es que en este régimen ninguna ejecución individual demuestra nada, y que la comparación tiene que hacerse entre distribuciones.
+
+\subsection{Comparación entre distribuciones}
+\label{sec:anexoF-distribuciones}
+
+Al construir el grupo de control apareció un error que arrastraban las secciones anteriores. Las cinco ejecuciones que se venían usando como control no eran réplicas de la configuración de producción: dos de ellas eran las variantes fallidas 37a y 37b, que cambiaban la métrica de selección y el \texttt{pos\_weight}. La peor de todas, 37b con 0{,}4192, rebajaba la media del grupo e inflaba artificialmente cualquier efecto medido contra ella. El control legítimo eran tres réplicas, que se ampliaron a cinco con dos ejecuciones adicionales, y el grupo experimental se amplió a cuatro semillas. La Tabla~\ref{tab:map-distribuciones} recoge ambas distribuciones. Conviene añadir que el propio modelo de producción queda \emph{fuera} del grupo de control: se eligió en su día por ser el mejor de muchas ejecuciones, de modo que incluirlo sesgaría la comparación.
+
+\begin{table}[h]
+\centering
+\caption{MAP por documento sobre el conjunto de prueba (gold completo): réplicas de la configuración de producción frente a ZLPR con selección por MAP.}
+\label{tab:map-distribuciones}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Grupo} & \textbf{n} & \textbf{Media} & \textbf{Desv. típica} & \textbf{Rango} \\
+\hline
+Control (réplicas de producción) & 5 & 0{,}4359 & 0{,}0051 & 0{,}4315--0{,}4421 \\
+ZLPR + selección por MAP & 4 & \textbf{0{,}4466} & 0{,}0070 & 0{,}4383--0{,}4535 \\
+\hline
+\end{tabular}
+\end{table}
+
+La diferencia de medias es de $+1{,}08$~pp. La prueba $t$ de Welch, que no presupone varianzas iguales, da $t = 2{,}59$ con 5{,}4~grados de libertad y $p = 0{,}045$, con un tamaño del efecto de $d = 1{,}81$ y un intervalo de confianza al 95~\% de $[+0{,}03, +2{,}12]$~pp. Las cuatro ejecuciones con la pérdida de ordenación superan la media del control y tres superan también su máximo. Es la primera diferencia de toda la serie que se distingue del ruido entre semillas.
+
+El alcance de esa afirmación conviene delimitarlo. Con cuatro y cinco ejecuciones por grupo, un $p$ de 0{,}045 es evidencia moderada y no concluyente, y el extremo inferior del intervalo roza el cero, como corresponde a un $p$ tan próximo al umbral. La ganancia queda además muy por debajo de los $+4{,}05$~pp del promediado de modelos. Su interés es que, a diferencia del promediado, no cuesta nada en inferencia.
+
+El mecanismo explica por qué ninguna de las dos piezas funcionaba por separado. La pérdida de ordenación desacopla las dos métricas: bajo entropía cruzada, F1-micro y MAP se estancan a la vez, mientras que con el término listwise el modelo sigue reordenando códigos dentro de cada documento mucho después de que las probabilidades absolutas hayan dejado de moverse. La ejecución 40a lo dejó a la vista, como se ha descrito: se detuvo con el MAP aún en ascenso y guardó el \emph{checkpoint} de veinte épocas antes del mejor. Y por eso la selección por MAP, descartada en la sección~\ref{sec:anexoF-map} porque bajo entropía cruzada esa métrica era plana y guiaba mal al planificador, vuelve a tener sentido: deja de ser plana precisamente porque es la que se está optimizando. Una genera el progreso y la otra lo conserva.
+
+\subsection{Fusión con el baseline de diccionario}
+\label{sec:anexoF-fusion}
+
+Toda la serie anterior comparte una limitación de partida: busca la mejora dentro del modelo neuronal, ajustando su pérdida, su selección de \emph{checkpoint} o su regularización. El techo de esa vía quedó medido en algo más de un punto porcentual. La alternativa es añadir una fuente de evidencia que el modelo no tiene, y el sistema ya dispone de una: el clasificador de diccionario descrito en el capítulo de desarrollo (sección~\ref{sec:diccionario}), que detecta bloques CIE-10 por coincidencia léxica sobre el informe.
+
+La combinación se plantea sobre las puntuaciones y no sobre las listas de salida. A cada código se le suma una bonificación proporcional a la confianza con que el diccionario ha detectado su bloque:
+\[
+s_c = z_c + \beta \cdot \text{conf}(\text{bloque}(c)),
+\]
+con $\beta$ ajustado exclusivamente sobre validación. El barrido se extendió hasta $\beta = 64$ y hasta el caso límite en que el diccionario decide el orden por completo, para comprobar que el óptimo ($\beta = 6$) es interior y no un artefacto del borde de la rejilla explorada: por encima de ese valor el MAP decae, y el límite lexicográfico baja hasta 0{,}5346. La Tabla~\ref{tab:map-fusion} recoge el resultado de la combinación frente a cada sistema por separado.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Todas las configuraciones de los dos motores, medidas sobre el conjunto de prueba y en el mismo espacio de 1.767 códigos completos. El umbral de decisión de cada configuración se ajusta sobre validación y se aplica sin retocar a prueba.}
+\label{tab:map-fusion}
+\begin{tabular}{lrrrr}
+\hline
+\textbf{Configuración} & \textbf{MAP} & \textbf{P} & \textbf{R} & \textbf{F1-micro} \\
+\hline
+Diccionario solo & 0{,}1452 & 0{,}188 & 0{,}791 & 0{,}304 \\
+\hline
+Modelo de producción solo & 0{,}4342 & 0{,}516 & 0{,}462 & 0{,}487 \\
+\quad + diccionario concatenado (\texttt{both}) & n/d & 0{,}184 & 0{,}841 & 0{,}302 \\
+\quad + diccionario fusionado & \textbf{0{,}5446} & 0{,}640 & 0{,}560 & \textbf{0{,}597} \\
+\hline
+Mejor modelo entrenado solo & 0{,}4535 & 0{,}549 & 0{,}455 & 0{,}497 \\
+\quad + diccionario concatenado (\texttt{both}) & n/d & 0{,}185 & 0{,}839 & 0{,}304 \\
+\quad + diccionario fusionado & \textbf{0{,}5535} & 0{,}644 & 0{,}581 & \textbf{0{,}611} \\
+\hline
+\end{tabular}
+\end{table}
+
+La tabla contiene tres lecturas que conviene separar.
+
+\textbf{El diccionario por sí solo es un mal sistema en este espacio de etiquetas} (MAP 0{,}1452), porque predice bloques y asigna la misma puntuación a todos los códigos que cuelgan de un mismo bloque, de modo que no establece ningún orden dentro de él. Su \emph{recall} de 0{,}791 revela sin embargo dónde está su valor: reconoce casi todo lo que hay que reconocer, pero no sabe discriminar. Conviene precisar que esa cifra está medida sobre el espacio de 1.767 códigos completos, que es el de esta tabla; evaluado en su propio espacio de bloques, como se hace en el capítulo de desarrollo, el mismo clasificador obtiene 0{,}461 de MAP y 0{,}672 de F1. No son resultados contradictorios sino dos tareas distintas.
+
+\textbf{La concatenación de ambos motores, que es lo que el sistema ofrecía como modo \texttt{both}, empeora a los dos.} Su F1 de 0{,}302 queda por debajo del modelo solo (0{,}487) y del diccionario solo en su propio espacio, porque unir los conjuntos predichos hereda los falsos positivos de ambos sin ningún criterio para arbitrar entre ellos: el \emph{recall} sube a 0{,}841 y la precisión se desploma a 0{,}184. Tampoco admite MAP, porque dos listas concatenadas no definen una ordenación única. El modo existía para que el cliente viera el origen de cada predicción, no como sistema de combinación, y esta medición confirma que no debe usarse como tal.
+
+\textbf{La fusión de puntuaciones sí combina.} Sube el MAP en 11{,}0~pp sobre el modelo de producción y el F1 en 11{,}0~pp, y lo hace mejorando \emph{a la vez} precisión y \emph{recall}, que es la señal de que está arbitrando entre las dos fuentes en lugar de acumularlas. La diferencia con la concatenación no está en la información disponible, que es idéntica, sino en combinarla antes de decidir y no después.
+
+El barrido completo de $\beta$ y las cifras de esta tabla quedan registrados en \texttt{model/fusion\_sweep.json}, de modo que son reproducibles sin repetir la inferencia. Proceden, como las del resto de la sección, de una única pasada de evaluación en precisión reducida, que es lo que las hace comparables entre sí; difieren en la tercera cifra decimal de la reportada en el Anexo~\ref{cap:AnexoH} (0{,}437 para el modelo de producción), que es la cifra titular del trabajo y procede del guion de evaluación en precisión completa. Esa diferencia, de 0{,}03~pp, es dos órdenes de magnitud menor que los efectos que aquí se discuten.
+
+La mejora es de casi diez puntos porcentuales de MAP, un orden de magnitud por encima de todo lo obtenido modificando el entrenamiento. La explicación está en el rendimiento de cada sistema por separado: el diccionario \emph{por sí solo} obtiene 0{,}1452, un resultado pésimo, porque predice bloques y asigna la misma puntuación a todos los códigos que cuelgan de un mismo bloque, de modo que no establece ningún orden dentro de él. Conviene precisar que esa cifra está medida sobre el espacio de 1.767 códigos completos, que es el de esta tabla; evaluado en su propio espacio de bloques, como se hace en el capítulo de desarrollo, el mismo clasificador obtiene 0{,}461. No son resultados contradictorios sino dos tareas distintas. El modelo neuronal ordena bien dentro del bloque pero se equivoca al decidir qué bloques son pertinentes. Cada sistema es fuerte exactamente donde el otro es débil, y la fusión no suma dos aproximaciones redundantes sino dos descripciones complementarias del mismo problema.
+
+Un detalle de medición confirma ese diagnóstico por una vía independiente. El MAP del diccionario en solitario calculado con la implementación de \emph{scikit-learn} (0{,}1452) difiere del calculado con la implementación propia (0{,}2144), mientras que en la fusión la discrepancia entre ambas cae por debajo de $10^{-4}$. La discrepancia aparece únicamente cuando hay empates masivos en las puntuaciones, que es precisamente lo que produce un sistema que puntúa por bloques.
+
+Sobre la validez de la medida: el diccionario se construye a partir de los conjuntos de entrenamiento y validación y \textbf{nunca a partir del de prueba}, y tanto $\beta$ como el umbral se ajustaron sobre validación, de modo que la cifra de prueba no está contaminada. En cuanto al coste, la fusión no exige hardware adicional: el diccionario ya estaba implementado y desplegado, y su ejecución (lematización y coincidencia de patrones) es de CPU, no de GPU, a diferencia de las pasadas adicionales del \emph{encoder} que exigía el promediado de modelos. Sí añade una pasada del diccionario respecto al modo por defecto, que solo ejecuta el clasificador neuronal, de modo que el coste no es literalmente nulo sino de otra naturaleza: no multiplica el componente que satura el VPS.
+
+El sistema expone esta combinación como un modo de inferencia propio, distinto del que ya existía: el modo anterior devolvía juntas las predicciones de ambos motores y dejaba la reconciliación al usuario, mientras que el nuevo combina las puntuaciones antes de ordenar. Requiere un umbral propio, expresado en el espacio de la puntuación fusionada, porque la bonificación satura la probabilidad de todo código cuyo bloque haya sido detectado y el umbral heredado dejaría de discriminar.
+
+En cuanto a la explicabilidad, las dos fuentes se reportan etiquetadas por origen y no se funden en una única lista ordenada. La razón es la misma que se midió en la subsección de calibración: la confianza de un patrón léxico y la caída de un \emph{logit} por enmascaramiento no comparten escala, y construir una equivalencia entre ambas sería una calibración sin fundamento. Además explican cosas distintas (el diccionario justifica el bloque y el modelo el código concreto dentro de él), de modo que mostrarlas por separado no es solo más honesto sino más informativo.
+
+\subsection{Lecciones}
+
+\begin{itemize}
+ \item Cuando el ruido estocástico entre semillas (1{,}06~pp de rango sobre cinco réplicas) es del orden del efecto esperado de un cambio de hiperparámetros, la vía productiva es reducir la varianza (combinando ejecuciones) y no perseguir configuraciones marginalmente mejores.
+ \item Una métrica de selección plana a lo largo de las épocas es mala guía para el planificador de tasa de aprendizaje, aunque sea la métrica que se desea maximizar.
+ \item Toda comparación con ejecuciones anteriores exige reejecutar la configuración de referencia en el mismo entorno: las versiones de las librerías y el \emph{backend} de atención cambian entre sesiones de trabajo.
+ \item La destilación de conocimiento presupone un profesor que generaliza. Antes de destilar conviene medir las probabilidades del profesor sobre el corpus donde va a aprender el alumno: si están saturadas en 0 y 1, la pérdida blanda es indistinguible de las etiquetas y el experimento no puede funcionar por construcción.
+ \item Ninguna ejecución individual demuestra nada cuando el ruido entre semillas es del orden del efecto buscado. Dos cambios distintos superaron el criterio en su primera ejecución y ninguno lo repitió al cambiar la semilla; la única lectura defendible es comparar distribuciones y acompañarlas de un contraste estadístico.
+ \item Un grupo de control tiene que estar formado por réplicas de la configuración de referencia, no por las ejecuciones que quedaron disponibles. Incluir variantes fallidas rebaja la media del control e infla cualquier efecto medido contra ella, de forma silenciosa y en la dirección que favorece a quien hace la medición.
+ \item Cuando la mejora dentro del modelo toca techo, conviene preguntarse qué evidencia no está usando el modelo en lugar de seguir ajustándolo. En este trabajo, una fuente léxica complementaria que ya estaba implementada rindió una ganancia un orden de magnitud mayor que la obtenida modificando la función de pérdida.
+ \item Antes de dar por bueno el óptimo de un barrido, comprobar que no está en el borde del espacio explorado. El valor inicialmente elegido para la fusión lo estaba, y solo al extender la rejilla pudo confirmarse que existía un óptimo interior.
+\end{itemize}

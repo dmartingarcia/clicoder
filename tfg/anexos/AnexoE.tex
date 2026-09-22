@@ -96,7 +96,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
     \item FastAPI genera documentación OpenAPI automáticamente, lo que facilita las pruebas manuales del endpoint durante el desarrollo.
     \item HTTP es el protocolo más sencillo de consumir desde Elixir con la biblioteca \texttt{Req}, sin necesidad de dependencias adicionales.
     \item El desacoplamiento como servicio independiente permite actualizar el modelo BERT sin recompilar ni reiniciar el backend.
-    \item FastAPI soporta tanto la variante GPU (con CUDA) como la CPU y el modo \emph{mock} mediante la misma interfaz, gestionado únicamente por variables de entorno.
+    \item FastAPI soporta tanto la variante GPU (con CUDA) como la CPU mediante la misma interfaz, seleccionada por la variable \texttt{DEVICE}; el modo \emph{mock} se obtiene sustituyendo el servicio completo por \texttt{ai\_engine\_mock} (ADR-07).
 \end{itemize}
 
 \section{ADR-07: Variante \emph{mock} del motor de IA}

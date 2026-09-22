@@ -12,7 +12,7 @@
 %
 %### Compilación 
 %
-% Esta plantilla ha sido preparada para compilarse con `pdflatex`  
+% Esta plantilla ha sido preparada para compilarse con `pdflatex` 
 % (bibliografía con `bibtex`).
 %$ $
 % Para su compilación se aconseja utilizar `latexmk` (requiere para su 
@@ -38,15 +38,15 @@
 	a4paper,			% Tamaño de papel
 	twoside,			% Impresión a doble cara
 	openright,			% La apertura de cap. a la dcha.
-%	draft       		% Versión borrador (sin figuras)
-	final       		% Versión final
+%	draft 		% Versión borrador (sin figuras)
+	final 		% Versión final
 ]{book}
 
 %--- Márgenes del documento
-\usepackage[top=2.5cm,    % Superior
-            bottom=2.5cm, % Inferior
-            inner=3.5cm,  % Interior 
-            outer=2cm     % Exterior
+\usepackage[top=2.5cm, % Superior
+ bottom=2.5cm, % Inferior
+ inner=3.5cm, % Interior 
+ outer=2cm % Exterior
 ]{geometry}
 
 \pdfcompresslevel=0
@@ -72,18 +72,18 @@
 
 % OPT: Opciones de hipertexto
 \hypersetup{% (Metadatos del fichero PDF generado)
-	breaklinks=true,         % Enlaces con división entre líneas
-    linktocpage=true,        % T/F=enlace al nº de pág./texto completo
-	colorlinks=true,         % T/F=texto en color/recuadro al texto
-%    hidelinks,               % Oculta colores en los enlaces (en negro)
-    linkcolor=UCLMred,       % Color links internos
-    anchorcolor=UCLMred,     % Color para anclas a texto
-	urlcolor=aquaESI,        % Color para URL enlazadas
-	citecolor=UCLMred,       % Color para citas a bibliografía
-	bookmarksopen=true,      % Abre PDF con panel de marcadores abierto
-	bookmarksnumbered=true,  % Incluye números en marcadores
-	pdftoolbar=true,         % Muestra la toolbar de Acrobat
-	pdfmenubar=true,	     % Muestra la menubar de Acrobat
+	breaklinks=true, % Enlaces con división entre líneas
+ linktocpage=true, % T/F=enlace al nº de pág./texto completo
+	colorlinks=true, % T/F=texto en color/recuadro al texto
+% hidelinks, % Oculta colores en los enlaces (en negro)
+ linkcolor=UCLMred, % Color links internos
+ anchorcolor=UCLMred, % Color para anclas a texto
+	urlcolor=aquaESI, % Color para URL enlazadas
+	citecolor=UCLMred, % Color para citas a bibliografía
+	bookmarksopen=true, % Abre PDF con panel de marcadores abierto
+	bookmarksnumbered=true, % Incluye números en marcadores
+	pdftoolbar=true, % Muestra la toolbar de Acrobat
+	pdfmenubar=true,	 % Muestra la menubar de Acrobat
 }
 
 %---
@@ -123,17 +123,17 @@
 % (EN: BACHELOR IN COMPUTING ENGINEERING)
 \tipoDoc{TRABAJO FIN DE GRADO} % (EN: BACHELOR DISSERTATION)
 % Si las fechas se desean en inglés hay que ponerla explícita.
-\mesTF{julio}        	% Mes de defensa (incluir siempre)
-\monthTF{July}        	% En inglés (incluir siempre)
-\yearTF{2026}        	% Año de defensa
+\mesTF{julio} 	% Mes de defensa (incluir siempre)
+\monthTF{July} 	% En inglés (incluir siempre)
+\yearTF{2026} 	% Año de defensa
 \cityTF{Ciudad Real}	% Ciudad de defensa
 
 
 \makeatletter
 \hypersetup{% (Metadatos del fichero PDF generado)
-	pdftitle={\@title},      % Título
-	pdfauthor={\@author},    % Autor
-	pdfsubject={\@tipoDoc}   % Tipo de de documento
+	pdftitle={\@title}, % Título
+	pdfauthor={\@author}, % Autor
+	pdfsubject={\@tipoDoc} % Tipo de de documento
 }
 \makeatother
 
@@ -161,7 +161,7 @@
 % BEGIN_FOLD
 % OPT.: Ficheros incluidos, modifica o comenta.
 \frontmatter
-\pagestyle{empty}  % Páginas sin cabecera ni pies
+\pagestyle{empty} % Páginas sin cabecera ni pies
 \input{./preambulo/PortadasESI} % Diseño de portadas
 %\input{./preambulo/PortadaETSII} % Por ej.,: Otras portadas
 %\includepdf{fichero_portada.pdf} % Incluso como fichero PDF
@@ -231,55 +231,55 @@
 % --- BIBLIOGRAFÍA
 % -------------------------
 \cleardoublepage % Necesario para ajustar el avance de página
-\phantomsection  % Ojo necesario con hyperref.
+\phantomsection % Ojo necesario con hyperref.
 \addcontentsline{toc}{chapter}{\bibname} % Añade la bibliografía al Índice de contenidos
 
 % Descomentar si se incluye lista \bibitem desde fichero "refs.bbl"
 \newif\ifbibitemrefs\bibitemrefsfalse
 % OPT: Activa bibitems para la bibliografía descomentabdi línea sig.
 %\bibitemrefstrue 
-\ifbibitemrefs  % Se incluye bibitem list desde refs.bbl
+\ifbibitemrefs % Se incluye bibitem list desde refs.bbl
 	\input{refs.bbl} % OJO: Fichero refs.bbl debe existir
 \else % OPT: Estilo en bibliografía
-	\bibliography{biblioTFG}   % Nombre del fichero .bib (sin extensión)
-	\bibliographystyle{plain}  % Estilo empleado en la bibliografía
+	\bibliography{biblioTFG} % Nombre del fichero .bib (sin extensión)
+	\bibliographystyle{plain} % Estilo empleado en la bibliografía
 \fi
 % Estilos nativos incluidos con LaTeX (plain, abbrv, alpha, unsrt).
 %
 % plain: las referencias se numeran y en la bibliografía las entradas
-%        aparecen en orden alfabético.
+% aparecen en orden alfabético.
 % abbrv: igual que el anterior pero en la bibliografía los nombres se
-%        escriben sólo con la inicial.
-%        y el año de publicación. En la bibliografía los nombres 
-%        igual que en plain. 
-%        .
+% escriben sólo con la inicial.
+% y el año de publicación. En la bibliografía los nombres 
+% igual que en plain. 
+% .
 % unsrt: la bibliografía no aparece por orden alfabético sino por 
-%        orden de cita en el texto.
+% orden de cita en el texto.
 %
-%---     Estilos incluidos con BibTeX “no nativos”, pero populares” 
-%        para ingenierías (no requieren paquetes adicionales).
-% acm:   Numérica con los nombre de autores en mayúsculas y 
-%        referencias con ordenación alfabética.
+%--- Estilos incluidos con BibTeX “no nativos”, pero populares” 
+% para ingenierías (no requieren paquetes adicionales).
+% acm: Numérica con los nombre de autores en mayúsculas y 
+% referencias con ordenación alfabética.
 % ieeetr:Para los IEEE Transactions, con citación numérica 
-%        y ordenación de referencias por orden de cita.
+% y ordenación de referencias por orden de cita.
 %========
 % apacite: No numérica, con referencias ordenadas alfabéticamente
-%          por apellido de autor (requiere paquete 'apacite'). 
+% por apellido de autor (requiere paquete 'apacite'). 
 %
 % NOTA: Cita natbib con estilo apacite
-%          La citación mediante este paquete permite el empleo 
-%          de comandos del paquete natbib como:
+% La citación mediante este paquete permite el empleo 
+% de comandos del paquete natbib como:
 %
-%   \citet{key} 				==>> Jones y col. (1990)
-%   \citet*{key} 				==>> Jones, Baker, y Smith (1990)
-%   \citep{key} 				==>> (Jones y col., 1990)
-%   \citep*{key} 				==>> (Jones, Baker, y Smith, 1990)
-%   \citep[cap. 2]{key} 		==>> (Jones y col., 1990, cap. 2)
-%   \citep[ver][]{key} 			==>> (ver Jones y col., 1990)
-%   \citep[ver][pág. 32]{key} 	==>> (ver Jones y col., pág. 32)
-%   \citeauthor{key} 			==>> Jones y col.
-%   \citeauthor*{key} 			==>> Jones, Baker, y Smith
-%   \citeyear{key} 				==>> 1990
+% \citet{key} 				==>> Jones y col. (1990)
+% \citet*{key} 				==>> Jones, Baker, y Smith (1990)
+% \citep{key} 				==>> (Jones y col., 1990)
+% \citep*{key} 				==>> (Jones, Baker, y Smith, 1990)
+% \citep[cap. 2]{key} 		==>> (Jones y col., 1990, cap. 2)
+% \citep[ver][]{key} 			==>> (ver Jones y col., 1990)
+% \citep[ver][pág. 32]{key} 	==>> (ver Jones y col., pág. 32)
+% \citeauthor{key} 			==>> Jones y col.
+% \citeauthor*{key} 			==>> Jones, Baker, y Smith
+% \citeyear{key} 				==>> 1990
 % -------------------------
 %--- (FIN BIBLIOGRAFÍA)
 % -------------------------
@@ -308,9 +308,10 @@
 \include{./anexos/AnexoG} % Anexo G: Análisis estadístico del corpus
 \include{./anexos/AnexoH} % Anexo H: Configuración y resultados del entrenamiento final
 \include{./anexos/AnexoI} % Anexo I: Arquitectura de producción (VPS + Docker Compose + Traefik)
-\include{./anexos/AnexoJ} % Anexo J: Tablero Kanban — listado completo de tareas
+\include{./anexos/AnexoJ} % Anexo J: Tablero Kanban, listado completo de tareas
 \include{./anexos/AnexoK} % Anexo K: Guía de arranque del sistema
 \include{./anexos/AnexoL} % Anexo L: Aumentación de datos mediante retrotraducción
+\include{./anexos/AnexoM} % Anexo M: Especificación de la API (OpenAPI + NDJSON)
 
 %END_FOLD
 %--- (FIN DOCUMENTO)

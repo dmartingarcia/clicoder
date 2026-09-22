@@ -1,0 +1,38 @@
+% Arquitectura de producción: Cloudflare -> VPS (Traefik + servicios Docker)
+% Uso: \input{figs/infra-prod} dentro de figure+\centering+\resizebox{\textwidth}{!}{...}
+
+\begin{tikzpicture}[
+  every node/.style={font=\small\sffamily},
+  ext/.style={draw=palered!80, fill=palered!10, thick, rectangle, rounded corners=3pt,
+              minimum width=3.0cm, minimum height=0.95cm, align=center},
+  prox/.style={draw=ocre!80, fill=ocre!15, thick, rectangle, rounded corners=3pt,
+               minimum width=8.2cm, minimum height=0.9cm, align=center},
+  svc/.style={draw=aquaESI!80, fill=aquaESI!15, thick, rectangle, rounded corners=3pt,
+              minimum width=2.4cm, minimum height=0.95cm, align=center},
+  dbc/.style={draw=turquesa!80, fill=turquesa!15, thick, cylinder, shape border rotate=90,
+              aspect=0.22, minimum width=2.2cm, minimum height=1.0cm, align=center},
+  arr/.style={->, >=Stealth, thick},
+]
+\node[ext] (user) at (0,3.4) {Usuario};
+\node[ext] (cf)   at (0,2.0) {Cloudflare\\\scriptsize WAF $\cdot$ DDoS $\cdot$ TLS de borde};
+
+% Frontera del VPS
+\draw[rounded corners=6pt, dashed, gray!55, thick] (-4.7,-3.3) rectangle (4.7,1.15);
+\node[gray!70, font=\footnotesize\sffamily\bfseries] at (0,0.85)
+  {VPS Contabo (Frankfurt) $\cdot$ Docker Compose $\cdot$ fail2ban};
+
+\node[prox] (tk) at (0,0.2) {Traefik \scriptsize (proxy inverso $\cdot$ TLS Let's Encrypt)};
+\node[svc] (fe) at (-3.2,-1.3) {Frontend\\\scriptsize Next.js};
+\node[svc] (be) at (-0.3,-1.3) {Backend\\\scriptsize Phoenix};
+\node[svc] (mon) at (3.0,-1.3) {Prometheus\\\scriptsize + Grafana};
+\node[svc] (ai) at (-1.8,-2.7) {AI Engine\\\scriptsize FastAPI (CPU)};
+\node[dbc] (pg) at (1.4,-2.7) {PostgreSQL};
+
+\draw[arr] (user) -- (cf);
+\draw[arr] (cf) -- (tk);
+\draw[arr] (tk) -- (fe);
+\draw[arr] (tk) -- (be);
+\draw[arr] (be) -- (ai);
+\draw[arr] (be) -- (pg);
+\draw[arr, gray!60] (be) -- (mon);
+\end{tikzpicture}

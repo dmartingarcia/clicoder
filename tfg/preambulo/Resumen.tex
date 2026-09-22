@@ -9,36 +9,36 @@
 
 % EDITAR: Resumen (máx. 1 pág.)
 %\cleardoublepage % Se incluye para modificar el contador de página antes de añadir bookmark
-\phantomsection  % Necesario con hyperref
+\phantomsection % Necesario con hyperref
 \addcontentsline{toc}{chapter}{Resumen} % Añade al TOC.
 \selectlanguage{spanish} % Selección de idioma del resumen.
 \makeatletter
 \begin{center} %
-   {\textsc{TRABAJO FIN DE GRADO - ESCUELA SUPERIOR DE INFORMÁTICA 
-   (UCLM)}\par} % Tipo de trabajo
-   \vspace{1cm} %  
-   {\textbf{\Large\@tituloCorto}\par}  % Título del trabajo
-   \vspace{0.4cm} %
-   {\@autor \\ \@cityTF,{} \@mesTF{} \@yearTF\par} 
-   \vspace{0.9cm} %
-   {\textbf{\large\textsf{Resumen}}\par} % Título de resumen
-\end{center}   
+ {\textsc{TRABAJO FIN DE GRADO - ESCUELA SUPERIOR DE INFORMÁTICA 
+ (UCLM)}\par} % Tipo de trabajo
+ \vspace{1cm} % 
+ {\textbf{\Large\@tituloCorto}\par} % Título del trabajo
+ \vspace{0.4cm} %
+ {\@autor \\ \@cityTF,{} \@mesTF{} \@yearTF\par} 
+ \vspace{0.9cm} %
+ {\textbf{\large\textsf{Resumen}}\par} % Título de resumen
+\end{center} 
 \makeatother %
 La codificación manual de diagnósticos clínicos en sistemas CIE-10 presenta importantes desafíos operativos: complejidad creciente (68.069 códigos frente a los 14.025 de CIE-9) y tiempos medios de 14 minutos por caso~\cite{sanidad2016cie10,gogorcena2017cie10es}, con el agravante de requerir personal especializado para evitar errores de clasificación.
 
 Este trabajo propone un sistema automático de codificación mediante modelos BERT multilabel adaptados a narrativas clínicas en español, abordando tres problemáticas clave:
 
 \begin{itemize}
-  \item Procesamiento de lenguaje clínico no estructurado.
-  \item Asignación múltiple de códigos jerárquicamente relacionados.
-  \item Adaptación a los requisitos de trazabilidad y auditabilidad del Reglamento UE 2017/745~\cite{eu2017745}, aplicable al software de apoyo a la decisión clínica.
+ \item Procesamiento de lenguaje clínico no estructurado.
+ \item Asignación múltiple de códigos jerárquicamente relacionados.
+ \item Adaptación a los requisitos de trazabilidad y auditabilidad del Reglamento UE 2017/745~\cite{eu2017745}, aplicable al software de apoyo a la decisión clínica.
 \end{itemize}
 
-La metodología combina técnicas de PLN con conocimiento clínico estructurado: preentrenamiento débil sobre las descripciones oficiales del catálogo CIE-10-ES, \emph{fine-tuning} del modelo RigoBERTa-Clinical~\cite{garciasubies2026rigobertaclinical} con función de pérdida Binary Cross-Entropy ponderada para combatir el desequilibrio extremo de clases, y calibración de umbrales de decisión por código sobre el conjunto de validación del corpus CodiEsp~\cite{miranda2020}.
+La metodología combina técnicas de PLN con conocimiento clínico estructurado: preentrenamiento débil sobre las descripciones oficiales del catálogo CIE-10-ES, \emph{fine-tuning} del modelo RigoBERTa-Clinical~\cite{garciasubies2026rigobertaclinical} con función de pérdida Binary Cross-Entropy ponderada para combatir el desequilibrio extremo de clases, y estudio de la estrategia de umbral de decisión (global frente a por código) sobre el conjunto de validación del corpus CodiEsp~\cite{miranda2020}.
 
-Los resultados muestran un F1-micro de 0,551 y un F1-macro de 0,152 en codificación de diagnósticos sobre el corpus CodiEsp con umbrales por clase optimizados (F1-micro de 0,4945 y F1-macro de 0,119 con umbral global de 0,3). El MAP por documento alcanza 0,544, equivalente a la segunda posición en el \emph{ranking} oficial del \emph{benchmark} CodiEsp~\cite{miranda2020} (22 equipos; mejor sistema: 0,593), superando a todos los sistemas basados exclusivamente en transformers. El modelo reduce la fase de propuesta de codificación a menos de un segundo por informe, frente a los 14 minutos de media del proceso manual, requiriendo únicamente revisión humana en los casos de baja certeza.
+Sobre el conjunto de prueba de CodiEsp, el sistema obtiene un F1-micro de 0,489 y un F1-macro de 0,109 (umbral de decisión global de 0,3, seleccionado sobre el conjunto de validación). La calidad del \emph{ranking} de códigos, medida como MAP por documento, es de 0,437 sobre el conjunto completo de códigos de referencia, métrica directamente comparable con el \emph{benchmark} CodiEsp~\cite{miranda2020}, y de 0,537 al restringirla al vocabulario de códigos que el modelo puede predecir. El sistema se sitúa dentro del rango de los participantes del \emph{benchmark}, por detrás tanto de los \emph{ensembles} y diccionarios construidos manualmente que lo encabezan (MAP 0,593) como de los mejores sistemas basados exclusivamente en transformers (MAP 0,517), lo que resulta razonable para un único clasificador plano entrenado con solo 500 documentos. El modelo reduce la fase de propuesta de codificación a menos de un segundo por informe, frente a los 14 minutos de media del proceso manual, requiriendo únicamente revisión humana en los casos de baja certeza.
 
-El trabajo demuestra la viabilidad de sistemas basados en transformers para codificación clínica automatizada, proponiendo un \emph{pipeline} reproducible que integra un clasificador multilabel, un servicio de inferencia con API REST y una interfaz web de demostración en tiempo real. Las limitaciones identificadas —cobertura reducida de códigos poco frecuentes y ausencia de datos de hospitales reales— establecen las líneas prioritarias para trabajos futuros.
+El trabajo demuestra la viabilidad de sistemas basados en transformers para codificación clínica automatizada, proponiendo un \emph{pipeline} reproducible que integra un clasificador multilabel, un servicio de inferencia con API REST y una interfaz web de demostración en tiempo real. Las limitaciones identificadas (cobertura reducida de códigos poco frecuentes y ausencia de datos de hospitales reales) establecen las líneas prioritarias para trabajos futuros.
 
 \bigskip
 \noindent\textbf{Palabras clave}: CIE-10, BERT, clasificación multilabel, codificación clínica, procesamiento de lenguaje natural.
@@ -52,36 +52,36 @@ El trabajo demuestra la viabilidad de sistemas basados en transformers para codi
 
 % EDITAR: Abstract (máx. 1 pág.)
 %---
-\phantomsection  % Necesario con hyperref
+\phantomsection % Necesario con hyperref
 \addcontentsline{toc}{chapter}{Abstract} % Añade al TOC.
 \selectlanguage{english} % Selección de idioma del resumen.
 \makeatletter
 \begin{center} %
-   {\textsc{BACHELOR DISSERTATION - ESCUELA SUPERIOR DE INFORMÁTICA 
-   (UCLM)}\par}
-   \vspace{1cm} %  
-   {\textbf{\Large\@tituloCorto}\par}
-   \vspace{0.4cm} %
-   {\@autor \\ \@cityTF,{} \@monthTF{} \@yearTF\par} 
-   \vspace{0.9cm} %
-   {\textbf{\large\textsf{Abstract}}\par} 
-\end{center}   
+ {\textsc{BACHELOR DISSERTATION - ESCUELA SUPERIOR DE INFORMÁTICA 
+ (UCLM)}\par}
+ \vspace{1cm} % 
+ {\textbf{\Large\@tituloCorto}\par}
+ \vspace{0.4cm} %
+ {\@autor \\ \@cityTF,{} \@monthTF{} \@yearTF\par} 
+ \vspace{0.9cm} %
+ {\textbf{\large\textsf{Abstract}}\par} 
+\end{center} 
 \makeatother %
-Manual coding of clinical diagnoses in ICD-10 systems presents significant operational challenges: growing complexity (68,069 codes versus 14,025 in ICD-9) and an average coding time of 14 minutes per case~\cite{sanidad2016cie10}, compounded by the need for specialist staff to avoid classification errors.
+Manual coding of clinical diagnoses in ICD-10 systems presents significant operational challenges: growing complexity (68,069 codes versus 14,025 in ICD-9) and an average coding time of 14 minutes per case~\cite{sanidad2016cie10,gogorcena2017cie10es}, compounded by the need for specialist staff to avoid classification errors.
 
 This work proposes an automatic coding system based on multilabel BERT models adapted to clinical narratives in Spanish, addressing three key problems:
 
 \begin{itemize}
-  \item Processing of unstructured clinical language.
-  \item Multiple assignment of hierarchically related codes.
-  \item Compliance with the traceability and auditability requirements of EU Regulation 2017/745~\cite{eu2017745}, applicable to clinical decision-support software.
+ \item Processing of unstructured clinical language.
+ \item Multiple assignment of hierarchically related codes.
+ \item Compliance with the traceability and auditability requirements of EU Regulation 2017/745~\cite{eu2017745}, applicable to clinical decision-support software.
 \end{itemize}
 
-The methodology combines advanced NLP techniques with structured clinical knowledge: weak pre-training on the official ICD-10-ES catalogue descriptions, fine-tuning of the RigoBERTa-Clinical model~\cite{garciasubies2026rigobertaclinical} with weighted Binary Cross-Entropy loss to address extreme class imbalance, and per-code decision threshold calibration on the CodiEsp validation set~\cite{miranda2020}.
+The methodology combines NLP techniques with structured clinical knowledge: weakly supervised pre-training on the official ICD-10-ES catalogue descriptions, fine-tuning of the RigoBERTa-Clinical model~\cite{garciasubies2026rigobertaclinical} with weighted Binary Cross-Entropy loss to address extreme class imbalance, and a study of the decision-threshold strategy (global versus per-code) on the CodiEsp validation set~\cite{miranda2020}.
 
-Results show an F1-micro of 0.551 and an F1-macro of 0.152 on diagnostic coding over the CodiEsp corpus with per-class optimized thresholds (F1-micro of 0.4945 and F1-macro of 0.119 with global threshold of 0.3). The per-document MAP reaches 0.544, ranking second out of 22 systems in the CodiEsp benchmark~\cite{miranda2020} (best system: 0.593) and surpassing all purely transformer-based systems. The model reduces the coding proposal phase to under one second per report, compared to the 14-minute average of the manual process, requiring human review only for low-confidence cases.
+On the CodiEsp test set, the system achieves an F1-micro of 0.489 and an F1-macro of 0.109 (global decision threshold of 0.3, selected on the validation set). Ranking quality, measured as per-document MAP, is 0.437 over the full reference code set (directly comparable with the CodiEsp benchmark~\cite{miranda2020}) and 0.537 when restricted to the code vocabulary the model can predict. The system falls within the range of the benchmark participants, trailing both the ensembles and manually built dictionaries that lead it (MAP 0.593) and the best purely transformer-based systems (MAP 0.517), a reasonable outcome for a single flat classifier trained on only 500 documents. The model reduces the coding proposal phase to under one second per report, compared with the 14-minute average of the manual process, requiring human review only for low-confidence cases.
 
-The work demonstrates the feasibility of transformer-based systems for automated clinical coding, proposing a reproducible pipeline integrating a multilabel classifier, a REST API inference service, and a real-time web interface. Identified limitations---limited coverage of rare codes and absence of real hospital data---define the priority directions for future work.
+The work demonstrates the feasibility of transformer-based systems for automated clinical coding, proposing a reproducible pipeline integrating a multilabel classifier, a REST API inference service, and a real-time web interface. Identified limitations (limited coverage of rare codes and absence of real hospital data) define the priority directions for future work.
 
 \bigskip
 
