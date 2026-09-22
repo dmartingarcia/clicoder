@@ -85,4 +85,20 @@ defmodule AppWeb.TranslationControllerTest do
       assert is_binary(auth["register"])
     end
   end
+
+  describe "idiomas no admitidos" do
+    test "un idioma desconocido cae al español en vez de fallar", %{conn: conn} do
+      # El cliente puede pedir cualquier cosa: devolver un error dejaría la interfaz sin
+      # textos, así que se sirve el idioma por defecto.
+      respuesta = json_response(get(conn, ~p"/api/translations/klingon"), 200)
+      assert respuesta["auth"]
+      assert respuesta == json_response(get(conn, ~p"/api/translations/es"), 200)
+    end
+
+    test "los cinco idiomas admitidos responden", %{conn: conn} do
+      for locale <- ~w(es en fr it de) do
+        assert json_response(get(conn, ~p"/api/translations/#{locale}"), 200)["auth"]
+      end
+    end
+  end
 end

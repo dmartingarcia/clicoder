@@ -1,4 +1,4 @@
-.PHONY: ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 -include .env
 export
@@ -299,6 +299,20 @@ backend-seed: backend-install ## Primera vez: create + migrate + eventstore + se
 	$(COMPOSE_CPU) run --rm backend mix cie10.import
 	@echo "$(GREEN)Admin: $(SEED_ADMIN_EMAIL) / $(SEED_ADMIN_PASSWORD)$(NC)"
 
+backend-coverage: ## Cobertura de pruebas del backend (excoveralls). Uso: make backend-coverage [ARGS="--detail"]
+	@echo "$(BLUE)Midiendo cobertura del backend...$(NC)"
+	$(COMPOSE_CPU) run --rm --no-deps -e MIX_ENV=test backend mix coveralls $(ARGS)
+
+frontend-coverage: ## Cobertura de pruebas del frontend (vitest + v8)
+	@echo "$(BLUE)Midiendo cobertura del frontend...$(NC)"
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm --no-deps frontend npx vitest run --coverage
+
+ai-coverage: ## Cobertura de pruebas del motor de IA (pytest-cov)
+	@echo "$(BLUE)Midiendo cobertura del motor de IA...$(NC)"
+	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c "pip install -q -r requirements-dev.txt pytest-cov && cd /app && python -m pytest tests/ -q -p no:cacheprovider --cov=. --cov-report=term --cov-config=/dev/null"
+
+coverage: backend-coverage ai-coverage frontend-coverage ## Cobertura de los tres proyectos
+
 backend-test: ## Ejecutar tests del backend
 	@echo "$(GREEN)Preparando BBDDs de test...$(NC)"
 	$(COMPOSE) exec -e MIX_ENV=test backend mix ecto.create --quiet
@@ -440,26 +454,64 @@ mock-up: frontend-install network-create ## Levantar servicios en modo mock (sin
 	@echo "  - Prometheus:    http://localhost:9090"
 	@echo "  - PostgreSQL:    localhost:5432"
 
-model-download: ## Descargar modelo desde Hugging Face a ai_engine/model/
-	@echo "$(BLUE)Descargando modelo desde HF: $(HF_REPO)$(NC)"
-	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
-		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) classifier.pt          --local-dir $(AI_MODEL_DIR) && \
-		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) thresholds.json        --local-dir $(AI_MODEL_DIR) && \
-		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) code_descriptions.json --local-dir $(AI_MODEL_DIR) && \
-		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) baseline_dict.json     --local-dir $(AI_MODEL_DIR)'
-	@echo "$(GREEN)Modelo descargado en $(MODEL_DIR)/$(NC)"
+model-list: ## Listar los modelos publicados y sus métricas
+	@python3 -c "import json; d=json.load(open('$(MODEL_DIR)/models.json')); \
+	print('repo:', d['repo']); \
+	print('  (métricas comparables entre sí: misma pasada de evaluación)'); \
+	[print(f\"  {k:12} MAP={v['comparables']['map_test']:.4f}  F1={v['comparables']['f1_micro_test']:.4f}  con diccionario MAP={v['comparables']['map_test_con_diccionario']:.4f}  {v['descripcion']}\") for k,v in d['modelos'].items()]; \
+	print(); print(d['nota_fusion'])"
 
-model-upload: ## Subir mejor modelo a Hugging Face (lee HF_TOKEN de .env)
-	@echo "$(BLUE)Subiendo modelo a HF: $(HF_REPO)$(NC)"
-	cp $(MODEL_DIR)/$(BEST_PT)  $(MODEL_DIR)/classifier.pt
-	cp $(MODEL_DIR)/$(BEST_THR) $(MODEL_DIR)/thresholds.json
+model-upload: ## Subir un modelo a HF con nombre propio. Uso: make model-upload NAME=zlpr-map PT=<fichero.pt> THR=<fichero.json>
+	@test -n "$(NAME)" || (echo "$(RED)Falta NAME=<nombre del modelo en el catálogo>$(NC)"; exit 1)
+	@test -n "$(PT)"   || (echo "$(RED)Falta PT=<ruta del checkpoint>$(NC)"; exit 1)
+	@test -n "$(THR)"  || (echo "$(RED)Falta THR=<ruta de los umbrales>$(NC)"; exit 1)
+	@echo "$(BLUE)Subiendo '$(NAME)' a HF: $(HF_REPO)$(NC)"
+# Se sube con el nombre del catálogo, no sobre classifier.pt: así conviven varias versiones
+# en el mismo repositorio y subir una nueva no sustituye a la que está en producción.
 	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
-		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/classifier.pt        classifier.pt && \
-		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/thresholds.json      thresholds.json && \
-		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/code_descriptions.json code_descriptions.json && \
-		HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/baseline_dict.json   baseline_dict.json'
-	rm -f $(MODEL_DIR)/classifier.pt $(MODEL_DIR)/thresholds.json
-	@echo "$(GREEN)Modelo subido: https://huggingface.co/$(HF_REPO)$(NC)"
+		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/$(PT)  $(NAME).pt && \
+		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/$(THR) $(NAME).thresholds.json'
+	@echo "$(GREEN)Subido como $(NAME).pt en https://huggingface.co/$(HF_REPO)$(NC)"
+
+model-upload-shared: ## Subir los artefactos comunes a todos los modelos (descripciones y diccionario)
+	@echo "$(BLUE)Subiendo artefactos compartidos a HF: $(HF_REPO)$(NC)"
+	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
+		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/code_descriptions.json code_descriptions.json && \
+		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/baseline_dict.json     baseline_dict.json && \
+		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/models.json            models.json && \
+		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/config.json            config.json'
+	@echo "$(GREEN)Artefactos compartidos subidos$(NC)"
+
+model-download: ## Descargar un modelo. Uso: make model-download [NAME=zlpr-map] (sin NAME baja el de producción)
+	@echo "$(BLUE)Descargando desde HF: $(HF_REPO)$(NC)"
+# Los artefactos compartidos se bajan siempre; el checkpoint, solo el pedido.
+	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
+		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) code_descriptions.json --local-dir $(AI_MODEL_DIR) && \
+		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) baseline_dict.json     --local-dir $(AI_MODEL_DIR) && \
+		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) models.json            --local-dir $(AI_MODEL_DIR) && \
+		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) config.json            --local-dir $(AI_MODEL_DIR) || true'
+	$(if $(NAME),\
+		$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
+			HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) $(NAME).pt               --local-dir $(AI_MODEL_DIR) && \
+			HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) $(NAME).thresholds.json  --local-dir $(AI_MODEL_DIR)',\
+		$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
+			HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) classifier.pt   --local-dir $(AI_MODEL_DIR) && \
+			HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) thresholds.json --local-dir $(AI_MODEL_DIR)')
+	@echo "$(GREEN)Descargado en $(MODEL_DIR)/$(NC)"
+
+model-use: ## Activar un modelo ya descargado. Uso: make model-use NAME=zlpr-map
+	@test -n "$(NAME)" || (echo "$(RED)Falta NAME=<nombre del modelo>$(NC)"; exit 1)
+# Reescribe config.json para apuntar al checkpoint elegido y a sus umbrales, incluido el
+# umbral de la fusión, que es propio de cada modelo porque vive en el espacio de puntuación.
+	@python3 -c "import json,sys; \
+	cat=json.load(open('$(MODEL_DIR)/models.json')); \
+	m=cat['modelos'].get('$(NAME)') or sys.exit('modelo desconocido: $(NAME)'); \
+	cfg=json.load(open('$(MODEL_DIR)/config.json')); \
+	cfg.update({'model_file': m['checkpoint'], 'thresholds_file': m['thresholds'], \
+	            'threshold': m['umbral'], 'fusion_threshold': m['fusion_threshold']}); \
+	json.dump(cfg, open('$(MODEL_DIR)/config.json','w'), indent=2, ensure_ascii=False); \
+	print('activo:', m['checkpoint'], '· MAP', m['map_test'])"
+	@echo "$(GREEN)Reinicia el motor para que cargue el modelo nuevo$(NC)"
 
 network-create: ## Crear red Docker compartida entre stacks (proxy, app, monitoring)
 	@docker network inspect $(NETWORK) >/dev/null 2>&1 || docker network create $(NETWORK)

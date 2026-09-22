@@ -9,6 +9,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     coverage: {
+      // Fuera del árbol del proyecto: el directorio por defecto (./coverage) quedó en manos
+      // de root tras ejecutar el contenedor como superusuario, y vitest lo limpia al
+      // arrancar, de modo que la medición fallaba con EACCES antes de empezar.
+      reportsDirectory: '/tmp/vitest-coverage',
       provider: 'v8',
       reporter: ['text', 'html', 'json', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],

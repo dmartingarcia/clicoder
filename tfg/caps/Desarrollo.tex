@@ -1064,7 +1064,30 @@ Las pruebas del motor de IA se realizan en dos niveles. A nivel de \emph{baselin
 \subsection{Pruebas del backend}
 \label{sec:pruebas-backend}
 
-El backend incluye una suite de 196~pruebas ExUnit organizada en \texttt{backend/test/}, ejecutadas con \texttt{make backend-test}. La suite cubre íntegramente toda la lógica de negocio, la capa de API REST y la autenticación; los únicos módulos sin cobertura son aquellos para los que escribir pruebas no tiene sentido práctico, como se detalla al final de esta sección. Las pruebas se distribuyen en cuatro niveles, siguiendo la estructura del código de producción.
+El backend incluye una suite de 287~pruebas ExUnit organizada en \texttt{backend/test/}, ejecutadas con \texttt{make backend-test}. La cobertura se mide por separado en cada uno de los tres proyectos (Tabla~\ref{tab:cobertura}), porque son bases de código independientes con herramientas y naturaleza distintas, y promediarlas no significaría nada.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Cobertura de línea por proyecto.}
+\label{tab:cobertura}
+\begin{tabular}{llrr}
+\hline
+\textbf{Proyecto} & \textbf{Herramienta} & \textbf{Pruebas} & \textbf{Cobertura} \\
+\hline
+Backend (Elixir) & \texttt{excoveralls} & 287 & \textbf{90{,}0\,\%} \\
+Motor de IA (Python) & \texttt{pytest-cov} & 144 & 33{,}8\,\%$^{*}$ \\
+Frontend (TypeScript) & \texttt{vitest} + \texttt{v8} & 151 & n/d$^{\dagger}$ \\
+\hline
+\end{tabular}
+
+\vspace{2mm}
+{\footnotesize $^{*}$ Sobre los módulos de servicio; el directorio completo, que incluye guiones de un solo uso, queda en el 30\,\%. $^{\dagger}$ No medible en el entorno actual por un problema de permisos del directorio de informes.}
+\end{table}
+
+La diferencia entre el backend y el motor de IA no es casual y conviene explicarla. El backend es código de orquestación cuyo comportamiento depende de la interacción entre piezas, y ahí las pruebas son la única forma de saber que sigue funcionando: cubren el agregado, el proyector que materializa el registro de eventos, los canales, los controladores, el panel de administración y los endpoints de protección de datos. El motor de IA, en cambio, está dominado por guiones de entrenamiento, evaluación y generación de figuras que se ejecutan a mano una vez y cuyo resultado se verifica contra los artefactos que producen; sus módulos de servicio (\texttt{main.py} y \texttt{classifier.py}) rondan el 45\,\%, y lo que arrastra la media a la baja es la construcción de patrones del diccionario, un proceso de un solo uso.
+
+Dos observaciones sobre el propio proceso de medir. La primera es que alcanzar esa cobertura exigió antes hacer testable lo que no lo era: faltaba la dependencia que Phoenix necesita para inspeccionar una vista en vivo, sin la cual el panel de administración era imposible de probar, y las llamadas al motor de IA no admitían inyectar el transporte, de modo que su integración no podía ejercitarse sin una red. La segunda es que un objetivo de cobertura invita a maquillar la cifra excluyendo del cálculo lo que no está probado; aquí solo se excluyen las dependencias de terceros y los ficheros de prueba, que no son código desplegado. Las pruebas se distribuyen en cuatro niveles, siguiendo la estructura del código de producción.
 
 \subsubsection*{Pruebas unitarias de dominio}
 

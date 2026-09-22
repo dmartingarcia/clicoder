@@ -105,14 +105,21 @@ defmodule AppWeb.Admin.SettingsLive do
       {system_prompt, user_prompt} =
         if mode == "summary", do: {ps, ups}, else: {pp, upp}
 
-      case Req.post("#{ai_url}/admin/summarizer",
-             json: %{
-               model: model,
-               mode: mode,
-               system_prompt: system_prompt,
-               user_prompt: user_prompt
-             },
-             receive_timeout: 120_000
+      peticion = [
+        json: %{
+          model: model,
+          mode: mode,
+          system_prompt: system_prompt,
+          user_prompt: user_prompt
+        },
+        receive_timeout: 120_000
+      ]
+
+      # Opciones de transporte inyectables, como en el resto del backend: permiten probar
+      # el camino completo del panel sin levantar el motor de IA.
+      case Req.post(
+             "#{ai_url}/admin/summarizer",
+             peticion ++ Application.get_env(:app, :ai_req_opts, [])
            ) do
         {:ok, %{status: 200}} ->
           {:noreply,
