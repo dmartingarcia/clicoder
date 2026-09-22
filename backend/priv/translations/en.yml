@@ -109,6 +109,11 @@ cards:
   suggest_code_placeholder: "E.g.: J18.9"
   suggest_submit: "Suggest"
   suggestion_saved: "Suggestion saved"
+  trigger_from_dict: "Literal match from the clinical dictionary"
+  trigger_from_model: "Word with the greatest influence on the model prediction"
+  trigger_verify: "Verify term"
+  trigger_unverify: "Mark as unverified"
+  triggers_loading: "Computing the model terms…"
 
 cie10:
   type_diagnosis: "Diagnosis"

@@ -338,6 +338,82 @@ defmodule AppWeb.ConversationChannel do
     end
   end
 
+  # La atribución de términos cuesta dos órdenes de magnitud más que predecir (medido: 0,35 s
+  # la predicción frente a 13 s la explicación con la estrategia adoptada), así que no puede
+  # bloquear la respuesta. Se pide en una segunda llamada y se emite cuando llega: el cliente
+  # pinta los códigos de inmediato y completa los términos después, mostrando un indicador
+  # mientras tanto. Con el motor fusionado, los términos del diccionario ya viajan con la
+  # predicción porque su coincidencia se calculó para ordenar los códigos.
+  defp request_triggers_async(ai_url, report_text, message_id, conversation_id, cards, socket) do
+    codes =
+      cards
+      |> Enum.find(%{}, fn c -> c["type"] == "codes" end)
+      |> Map.get("content", [])
+      |> Enum.map(& &1["code"])
+      |> Enum.reject(&is_nil/1)
+
+    if codes != [] do
+      Task.start(fn ->
+        case Req.post("#{ai_url}/explain",
+               json: %{text: report_text, codes: codes},
+               receive_timeout: 180_000
+             ) do
+          {:ok, %{status: 200, body: body}} ->
+            triggers = body["triggers"] || %{}
+            persist_triggers(conversation_id, message_id, triggers)
+
+            Logger.info("Términos explicativos recibidos",
+              method: body["method"],
+              explain_ms: get_in(body, ["timing", "explain_ms"]),
+              conversation_id: conversation_id
+            )
+
+            broadcast!(socket, "triggers_received", %{
+              message_id: message_id,
+              method: body["method"],
+              triggers: triggers
+            })
+
+          otro ->
+            # Que falle la explicación no invalida la predicción: el usuario conserva sus
+            # códigos y la tarjeta se queda sin términos en lugar de romperse.
+            Logger.warning("No se pudieron obtener los términos explicativos: #{inspect(otro)}")
+        end
+      end)
+    end
+  end
+
+  # Completa la tarjeta ya guardada con los términos que llegaron después, para que al
+  # recargar la conversación sigan estando.
+  defp persist_triggers(conversation_id, message_id, triggers) do
+    conversation = Repo.get_by(ConversationProjection, conversation_id: conversation_id)
+
+    with false <- is_nil(conversation),
+         card when not is_nil(card) <-
+           Repo.get_by(AnalysisCardProjection,
+             message_id: message_id,
+             conversation_id: conversation.id,
+             card_type: "codes"
+           ),
+         {:ok, contenido} <- Jason.decode(card.content) do
+      completado =
+        Enum.map(contenido, fn code ->
+          terminos = Map.get(triggers, code["code"], [])
+
+          code
+          |> Map.put("triggers", Enum.map(terminos, & &1["term"]))
+          |> Map.put("trigger_detail", terminos)
+          |> Map.put("triggers_complete", true)
+        end)
+
+      card
+      |> Ecto.Changeset.change(content: Jason.encode!(completado))
+      |> Repo.update()
+    else
+      _ -> :ok
+    end
+  end
+
   # Always inserts predicted codes directly with pre-generated UUIDs so we can
   # broadcast them immediately in analysis_complete (avoids async CQRS timing issues).
   defp persist_predicted_codes_direct(conversation_id, cards) do
@@ -415,6 +491,7 @@ defmodule AppWeb.ConversationChannel do
           )
 
           persist_cards_direct(conversation_id, message_id, cards)
+          request_triggers_async(ai_url, report_text, message_id, conversation_id, cards, socket)
 
           Enum.each(cards, fn card ->
             broadcast!(socket, "analysis_card_received", %{

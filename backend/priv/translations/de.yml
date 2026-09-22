@@ -109,6 +109,11 @@ cards:
   suggest_code_placeholder: "Z.B.: J18.9"
   suggest_submit: "Vorschlagen"
   suggestion_saved: "Vorschlag gespeichert"
+  trigger_from_dict: "Wörtliche Übereinstimmung aus dem klinischen Wörterbuch"
+  trigger_from_model: "Wort mit dem größten Einfluss auf die Modellvorhersage"
+  trigger_verify: "Begriff verifizieren"
+  trigger_unverify: "Als nicht verifiziert markieren"
+  triggers_loading: "Modellbegriffe werden berechnet…"
 
 cie10:
   type_diagnosis: "Diagnose"
