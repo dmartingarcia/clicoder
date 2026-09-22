@@ -202,7 +202,7 @@ defmodule AppWeb.ConversationController do
     ]
   )
 
-  # Hard delete — borra todos los datos de la conversación (RGPD Art. 17)
+  # Hard delete: borra todos los datos de la conversación (RGPD Art. 17)
   def purge(conn, %{"conversation_id" => conversation_id}) do
     user_id = conn.assigns.current_user_id
 

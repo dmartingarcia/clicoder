@@ -1,5 +1,5 @@
 """
-baseline_tfidf.py — Baseline TF-IDF + Regresión Logística para clasificación CIE-10.
+baseline_tfidf.py: Baseline TF-IDF + Regresión Logística para clasificación CIE-10.
 
 Entrena un clasificador binario por código (binary relevance) usando TF-IDF sobre
 el texto. Sirve como línea base para comparar con el modelo transformer.
@@ -83,8 +83,8 @@ def main():
     f1_macro = f1_score(Y_val, Y_pred, average="macro", zero_division=0)
 
     print(f"\n[result] TF-IDF baseline  threshold={args.threshold}")
-    print(f"  micro — P={p_micro:.4f}  R={r_micro:.4f}  F1={f1_micro:.4f}")
-    print(f"  macro — F1={f1_macro:.4f}")
+    print(f"  micro: P={p_micro:.4f}  R={r_micro:.4f}  F1={f1_micro:.4f}")
+    print(f"  macro: F1={f1_macro:.4f}")
 
     # Sweep de thresholds para encontrar el óptimo
     print("\n[sweep] F1-micro por threshold:")

@@ -9,7 +9,7 @@ config :swoosh, local: false
 # Do not print debug messages in production
 config :logger, level: :info
 
-# Sentry — solo en producción (DSN en runtime.exs)
+# Sentry: solo en producción (DSN en runtime.exs)
 config :sentry,
   enable_source_code_context: true,
   root_source_code_paths: [File.cwd!()],

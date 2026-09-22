@@ -352,7 +352,7 @@ def main():
             f"{v['f1_micro']:7.4f} {v['f1_macro']:7.4f} {v['r_micro']:7.4f}"
         )
 
-    print("\n=== NIVEL DE BLOQUE (3 caracteres) — comparable con baseline_dict.py ===")
+    print("\n=== NIVEL DE BLOQUE (3 caracteres): comparable con baseline_dict.py ===")
     print(
         f"  F1-micro={block['f1_micro']:.4f}  F1-macro={block['f1_macro']:.4f}  "
         f"P={block['p_micro']:.4f}  R={block['r_micro']:.4f}"

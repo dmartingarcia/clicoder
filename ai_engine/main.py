@@ -1,5 +1,5 @@
 """
-main.py — FastAPI service for the CIE-10 AI Engine.
+main.py: FastAPI service for the CIE-10 AI Engine.
 
 Variables de entorno
 --------------------
@@ -145,7 +145,7 @@ code_descriptions: dict[str, str] = {}
 
 # ==================== JOB STORE ====================
 
-_JOB_TTL = 600  # segundos — los resultados se guardan 10 min tras completar
+_JOB_TTL = 600  # segundos: los resultados se guardan 10 min tras completar
 _jobs: dict[str, dict[str, Any]] = {}
 
 
@@ -173,7 +173,7 @@ async def lifespan(app: FastAPI):
 
     if not os.path.isdir(model_dir):
         logger.warning(
-            "MODEL_DIR '%s' no existe — el motor arranca sin modelo. "
+            "MODEL_DIR '%s' no existe: el motor arranca sin modelo. "
             "/predict devolverá 503 hasta que se entrene y monte el modelo.",
             model_dir,
         )
@@ -246,7 +246,7 @@ async def lifespan(app: FastAPI):
                 dict_classifier = None
         else:
             logger.info(
-                "baseline_dict.json no encontrado en '%s' — engine=dict no disponible. "
+                "baseline_dict.json no encontrado en '%s': engine=dict no disponible. "
                 "Genera el fichero con: python baseline_dict.py --save_dict %s",
                 model_dir,
                 dict_path,
@@ -336,9 +336,9 @@ class AnalysisRequest(BaseModel):
 
     - ``text``: texto del informe (obligatorio, no vacío).
     - ``engine``:
-        - ``"bert"``  — clasificador RigoBERTa multi-label (default).
-        - ``"dict"``  — reglas por diccionario (determinista, sin GPU).
-        - ``"both"``  — ambos motores en paralelo; los resultados se devuelven
+        - ``"bert"`` : clasificador RigoBERTa multi-label (default).
+        - ``"dict"`` : reglas por diccionario (determinista, sin GPU).
+        - ``"both"`` : ambos motores en paralelo; los resultados se devuelven
           juntos con el campo ``engine`` identificando el origen de cada código.
     """
 
@@ -660,7 +660,7 @@ def _dict_bonus_vector(hits: list[dict], code_to_idx: dict, beta: float):
     completos, así que la bonificación se reparte a todos los códigos del bloque por igual:
     aporta la evidencia léxica de qué bloque aplica y deja que el modelo decida el orden
     dentro de él. Medido sobre el conjunto de prueba, esto sube el MAP por documento de
-    0,4342 a 0,5446 sin coste adicional de inferencia — el diccionario ya se ejecutaba.
+    0,4342 a 0,5446 sin coste adicional de inferencia: el diccionario ya se ejecutaba.
     """
     bonus = np.zeros(len(code_to_idx), dtype=np.float32)
     por_bloque: dict[str, float] = {}
@@ -719,7 +719,7 @@ async def _predict_fused(text: str, incluir_triggers: bool = False):
     A diferencia de `both`, que devuelve las dos listas juntas y deja al usuario reconciliarlas,
     aquí las dos fuentes se combinan ANTES de ordenar: puntuación = logit + beta x confianza del
     diccionario. El umbral es propio y vive en el espacio de puntuación fusionada, porque el
-    umbral de probabilidad heredado no sirve — la bonificación satura la probabilidad de todo
+    umbral de probabilidad heredado no sirve: la bonificación satura la probabilidad de todo
     código cuyo bloque haya hecho match.
     """
     if classifier is None or dict_classifier is None:
@@ -746,9 +746,9 @@ async def _predict_fused(text: str, incluir_triggers: bool = False):
     )
 
     # Explicabilidad: las dos fuentes se reportan por separado y etiquetadas, no
-    # mezcladas en un único ranking. Explican cosas distintas — el diccionario justifica
+    # mezcladas en un único ranking. Explican cosas distintas: el diccionario justifica
     # el BLOQUE con frases exactas, el modelo justifica el CÓDIGO dentro del bloque con
-    # palabras del informe — y ordenarlas juntas exigiría una escala común entre la
+    # palabras del informe: y ordenarlas juntas exigiría una escala común entre la
     # confianza de un patrón regex y la caída de un logit, que no existe.
     code_indices = [
         int(classifier.code_to_idx[p["code"]])
@@ -1015,7 +1015,7 @@ def _new_job() -> tuple[str, dict[str, Any]]:
     return job_id, job
 
 
-@app.post("/jobs/predict", summary="Predicción asíncrona — devuelve job_id inmediatamente")
+@app.post("/jobs/predict", summary="Predicción asíncrona: devuelve job_id inmediatamente")
 async def submit_predict_job(request: AnalysisRequest):
     """Encola la predicción y devuelve un ``job_id``.
 
@@ -1051,7 +1051,7 @@ async def submit_predict_job(request: AnalysisRequest):
     return {"job_id": job_id, "status": "pending"}
 
 
-@app.post("/jobs/summarize", summary="Resumen asíncrono — devuelve job_id inmediatamente")
+@app.post("/jobs/summarize", summary="Resumen asíncrono: devuelve job_id inmediatamente")
 async def submit_summarize_job(request: SummarizeRequest):
     """Encola el resumen y devuelve un ``job_id``.
 
@@ -1087,9 +1087,9 @@ async def submit_summarize_job(request: SummarizeRequest):
 async def get_job(job_id: str):
     """Devuelve el estado del job.
 
-    - ``status: "pending"`` — en proceso, vuelve a consultar en unos segundos.
-    - ``status: "done"``    — result contiene la respuesta completa.
-    - ``status: "error"``   — error contiene el mensaje de error.
+    - ``status: "pending"``, en proceso, vuelve a consultar en unos segundos.
+    - ``status: "done"``   , result contiene la respuesta completa.
+    - ``status: "error"``  , error contiene el mensaje de error.
 
     Devuelve 404 si el job no existe o ha expirado (>10 min desde que completó).
     """

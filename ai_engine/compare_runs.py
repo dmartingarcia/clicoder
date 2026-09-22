@@ -1,8 +1,8 @@
 """Compara dos grupos de ejecuciones por su MAP, con el contraste estadístico correspondiente.
 
 Con 500 documentos de entrenamiento, el ruido entre semillas idénticas es del mismo orden que el
-efecto de cualquier cambio que se quiera medir. Comparar una ejecución contra otra —o contra el
-máximo de un grupo— produce conclusiones que no se reproducen: a lo largo de esta serie de
+efecto de cualquier cambio que se quiera medir. Comparar una ejecución contra otra -o contra el
+máximo de un grupo- produce conclusiones que no se reproducen: a lo largo de esta serie de
 experimentos ocurrió dos veces. La única lectura defendible es comparar DISTRIBUCIONES, y decir
 explícitamente si la diferencia observada se distingue del azar.
 

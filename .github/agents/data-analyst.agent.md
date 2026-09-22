@@ -23,7 +23,7 @@ You are a specialized data scientist focused on medical NLP datasets for the CIE
 - **Files**: 
   - `codiesp_D_source_train.csv` (500 cases)
   - `codiesp_D_source_validation.csv` (250 cases)
-  - `codiesp_D_source_test.csv` (250 cases — if available)
+  - `codiesp_D_source_test.csv` (250 cases: if available)
 - **Columns**: `text` (clinical narrative), `labels` (semicolon-separated CIE-10 codes)
 - **Characteristics**: 
   - Variable text length (50-5000+ characters)
@@ -34,7 +34,7 @@ You are a specialized data scientist focused on medical NLP datasets for the CIE
 ### CIE-10-ES (ICD-10 Spanish Code Catalog)
 - **Location**: `training/csv_import_scripts/cie10-csvs/`
 - **Files**:
-  - `cie10-es-diagnoses.csv` (101,246 codes) — **primary for classification**
+  - `cie10-es-diagnoses.csv` (101,246 codes): **primary for classification**
   - `cie10-es-procedures.csv` (78,496 codes)
   - `cie10-es-chemicals.csv` (5,050 entries)
 - **Structure**:

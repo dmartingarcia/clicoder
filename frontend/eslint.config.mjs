@@ -12,7 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Generated coverage report — not source code.
+    // Generated coverage report: not source code.
     "coverage/**",
   ]),
   {
@@ -25,7 +25,7 @@ const eslintConfig = defineConfig([
   },
   {
     // setMounted(true) inside useEffect is the canonical SSR hydration guard in
-    // Next.js — there is no alternative that avoids hydration mismatch.
+    // Next.js: there is no alternative that avoids hydration mismatch.
     files: ["**/AuthContext.tsx"],
     rules: {
       "react-hooks/set-state-in-effect": "off",

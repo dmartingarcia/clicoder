@@ -41,5 +41,5 @@ config :phoenix, :plug_init_mode, :runtime
 # Puerto 0 = el OS elige un puerto libre; evita conflicto con el contenedor corriendo en 9568
 config :app, :prometheus_port, 0
 
-# Req.Test stub para el AI engine — vacío en prod, inyectado solo en test
+# Req.Test stub para el AI engine: vacío en prod, inyectado solo en test
 config :app, :ai_req_opts, plug: {Req.Test, App.AIEngineMock}

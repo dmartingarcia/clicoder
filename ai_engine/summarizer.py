@@ -1,5 +1,5 @@
 """
-summarizer.py — Resumen médico de informes clínicos via LLM local (GGUF/llama-cpp).
+summarizer.py: Resumen médico de informes clínicos via LLM local (GGUF/llama-cpp).
 
 Variables de entorno
 --------------------
@@ -157,7 +157,7 @@ class MedicalSummarizer:
         size_mb = size_gb * 1024
 
         logger.info(
-            "Resumidor: preparando %s — %s (~%.1f GB) …",
+            "Resumidor: preparando %s, %s (~%.1f GB) …",
             self._cfg["display"],
             filename,
             size_gb,
@@ -181,7 +181,7 @@ class MedicalSummarizer:
             logger.info("Resumidor: %s encontrado en caché.", filename)
         else:
             logger.info(
-                "Resumidor: descargando %s (~%.1f GB) — esto puede tardar varios minutos …",
+                "Resumidor: descargando %s (~%.1f GB), esto puede tardar varios minutos …",
                 filename,
                 size_gb,
             )
@@ -267,7 +267,7 @@ class MedicalSummarizer:
         ejecutar este generador en un hilo (no bloquea el event loop de asyncio).
 
         Si ``system_prompt`` / ``user_prompt`` se proporcionan (pre-rellenados por el
-        backend — sin placeholders), se usan en lugar de los prompts almacenados.
+        backend: sin placeholders), se usan en lugar de los prompts almacenados.
         """
         if not self.is_loaded:
             self.load()

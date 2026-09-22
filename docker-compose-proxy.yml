@@ -1,4 +1,4 @@
-# Traefik v3 — proxy inverso. Red externa: make network-create
+# Traefik v3: proxy inverso. Red externa: make network-create
 # Dashboard hash: make traefik-passwd
 
 services:
@@ -47,7 +47,7 @@ services:
       - "traefik.http.routers.dashboard.tls=true"
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.middlewares=dashboard-auth,dashboard-ratelimit"
-      # Basic auth — hash generado con: make traefik-passwd
+      # Basic auth: hash generado con: make traefik-passwd
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
       # Rate limit: 60 req / min, burst de 20
       - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.average=60"
@@ -71,7 +71,7 @@ services:
       - "traefik.http.routers.maintenance.priority=1"
       - "traefik.http.services.maintenance.loadbalancer.server.port=80"
 
-  # Cloudflare Tunnel — ingreso sin puertos abiertos en el VPS.
+  # Cloudflare Tunnel: ingreso sin puertos abiertos en el VPS.
   # El token se genera en dash.cloudflare.com → Zero Trust → Networks → Tunnels.
   # Las rutas (DOMAIN, api.DOMAIN, grafana.DOMAIN) se configuran en el dashboard
   # de Cloudflare apuntando a https://cie10_traefik:443 (noTLSVerify: true).

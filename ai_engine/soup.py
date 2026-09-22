@@ -11,8 +11,8 @@ que alcanzan quedan conectados dentro de la misma cuenca de la función de pérd
 que el promedio de sus pesos sigue siendo un punto válido (Wortsman et al., 2022).
 
 Dos variantes:
-  uniforme — promedia todos los checkpoints dados.
-  voraz    — ordena por MAP de validación y añade uno a uno, conservando el candidato
+  uniforme: promedia todos los checkpoints dados.
+  voraz   : ordena por MAP de validación y añade uno a uno, conservando el candidato
              solo si el MAP de VALIDACIÓN mejora. El conjunto de prueba nunca interviene.
 
 Uso (imagen cie-10-training):
@@ -142,7 +142,7 @@ def main():
 
     results = {}
 
-    # 1) MAP individual de cada checkpoint en validación — ordena la sopa voraz
+    # 1) MAP individual de cada checkpoint en validación: ordena la sopa voraz
     singles = {}
     for path, lab in zip(args.ckpts, args.labels, strict=True):
         print(f"[val] {lab}", flush=True)

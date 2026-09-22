@@ -102,7 +102,7 @@ defmodule AppWeb.Admin.UserLive.Show do
                     <%= Calendar.strftime(conv.inserted_at, "%d/%m/%Y %H:%M") %>
                   </td>
                   <td class="px-4 py-3 text-sm text-gray-500">
-                    <%= if conv.deleted_at, do: Calendar.strftime(conv.deleted_at, "%d/%m/%Y"), else: "—" %>
+                    <%= if conv.deleted_at, do: Calendar.strftime(conv.deleted_at, "%d/%m/%Y"), else: "-" %>
                   </td>
                 </tr>
               <% end %>

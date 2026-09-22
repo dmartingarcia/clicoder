@@ -3,7 +3,7 @@
 -include .env
 export
 
-# Variables — compose stacks
+# Variables: compose stacks
 COMPOSE            = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
 COMPOSE_CPU        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
 COMPOSE_MOCK       = docker compose -f docker-compose.yml -f docker-compose.mock.yml
@@ -21,14 +21,14 @@ FRONTEND = $(COMPOSE) exec frontend
 AI = $(COMPOSE) exec ai_engine
 DB = $(COMPOSE) exec db
 
-# Variables — modelo Hugging Face
+# Variables: modelo Hugging Face
 HF_REPO      = dmartingarcia/cie10-rigoberta-classifier
 MODEL_DIR    = ai_engine/model
 BEST_PT      = classifier_20260530T030233Z_f1=0.4945.pt
 BEST_THR     = thresholds_20260530T030233Z.json
 AI_MODEL_DIR = /app/model
 
-# Variables — TFG
+# Variables: TFG
 TFG_DIR   = tfg
 TFG_MAIN  = uclmTFGesi
 TFG_OUT   = $(TFG_DIR)/build

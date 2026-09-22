@@ -118,7 +118,7 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
       const data = await res.json();
       setTrashedConversations(data.conversations ?? []);
     } catch {
-      // silent — trash load failure is non-critical
+      // silent: trash load failure is non-critical
     }
   }, [userId, authFetch]);
 
@@ -357,7 +357,7 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
 
   const analyzeReport = useCallback((reportText: string) => {
     if (!activeConversationId) {
-      // First report in a new conversation — create the conversation now
+      // First report in a new conversation: create the conversation now
       const newId = `conv-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       pendingReportRef.current = reportText;
       setPendingConversation(false);

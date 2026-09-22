@@ -78,7 +78,7 @@ describe('AuthPage', () => {
       await user.click(screen.getByRole('button', { name: /auth\.submit_login/i }));
       await waitFor(() => expect(screen.getByText('Invalid credentials')).toBeInTheDocument());
 
-      // Switch to register — error should clear
+      // Switch to register: error should clear
       await user.click(screen.getByText('auth.register'));
       expect(screen.queryByText('Invalid credentials')).not.toBeInTheDocument();
     });

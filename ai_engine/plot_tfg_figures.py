@@ -265,7 +265,7 @@ if pf:
     fig.savefig(f"{OUT}/tfg_freq.png", dpi=150)
     plt.close(fig)
 
-print("OK — figuras generadas en", OUT)
+print("OK: figuras generadas en", OUT)
 for n in (
     "tfg_longtail",
     "tfg_threshold",

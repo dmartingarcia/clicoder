@@ -21,7 +21,7 @@ defmodule App.JsonSerializer do
         if is_map(decoded), do: struct(module, decoded), else: decoded
 
       :error ->
-        # Called for event metadata — just return the decoded value as-is
+        # Called for event metadata: just return the decoded value as-is
         decoded
     end
   end

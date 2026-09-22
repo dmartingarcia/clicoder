@@ -1,9 +1,9 @@
 """
-plot_runs.py — Comparative charts for all training runs.
+plot_runs.py: Comparative charts for all training runs.
 
 Generates two files:
-  all_trainings_graph.png  — bar chart comparing final metrics per run
-  all_epochs_graph.png     — line chart comparing F1-micro curve per epoch across runs
+  all_trainings_graph.png : bar chart comparing final metrics per run
+  all_epochs_graph.png    : line chart comparing F1-micro curve per epoch across runs
 
 Usage: python plot_runs.py [--csv model/training_runs.csv] [--out model/all_trainings_graph.png]
 """
@@ -65,7 +65,7 @@ def main():
 
     fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
     fig.suptitle(
-        "CIE-10 mmBERT-base — Comparativa de runs\n"
+        "CIE-10 mmBERT-base: Comparativa de runs\n"
         "CodiESP  |  ~500 train / 250 val  |  809 códigos (bloque)",
         fontsize=13,
         fontweight="bold",
@@ -162,7 +162,7 @@ def _plot_epochs(history_files: list, out_path: pathlib.Path):
 
     fig, (ax_f1, ax_loss) = plt.subplots(2, 1, figsize=(14, 9), sharex=False)
     fig.suptitle(
-        f"CIE-10 — Curvas de entrenamiento por época (todos los runs)\n"
+        f"CIE-10: Curvas de entrenamiento por época (todos los runs)\n"
         f"{models_str}  |  CodiESP  |  ~500 train / 250 val",
         fontsize=12,
         fontweight="bold",

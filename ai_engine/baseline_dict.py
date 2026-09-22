@@ -1,5 +1,5 @@
 """
-baseline_dict.py — Baseline de diccionario para clasificación CIE-10.
+baseline_dict.py: Baseline de diccionario para clasificación CIE-10.
 
 Para cada nota clínica busca qué códigos CIE-10 tienen su descripción (o nombre
 de sustancia) mencionada en el texto, usando lematización con spaCy es_core_news_lg.
@@ -10,10 +10,10 @@ Los lemas de cada diccionario se cachean en disco (--cache_dir) para que
 ejecuciones sucesivas no tengan que relematizar las 100k+ entradas.
 
 Fuentes evaluadas por separado:
-  diagnoses    — descripciones del diccionario diagnóstico CIE-10-MC
-  procedures   — descripciones del diccionario de procedimientos CIE-10-PCS
-  chemicals    — nombres de sustancias/fármacos del diccionario CIE-10-MC
-  clinical     — términos clínicos reales extraídos de las anotaciones CodiESP
+  diagnoses   : descripciones del diccionario diagnóstico CIE-10-MC
+  procedures  : descripciones del diccionario de procedimientos CIE-10-PCS
+  chemicals   : nombres de sustancias/fármacos del diccionario CIE-10-MC
+  clinical    : términos clínicos reales extraídos de las anotaciones CodiESP
                  task_x, expandidos con sinónimos léxicos vía spaCy word vectors.
                  Nota: task_x incluye las etiquetas de train Y val, por lo que
                  esta fuente usa información del conjunto de evaluación → marcar
@@ -42,7 +42,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from tqdm import tqdm
 
 # ---------------------------------------------------------------------------
-# Versión de lematización — incrementar cuando cambie el comportamiento de
+# Versión de lematización: incrementar cuando cambie el comportamiento de
 # lemmatize() para invalidar automáticamente los caches en disco.
 # ---------------------------------------------------------------------------
 
@@ -51,7 +51,7 @@ SYNONYM_FILTER_VERSION = 3  # v3: patrones cacheados como (pattern, confianza)
 CORPUS_FILTER_VERSION = 3  # v3: patrones cacheados como (pattern, confianza)
 
 # ---------------------------------------------------------------------------
-# Confianza por fuente — cuánto se fía cada patrón según su procedencia.
+# Confianza por fuente: cuánto se fía cada patrón según su procedencia.
 # diagnoses/procedures/chemicals son descripciones oficiales del catálogo;
 # clinical distingue el término real anotado (alta) de sus variantes por
 # sinónimo (más ruidosas); corpus usa directamente la precisión estadística
@@ -73,7 +73,7 @@ CONF_CLINICAL_SYNONYM = 0.6
 # ---------------------------------------------------------------------------
 
 MEDICAL_ABBREVIATIONS: dict[str, str] = {
-    # — Cardiovascular —
+    # ( Cardiovascular )
     "HTA": "hipertensión arterial",
     "ICC": "insuficiencia cardíaca congestiva",
     "IAM": "infarto agudo de miocardio",
@@ -92,7 +92,7 @@ MEDICAL_ABBREVIATIONS: dict[str, str] = {
     "BRIHH": "bloqueo de rama izquierda del haz de His",
     "BRDHH": "bloqueo de rama derecha del haz de His",
     "CID": "coagulación intravascular diseminada",
-    # — Metabólico / Endocrino —
+    # ( Metabólico / Endocrino )
     "DM": "diabetes mellitus",
     "DM1": "diabetes mellitus tipo 1",
     "DM2": "diabetes mellitus tipo 2",
@@ -100,22 +100,22 @@ MEDICAL_ABBREVIATIONS: dict[str, str] = {
     "DMNID": "diabetes mellitus no insulinodependiente",
     "DLP": "dislipidemia",
     "HbA1c": "hemoglobina glucosilada",
-    # — Respiratorio —
+    # ( Respiratorio )
     "EPOC": "enfermedad pulmonar obstructiva crónica",
     "NAC": "neumonía adquirida en la comunidad",
     "SDRA": "síndrome de dificultad respiratoria aguda",
     "SAHS": "síndrome de apnea hipopnea del sueño",
-    # — Renal —
+    # ( Renal )
     "ERC": "enfermedad renal crónica",
     "IRC": "insuficiencia renal crónica",
     "ITU": "infección del tracto urinario",
     "IVU": "infección vías urinarias",
-    # — Neurológico —
+    # ( Neurológico )
     "TCE": "traumatismo craneoencefálico",
     "HIC": "hipertensión intracraneal",
     "ELA": "esclerosis lateral amiotrófica",
     "SGB": "síndrome de Guillain-Barré",
-    # — Digestivo / Hepático —
+    # ( Digestivo / Hepático )
     "HDA": "hemorragia digestiva alta",
     "HDB": "hemorragia digestiva baja",
     "EII": "enfermedad inflamatoria intestinal",
@@ -123,28 +123,28 @@ MEDICAL_ABBREVIATIONS: dict[str, str] = {
     "HCC": "carcinoma hepatocelular",
     "PBE": "peritonitis bacteriana espontánea",
     "CPRE": "colangiopancreatografía retrógrada endoscópica",
-    # — Reumatológico / Inmunológico —
+    # ( Reumatológico / Inmunológico )
     "AR": "artritis reumatoide",
     "LES": "lupus eritematoso sistémico",
     "SAF": "síndrome antifosfolípido",
-    # — Infeccioso —
+    # ( Infeccioso )
     "VIH": "virus de la inmunodeficiencia humana",
     "SIDA": "síndrome de inmunodeficiencia adquirida",
     "VHC": "virus de la hepatitis C",
     "VHB": "virus de la hepatitis B",
-    # — Oncohematológico —
+    # ( Oncohematológico )
     "LH": "linfoma de Hodgkin",
     "LNH": "linfoma no Hodgkin",
     "LLA": "leucemia linfoblástica aguda",
     "LMA": "leucemia mieloide aguda",
     "LLC": "leucemia linfocítica crónica",
     "LMC": "leucemia mieloide crónica",
-    # — Traumatológico —
+    # ( Traumatológico )
     "LCA": "ligamento cruzado anterior",
     "LCP": "ligamento cruzado posterior",
     "PTR": "prótesis total de rodilla",
     "PTC": "prótesis total de cadera",
-    # — Fármacos / Mecanismos —
+    # ( Fármacos / Mecanismos )
     "IECA": "inhibidor de la enzima convertidora de angiotensina",
     "ARAII": "antagonista del receptor de angiotensina II",
 }
@@ -186,8 +186,8 @@ def build_pattern(phrase: str) -> re.Pattern:
     return re.compile(r"\b" + re.escape(phrase) + r"\b")
 
 
-_nlp_trf = None  # es_dep_news_trf  — lematización contextual (transformer)
-_nlp_lg = None  # es_core_news_lg  — word vectors para synonym expansion
+_nlp_trf = None  # es_dep_news_trf : lematización contextual (transformer)
+_nlp_lg = None  # es_core_news_lg : word vectors para synonym expansion
 
 
 def _get_nlp():
@@ -837,7 +837,7 @@ def predict(
 
 
 # ---------------------------------------------------------------------------
-# Métricas — formato idéntico a train.py
+# Métricas: formato idéntico a train.py
 # ---------------------------------------------------------------------------
 
 
@@ -845,7 +845,7 @@ def compute_map(Y_true: np.ndarray, Y_pred: np.ndarray) -> float:
     """
     MAP por documento (average_precision_score fila a fila), documentos sin
     gold excluidos. El diccionario da confianza fija (1.0) a todo match, así
-    que no hay ranking real entre códigos predichos — a diferencia del MAP de
+    que no hay ranking real entre códigos predichos: a diferencia del MAP de
     BERT (probabilidades continuas), este valor se degrada a una medida de
     precisión por documento, no a un ranking.
     """
@@ -869,8 +869,8 @@ def print_metrics(Y_true, Y_pred, split: str, source: str, n_ignored: int = 0):
     n_true = int(Y_true.sum())
 
     print(f"\n[result] dict/{source}  split={split}")
-    print(f"  micro — P={p_micro:.3f}  R={r_micro:.3f}  F1={f1_micro:.3f}")
-    print(f"  macro — P={p_macro:.3f}  R={r_macro:.3f}  F1={f1_macro:.3f}")
+    print(f"  micro: P={p_micro:.3f}  R={r_micro:.3f}  F1={f1_micro:.3f}")
+    print(f"  macro: P={p_macro:.3f}  R={r_macro:.3f}  F1={f1_macro:.3f}")
     print(f"  MAP por documento: {map_doc:.3f}")
     print(f"  predicciones: {n_pred}  verdaderos: {n_true}", end="")
     if n_ignored:
@@ -890,7 +890,7 @@ def main():
     parser.add_argument(
         "--test_file",
         default="/data/codiesp_csvs/codiesp_D_source_test.csv",
-        help="Test de CodiEsp — nunca se usa para construir patrones, mide generalización real",
+        help="Test de CodiEsp: nunca se usa para construir patrones, mide generalización real",
     )
     parser.add_argument("--diagnoses_file", default="/data/cie10-csvs/cie10-es-diagnoses.csv")
     parser.add_argument("--procedures_file", default="/data/cie10-csvs/cie10-es-procedures.csv")
@@ -1005,12 +1005,12 @@ def main():
         _ABBREV_RE = re.compile(r"(?!)")  # regex que nunca hace match → no-op
         print("[abbrev] expansión de abreviaturas DESACTIVADA")
     else:
-        print(f"[abbrev] expansión activa — {len(MEDICAL_ABBREVIATIONS)} abreviaturas registradas")
+        print(f"[abbrev] expansión activa: {len(MEDICAL_ABBREVIATIONS)} abreviaturas registradas")
 
     cache_dir = None if args.no_cache else args.cache_dir
 
     # Cargar splits. test nunca se usa para construir patrones (ni siquiera
-    # 'clinical', que sí usa las etiquetas de val) — es la única métrica sin fuga.
+    # 'clinical', que sí usa las etiquetas de val): es la única métrica sin fuga.
     splits = {}
     for name, path in [
         ("train", args.train_file),
@@ -1021,7 +1021,7 @@ def main():
             df = pd.read_csv(path)
         except FileNotFoundError:
             if name == "test":
-                print(f"[data] test SKIP — archivo no encontrado: {path}")
+                print(f"[data] test SKIP: archivo no encontrado: {path}")
                 continue
             raise
         df.columns = df.columns.str.strip()
@@ -1116,7 +1116,7 @@ def main():
         try:
             block_patterns, top_patterns = source_loaders[source]()
         except FileNotFoundError as e:
-            print(f"  SKIP — archivo no encontrado: {e}")
+            print(f"  SKIP: archivo no encontrado: {e}")
             continue
 
         n_blocks = len(block_patterns)
@@ -1150,7 +1150,7 @@ def main():
     if run_combined and all_loaded:
         # Corpus selectivo: si está activo, los patrones de corpus solo se añaden
         # para bloques que NINGUNA otra fuente cubre (diagnoses/procedures/chemicals/
-        # clinical son más fiables — catálogo oficial o anotación real — así que
+        # clinical son más fiables ( catálogo oficial o anotación real ) así que
         # corpus actúa solo de relleno del recall que ninguna de ellas alcanza,
         # sin contaminar con ruido estadístico los bloques que ya están bien resueltos.
         corpus_selective = args.corpus_selective and "corpus" in all_loaded and len(all_loaded) > 1
@@ -1162,7 +1162,7 @@ def main():
         if corpus_selective:
             n_filtered = sum(1 for b in all_loaded["corpus"] if b in covered_blocks)
             print(
-                f"\n[combined] corpus selectivo — filtrando {n_filtered} bloques "
+                f"\n[combined] corpus selectivo: filtrando {n_filtered} bloques "
                 "ya cubiertos por otras fuentes"
             )
 
@@ -1192,7 +1192,7 @@ def main():
             inner = pat.pattern[2:-2]  # quita \b de inicio y fin
             return re.sub(r"\\(.)", r"\1", inner)
 
-        # Cada entrada es [frase, confianza] — ver DictClassifier para el formato de carga.
+        # Cada entrada es [frase, confianza]: ver DictClassifier para el formato de carga.
         phrases_map = {
             block: [[_pat_to_phrase(p), round(conf, 3)] for p, conf in patterns]
             for block, patterns in combined.items()

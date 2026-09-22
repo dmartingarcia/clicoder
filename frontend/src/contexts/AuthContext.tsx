@@ -16,7 +16,7 @@ interface AuthContextType {
   token: string | null;
   /** Non-null while waiting for the user to confirm their email */
   pendingEmail: string | null;
-  /** False until localStorage has been read — avoids SSR/client mismatch */
+  /** False until localStorage has been read: avoids SSR/client mismatch */
   mounted: boolean;
   login: (email: string, password: string) => Promise<{ error?: string }>;
   register: (fields: { first_name: string; last_name: string; username: string; email: string; password: string }) => Promise<{ error?: string }>;

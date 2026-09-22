@@ -1,7 +1,7 @@
-# Dockerfile — CIE-10 AI Engine
+# Dockerfile: CIE-10 AI Engine
 # GPU path usa cie10-ml-base (CUDA 13.1 + flash-attn precompilados).
 # CPU path usa python:3.11-slim (ligero, sin CUDA).
-# Model weights are NOT baked in — mount the model directory at runtime:
+# Model weights are NOT baked in: mount the model directory at runtime:
 #   docker run -v /path/to/model:/app/model -e MODEL_DIR=/app/model ...
 
 # ARG must be declared before the first FROM to be usable in FROM instructions

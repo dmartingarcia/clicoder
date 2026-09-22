@@ -127,7 +127,7 @@ def map_scores(T, S, n_total, n_reach):
 
 
 def map_strict_sklearn(T, S, n_total, n_reach):
-    """Misma métrica con sklearn — control de que el AP rápido no cambia el número."""
+    """Misma métrica con sklearn: control de que el AP rápido no cambia el número."""
     strict = []
     for r in range(len(T)):
         if n_total[r] == 0:
@@ -257,7 +257,7 @@ def main():
             }
             cov = float((B["test"] > 0).any(axis=1).mean())
             print(f"[dict] documentos de prueba con algún bloque detectado: {cov:.1%}", flush=True)
-        except Exception as exc:  # noqa: BLE001 — cualquier fallo desactiva la fusión
+        except Exception as exc:  # noqa: BLE001, cualquier fallo desactiva la fusión
             print(f"[dict] fusión desactivada: {type(exc).__name__}: {exc}", flush=True)
             B = None
 

@@ -16,7 +16,7 @@ defmodule AppWeb.ConversationControllerTest do
   # GET /api/conversations?user_id=<id>
   # ---------------------------------------------------------------------------
 
-  describe "index/2 — active conversations" do
+  describe "index/2: active conversations" do
     test "returns only active (non-deleted) conversations for the user", %{conn: conn} do
       user = user_fixture()
       active1 = conversation_fixture(user)
@@ -99,7 +99,7 @@ defmodule AppWeb.ConversationControllerTest do
   # GET /api/conversations/trash?user_id=<id>
   # ---------------------------------------------------------------------------
 
-  describe "trash/2 — deleted conversations" do
+  describe "trash/2: deleted conversations" do
     test "returns only soft-deleted conversations", %{conn: conn} do
       user = user_fixture()
       _active = conversation_fixture(user)
@@ -151,7 +151,7 @@ defmodule AppWeb.ConversationControllerTest do
   # DELETE /api/conversations/:conversation_id
   # ---------------------------------------------------------------------------
 
-  describe "delete/2 — soft delete" do
+  describe "delete/2: soft delete" do
     test "soft-deletes an active conversation owned by the user", %{conn: conn} do
       user = user_fixture()
       conv = conversation_fixture(user)
@@ -209,7 +209,7 @@ defmodule AppWeb.ConversationControllerTest do
   # PUT /api/conversations/:conversation_id/restore
   # ---------------------------------------------------------------------------
 
-  describe "restore/2 — restore from trash" do
+  describe "restore/2: restore from trash" do
     test "restores a soft-deleted conversation", %{conn: conn} do
       user = user_fixture()
       conv = deleted_conversation_fixture(user)
@@ -239,7 +239,7 @@ defmodule AppWeb.ConversationControllerTest do
         |> authed_conn(user)
         |> put("/api/conversations/#{conv.conversation_id}/restore")
 
-      # The controller just sets deleted_at: nil regardless — should still succeed
+      # The controller just sets deleted_at: nil regardless, should still succeed
       assert %{"ok" => true} = json_response(conn, 200)
     end
 

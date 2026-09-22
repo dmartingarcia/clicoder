@@ -156,7 +156,7 @@ defmodule AppWeb.Admin.ConversationLive.Show do
                         <%= card.engine %>
                       </span>
                     <% else %>
-                      <span class="text-gray-400 text-xs">—</span>
+                      <span class="text-gray-400 text-xs">-</span>
                     <% end %>
                   </td>
                   <td class="px-4 py-3 text-sm text-gray-700 max-w-lg">

@@ -198,7 +198,7 @@ defmodule AppWeb.AuthControllerTest do
       user = unconfirmed_user_fixture()
       token = user.confirmation_token
 
-      # Confirm once — this nils the token in the DB
+      # Confirm once: this nils the token in the DB
       App.Accounts.confirm_user(token)
 
       # Second attempt should fail

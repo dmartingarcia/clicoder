@@ -1,8 +1,8 @@
 """Evalúa checkpoints sueltos y su ensemble (media de probabilidades) sobre val y test.
 
 MAP por documento estilo CodiEsp en dos variantes (igual que eval_test.py):
-  reachable — solo el gold que el modelo puede predecir
-  strict    — gold completo; los códigos fuera del vocabulario penalizan
+  reachable: solo el gold que el modelo puede predecir
+  strict   : gold completo; los códigos fuera del vocabulario penalizan
 """
 
 import argparse

@@ -1,5 +1,8 @@
-# Carga el modelo entrenado con train.py y expone CIE10Classifier.predict().
-# Una sola pasada forward produce probabilidades para todos los ~1767 códigos a la vez.
+"""Carga el modelo entrenado con train.py y expone CIE10Classifier.
+
+Una sola pasada del encoder produce probabilidades para los ~1767 códigos a la vez.
+Contiene además el registro de estrategias de atribución que usa /explain.
+"""
 
 import json
 import logging
@@ -105,8 +108,8 @@ class _FlatClassifier(nn.Module):
 # Métodos de atribución (explicabilidad)
 # ============================================================================
 #
-# Las tres estrategias responden a la misma pregunta —qué palabras del informe
-# sostienen cada código predicho— y devuelven el mismo tipo de respuesta: la caída
+# Las tres estrategias responden a la misma pregunta -qué palabras del informe
+# sostienen cada código predicho- y devuelven el mismo tipo de respuesta: la caída
 # real del logit al enmascarar la palabra. Lo que cambia es a cuántas palabras se
 # pregunta, porque preguntar cuesta una pasada del encoder por palabra.
 #
@@ -335,8 +338,8 @@ class CIE10Classifier:
         threshold         : Umbral mínimo de probabilidad.
                             Si None, usa el valor de config.json (por defecto 0.5).
         logit_bonus       : Vector (num_codes,) que se suma a los logits antes de ordenar.
-                            Sirve para fusionar con otra fuente de evidencia — el diccionario
-                            de bloques — sin reentrenar nada. Al activarlo, la ordenación y el
+                            Sirve para fusionar con otra fuente de evidencia: el diccionario
+                            de bloques: sin reentrenar nada. Al activarlo, la ordenación y el
                             filtrado pasan al espacio de puntuación fusionada.
         score_threshold   : Umbral sobre la puntuación fusionada (logit + bonus). Obligatorio
                             junto a logit_bonus: el umbral de probabilidad heredado no sirve,
@@ -373,7 +376,7 @@ class CIE10Classifier:
             probs = torch.sigmoid(logits).cpu().numpy()[0]
 
         # Fusión: la ordenación pasa al espacio de puntuación, pero la confianza que se
-        # reporta sigue siendo la probabilidad del modelo — es la que el usuario interpreta.
+        # reporta sigue siendo la probabilidad del modelo: es la que el usuario interpreta.
         fused = logit_bonus is not None
         scores = raw_logits + logit_bonus if fused else None
         if fused and score_threshold is None:
