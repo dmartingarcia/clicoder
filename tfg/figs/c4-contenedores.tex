@@ -1,65 +1,65 @@
-% C4 Level 2 — Diagrama de contenedores
+% C4 Level 2, Diagrama de contenedores
 % Uso: \input{figs/c4-contenedores} dentro de figure+\centering
 \begin{tikzpicture}[
-  every node/.style={font=\small\sffamily},
-  actor/.style={
-    draw=gray!55, fill=gray!10, thick,
-    rectangle, rounded corners=5pt,
-    minimum width=2.4cm, minimum height=2.2cm,
-    align=center, text width=2.2cm
-  },
-  cont/.style={
-    draw=aquaESI!80, fill=aquaESI!12, thick,
-    rectangle, rounded corners=4pt,
-    minimum width=3.2cm, minimum height=2.6cm,
-    align=center, text width=3.0cm
-  },
-  db/.style={
-    draw=turquesa!80, fill=turquesa!12, thick,
-    cylinder, shape border rotate=90,
-    minimum height=2.6cm, minimum width=2.8cm,
-    align=center, text width=2.4cm
-  },
-  arr/.style={->, >=Stealth, thick, gray!60},
-  biarr/.style={<->, >=Stealth, thick, gray!60},
-  lbl/.style={font=\scriptsize\sffamily, fill=white,
-              inner sep=1.5pt, draw=gray!30, rounded corners=2pt},
-  node distance=1.0cm and 2.2cm
+ every node/.style={font=\small\sffamily},
+ actor/.style={
+ draw=gray!55, fill=gray!10, thick,
+ rectangle, rounded corners=5pt,
+ minimum width=2.4cm, minimum height=2.2cm,
+ align=center, text width=2.2cm
+ },
+ cont/.style={
+ draw=aquaESI!80, fill=aquaESI!12, thick,
+ rectangle, rounded corners=4pt,
+ minimum width=3.2cm, minimum height=2.6cm,
+ align=center, text width=3.0cm
+ },
+ db/.style={
+ draw=turquesa!80, fill=turquesa!12, thick,
+ cylinder, shape border rotate=90,
+ minimum height=2.6cm, minimum width=2.8cm,
+ align=center, text width=2.4cm
+ },
+ arr/.style={->, >=Stealth, thick, gray!60},
+ biarr/.style={<->, >=Stealth, thick, gray!60},
+ lbl/.style={font=\scriptsize\sffamily, fill=white,
+ inner sep=1.5pt, draw=gray!30, rounded corners=2pt},
+ node distance=1.0cm and 2.2cm
 ]
 
 \node[actor] (usr) {
-  \textbf{Codificador}\\[4pt]
-  \small clínico\\[2pt]
-  \scriptsize[Actor externo]
+ \textbf{Codificador}\\[4pt]
+ \small clínico\\[2pt]
+ \scriptsize[Actor externo]
 };
 
 \node[cont, right=2.0cm of usr] (fe) {
-  \textbf{Frontend}\\[6pt]
-  \scriptsize Next.js 16, React 19\\TypeScript
+ \textbf{Frontend}\\[6pt]
+ \scriptsize Next.js 16, React 19\\TypeScript
 };
 
 \node[cont, right=2.2cm of fe] (be) {
-  \textbf{Backend}\\[6pt]
-  \scriptsize Elixir 1.15, Phoenix 1.8\\Commanded (CQRS/ES)
+ \textbf{Backend}\\[6pt]
+ \scriptsize Elixir 1.15, Phoenix 1.8\\Commanded (CQRS/ES)
 };
 
 \node[cont, below=1.8cm of be] (ai) {
-  \textbf{AI Engine}\\[6pt]
-  \scriptsize Python 3.11, FastAPI\\IIC/RigoBERTa-Clinical
+ \textbf{AI Engine}\\[6pt]
+ \scriptsize Python 3.11, FastAPI\\IIC/RigoBERTa-Clinical
 };
 
 \node[db, right=2.2cm of be] (pg) {
-  \textbf{PostgreSQL 15}\\[6pt]
-  \scriptsize Event Store\\+ Proyecciones
+ \textbf{PostgreSQL 15}\\[6pt]
+ \scriptsize Event Store\\+ Proyecciones
 };
 
 % Relaciones
 \draw[arr] (usr) -- node[lbl, above]{HTTPS} (fe);
 
 \draw[biarr, bend left=20] (fe) to
-  node[lbl, above]{\footnotesize REST API} (be);
+ node[lbl, above]{\footnotesize REST API} (be);
 \draw[biarr, bend right=20] (fe) to
-  node[lbl, below]{\footnotesize WebSocket} (be);
+ node[lbl, below]{\footnotesize WebSocket} (be);
 
 \draw[biarr] (be) -- node[lbl, right]{\footnotesize HTTP POST /predict} (ai);
 
@@ -67,13 +67,13 @@
 
 % Límite del sistema
 \begin{pgfonlayer}{background}
-  \node[
-    draw=aquaESI!60, dashed, thick, rounded corners=10pt,
-    fill=aquaESI!4, inner sep=16pt,
-    fit=(fe)(be)(ai)(pg),
-    label={[aquaESI!80, font=\footnotesize\sffamily\bfseries]above left:%
-      Sistema de Codificación CIE-10-ES}
-  ] {};
+ \node[
+ draw=aquaESI!60, dashed, thick, rounded corners=10pt,
+ fill=aquaESI!4, inner sep=16pt,
+ fit=(fe)(be)(ai)(pg),
+ label={[aquaESI!80, font=\footnotesize\sffamily\bfseries]above left:%
+ Sistema de Codificación CIE-10-ES}
+ ] {};
 \end{pgfonlayer}
 
 \end{tikzpicture}

@@ -1,16 +1,17 @@
 \chapter{Tablero Kanban: listado completo de tareas}\label{cap:AnexoJ}
 
-Este anexo recoge el listado completo de tareas que componen el tablero Kanban del proyecto, organizadas por épica. Los identificadores de tarea (\texttt{T-XX}) son los empleados en el tablero durante el desarrollo para referenciar cada ítem. La prioridad refleja el orden de atención dentro de cada épica: \textbf{Alta} (bloquea el avance de otras tareas), \textbf{Media} (necesaria pero no bloqueante), \textbf{Baja} (mejora o calidad sin impacto crítico en el camino principal) y \textbf{Descartada} (identificada durante el desarrollo pero excluida explícitamente del alcance del proyecto).
+Este anexo recoge el listado completo de tareas que componen el tablero Kanban del proyecto, organizadas por épica. Los identificadores de tarea (\texttt{T-XX}) son los empleados en el tablero durante el desarrollo para referenciar cada ítem. La última columna recoge la prioridad de atención dentro de cada épica o, en su caso, el estado de exclusión: \textbf{Alta} (bloquea el avance de otras tareas), \textbf{Media} (necesaria pero no bloqueante), \textbf{Baja} (mejora o calidad sin impacto crítico en el camino principal) y \textbf{Descartada} (identificada durante el desarrollo pero excluida explícitamente del alcance del proyecto).
 
 \begin{center}
 \small
 \begin{longtable}{llp{7cm}c}
+\caption{Listado completo de tareas del tablero Kanban con su prioridad o estado, agrupadas por épica.}\label{tab:kanban}\\
 \hline
-\textbf{ID} & \textbf{Épica} & \textbf{Tarea} & \textbf{Prioridad} \\
+\textbf{ID} & \textbf{Épica} & \textbf{Tarea} & \textbf{Prioridad / estado} \\
 \hline
 \endfirsthead
 \hline
-\textbf{ID} & \textbf{Épica} & \textbf{Tarea} & \textbf{Prioridad} \\
+\textbf{ID} & \textbf{Épica} & \textbf{Tarea} & \textbf{Prioridad / estado} \\
 \hline
 \endhead
 \hline
@@ -21,6 +22,7 @@ T-02 & Datos & Análisis estadístico del corpus: distribución de longitudes, f
 T-03 & Datos & Desarrollo del script de \emph{scraping} sobre el portal eCIE-maps para obtener el catálogo CIE-10-ES & Alta \\
 T-04 & Datos & Análisis estadístico del catálogo CIE-10-ES: cobertura, distribución por capítulos y vocabulario & Media \\
 T-05 & Datos & Generación de los ficheros CSV de entrenamiento, validación y test & Alta \\
+T-48 & Datos & Aumentación del corpus CodiEsp mediante retrotraducción con Azure Translator (F0 free tier) usando tres pivotes (EN, DE, FR), cuadruplicando el dataset de 500 a 2.000 documentos (evaluada y finalmente descartada por no superar la referencia de 500 documentos; véase el Anexo~\ref{cap:AnexoL}) & Media \\
 \hline
 T-06 & Modelo & Comparativa de modelos base candidatos (IIC/RigoBERTa-Clinical, mmBERT, BETO) & Alta \\
 T-07 & Modelo & Implementación del clasificador plano multilabel basado en BERT & Alta \\
@@ -31,7 +33,7 @@ T-11 & Modelo & Evaluación sobre el conjunto de test con métricas de precisió
 T-46 & Modelo & Activación de FlashAttention~2 como implementación eficiente del mecanismo de atención: integrada en la imagen base GPU (\texttt{cie10-ml-base}) con fallback automático a SDPA; activa en todos los \emph{runs} de entrenamiento & Media \\
 \hline
 T-12 & AI Engine & Implementación del servicio FastAPI con entorno virtualizado & Alta \\
-T-13 & AI Engine & Endpoint \texttt{POST /predict} y \texttt{GET /health} & Alta \\
+T-13 & AI Engine & Endpoint \texttt{POST /predict} y \texttt{GET /} & Alta \\
 T-14 & AI Engine & Desarrollo del servicio \emph{mock} para entornos CI y desarrollo sin GPU & Alta \\
 T-15 & AI Engine & Dockerización con imagen base optimizada para PyTorch & Media \\
 \hline
@@ -45,7 +47,7 @@ T-22 & Backend & Suite de pruebas con ExUnit e informe de cobertura con excovera
 T-23 & Backend & Dockerización del entorno de desarrollo, pruebas y producción & Media \\
 \hline
 T-24 & Frontend & Página de autenticación con formularios de registro e inicio de sesión & Alta \\
-T-25 & Frontend & Interfaz de chat con renderizado de tarjetas tipadas (resumen, códigos, recomendaciones) & Alta \\
+T-25 & Frontend & Interfaz de chat con renderizado de tarjetas tipadas (resumen y códigos) & Alta \\
 T-26 & Frontend & Panel lateral con historial de análisis y controles de sesión & Alta \\
 T-27 & Frontend & Componentes de validación y rechazo de códigos predichos con motivo & Alta \\
 T-28 & Frontend & Selector de idioma y carga de traducciones desde el backend & Media \\
@@ -57,11 +59,10 @@ T-32 & Infraestructura & Makefile con \emph{targets} para el ciclo de vida compl
 T-33 & Infraestructura & Configuración de commitlint y Husky para validación de mensajes de commit & Baja \\
 T-34 & Infraestructura & Workflow de GitHub Actions para integración continua & Media \\
 T-35 & Infraestructura & Dockerización del entorno de entrenamiento con soporte CPU y GPU & Alta \\
-T-36 & Infraestructura & Despliegue en clúster Kubernetes con Traefik como proxy inverso & Media \\
+T-36 & Infraestructura & Despliegue en producción sobre VPS con Docker Compose y Traefik como proxy inverso (TLS automático de Let's Encrypt) & Media \\
 T-37 & Infraestructura & Monitorización con Prometheus y Grafana: el backend expone métricas de latencia HTTP, queries Ecto y VM BEAM en \texttt{:9568/metrics} mediante \texttt{telemetry\_metrics\_prometheus}; Prometheus scrapea todos los servicios y Grafana los visualiza con datasource provisionado automáticamente & Baja \\
 T-38 & Infraestructura & Gestión de errores y excepciones con Sentry: captura de excepciones HTTP mediante \texttt{Sentry.PlugCapture} en el endpoint Phoenix, captura de crashes OTP (GenServer, comandos Commanded) mediante \texttt{Sentry.LoggerHandler}, con stacktrace completo y etiqueta de entorno configurada vía \texttt{SENTRY\_DSN} & Baja \\
 T-47 & Infraestructura & Configuración del servidor de email en producción con registros SPF, DKIM y política DMARC para garantizar la entregabilidad y autenticidad de los emails transaccionales & Media \\
-T-48 & Datos & Aumentación del corpus CodiEsp mediante retrotraducción con Azure Translator (F0 free tier) usando tres pivotes (EN, DE, FR), cuadruplicando el dataset de 500 a 2000 documentos & Media \\
 \hline
 T-39 & Modelo & Bucle de aprendizaje activo: reentrenamiento incremental con códigos validados por el codificador & Descartada \\
 T-40 & Modelo & Soporte de codificación de procedimientos CIE-10-ES (ICD-10-PCS) además de diagnósticos & Descartada \\
@@ -71,7 +72,5 @@ T-43 & Backend & Autenticación federada mediante OAuth~2.0 / SSO hospitalario &
 T-44 & Frontend & Procesamiento por lotes: envío y codificación de múltiples informes de forma simultánea & Descartada \\
 T-45 & Modelo & Motor de codificación por búsqueda inversa: indexación del catálogo CIE-10-ES con BM25/TF-IDF y recuperación de códigos por similitud léxica con el informe & Descartada \\
 \hline
-\caption{Listado completo de tareas del tablero Kanban con prioridad por épica.}
-\label{tab:kanban}
 \end{longtable}
 \end{center}

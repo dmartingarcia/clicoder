@@ -6,10 +6,10 @@ Este anexo describe los pasos necesarios para poner en marcha el sistema en un e
 \section{Requisitos previos}
 
 \begin{itemize}
-  \item \textbf{Docker} 24 o superior con el plugin \texttt{docker compose} (v2).
-  \item \textbf{GNU Make}.
-  \item \textbf{Git}.
-  \item \textit{Opcional — modo GPU:} controlador NVIDIA y \texttt{nvidia-container-toolkit} instalados en el sistema anfitrión.
+ \item \textbf{Docker} 24 o superior con el plugin \texttt{docker compose} (v2).
+ \item \textbf{GNU Make}.
+ \item \textbf{Git}.
+ \item \textit{Opcional, modo GPU:} controlador NVIDIA y \texttt{nvidia-container-toolkit} instalados en el sistema anfitrión.
 \end{itemize}
 
 \section{Configuración del entorno}
@@ -20,26 +20,7 @@ Antes de arrancar por primera vez es necesario crear el fichero de variables de 
 cp .env.example .env
 \end{lstlisting}
 
-Los valores por defecto son válidos para un entorno local de desarrollo. Las variables más relevantes se recogen en la tabla~\ref{tab:env-vars}.
-
-\begin{table}[h]
-\centering
-\caption{Variables de entorno principales.}
-\label{tab:env-vars}
-\begin{tabular}{lll}
-\hline
-\textbf{Variable} & \textbf{Valor por defecto} & \textbf{Descripción} \\
-\hline
-\texttt{POSTGRES\_PASSWORD} & \texttt{changeme}   & Contraseña de PostgreSQL \\
-\texttt{SECRET\_KEY\_BASE}  & (valor de ejemplo)  & Clave secreta de Phoenix \\
-\texttt{HF\_TOKEN}          & \texttt{hf\_xxx...} & Token de Hugging Face (modo GPU) \\
-\texttt{BACKEND\_PORT}      & \texttt{4000}       & Puerto del backend Elixir \\
-\texttt{FRONTEND\_PORT}     & \texttt{3000}       & Puerto del frontend Next.js \\
-\texttt{AI\_ENGINE\_PORT}   & \texttt{8000}       & Puerto del motor de IA \\
-\texttt{GRAFANA\_PASSWORD} & \texttt{changeme}   & Contraseña del usuario \texttt{admin} de Grafana \\
-\hline
-\end{tabular}
-\end{table}
+Los valores por defecto son válidos para un entorno local de desarrollo. El catálogo completo de variables, con sus valores por defecto y el servicio que las consume, se recoge en el Anexo~\ref{cap:AnexoB} (Tabla~\ref{tab:envvars}).
 
 \section{Primera puesta en marcha}
 
@@ -60,8 +41,8 @@ make up
 A partir de la segunda vez, el ciclo de trabajo diario se reduce a dos comandos:
 
 \begin{lstlisting}[language=bash]
-make up     # Levanta todos los servicios en segundo plano
-make down   # Detiene todos los servicios
+make up # Levanta todos los servicios en segundo plano
+make down # Detiene todos los servicios
 \end{lstlisting}
 
 Tras ejecutar \texttt{make up} los servicios quedan accesibles en las siguientes URLs (tabla~\ref{tab:urls}).
@@ -74,14 +55,14 @@ Tras ejecutar \texttt{make up} los servicios quedan accesibles en las siguientes
 \hline
 \textbf{Servicio} & \textbf{URL} \\
 \hline
-Frontend (Next.js)    & \url{http://localhost:3000} \\
+Frontend (Next.js) & \url{http://localhost:3000} \\
 Backend API (Phoenix) & \url{http://localhost:4000} \\
 Motor de IA (FastAPI) & \url{http://localhost:8000} \\
 Backoffice admin (Phoenix) & \url{http://localhost:4000/admin} \\
 Mailpit (bandeja SMTP de pruebas) & \url{http://localhost:8025} \\
-Prometheus            & \url{http://localhost:9090} \\
-Grafana               & \url{http://localhost:3030} \\
-PostgreSQL            & \texttt{localhost:5432} \\
+Prometheus & \url{http://localhost:9090} \\
+Grafana & \url{http://localhost:3030} \\
+PostgreSQL & \texttt{localhost:5432} \\
 \hline
 \end{tabular}
 \end{table}
@@ -98,8 +79,8 @@ El sistema admite tres modos de ejecución en función de la disponibilidad de h
 \hline
 \textbf{Modo} & \textbf{Comando} & \textbf{Requisito} \\
 \hline
-GPU  & \texttt{make up}      & GPU NVIDIA + modelo entrenado \\
-CPU  & \texttt{make cpu-up}  & Modelo entrenado (inferencia lenta) \\
+GPU & \texttt{make up} & GPU NVIDIA + modelo entrenado \\
+CPU & \texttt{make cpu-up} & Modelo entrenado (modo de producción) \\
 Mock & \texttt{make mock-up} & Ninguno (respuestas simuladas) \\
 \hline
 \end{tabular}
@@ -109,9 +90,9 @@ Cada modo se describe a continuación:
 
 \begin{sloppypar}
 \begin{itemize}
-  \item \textbf{GPU} (\texttt{make up}): modo de producción. Requiere una GPU NVIDIA con \texttt{nvidia-container-toolkit} y un modelo previamente entrenado montado en \texttt{ai\_engine/model/}. Es el único modo que ofrece tiempos de inferencia aceptables en uso real.
-  \item \textbf{CPU} (\texttt{make cpu-up}): carga el modelo real pero realiza la inferencia en CPU. Útil para probar el modelo en una máquina sin GPU. La respuesta tarda menos de 1 segundo por informe en hardware moderno.
-  \item \textbf{Mock} (\texttt{make mock-up}): el motor de IA devuelve respuestas fijas sin cargar ningún modelo. Recomendado para desarrollo del frontend y pruebas funcionales del backend cuando no se dispone de modelo entrenado.
+ \item \textbf{GPU} (\texttt{make up}): requiere una GPU NVIDIA con \texttt{nvidia-container-toolkit} y un modelo previamente entrenado montado en \texttt{ai\_engine/model/}. Ofrece la máxima velocidad de inferencia; es el modo empleado durante el entrenamiento y en desarrollo cuando se dispone de GPU.
+ \item \textbf{CPU} (\texttt{make cpu-up}): carga el modelo real pero realiza la inferencia en CPU. Es el modo empleado en el despliegue de producción sobre VPS (Anexo~\ref{cap:AnexoI}); la respuesta tarda menos de 1 segundo por informe en hardware moderno, suficiente para el caso de uso.
+ \item \textbf{Mock} (\texttt{make mock-up}): el motor de IA devuelve respuestas fijas sin cargar ningún modelo. Recomendado para desarrollo del frontend y pruebas funcionales del backend cuando no se dispone de modelo entrenado.
 \end{itemize}
 \end{sloppypar}
 
@@ -127,19 +108,19 @@ El comando \texttt{make setup} (a través de \texttt{mix run priv/repo/seeds.exs
 \hline
 \textbf{Email} & \textbf{Contraseña} & \textbf{Username} & \textbf{Rol} \\
 \hline
-\texttt{admin@test.com} & \texttt{password123} & \texttt{admin} & Administrador \\
+\texttt{myadminuser@clicoder.app} & \texttt{password123!} & \texttt{admin} & Administrador \\
 \hline
 \end{tabular}
 \end{table}
 
-El usuario administrador tiene acceso al backoffice en \url{http://localhost:4000/admin}.
+El correo y la contraseña del administrador son configurables mediante las variables de entorno \texttt{SEED\_ADMIN\_EMAIL} y \texttt{SEED\_ADMIN\_PASSWORD} (los valores de la tabla son los predeterminados). El usuario administrador tiene acceso al backoffice en \url{http://localhost:4000/admin}.
 
 \section{Consulta de logs}
 
 Para inspeccionar la salida de cualquier servicio en tiempo real:
 
 \begin{lstlisting}[language=bash]
-make logs   # Menú interactivo para seleccionar el servicio
+make logs # Menú interactivo para seleccionar el servicio
 \end{lstlisting}
 
 \section{Reset de base de datos}
@@ -147,7 +128,7 @@ make logs   # Menú interactivo para seleccionar el servicio
 Si es necesario partir de un estado limpio sin reconstruir imágenes:
 
 \begin{lstlisting}[language=bash]
-make db-reset   # Drop + migrate + seed
+make db-reset # Drop + migrate + seed
 \end{lstlisting}
 
 \section{Motor de IA: diccionario y entrenamiento}
@@ -174,7 +155,7 @@ make ai-baseline-dict NO_ABBREVS=1 2>&1 | tee /tmp/dict_noabbrev.log
 
 \subsection{Entrenar el clasificador neuronal}
 
-El clasificador neuronal se entrena con \texttt{train.py} sobre el corpus CodiEsp. El proceso descarga el modelo base desde Hugging Face (requiere \texttt{HF\_TOKEN} en \texttt{.env}), fine-tunea el codificador RigoBERTa-Clinical con una cabeza de clasificación \emph{multi-label} y guarda el modelo resultante en \texttt{ai\_engine/model/}. El entrenamiento se lanza con GPU explícita mediante:
+El clasificador neuronal se entrena con \texttt{train.py} sobre el corpus CodiEsp. El proceso descarga el modelo base desde Hugging Face (requiere \texttt{HF\_TOKEN} en \texttt{.env}), ajusta mediante \emph{fine-tuning} el \emph{encoder} RigoBERTa-Clinical con una cabeza de clasificación \emph{multi-label} y guarda el modelo resultante en \texttt{ai\_engine/model/}. El entrenamiento se lanza con GPU explícita mediante:
 
 \begin{lstlisting}[language=bash]
 make ai-train-gpu 2>&1 | tee /tmp/train.log
@@ -196,8 +177,8 @@ El sistema incluye una pila de observabilidad compuesta por Prometheus y Grafana
 \hline
 \textbf{Herramienta} & \textbf{URL} & \textbf{Credenciales} \\
 \hline
-Prometheus  & \url{http://localhost:9090} & Sin autenticación \\
-Grafana     & \url{http://localhost:3030} & \texttt{admin} / \texttt{GRAFANA\_PASSWORD} \\
+Prometheus & \url{http://localhost:9090} & Sin autenticación \\
+Grafana & \url{http://localhost:3030} & \texttt{admin} / \texttt{GRAFANA\_PASSWORD} \\
 \hline
 \end{tabular}
 \end{table}
@@ -206,7 +187,7 @@ La contraseña de Grafana se configura mediante la variable \texttt{GRAFANA\_PAS
 
 \subsection{Métricas expuestas}
 
-Prometheus recoge métricas de tres \emph{jobs} con un intervalo de scraping de 15 segundos (tabla~\ref{tab:prometheus-jobs}).
+Prometheus recoge métricas de ocho \emph{jobs} con un intervalo de scraping de 15 segundos (tabla~\ref{tab:prometheus-jobs}).
 
 \begin{table}[h]
 \centering
@@ -216,9 +197,14 @@ Prometheus recoge métricas de tres \emph{jobs} con un intervalo de scraping de 
 \hline
 \textbf{Job} & \textbf{Endpoint} & \textbf{Métricas principales} \\
 \hline
-\texttt{backend}    & \texttt{:9568/metrics}  & Latencia HTTP (Phoenix), tiempos de query Ecto, memoria BEAM, colas de schedulers \\
-\texttt{ai\_engine} & \texttt{:8000/metrics}  & Latencia de inferencia, peticiones totales, estado del modelo \\
-\texttt{prometheus}  & \texttt{:9090/metrics}  & Métricas internas de Prometheus \\
+\texttt{backend} & \texttt{:9568/metrics} & Latencia HTTP (Phoenix), tiempos de query Ecto, memoria BEAM, colas de schedulers \\
+\texttt{ai\_engine} & \texttt{:8000/metrics} & Latencia de inferencia, peticiones totales, estado del modelo \\
+\texttt{prometheus} & \texttt{:9090/metrics} & Métricas internas de Prometheus \\
+\texttt{cadvisor} & \texttt{:8080/metrics} & CPU, memoria, red y disco por contenedor \\
+\texttt{node\_exporter} & \texttt{:9100/metrics} & Métricas del host: CPU, RAM, disco y carga \\
+\texttt{traefik} & \texttt{:8082/metrics} & Peticiones, códigos de estado y latencia del proxy inverso \\
+\texttt{cloudflared} & \texttt{:20241/metrics} & Estado y tráfico del túnel de Cloudflare \\
+\texttt{blackbox} & \texttt{:9115/probe} & Sondas de disponibilidad HTTP de los servicios públicos \\
 \hline
 \end{tabular}
 \end{table}

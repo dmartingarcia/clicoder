@@ -1,7 +1,14 @@
 \chapter{Comunicación entre servicios}
 \label{cap:AnexoC}
 
-Este anexo documenta los protocolos y contratos de comunicación entre los servicios del sistema: la API REST entre frontend y backend, el canal WebSocket para mensajes en tiempo real y la llamada HTTP del backend al motor de IA.
+Este anexo documenta los protocolos y contratos de comunicación entre los servicios del sistema: la API REST entre frontend y backend, el canal WebSocket para mensajes en tiempo real y la llamada HTTP del backend al motor de IA. La Figura~\ref{fig:conexion-fe-be} ofrece una visión de conjunto.
+
+\begin{figure}[ht]
+\centering
+\resizebox{\textwidth}{!}{\input{figs/conexion-fe-be}}
+\caption{Esquema de comunicación entre servicios: el frontend habla con el backend por API REST (autenticación y consultas) y por un canal WebSocket (análisis en tiempo real); el backend invoca al motor de IA por HTTP.}
+\label{fig:conexion-fe-be}
+\end{figure}
 
 \section{Flujo de análisis clínico}
 
@@ -16,9 +23,9 @@ La Figura~\ref{fig:seq-analisis} ilustra la secuencia completa de mensajes que s
 
 \section{API REST: frontend \texorpdfstring{$\rightarrow$}{->} backend}
 
-La base de la URL es configurable mediante la variable de entorno \texttt{NEXT\_PUBLIC\_API\_URL} (valor por defecto: \texttt{http://localhost:4000/api}). Las rutas protegidas requieren la cabecera \texttt{Authorization: Bearer <token>}, donde \texttt{<token>} es un JWT emitido por Phoenix al iniciar sesión con validez de 30 días.
+La base de la URL es configurable mediante la variable de entorno \texttt{NEXT\_PUBLIC\_API\_URL} (valor por defecto: \texttt{http://localhost:4000/api}). Las rutas protegidas requieren la cabecera \texttt{Authorization: Bearer <token>}, donde \texttt{<token>} es un token firmado con \texttt{Phoenix.Token} emitido al iniciar sesión, con una validez de una hora.
 
-La especificación completa de la API está disponible a través de la interfaz web de Swagger UI en \texttt{http://localhost:4000/api/swagger}, donde es posible explorar todos los \emph{endpoints}, consultar los esquemas de petición y respuesta, y ejecutar llamadas de prueba directamente desde el navegador.
+La especificación completa de la API está disponible a través de la interfaz web de Swagger UI en \texttt{http://localhost:4000/docs}, donde es posible explorar todos los \emph{endpoints}, consultar los esquemas de petición y respuesta, y ejecutar llamadas de prueba directamente desde el navegador.
 
 \subsection{Autenticación}
 
@@ -30,10 +37,10 @@ La especificación completa de la API está disponible a través de la interfaz 
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
-POST & \texttt{/auth/register}       & Registra un nuevo usuario. Envía email de confirmación. \\
-POST & \texttt{/auth/login}          & Autentica al usuario; devuelve \texttt{\{user, token\}}. \\
-GET  & \texttt{/auth/confirm/:token} & Confirma el email del usuario a partir del enlace recibido. \\
-PUT  & \texttt{/users/locale}        & Actualiza el idioma preferido del usuario. \emph{Protegido.} \\
+POST & \texttt{/auth/register} & Registra un nuevo usuario. Envía email de confirmación. \\
+POST & \texttt{/auth/login} & Autentica al usuario; devuelve \texttt{\{user, token\}}. \\
+GET & \texttt{/auth/confirm/:token} & Confirma el email del usuario a partir del enlace recibido. \\
+PUT & \texttt{/users/locale} & Actualiza el idioma preferido del usuario. \emph{Protegido.} \\
 \hline
 \end{tabular}
 \end{table}
@@ -50,10 +57,10 @@ El token se almacena en \texttt{localStorage} bajo la clave \texttt{cie10\_auth}
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
-GET    & \texttt{/conversations?\allowbreak{}user\_id=<uuid>}     & Lista conversaciones activas del usuario. \emph{Protegido.} \\
-GET    & \texttt{/conversations/trash?\allowbreak{}user\_id=<uuid>} & Lista conversaciones en papelera. \emph{Protegido.} \\
-DELETE & \texttt{/conversations/:id}                             & Borrado lógico (soft delete). \emph{Protegido.} \\
-PUT    & \texttt{/conversations/\allowbreak{}:id/restore}        & Restaura conversación de la papelera. \emph{Protegido.} \\
+GET & \texttt{/conversations?\allowbreak{}user\_id=<uuid>} & Lista conversaciones activas del usuario. \emph{Protegido.} \\
+GET & \texttt{/conversations/trash?\allowbreak{}user\_id=<uuid>} & Lista conversaciones en papelera. \emph{Protegido.} \\
+DELETE & \texttt{/conversations/:id} & Borrado lógico (soft delete). \emph{Protegido.} \\
+PUT & \texttt{/conversations/\allowbreak{}:id/restore} & Restaura conversación de la papelera. \emph{Protegido.} \\
 \hline
 \end{tabular}
 \end{table}
@@ -69,7 +76,7 @@ PUT    & \texttt{/conversations/\allowbreak{}:id/restore}        & Restaura conv
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
 GET & \texttt{/cie10/search?\allowbreak{}q=<query>\&\allowbreak{}limit=<n>\&\allowbreak{}type=<tipo>} & Búsqueda en texto libre. \texttt{type} puede ser \texttt{diagnosis}, \texttt{procedure} o \texttt{chemical}. \\
-GET & \texttt{/cie10/codes/:code}          & Devuelve un código concreto con su descripción y metadatos. \\
+GET & \texttt{/cie10/codes/:code} & Devuelve un código concreto con su descripción y metadatos. \\
 GET & \texttt{/cie10/codes/\allowbreak{}:code/children} & Devuelve los códigos hijos en la jerarquía CIE-10. \\
 \hline
 \end{tabular}
@@ -92,13 +99,13 @@ GET & \texttt{/translations/:locale} & Devuelve el mapa de cadenas de texto para
 
 \section{Canal WebSocket: frontend \texorpdfstring{$\rightarrow$}{->} backend}
 
-La conexión WebSocket se establece contra \texttt{ws://localhost:4000/socket} (configurable con \texttt{NEXT\_PUBLIC\_WS\_URL}) usando la librería \texttt{phoenix\_socket}. El token JWT se pasa como parámetro de conexión para autenticar la sesión.
+La conexión WebSocket se establece contra \texttt{ws://localhost:4000/socket} (configurable con \texttt{NEXT\_PUBLIC\_WS\_URL}) usando la librería \texttt{phoenix\_socket}. El token se pasa como parámetro de conexión para autenticar la sesión.
 
 Cada conversación se suscribe a un canal propio con el topic \texttt{conversation:<conversation\_id>}, donde \texttt{conversation\_id} es un UUID generado por el cliente.
 
 \subsection{Mensajes entrantes (cliente \texorpdfstring{$\rightarrow$}{->} servidor)}
 
-El frontend envía seis tipos de mensajes al canal. El mensaje \texttt{join} se emite automáticamente al montar el componente de conversación y recibe como respuesta el historial completo del canal. Los mensajes de acción (\texttt{validate\_code}, \texttt{reject\_code} y \texttt{suggest\_code}) se generan cuando el codificador interactúa con los códigos predichos; cada uno emite el comando CQRS correspondiente sobre el agregado de análisis.
+El frontend envía siete tipos de mensajes al canal. El mensaje \texttt{join} se emite automáticamente al montar el componente de conversación y recibe como respuesta el historial completo del canal. Los mensajes de acción (\texttt{validate\_code}, \texttt{reject\_code} y \texttt{suggest\_code}) se generan cuando el codificador interactúa con los códigos predichos; cada uno emite el comando CQRS correspondiente sobre el agregado de análisis.
 
 \begin{table}[H]
 \centering
@@ -108,12 +115,13 @@ El frontend envía seis tipos de mensajes al canal. El mensaje \texttt{join} se 
 \hline
 \textbf{Evento} & \textbf{Payload} & \textbf{Efecto} \\
 \hline
-\texttt{join}           & —                                                & Une al cliente al canal; devuelve el historial de la conversación. \\
-\texttt{send\_message}  & \texttt{\{content: string\}}                     & Guarda el mensaje y lo difunde al canal. \\
-\texttt{analyze\_report}& \texttt{\{report\_text: string\}}                & Persiste el informe y lanza la tarea asíncrona de análisis IA. \\
-\texttt{validate\_code} & \texttt{\{code\_id, cie10\_code\}}               & Emite el comando \texttt{ValidateCode} al agregado. \\
-\texttt{reject\_code}   & \texttt{\{code\_id, cie10\_code, reason\}}       & Emite el comando \texttt{RejectCode} al agregado. \\
-\texttt{suggest\_code}  & \texttt{\{selected\_text, suggested\_code\}}     & Almacena una sugerencia manual del usuario. \\
+\texttt{join} &  n/d & Une al cliente al canal; devuelve el historial de la conversación. \\
+\texttt{send\_message} & \texttt{\{content: string\}} & Guarda el mensaje y lo difunde al canal. \\
+\texttt{analyze\_report}& \texttt{\{report\_text: string\}} & Persiste el informe y lanza la tarea asíncrona de análisis IA. \\
+\texttt{validate\_code} & \texttt{\{code\_id, cie10\_code\}} & Emite el comando \texttt{ValidateCode} al agregado. \\
+\texttt{reject\_code} & \texttt{\{code\_id, cie10\_code, reason\}} & Emite el comando \texttt{RejectCode} al agregado. \\
+\texttt{suggest\_code} & \texttt{\{selected\_text, suggested\_code\}} & Almacena una sugerencia manual del usuario. \\
+\texttt{verify\_trigger} & \texttt{\{code\_id, trigger, verified\}} & Marca como verificado un término disparador. \\
 \hline
 \end{tabular}
 \end{table}
@@ -128,19 +136,21 @@ El frontend envía seis tipos de mensajes al canal. El mensaje \texttt{join} se 
 \hline
 \textbf{Evento} & \textbf{Payload principal} & \textbf{Cuándo se emite} \\
 \hline
-\texttt{joined}                  & \texttt{\{history\}}                               & Al unirse al canal con éxito. \\
-\texttt{new\_message}            & \texttt{\{message\_id, content, user\_id, timestamp\}} & Cuando cualquier participante envía un mensaje. \\
-\texttt{analysis\_started}       & \texttt{\{message\_id\}}                           & Inmediatamente tras recibir \texttt{analyze\_report}. \\
-\texttt{analysis\_card\_received}& \texttt{\{card\_id, card\_type, content, message\_id\}} & Por cada una de las tres tarjetas generadas. \\
-\texttt{analysis\_complete}      & \texttt{\{message\_id, predicted\_codes\}}         & Al completarse la predicción IA. \\
-\texttt{code\_validated}         & \texttt{\{code\_id, cie10\_code\}}                 & Tras confirmar la validación en el agregado. \\
-\texttt{code\_rejected}          & \texttt{\{code\_id, cie10\_code, reason\}}         & Tras confirmar el rechazo en el agregado. \\
-\texttt{analysis\_failed}        & \texttt{\{message\_id, error\}}                    & Si el motor de IA devuelve un error. \\
+\texttt{joined} & \texttt{\{history\}} & Al unirse al canal con éxito. \\
+\texttt{new\_message} & \texttt{\{message\_id, content, user\_id, timestamp\}} & Cuando cualquier participante envía un mensaje. \\
+\texttt{analysis\_started} & \texttt{\{message\_id\}} & Inmediatamente tras recibir \texttt{analyze\_report}. \\
+\texttt{analysis\_card\_received}& \texttt{\{card\_id, card\_type, content, message\_id\}} & Por cada tarjeta generada (códigos y resumen). \\
+\texttt{analysis\_complete} & \texttt{\{message\_id, predicted\_codes\}} & Al completarse la predicción IA. \\
+\texttt{code\_validated} & \texttt{\{code\_id, cie10\_code\}} & Tras confirmar la validación en el agregado. \\
+\texttt{code\_rejected} & \texttt{\{code\_id, cie10\_code, reason\}} & Tras confirmar el rechazo en el agregado. \\
+\texttt{summary\_token} & \texttt{\{message\_id, token\}} & Por cada fragmento del resumen generado en \emph{streaming}. \\
+\texttt{trigger\_verified} & \texttt{\{code\_id, trigger, verified\}} & Tras verificar un término disparador. \\
+\texttt{analysis\_failed} & \texttt{\{message\_id, error\}} & Si el motor de IA devuelve un error. \\
 \hline
 \end{tabular}
 \end{table}
 
-Cada análisis genera exactamente tres tarjetas (\texttt{summary}, \texttt{codes}, \texttt{recommendations}) que se emiten como eventos \texttt{analysis\_card\_received} independientes antes del evento \texttt{analysis\_complete}.
+El análisis genera la tarjeta de códigos (\texttt{codes}) a partir de \texttt{POST /predict} y, en paralelo, la tarjeta de resumen (\texttt{summary}) mediante \texttt{POST /summarize/stream}; ambas se emiten como eventos \texttt{analysis\_card\_received} antes del evento \texttt{analysis\_complete}.
 
 \section{HTTP interno: backend \texorpdfstring{$\rightarrow$}{->} motor de IA}
 
@@ -151,57 +161,41 @@ La especificación de los \emph{endpoints} del motor de IA está disponible a tr
 \subsection{Endpoint de predicción}
 
 \begin{description}
-    \item[Ruta] \texttt{POST /predict}
-    \item[Cuerpo de la petición]~
+ \item[Ruta] \texttt{POST /predict}
+ \item[Cuerpo de la petición]~
 \end{description}
 
 \begin{verbatim}
 {
-  "text": "<informe clínico en español>",
-  "engine": "bert" | "dict"   // opcional; por defecto "bert"
+ "text": "<informe clínico en español>",
+ "engine": "bert" | "dict" | "both" | "fused", // opcional; por defecto "bert"
+ "include_triggers": false                     // opcional; por defecto false
 }
 \end{verbatim}
 
 \begin{description}
-    \item[Respuesta] Objeto JSON con el campo \texttt{cards}, lista de tres objetos:
+ \item[Respuesta] Objeto JSON con el campo \texttt{cards}, que contiene una única tarjeta de tipo \texttt{codes} con la lista de códigos predichos (cada uno con su descripción, confianza y términos que lo motivan). El resumen del informe se genera de forma independiente mediante \texttt{POST /summarize/stream}. El esquema completo de la petición y la respuesta se detalla en el Anexo~\ref{cap:AnexoM}.
 \end{description}
 
-{\small
-\begin{verbatim}
-{
-  "cards": [
-    {
-      "type": "summary",
-      "content": "Informe analizado. 11 código(s) CIE-10 identificado(s)..."
-    },
-    {
-      "type": "codes",
-      "content": [
-        {
-          "code":        "E11",
-          "description": "Diabetes mellitus tipo 2",
-          "reason":      "Capítulo IV — confianza 95.3%",
-          "confidence":  0.953,
-          "engine":      "bert"
-        }
-      ]
-    },
-    {
-      "type": "recommendations",
-      "content": "Revisar y confirmar los códigos con el equipo médico..."
-    }
-  ]
-}
-\end{verbatim}
-}
-
 La llamada se realiza dentro de una \texttt{Task.start} asíncrona, por lo que el backend no bloquea el canal WebSocket durante la inferencia. Cuando la respuesta llega, el backend emite el comando \texttt{ReceiveAIPrediction}, que genera los eventos correspondientes y activa los proyectores que persisten las tarjetas y los códigos predichos.
+
+\subsection{Endpoint de explicabilidad}
+
+\begin{description}
+ \item[Ruta] \texttt{POST /explain}
+ \item[Cuerpo] \texttt{\{text, codes, method?, top\_k?\}}
+ \item[Respuesta] \texttt{\{method, triggers, unknown\_codes, timing\}}
+\end{description}
+
+La atribución de términos viaja en una llamada propia porque cuesta dos órdenes de magnitud más que la predicción. El parámetro \texttt{include\_triggers} de \texttt{/predict} está desactivado por defecto precisamente por eso: los códigos se devuelven en cuanto están y el backend lanza esta segunda petición en paralelo, emitiendo el evento \texttt{triggers\_received} por el canal WebSocket cuando la respuesta llega. La interfaz muestra entre tanto los términos que ya tiene (los del diccionario, si el motor es fusionado) junto a un indicador de progreso.
+
+Si esta segunda llamada falla, la predicción no se invalida: se registra el aviso y la tarjeta conserva sus códigos sin términos explicativos.
 
 \subsection{Endpoint de estado}
 
 \begin{description}
-    \item[Ruta] \texttt{GET /}
-    \item[Respuesta] \texttt{\{status: \textquotedbl{}ok\textquotedbl{}, model\_loaded: bool, dict\_loaded: bool\}}
+ \item[Ruta] \texttt{GET /}
+ \item[Respuesta] \texttt{\{status: \textquotedbl{}online\textquotedbl{}, model\_loaded: bool, dict\_loaded: bool, summarizer\_loaded: bool\}}
 \end{description}
 
 Permite al backend verificar que el motor de IA está disponible y que el modelo ha terminado de cargarse en memoria antes de aceptar peticiones de análisis.
