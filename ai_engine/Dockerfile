@@ -37,9 +37,10 @@ RUN if [ "$BUILD_WITH_CUDA" = "0" ]; then \
             --index-url https://download.pytorch.org/whl/cpu; \
     fi
 
-RUN pip install --no-cache-dir -r requirements.txt && \
-    python -m spacy download es_core_news_lg
+RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m spacy download es_core_news_lg
 RUN python -m spacy download es_dep_news_trf
+
 ARG BUILD_WITH_CUDA=0
 RUN if [ "$BUILD_WITH_CUDA" = "1" ]; then \
         pip install --no-cache-dir cupy-cuda13x; \
@@ -53,7 +54,7 @@ ENV MODEL_DIR=/app/model
 ENV DEVICE=cpu
 ENV HF_HOME=/cache/huggingface
 
-RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -m appuser && \
+RUN groupadd appuser && useradd -g appuser -m appuser && \
     chown -R appuser:appuser /app
 
 USER appuser
