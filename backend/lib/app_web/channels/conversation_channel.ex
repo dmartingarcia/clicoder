@@ -355,7 +355,11 @@ defmodule AppWeb.ConversationChannel do
     if codes != [] do
       Task.start(fn ->
         case Req.post("#{ai_url}/explain",
-               json: %{text: report_text, codes: codes},
+               json: %{
+                 text: report_text,
+                 codes: codes,
+                 method: App.AIEngineSettings.get_explain_method()
+               },
                receive_timeout: 180_000
              ) do
           {:ok, %{status: 200, body: body}} ->

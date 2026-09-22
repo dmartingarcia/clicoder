@@ -9,7 +9,22 @@ defmodule AppWeb.Admin.SettingsLive do
      "Clasificador neuronal multi-label. Requiere GPU/CPU con modelo entrenado."},
     {"dict", "Diccionario",
      "Reglas deterministas por términos clínicos. Sin GPU, siempre disponible."},
-    {"both", "Ambos", "BERT y diccionario en paralelo. Muestra predicciones de los dos motores."}
+    {"both", "Ambos", "BERT y diccionario en paralelo. Muestra predicciones de los dos motores."},
+    {"fused", "Fusionado",
+     "Combina las puntuaciones de ambos antes de ordenar, en vez de concatenar sus listas."}
+  ]
+
+  # Las cuatro estrategias devuelven términos medidos de verdad; lo que cambia es a cuántas
+  # palabras se pregunta, y eso son dos órdenes de magnitud de diferencia en tiempo.
+  @explain_methods [
+    {"diccionario", "Diccionario",
+     "Instantáneo. Devuelve las frases clínicas que hicieron coincidencia, sin usar el modelo."},
+    {"gradiente_filtrado", "Gradiente filtrado",
+     "Recomendado. El gradiente elige a qué palabras preguntar y se miden solo esas."},
+    {"exhaustivo", "Exhaustivo",
+     "Pregunta por todas las palabras. Es la referencia fiel y la más lenta."},
+    {"divide_y_venceras", "Divide y vencerás",
+     "Experimental. Medido como más lento que el exhaustivo en este corpus."}
   ]
 
   @summarizer_models [
@@ -34,6 +49,9 @@ defmodule AppWeb.Admin.SettingsLive do
      assign(socket,
        engine: AIEngineSettings.get_engine(),
        engines: @engines,
+       explain_method: AIEngineSettings.get_explain_method(),
+       explain_methods: @explain_methods,
+       explain_saved: false,
        summarizer_model: summ.model,
        summarizer_mode: summ.mode,
        prompt_summary: summ.prompt_summary,
@@ -49,6 +67,13 @@ defmodule AppWeb.Admin.SettingsLive do
   end
 
   @impl true
+  def handle_event("set_explain_method", %{"method" => metodo}, socket) do
+    case AIEngineSettings.set_explain_method(metodo) do
+      :ok -> {:noreply, assign(socket, explain_method: metodo, explain_saved: true)}
+      {:error, razon} -> {:noreply, put_flash(socket, :error, razon)}
+    end
+  end
+
   def handle_event("set_engine", %{"engine" => engine}, socket) do
     case AIEngineSettings.set_engine(engine) do
       :ok ->
@@ -166,6 +191,49 @@ defmodule AppWeb.Admin.SettingsLive do
 
         <%= if @engine_saved do %>
           <p class="mt-4 text-sm text-green-600">Motor actualizado correctamente.</p>
+        <% end %>
+      </div>
+
+      <%!-- Estrategia de explicabilidad --%>
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-700 mb-1">Explicabilidad</h2>
+        <p class="text-gray-500 text-sm mb-5">
+          Cómo se calculan los términos del informe que justifican cada código. Se piden en una
+          segunda llamada, de modo que los códigos se muestran sin esperar a ellos. Las cuatro
+          estrategias devuelven términos medidos de verdad: lo que cambia es a cuántas palabras
+          se pregunta, y con ello el tiempo de respuesta.
+        </p>
+
+        <div class="flex flex-col gap-3">
+          <%= for {value, label, description} <- @explain_methods do %>
+            <button
+              phx-click="set_explain_method"
+              phx-value-method={value}
+              class={[
+                "text-left border rounded-lg px-4 py-3 transition-colors",
+                if(@explain_method == value,
+                  do: "border-indigo-500 bg-indigo-50 ring-1 ring-indigo-400",
+                  else: "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
+                )
+              ]}
+            >
+              <div class="flex items-center gap-2">
+                <span class={[
+                  "w-3 h-3 rounded-full shrink-0",
+                  if(@explain_method == value, do: "bg-indigo-500", else: "bg-gray-300")
+                ]} />
+                <span class="font-medium text-gray-800"><%= label %></span>
+                <%= if @explain_method == value do %>
+                  <span class="ml-auto text-xs text-indigo-600 font-semibold">Activo</span>
+                <% end %>
+              </div>
+              <p class="text-xs text-gray-500 mt-1 ml-5"><%= description %></p>
+            </button>
+          <% end %>
+        </div>
+
+        <%= if @explain_saved do %>
+          <p class="mt-4 text-sm text-green-600">Estrategia actualizada correctamente.</p>
         <% end %>
       </div>
 
