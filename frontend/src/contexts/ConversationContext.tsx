@@ -30,6 +30,15 @@ export interface AnalysisCode {
   confidence: number;
   relative_confidence?: number;
   triggers?: string[];
+  /** Same terms as `triggers`, each labelled with where it came from.
+   *  The dictionary reports literal matches and the model reports the words whose removal
+   *  lowers the logit the most: they are different kinds of evidence, so the UI shows the
+   *  origin instead of merging them into a single ranking. */
+  trigger_detail?: { term: string; source: 'dict' | 'bert'; weight: number | null }[];
+  /** False while the model terms are still being computed in a separate request.
+   *  The dictionary terms arrive with the prediction; the model ones cost an encoder pass
+   *  per word, so the card shows what it has and fills in the rest when it lands. */
+  triggers_complete?: boolean;
   // for validation (populated from predictedCodes)
   code_id?: string;
   status?: 'pending' | 'validated' | 'rejected';
@@ -282,6 +291,39 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
           content: payload.token,
         }];
       });
+    });
+
+    // Los términos explicativos llegan en una segunda petición porque calcularlos cuesta
+    // dos órdenes de magnitud más que predecir los códigos. Hasta que llegan, la tarjeta
+    // muestra lo que ya tiene (los del diccionario, si el motor es fusionado) y un indicador.
+    ch.on('triggers_received', (payload: { message_id: string; method: string; triggers: Record<string, { term: string; source?: 'dict' | 'bert'; weight: number | null }[]> }) => {
+      setChatItems((prev) =>
+        prev.map((item) => {
+          if (item.kind !== 'card' || item.message_id !== payload.message_id) return item;
+          if (item.card_type !== 'codes' || !Array.isArray(item.content)) return item;
+          return {
+            ...item,
+            content: (item.content as AnalysisCode[]).map((c) => {
+              const llegados = payload.triggers[c.code] ?? [];
+              if (llegados.length === 0) return { ...c, triggers_complete: true };
+              const detalle = [
+                ...(c.trigger_detail ?? []),
+                ...llegados.map((t) => ({ term: t.term, source: t.source ?? ('bert' as const), weight: t.weight })),
+              ];
+              // El diccionario y el modelo pueden coincidir en un término: se conserva uno solo.
+              const unicos = detalle.filter(
+                (d, i) => detalle.findIndex((o) => o.term.toLowerCase() === d.term.toLowerCase()) === i
+              );
+              return {
+                ...c,
+                triggers: unicos.map((d) => d.term),
+                trigger_detail: unicos,
+                triggers_complete: true,
+              };
+            }),
+          };
+        })
+      );
     });
 
     ch.on('trigger_verified', (payload: { code_id: string; verified_triggers: string[] }) => {

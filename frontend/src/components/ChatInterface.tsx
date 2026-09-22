@@ -128,25 +128,44 @@ function CodesCard({
 
             <p className="text-xs text-gray-600 mb-1">{c.reason ?? c.reasoning}</p>
 
-            {c.triggers && c.triggers.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {c.triggers.map((term) => {
+            {((c.triggers && c.triggers.length > 0) || c.triggers_complete === false) && (
+              <div className="flex flex-wrap items-center gap-1 mb-2">
+                {(c.triggers ?? []).map((term) => {
                   const isVerified = c.verified_triggers.includes(term);
+                  // De dónde salió el término decide el color y el tooltip: el diccionario
+                  // aporta coincidencias literales y el modelo, palabras influyentes. Son
+                  // evidencias de distinta naturaleza y el codificador necesita distinguirlas.
+                  const source = c.trigger_detail?.find((d) => d.term === term)?.source;
+                  const origin =
+                    source === 'dict' ? t('cards.trigger_from_dict')
+                    : source === 'bert' ? t('cards.trigger_from_model')
+                    : '';
+                  const action = isVerified ? t('cards.trigger_unverify') : t('cards.trigger_verify');
+                  const palette = isVerified
+                    ? 'bg-green-50 text-green-700 border-green-300'
+                    : source === 'dict'
+                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                      : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100';
                   return (
                     <button
                       key={term}
                       onClick={() => c.code_id && verifyTrigger(c.code_id, term, !isVerified)}
-                      title={isVerified ? 'Marcar como no verificado' : 'Verificar trigger'}
-                      className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
-                        isVerified
-                          ? 'bg-green-50 text-green-700 border-green-300'
-                          : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-                      }`}
+                      title={origin ? `${origin} · ${action}` : action}
+                      className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${palette}`}
                     >
                       {isVerified ? '✓ ' : ''}{term}
                     </button>
                   );
                 })}
+                {c.triggers_complete === false && (
+                  <span
+                    className="inline-flex items-center gap-1 text-[10px] text-gray-500"
+                    title={t('cards.triggers_loading')}
+                  >
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    {t('cards.triggers_loading')}
+                  </span>
+                )}
               </div>
             )}
 
