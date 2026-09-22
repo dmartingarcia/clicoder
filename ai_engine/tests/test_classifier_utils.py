@@ -1,6 +1,6 @@
 """
 Tests for pure utility functions in classifier.py and baseline_dict.py.
-No model weights or spaCy needed — only tests deterministic logic.
+No model weights or spaCy needed: only tests deterministic logic.
 """
 
 import json

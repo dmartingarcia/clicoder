@@ -1,5 +1,5 @@
 """
-train.py — Flat multi-label CIE-10 classifier (RigoBERTa-Clinical)
+train.py: Flat multi-label CIE-10 classifier (RigoBERTa-Clinical)
 
 Entrena un único modelo de clasificación multi-label sobre los ~1767 códigos
 CIE-10 presentes en el dataset CodiESP.  No hay jerarquía: una sola pasada
@@ -152,7 +152,7 @@ def load_data(train_file, val_file):
                 raise ValueError(f"Column '{col}' missing in {name} CSV")
         df.dropna(subset=["text", "labels"], inplace=True)
 
-    print(f"[data] rows — train={len(train_df)}  val={len(val_df)}")
+    print(f"[data] rows: train={len(train_df)}  val={len(val_df)}")
     return train_df, val_df
 
 
@@ -254,12 +254,12 @@ def build_pretrain_loader(
 ):
     """Genera un DataLoader para pre-entrenamiento combinando dos fuentes:
 
-    Fuente 1 — descripciones oficiales CIE-10 (csv cie10_file):
+    Fuente 1: descripciones oficiales CIE-10 (csv cie10_file):
       Cada fila puede tener variantes separadas por '|' en la columna 'description'.
       Cada variante se convierte en una muestra con su código como única etiqueta.
       Solo se incluyen códigos presentes en code_to_idx (vocabulario CodiESP).
 
-    Fuente 2 — snippets clínicos reales (task_X CSVs, opcional):
+    Fuente 2: snippets clínicos reales (task_X CSVs, opcional):
       Columna 'task_x' contiene JSON con anotaciones de explainabilidad CodiESP.
       Se extraen solo las anotaciones DIAGNOSTICO: cada snippet de texto clínico
       (jerga, siglas, variantes) se empareja con su código como muestra de pretrain.
@@ -299,7 +299,7 @@ def build_pretrain_loader(
                 for _, row in tx_df.iterrows():
                     try:
                         # task_x está almacenado como Python dict literal (comillas simples),
-                        # no como JSON estándar — usar ast.literal_eval en vez de json.loads
+                        # no como JSON estándar: usar ast.literal_eval en vez de json.loads
                         annotations = ast.literal_eval(str(row.get("task_x", "[]")))
                     except (ValueError, SyntaxError):
                         continue
@@ -517,7 +517,7 @@ class FlatClassifier(nn.Module):
             gam[:, 0] = 1
             kwargs["global_attention_mask"] = gam
         out = self.encoder(input_ids=input_ids, attention_mask=attention_mask, **kwargs)
-        # CLS token ([0]) — works for BERT, RoBERTa, DeBERTa-v2, Longformer
+        # CLS token ([0]): works for BERT, RoBERTa, DeBERTa-v2, Longformer
         cls = out.last_hidden_state[:, 0, :]  # (total_chunks, hidden_size)
 
         if doc_chunk_counts is not None:
@@ -598,7 +598,7 @@ def find_optimal_thresholds_per_class(
     """Threshold óptimo por clase para maximizar F1 binario de cada código.
 
     Para clases con menos de `min_val_positives` positivos en val (umbral no fiable),
-    usa el threshold global en vez del específico — evita que un umbral=0.05 dispare
+    usa el threshold global en vez del específico: evita que un umbral=0.05 dispare
     falsos positivos en códigos rarísimos y destruya F1-micro.
 
     Devuelve array de shape (num_classes,) con el threshold óptimo de cada clase.
@@ -807,8 +807,8 @@ class AsymmetricLoss(nn.Module):
       (umbrales de anotación, sinónimos parciales).
 
     Parámetros recomendados (paper, datasets multi-label con long-tail):
-      γ+=0, γ-=4, clip=0.05  — agresivo en negativos, neutral en positivos
-      γ+=1, γ-=4, clip=0.05  — también penaliza positivos fáciles (ligeramente)
+      γ+=0, γ-=4, clip=0.05 : agresivo en negativos, neutral en positivos
+      γ+=1, γ-=4, clip=0.05 : también penaliza positivos fáciles (ligeramente)
     """
 
     def __init__(
@@ -835,7 +835,7 @@ class AsymmetricLoss(nn.Module):
         lo_pos = y * torch.log(xs_pos.clamp(min=self.eps))
         lo_neg = (1 - y) * torch.log(xs_neg.clamp(min=self.eps))
 
-        # Focusing: (1-pt)^γ — cuando el modelo es confiado, el peso → 0
+        # Focusing: (1-pt)^γ, cuando el modelo es confiado, el peso → 0
         if self.gamma_neg > 0 or self.gamma_pos > 0:
             pt = xs_pos * y + xs_neg * (1 - y)  # p_t por clase y muestra
             gamma = self.gamma_pos * y + self.gamma_neg * (1 - y)
@@ -875,7 +875,7 @@ def rdrop_loss(logits_a: torch.Tensor, logits_b: torch.Tensor) -> torch.Tensor:
 
     R-Drop penaliza que el modelo conteste cosas distintas al mismo informe según qué
     neuronas se apaguen. Es regularización que no usa las etiquetas, de modo que aprovecha
-    los 500 documentos sin depender de cuántos positivos tenga cada código — el punto débil
+    los 500 documentos sin depender de cuántos positivos tenga cada código: el punto débil
     de este corpus. Cada clase es una Bernoulli independiente, así que la divergencia se
     promedia sobre las clases para quedar en la misma escala que la BCE.
     """
@@ -891,8 +891,8 @@ class WeightEMA:
     """Media móvil exponencial de los pesos entrenables.
 
     Promediar las salidas de varias ejecuciones sube el MAP, pero multiplica el coste de
-    inferencia y por eso no cabe en el VPS. La EMA persigue el mismo efecto —reducir la
-    varianza de los pesos— dentro de UNA sola trayectoria: los puntos que promedia están
+    inferencia y por eso no cabe en el VPS. La EMA persigue el mismo efecto -reducir la
+    varianza de los pesos- dentro de UNA sola trayectoria: los puntos que promedia están
     en la misma cuenca por construcción y el resultado sigue siendo un único modelo.
 
     Solo se siguen los parámetros entrenables: los congelados no cambian, así que su media
@@ -1125,7 +1125,7 @@ def train(
                         extra["zlpr"] = rank_loss_weight * zlpr_loss(logits, labels)
                     if "teacher" in batch:
                         # Destilación: además de las etiquetas binarias, imitar las
-                        # probabilidades del profesor. Sin pos_weight — los objetivos blandos
+                        # probabilidades del profesor. Sin pos_weight: los objetivos blandos
                         # ya llevan la información de ordenación que interesa al MAP.
                         soft_loss = nn.functional.binary_cross_entropy_with_logits(
                             logits, batch["teacher"].to(device)
@@ -1135,7 +1135,7 @@ def train(
                     if hier_child is not None:
                         # Penalizar cuando logit_hijo > logit_padre: relu(child - parent).
                         # Asimétrico: no penaliza si padre > hijo (consistente). No modifica la
-                        # arquitectura — solo presiona al modelo a activar el padre cuando activa el hijo.
+                        # arquitectura: solo presiona al modelo a activar el padre cuando activa el hijo.
                         hier_loss = torch.relu(
                             logits[:, hier_child] - logits[:, hier_parent]
                         ).mean()
@@ -1171,7 +1171,7 @@ def train(
             epoch_times.append(epoch_elapsed)
 
             avg_loss = epoch_loss / n_batches
-            # Con EMA activa se evalúa —y se guarda— la media móvil, no los pesos del último
+            # Con EMA activa se evalúa (y se guarda) la media móvil, no los pesos del último
             # paso: es la media la que se quiere llevar a producción.
             if ema is not None:
                 with ema.applied(model):
@@ -1504,7 +1504,7 @@ def main():
         torch.cuda.manual_seed_all(args.seed)
         print(f"[seed] {args.seed}")
 
-    # Device — prioridad: CUDA > MPS (Apple GPU) > CPU
+    # Device: prioridad: CUDA > MPS (Apple GPU) > CPU
     if args.device == "auto":
         if torch.cuda.is_available():
             device = torch.device("cuda")
@@ -1706,8 +1706,8 @@ def main():
     final_thr = best_global_thr
     fm = evaluate(model, val_loader, device, threshold=final_thr)
     print(f"\n[result] threshold={final_thr}")
-    print(f"  micro — P={fm['p_micro']:.4f}  R={fm['r_micro']:.4f}  F1={fm['f1_micro']:.4f}")
-    print(f"  macro — P={fm['p_macro']:.4f}  R={fm['r_macro']:.4f}  F1={fm['f1_macro']:.4f}")
+    print(f"  micro: P={fm['p_micro']:.4f}  R={fm['r_micro']:.4f}  F1={fm['f1_micro']:.4f}")
+    print(f"  macro: P={fm['p_macro']:.4f}  R={fm['r_macro']:.4f}  F1={fm['f1_macro']:.4f}")
 
     # ---- CSV de run ----
     import csv
@@ -1847,12 +1847,12 @@ def main():
     better_f1 = prev_best["f1"] is None or fm["f1_micro"] > prev_best["f1"]
     better_map = prev_best["map"] is None or map_macro > prev_best["map"]
     print(
-        "\n[hub] mejor anterior — "
+        "\n[hub] mejor anterior: "
         f"F1={prev_best['f1'] if prev_best['f1'] is not None else float('nan'):.4f}  "
         f"MAP={prev_best['map'] if prev_best['map'] is not None else float('nan'):.4f}"
     )
     print(
-        f"[hub] este run       — F1={fm['f1_micro']:.4f}{'  (mejor)' if better_f1 else ''}  "
+        f"[hub] este run      : F1={fm['f1_micro']:.4f}{'  (mejor)' if better_f1 else ''}  "
         f"MAP={map_macro:.4f}{'  (mejor)' if better_map else ''}"
     )
     if better_f1 or better_map:
@@ -1931,7 +1931,7 @@ def main():
     ax3.grid(True, alpha=0.3)
 
     fig.suptitle(
-        f"{args.model_name}  [{model.attn_impl}]  —  {timestamp}\n"
+        f"{args.model_name}  [{model.attn_impl}] :  {timestamp}\n"
         f"max_length={args.max_length}  batch={args.batch_size}×{args.grad_accum}={args.batch_size * args.grad_accum}"
         f"  lr={args.lr:.0e}  wd={args.weight_decay}  warmup={args.warmup_ratio}  dropout={args.dropout}"
         f"  threshold={args.threshold}  pos_weight_cap={args.pos_weight_cap}"

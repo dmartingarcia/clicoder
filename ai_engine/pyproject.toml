@@ -12,7 +12,7 @@ select = [
     "UP",  # pyupgrade
 ]
 ignore = [
-    "E501",  # line too long — enforced by formatter, not checker
+    "E501",  # line too long: enforced by formatter, not checker
     "B008",  # do not perform function calls in default arguments
 ]
 

@@ -1,6 +1,6 @@
 # docker-compose.cpu.yml
 # Override para entornos sin GPU (Mac, Linux sin NVIDIA).
-# El ai_engine real se ejecuta en CPU — válido para desarrollo y entrenamiento.
+# El ai_engine real se ejecuta en CPU: válido para desarrollo y entrenamiento.
 # Uso: docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
 
 services:

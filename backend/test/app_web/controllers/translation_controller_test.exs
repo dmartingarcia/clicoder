@@ -61,7 +61,7 @@ defmodule AppWeb.TranslationControllerTest do
       conn = get(conn, "/api/translations/zz")
       body = json_response(conn, 200)
 
-      # Falls back to 'es' — verify the Spanish content is served
+      # Falls back to 'es': verify the Spanish content is served
       assert Map.has_key?(body, "auth")
 
       conn_es = get(Phoenix.ConnTest.build_conn(), "/api/translations/es")

@@ -33,7 +33,7 @@ defmodule Mix.Tasks.Cie10.Import do
     n_chemicals = import_chemicals(Path.join(base_dir, "cie10-es-chemicals.csv"))
 
     Logger.info(
-      "Import complete — diagnoses: #{n_diagnoses}, procedures: #{n_procedures}, chemicals: #{n_chemicals}"
+      "Import complete: diagnoses: #{n_diagnoses}, procedures: #{n_procedures}, chemicals: #{n_chemicals}"
     )
   end
 

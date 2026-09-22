@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from train import WeightEMA, rdrop_loss, zlpr_loss
 
 # =============================================================================
-# ZLPR — pérdida listwise dentro del documento
+# ZLPR: pérdida listwise dentro del documento
 # =============================================================================
 
 

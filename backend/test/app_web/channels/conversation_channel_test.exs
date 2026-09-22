@@ -46,10 +46,10 @@ defmodule AppWeb.ConversationChannelTest do
   end
 
   # ---------------------------------------------------------------------------
-  # Joining an EXISTING conversation (no Commanded needed — DB read only)
+  # Joining an EXISTING conversation (no Commanded needed: DB read only)
   # ---------------------------------------------------------------------------
 
-  describe "join/3 — existing conversation" do
+  describe "join/3: existing conversation" do
     test "returns status 'joined' and conversation history", %{conn: _conn} do
       user = user_fixture()
       conv = conversation_fixture(user)
@@ -186,7 +186,7 @@ defmodule AppWeb.ConversationChannelTest do
   # Joining a NEW conversation (requires Commanded + EventStore)
   # ---------------------------------------------------------------------------
 
-  describe "join/3 — new conversation" do
+  describe "join/3: new conversation" do
     test "dispatches StartConversation and returns 'conversation_started'", %{conn: _conn} do
       user = user_fixture()
       new_id = UUID.uuid4()

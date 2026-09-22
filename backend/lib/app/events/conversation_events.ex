@@ -29,7 +29,7 @@ end
 
 # These structs exist solely to register their field atoms at compile time.
 # EventStore replays events with Jason keys: :atoms! which requires all JSON
-# keys to already be known atoms — including nested keys inside :cards and
+# keys to already be known atoms: including nested keys inside :cards and
 # :predicted_codes lists.
 defmodule App.Events.CardData do
   @derive Jason.Encoder

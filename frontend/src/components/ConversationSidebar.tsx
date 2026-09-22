@@ -125,7 +125,7 @@ export function ConversationSidebar() {
           <div className="space-y-1 pb-2">
             {conversations.map((conv) => {
               const isActive = conv.conversation_id === activeConversationId;
-              const preview = conv.last_message?.content?.slice(0, 60) ?? '—';
+              const preview = conv.last_message?.content?.slice(0, 60) ?? '…';
               const msgLabel = conv.message_count === 1 ? t('sidebar.messages_one') : t('sidebar.messages_other');
 
               return (
@@ -184,7 +184,7 @@ export function ConversationSidebar() {
                   <div key={conv.conversation_id} className="flex items-center gap-1 px-2">
                     <div className="flex-1 min-w-0 px-2 py-1 rounded text-gray-500">
                       <p className="text-xs truncate opacity-60">
-                        {formatDate(conv.started_at)} · {conv.last_message?.content?.slice(0, 40) ?? '—'}
+                        {formatDate(conv.started_at)} · {conv.last_message?.content?.slice(0, 40) ?? '…'}
                       </p>
                     </div>
                     <button

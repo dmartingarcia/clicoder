@@ -346,7 +346,7 @@ En este trabajo se exploran y comparan los enfoques más avanzados, integrando m
 
 [30] Zhang, D., Yin, C., Zeng, J., Yuan, X., & Zhang, P. (2017). Combining structured and unstructured data for predictive models: a deep learning approach. BMC Medical Informatics and Decision Making, 17(1), 1-11.
 
-[31] Obermeyer, Z., & Emanuel, E. J. (2016). Predicting the future—big data, machine learning, and clinical medicine. New England Journal of Medicine, 375(13), 1216-1219.
+[31] Obermeyer, Z., & Emanuel, E. J. (2016). Predicting the future-big data, machine learning, and clinical medicine. New England Journal of Medicine, 375(13), 1216-1219.
 
 [32] Denny, J. C., Spickard III, A., Johnson, K. B., Peterson, N. B., Peterson, J. F., & Miller, R. A. (2009). Evaluation of a method to identify and categorize section headers in clinical documents. Journal of the American Medical Informatics Association, 16(6), 806-815.
 

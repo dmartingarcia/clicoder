@@ -48,7 +48,7 @@ defmodule App.JsonSerializerTest do
   end
 
   # ---------------------------------------------------------------------------
-  # deserialize/2 — with :type config
+  # deserialize/2: with :type config
   # ---------------------------------------------------------------------------
 
   describe "deserialize/2 with known event type" do
@@ -97,7 +97,7 @@ defmodule App.JsonSerializerTest do
   end
 
   # ---------------------------------------------------------------------------
-  # deserialize/2 — without :type config (metadata path)
+  # deserialize/2: without :type config (metadata path)
   # ---------------------------------------------------------------------------
 
   describe "deserialize/2 without :type config (metadata deserialization)" do

@@ -44,7 +44,7 @@ if [ ! -f "$REPO_DIR/.env" ]; then
   echo "Edita $REPO_DIR/.env antes de arrancar los servicios"
 fi
 
-# Fail2ban — protección SSH + brute force HTTP vía logs de Traefik
+# Fail2ban: protección SSH + brute force HTTP vía logs de Traefik
 if ! command -v fail2ban-client &>/dev/null; then
   apt-get update -q && apt-get install -y fail2ban
 fi
@@ -82,7 +82,7 @@ bantime  = 1h
 findtime = 5m
 EOF
 
-# Traefik escribe access logs en JSON — extraemos ClientHost de cada 401
+# Traefik escribe access logs en JSON: extraemos ClientHost de cada 401
 cat > /etc/fail2ban/filter.d/traefik-auth.conf << 'EOF'
 [Definition]
 failregex = ^.*"ClientHost":"<HOST>".*"DownstreamStatus":401.*$

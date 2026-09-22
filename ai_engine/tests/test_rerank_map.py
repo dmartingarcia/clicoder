@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from rerank_map import _ap, build_gold, calibrate, map_scores, to_logits
 
 # =============================================================================
-# _ap — debe coincidir con sklearn, que es la referencia usada en eval_test.py
+# _ap: debe coincidir con sklearn, que es la referencia usada en eval_test.py
 # =============================================================================
 
 
@@ -76,7 +76,7 @@ def test_calibrar_reordena_dentro_del_documento():
 
 
 # =============================================================================
-# build_gold — el gold fuera de vocabulario cuenta en n_total pero no en n_reach
+# build_gold: el gold fuera de vocabulario cuenta en n_total pero no en n_reach
 # =============================================================================
 
 

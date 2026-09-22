@@ -1,5 +1,5 @@
 """
-augment.py — Back-translation data augmentation (NLLB-200 local o Azure Translator).
+augment.py: Back-translation data augmentation (NLLB-200 local o Azure Translator).
 
 Genera paráfrasis de cada nota clínica traduciendo ES→pivot→ES.
 Las etiquetas CIE-10 se mantienen intactas.
@@ -127,12 +127,12 @@ class AzureTranslator:
                 retries += 1
                 for remaining in range(wait, 0, -1):
                     print(
-                        f"\r[azure] 429 rate-limit (retry #{retries}) — {remaining:2d}s…  ",
+                        f"\r[azure] 429 rate-limit (retry #{retries}): {remaining:2d}s…  ",
                         end="",
                         flush=True,
                     )
                     time.sleep(1)
-                print(f"\r[azure] 429 rate-limit (retry #{retries}) — reintentando…          ")
+                print(f"\r[azure] 429 rate-limit (retry #{retries}): reintentando…          ")
                 continue
             retries = 0
             resp.raise_for_status()
@@ -358,7 +358,7 @@ def main() -> None:
                     retry += 1
                     wait = min(10 * retry, 120)
                     print(
-                        f"[{i}/{total}] ERROR (intento #{retry}): {e} — reintentando en {wait}s…",
+                        f"[{i}/{total}] ERROR (intento #{retry}): {e}, reintentando en {wait}s…",
                         file=sys.stderr,
                     )
                     import time

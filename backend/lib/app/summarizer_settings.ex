@@ -7,8 +7,8 @@ defmodule App.SummarizerSettings do
   en memoria para no bloquear el Agent.
 
   Variables disponibles en los prompts:
-    - `{text}`     — informe clínico del paciente
-    - `{language}` — idioma del usuario (ej. "español", "English"), interpolado por el backend
+    - `{text}`    : informe clínico del paciente
+    - `{language}`: idioma del usuario (ej. "español", "English"), interpolado por el backend
 
   Modelos válidos: `"gemma3"` | `"gemma4"` | `"phi4"` | `"qwen"` | `"none"`
   Modos válidos:   `"summary"` | `"paraphrase"`

@@ -38,12 +38,12 @@ function writeCache(loc: string, data: Translations): void {
   try {
     localStorage.setItem(`${TRANSLATIONS_CACHE_KEY}_${loc}`, JSON.stringify(data));
   } catch {
-    // localStorage quota exceeded — best effort
+    // localStorage quota exceeded: best effort
   }
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  // Always start with SSR-compatible defaults — no localStorage reads at init time.
+  // Always start with SSR-compatible defaults: no localStorage reads at init time.
   const [locale, setLocaleState] = useState<string>(DEFAULT_LOCALE);
   const [translations, setTranslations] = useState<Translations>({});
   const [ready, setReady] = useState(false);
@@ -70,7 +70,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Runs once after hydration — safe to read localStorage here
+  // Runs once after hydration: safe to read localStorage here
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     const browser = navigator.language.split('-')[0];

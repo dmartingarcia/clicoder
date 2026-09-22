@@ -297,7 +297,7 @@ describe('AuthProvider', () => {
       // Store invalid JSON so JSON.parse throws
       localStorage.setItem('cie10_auth', 'NOT_VALID_JSON{{{');
       const getCtx = renderProvider();
-      // Should not throw — catch branch returns null, auth stays null
+      // Should not throw: catch branch returns null, auth stays null
       await waitFor(() => expect(getCtx().mounted).toBe(true));
       expect(getCtx().user).toBeNull();
     });

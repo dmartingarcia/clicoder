@@ -1,5 +1,5 @@
 """
-combine_augmented.py — Combina el corpus original con las variantes aumentadas de todos los pivotes.
+combine_augmented.py: Combina el corpus original con las variantes aumentadas de todos los pivotes.
 
 Uso:
     python combine_augmented.py

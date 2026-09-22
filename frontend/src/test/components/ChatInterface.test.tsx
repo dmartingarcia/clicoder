@@ -35,7 +35,7 @@ vi.mock('@/contexts/ConversationContext', () => ({
   }),
 }));
 
-// Mock sidebar — avoid rendering the full sidebar in these tests
+// Mock sidebar: avoid rendering the full sidebar in these tests
 vi.mock('@/components/ConversationSidebar', () => ({
   ConversationSidebar: () => <div data-testid="sidebar" />,
 }));
@@ -415,7 +415,7 @@ describe('ChatInterface', () => {
       vi.spyOn(window, 'getSelection').mockReturnValue(mockSel as unknown as Selection);
       fireEvent.mouseUp(textDiv);
 
-      // The cancel button is inside the form container — scope with within()
+      // The cancel button is inside the form container: scope with within()
       const { within } = await import('@testing-library/react');
       const input = screen.getByPlaceholderText('cards.suggest_code_placeholder');
       const formRow = input.parentElement!; // the flex gap-2 div

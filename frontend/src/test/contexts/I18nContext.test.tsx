@@ -118,7 +118,7 @@ describe('I18nProvider', () => {
       // navigator.language is 'zh-CN' (unsupported) so locale will be 'es'
       localStorage.setItem('cie10_translations_es', JSON.stringify(cached));
 
-      // Make fetch never resolve — cache should still set ready=true
+      // Make fetch never resolve: cache should still set ready=true
       global.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
 
       const getCtx = renderProvider();

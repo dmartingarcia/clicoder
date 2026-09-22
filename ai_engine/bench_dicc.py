@@ -44,13 +44,17 @@ def main():
         for c in codigos:
             palabras = {w.lower() for w in exh.get(int(clf.code_to_idx[c]), [])}
             frases = " ".join(terminos_dic[c]).lower()
-            sol.append(np.mean([1.0 if w in frases else 0.0 for w in palabras]) if palabras else 0.0)
+            sol.append(
+                np.mean([1.0 if w in frases else 0.0 for w in palabras]) if palabras else 0.0
+            )
         solape_palabras.append(np.mean(sol))
 
     print(f"diccionario   {np.mean(t_dic):7.3f} s   cobertura de códigos: {np.mean(cobertura):.0%}")
     print(f"exhaustivo    {np.mean(t_exh):7.3f} s")
     print(f"factor de aceleración: {np.mean(t_exh) / max(np.mean(t_dic), 1e-9):.0f}x")
-    print(f"palabras del modelo contenidas en las frases del diccionario: {np.mean(solape_palabras):.0%}")
+    print(
+        f"palabras del modelo contenidas en las frases del diccionario: {np.mean(solape_palabras):.0%}"
+    )
 
 
 if __name__ == "__main__":

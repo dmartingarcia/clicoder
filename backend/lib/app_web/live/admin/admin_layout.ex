@@ -11,7 +11,7 @@ defmodule AppWeb.Admin.AdminLayout do
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={Plug.CSRFProtection.get_csrf_token()} />
-        <title>Backoffice — CIE-10</title>
+        <title>Backoffice: CIE-10</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script type="importmap">
           {

@@ -1,5 +1,5 @@
 """
-augment_paraphrase.py — Paráfrasis de notas clínicas con Gemma 3 4B IT (GPU).
+augment_paraphrase.py: Paráfrasis de notas clínicas con Gemma 3 4B IT (GPU).
 
 Genera versiones paráfraseadas manteniendo todos los detalles médicos intactos
 (diagnósticos, fármacos, dosis, fechas, procedimientos). Las etiquetas CIE-10
@@ -223,7 +223,7 @@ def main() -> None:
                     retry += 1
                     wait = min(10 * retry, 60)
                     print(
-                        f"[{i}/{total_notes}] ERROR (intento #{retry}): {e} — reintentando en {wait}s…",
+                        f"[{i}/{total_notes}] ERROR (intento #{retry}): {e}, reintentando en {wait}s…",
                         file=sys.stderr,
                     )
                     import time

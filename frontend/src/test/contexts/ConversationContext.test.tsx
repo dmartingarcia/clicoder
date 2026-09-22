@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
-import '../helpers'; // i18n / sonner / config mocks — also registers a static socket mock
+import '../helpers'; // i18n / sonner / config mocks: also registers a static socket mock
 
 // ── Override the socket mock with a controllable version ─────────────────────
 // helpers.tsx registers getSocket as vi.fn(). We override its implementation
@@ -224,7 +224,7 @@ describe('ConversationProvider', () => {
       });
       expect(getCtx().chatItems).toHaveLength(1);
 
-      // Fire analysis_complete — should inject a 'suggest' card
+      // Fire analysis_complete: should inject a 'suggest' card
       act(() => {
         channelEvents['analysis_complete']?.({
           message_id: 'msg-10',
@@ -343,7 +343,7 @@ describe('ConversationProvider', () => {
       // Wait for the channel to be created for the new conversation ID
       await waitFor(() => expect(mockSocket.channel).toHaveBeenCalled());
 
-      // Simulate the channel join succeeding — this triggers the pendingReportRef branch
+      // Simulate the channel join succeeding: this triggers the pendingReportRef branch
       act(() => {
         joinCallbacks['ok']?.({
           status: 'conversation_started',
@@ -487,7 +487,7 @@ describe('ConversationProvider', () => {
       const getCtx = renderProvider();
       await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
-      // Set trashed conversations via the channel event or direct mock —
+      // Set trashed conversations via the channel event or direct mock -
       // simulate loadTrashed response
       (global.fetch as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({ ok: true, json: async () => ({}) } as Response)  // PUT restore
@@ -496,7 +496,7 @@ describe('ConversationProvider', () => {
 
       act(() => { void getCtx().restoreConversation('trash-1'); });
 
-      // No errors expected — fetch should be called with restore URL
+      // No errors expected: fetch should be called with restore URL
       await waitFor(() => {
         const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
         return expect(calls.some((call) => (call[0] as string).includes('trash-1/restore'))).toBe(true);
