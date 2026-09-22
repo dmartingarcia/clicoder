@@ -1,4 +1,5 @@
 FROM node:24-alpine AS base
+RUN apk upgrade --no-cache
 
 # Installar dependencias solo cuando sea necesario
 FROM base AS deps
@@ -6,7 +7,7 @@ WORKDIR /app
 
 # Copiar archivos de configuración
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 
 # Desarrollo
 FROM base AS dev

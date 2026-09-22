@@ -189,3 +189,52 @@ make mailpit     # Abrir bandeja de email de prueba
 make backend-migrate  # Ejecutar migraciones
 make logs-backend     # Ver logs del backend
 ```
+
+---
+
+## Infraestructura de producción
+
+VPS en **Contabo** con snapshot diaria (hace las veces de backup de la base de datos).
+
+### Proxy inverso
+
+Traefik v3 gestiona el enrutamiento por subdominio y los certificados TLS con Let's Encrypt:
+
+- Redirección HTTP -> HTTPS global
+- Routing: `DOMAIN`, `api.DOMAIN`, `grafana.DOMAIN`, `traefik.DOMAIN`
+- Dashboard protegido con Basic Auth y rate limit
+
+```bash
+make start-proxy
+make stop-proxy
+make traefik-passwd USER=admin PASSWORD=xxx
+```
+
+### Cloudflare Zero Trust Tunnel
+
+El tráfico entra a traves de **Cloudflare Zero Trust** en lugar de puertos abiertos en el VPS. El contenedor `cloudflared` mantiene una conexion saliente a Cloudflare y todo el trafico llega a Traefik por ahi, sin exponer la IP del servidor.
+
+```
+Internet -> Cloudflare -> tunnel -> cloudflared -> Traefik -> servicios
+```
+
+Para configurarlo:
+
+1. Crear el tunnel en dash.cloudflare.com -> Zero Trust -> Networks -> Tunnels
+2. Copiar el token al `.env` como `CLOUDFLARE_TUNNEL_TOKEN`
+3. En el dashboard de Cloudflare apuntar cada subdominio a `https://cie10_traefik:443` con *No TLS Verify* activado
+
+```bash
+make start-tunnel
+make stop-tunnel
+make deploy TUNNEL=1
+```
+
+### Monitorizacion
+
+Prometheus + Grafana + Loki. Dashboards para el host, contenedores, Traefik, el tunnel de Cloudflare, backend, AI engine y health checks de los tres servicios principales.
+
+```bash
+make start-monitoring
+make stop-monitoring
+```
