@@ -108,8 +108,8 @@ class _FlatClassifier(nn.Module):
 # Métodos de atribución (explicabilidad)
 # ============================================================================
 #
-# Las tres estrategias responden a la misma pregunta -qué palabras del informe
-# sostienen cada código predicho- y devuelven el mismo tipo de respuesta: la caída
+# Las tres estrategias responden a la misma pregunta (qué palabras del informe
+# sostienen cada código predicho) y devuelven el mismo tipo de respuesta: la caída
 # real del logit al enmascarar la palabra. Lo que cambia es a cuántas palabras se
 # pregunta, porque preguntar cuesta una pasada del encoder por palabra.
 #
@@ -270,13 +270,21 @@ EXPLAIN_POR_DEFECTO = "exhaustivo"
 class CIE10Classifier:
     """Clasificador plano multi-label para CIE-10."""
 
-    def __init__(self, model_dir: str, device: str = "cpu"):
+    def __init__(self, model_dir: str, device: str = "cpu", overrides: dict | None = None):
+        """Carga el modelo indicado en config.json, o el que imponga ``overrides``.
+
+        ``overrides`` permite instanciar un checkpoint concreto sin tocar config.json, que es
+        lo que necesita el cambio de modelo en caliente: se construye el clasificador nuevo
+        entero y solo cuando ha cargado bien se sustituye al que estaba sirviendo.
+        """
         self.device = torch.device(device)
         model_path = Path(model_dir)
 
         # Config
         with open(model_path / "config.json") as f:
             self.config = json.load(f)
+        if overrides:
+            self.config = {**self.config, **overrides}
 
         # Capítulos (para display)
         chapters_path = model_path / "cie10_chapters.json"
