@@ -1,0 +1,9 @@
+{
+  "model_name": "IIC/RigoBERTa-Clinical",
+  "model_file": "classifier_20260921T101828Z_f1=0.4809_map=0.5389.pt",
+  "thresholds_file": "thresholds_20260921T101828Z.json",
+  "max_length": 512,
+  "threshold": 0.2,
+  "threshold_configured": 0.3,
+  "full_codes": true
+}

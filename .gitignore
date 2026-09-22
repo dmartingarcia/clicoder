@@ -41,6 +41,9 @@ ai_engine/model/thresholds.json
 ai_engine/model/baseline_cache/
 # Caché de logits de los experimentos de fusión: reproducible con rerank_map.py
 ai_engine/model/logits_cache/
+# Cada ejecución duplica el catálogo de descripciones (11 MB): basta con el de model/
+ai_engine/model/runs/*/code_descriptions.json
+ai_engine/model/runs/*/cie10_chapters.json
 ai_engine/snapshots
 **/cache
 
