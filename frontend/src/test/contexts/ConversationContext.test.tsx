@@ -2,14 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import '../helpers'; // i18n / sonner / config mocks: also registers a static socket mock
 
-// ── Override the socket mock with a controllable version ─────────────────────
-// helpers.tsx registers getSocket as vi.fn(). We override its implementation
-// in beforeEach so the test has full control over channel callbacks.
-
 import { getSocket } from '@/lib/socket';
 
 const channelEvents: Record<string, (payload: unknown) => void> = {};
 const joinCallbacks: Record<string, (resp: unknown) => void> = {};
+
+let pushRespondeCon: 'ninguno' | 'ok' | 'error' = 'ninguno';
 
 const mockChannel = {
   join: vi.fn(() => {
@@ -24,7 +22,11 @@ const mockChannel = {
     channelEvents[event] = cb;
   }),
   push: vi.fn(() => {
-    function receive(_e: string, _cb: unknown) { return { receive }; }
+    // Los .receive() encadenados solo se disparan si el test lo pide
+    function receive(evento: string, cb: (resp?: unknown) => void) {
+      if (evento === pushRespondeCon) cb({});
+      return { receive };
+    }
     return { receive };
   }),
   leave: vi.fn(),
@@ -32,20 +34,18 @@ const mockChannel = {
 
 const mockSocket = { channel: vi.fn(() => mockChannel) };
 
-// ── Import context after socket import ───────────────────────────────────────
 import { ConversationProvider, useConversation } from '@/contexts/ConversationContext';
 
-// Helper component to expose context values
 function Probe({ onRender }: { onRender: (ctx: ReturnType<typeof useConversation>) => void }) {
   const ctx = useConversation();
   onRender(ctx);
   return null;
 }
 
-function renderProvider(userId = 'user-1', token = 'tok-abc') {
+function renderProvider(userId = 'user-1', token = 'tok-abc', onUnauthorized?: () => void) {
   let capturedCtx!: ReturnType<typeof useConversation>;
   render(
-    <ConversationProvider userId={userId} token={token}>
+    <ConversationProvider userId={userId} token={token} onUnauthorized={onUnauthorized}>
       <Probe onRender={(ctx) => { capturedCtx = ctx; }} />
     </ConversationProvider>
   );
@@ -56,16 +56,14 @@ function mockFetch(body: unknown, ok = true) {
   global.fetch = vi.fn().mockResolvedValue({ ok, json: async () => body } as Response);
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
 describe('ConversationProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Override the socket mock from helpers.tsx with our controllable version
     vi.mocked(getSocket).mockReturnValue(mockSocket as unknown as ReturnType<typeof getSocket>);
     for (const k of Object.keys(channelEvents)) delete channelEvents[k];
     for (const k of Object.keys(joinCallbacks)) delete joinCallbacks[k];
     mockFetch({ conversations: [] });
+    pushRespondeCon = 'ninguno';
   });
 
   describe('initial state', () => {
@@ -213,7 +211,6 @@ describe('ConversationProvider', () => {
     it('analysis_complete injects a suggest card when chatItems has a user message', async () => {
       const getCtx = await setupWithChannel();
 
-      // First, add a user message via new_message event
       act(() => {
         channelEvents['new_message']?.({
           message_id: 'msg-10',
@@ -224,7 +221,6 @@ describe('ConversationProvider', () => {
       });
       expect(getCtx().chatItems).toHaveLength(1);
 
-      // Fire analysis_complete: should inject a 'suggest' card
       act(() => {
         channelEvents['analysis_complete']?.({
           message_id: 'msg-10',
@@ -312,7 +308,6 @@ describe('ConversationProvider', () => {
       });
 
       await waitFor(() => expect(getCtx().chatItems.length).toBeGreaterThan(0));
-      // messages + analysis card + injected suggest card = 3 items
       const hasUserMsg = getCtx().chatItems.some((i) => i.kind === 'user');
       const hasCard = getCtx().chatItems.some((i) => i.kind === 'card' && i.card_type === 'summary');
       const hasSuggest = getCtx().chatItems.some((i) => i.kind === 'card' && i.card_type === 'suggest');
@@ -336,14 +331,11 @@ describe('ConversationProvider', () => {
       const getCtx = renderProvider();
       await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
-      // createConversation + analyzeReport sets pendingReportRef and creates a new conv ID
       act(() => { getCtx().createConversation(); });
       act(() => { getCtx().analyzeReport('Pending report text'); });
 
-      // Wait for the channel to be created for the new conversation ID
       await waitFor(() => expect(mockSocket.channel).toHaveBeenCalled());
 
-      // Simulate the channel join succeeding: this triggers the pendingReportRef branch
       act(() => {
         joinCallbacks['ok']?.({
           status: 'conversation_started',
@@ -351,7 +343,6 @@ describe('ConversationProvider', () => {
         });
       });
 
-      // The channel should push analyze_report with the pending text
       await waitFor(() =>
         expect(mockChannel.push).toHaveBeenCalledWith('analyze_report', { report_text: 'Pending report text' })
       );
@@ -363,7 +354,6 @@ describe('ConversationProvider', () => {
       act(() => { getCtx().switchConversation('conv-1'); });
       await waitFor(() => expect(mockSocket.channel).toHaveBeenCalled());
 
-      // Simulate channel join acknowledged so the channel ref is set
       act(() => {
         joinCallbacks['ok']?.({
           status: 'joined',
@@ -487,8 +477,6 @@ describe('ConversationProvider', () => {
       const getCtx = renderProvider();
       await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
-      // Set trashed conversations via the channel event or direct mock -
-      // simulate loadTrashed response
       (global.fetch as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({ ok: true, json: async () => ({}) } as Response)  // PUT restore
         .mockResolvedValueOnce({ ok: true, json: async () => ({ conversations: [] }) } as Response)  // loadConversations
@@ -496,7 +484,6 @@ describe('ConversationProvider', () => {
 
       act(() => { void getCtx().restoreConversation('trash-1'); });
 
-      // No errors expected: fetch should be called with restore URL
       await waitFor(() => {
         const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
         return expect(calls.some((call) => (call[0] as string).includes('trash-1/restore'))).toBe(true);
@@ -514,6 +501,436 @@ describe('ConversationProvider', () => {
       act(() => { void getCtx().restoreConversation('trash-2'); });
 
       await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    });
+  });
+
+  async function conCanalActivo(getCtx: () => ReturnType<typeof useConversation>) {
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    act(() => { getCtx().switchConversation('conv-1'); });
+    await waitFor(() => expect(mockSocket.channel).toHaveBeenCalled());
+    act(() => {
+      joinCallbacks['ok']?.({
+        status: 'joined',
+        history: { messages: [], predicted_codes: [], analysis_cards: [] },
+      });
+    });
+    return getCtx;
+  }
+
+  describe('sesión caducada', () => {
+    it('un 401 avisa al usuario y dispara el cierre de sesión', async () => {
+      const { toast } = await import('sonner');
+      const onUnauthorized = vi.fn();
+      global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) } as Response);
+
+      renderProvider('user-1', 'tok-caducado', onUnauthorized);
+
+      await waitFor(() => expect(onUnauthorized).toHaveBeenCalled());
+      expect(toast.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('papelera', () => {
+    function fetchPorRuta(papelera: unknown[], activas: unknown[] = []) {
+      global.fetch = vi.fn((url: string) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ conversations: url.includes('/trash') ? papelera : activas }),
+        } as Response)
+      ) as unknown as typeof fetch;
+    }
+
+    const borrada = {
+      conversation_id: 'papelera-1',
+      started_at: new Date().toISOString(),
+      status: 'active',
+      deleted_at: new Date().toISOString(),
+      message_count: 2,
+      last_message: null,
+    };
+
+    it('carga las conversaciones borradas al montar', async () => {
+      fetchPorRuta([borrada]);
+      const getCtx = renderProvider();
+      await waitFor(() => expect(getCtx().trashedConversations).toHaveLength(1));
+      expect(getCtx().trashedConversations[0].conversation_id).toBe('papelera-1');
+    });
+
+    it('si la papelera no responde, el resto de la pantalla sigue funcionando', async () => {
+      global.fetch = vi.fn((url: string) =>
+        Promise.resolve({
+          ok: !url.includes('/trash'),
+          status: url.includes('/trash') ? 500 : 200,
+          json: async () => ({ conversations: [] }),
+        } as Response)
+      ) as unknown as typeof fetch;
+
+      const getCtx = renderProvider();
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+      expect(getCtx().trashedConversations).toEqual([]);
+    });
+
+    it('un fallo de red al listar conversaciones se le dice al usuario', async () => {
+      const { toast } = await import('sonner');
+      global.fetch = vi.fn().mockRejectedValue(new Error('sin red'));
+
+      renderProvider();
+      await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    });
+  });
+
+  describe('resumen en streaming', () => {
+    it('el primer token crea la tarjeta de resumen', async () => {
+      const getCtx = await conCanalActivo(renderProvider());
+      act(() => { channelEvents['summary_token']?.({ message_id: 'm1', token: 'Paciente ' }); });
+
+      const tarjeta = getCtx().chatItems[0];
+      expect(tarjeta.kind).toBe('card');
+      if (tarjeta.kind === 'card') {
+        expect(tarjeta.card_id).toBe('streaming-summary-m1');
+        expect(tarjeta.content).toBe('Paciente ');
+      }
+    });
+
+    it('los tokens siguientes se van concatenando en la misma tarjeta', async () => {
+      const getCtx = await conCanalActivo(renderProvider());
+      act(() => { channelEvents['summary_token']?.({ message_id: 'm1', token: 'Paciente ' }); });
+      act(() => { channelEvents['summary_token']?.({ message_id: 'm1', token: 'con disnea' }); });
+
+      expect(getCtx().chatItems).toHaveLength(1);
+      const tarjeta = getCtx().chatItems[0];
+      if (tarjeta.kind === 'card') expect(tarjeta.content).toBe('Paciente con disnea');
+    });
+
+    it('la tarjeta definitiva sustituye al buffer en vez de duplicarlo', async () => {
+      const getCtx = await conCanalActivo(renderProvider());
+      act(() => { channelEvents['summary_token']?.({ message_id: 'm1', token: 'borrador' }); });
+      act(() => {
+        channelEvents['analysis_card_received']?.({
+          message_id: 'm1',
+          card_id: 'card-final',
+          card_type: 'summary',
+          content: 'Resumen definitivo',
+        });
+      });
+
+      expect(getCtx().chatItems).toHaveLength(1);
+      const tarjeta = getCtx().chatItems[0];
+      if (tarjeta.kind === 'card') {
+        expect(tarjeta.card_id).toBe('card-final');
+        expect(tarjeta.content).toBe('Resumen definitivo');
+      }
+    });
+
+    it('la misma tarjeta no se añade dos veces si el evento llega repetido', async () => {
+      const getCtx = await conCanalActivo(renderProvider());
+      const carga = { message_id: 'm1', card_id: 'card-1', card_type: 'summary', content: 'texto' };
+      act(() => { channelEvents['analysis_card_received']?.(carga); });
+      act(() => { channelEvents['analysis_card_received']?.(carga); });
+
+      expect(getCtx().chatItems).toHaveLength(1);
+    });
+
+    it('al terminar el análisis el buffer deja de estar en curso', async () => {
+      const getCtx = await conCanalActivo(renderProvider());
+      act(() => { channelEvents['summary_token']?.({ message_id: 'm1', token: 'texto' }); });
+      act(() => { channelEvents['analysis_complete']?.({ message_id: 'm1' }); });
+
+      const tarjeta = getCtx().chatItems[0];
+      // Con el id de streaming la tarjeta se quedaría "escribiendo" para siempre
+      if (tarjeta.kind === 'card') expect(tarjeta.card_id).toBe('done-summary-m1');
+    });
+  });
+
+  describe('términos explicativos en segunda petición', () => {
+    async function conTarjetaDeCodigos(codigos: unknown[]) {
+      const getCtx = await conCanalActivo(renderProvider());
+      act(() => {
+        channelEvents['analysis_card_received']?.({
+          message_id: 'm1',
+          card_id: 'card-codes',
+          card_type: 'codes',
+          content: codigos,
+        });
+      });
+      return getCtx;
+    }
+
+    function codigosDe(getCtx: () => ReturnType<typeof useConversation>) {
+      const tarjeta = getCtx().chatItems.find((i) => i.kind === 'card' && i.card_type === 'codes');
+      if (!tarjeta || tarjeta.kind !== 'card') throw new Error('no hay tarjeta de códigos');
+      return tarjeta.content as { code: string; triggers?: string[]; trigger_detail?: { term: string; source: string }[]; triggers_complete?: boolean }[];
+    }
+
+    it('rellena los términos cuando llegan', async () => {
+      const getCtx = await conTarjetaDeCodigos([{ code: 'I10', confidence: 0.9 }]);
+      act(() => {
+        channelEvents['triggers_received']?.({
+          message_id: 'm1',
+          method: 'gradiente_filtrado',
+          triggers: { I10: [{ term: 'hipertensión', source: 'bert', weight: 0.4 }] },
+        });
+      });
+
+      const [codigo] = codigosDe(getCtx);
+      expect(codigo.triggers).toEqual(['hipertensión']);
+      expect(codigo.triggers_complete).toBe(true);
+    });
+
+    it('conserva los términos del diccionario y añade los del modelo', async () => {
+      const getCtx = await conTarjetaDeCodigos([
+        { code: 'I10', confidence: 0.9, trigger_detail: [{ term: 'HTA', source: 'dict', weight: null }] },
+      ]);
+      act(() => {
+        channelEvents['triggers_received']?.({
+          message_id: 'm1',
+          method: 'gradiente_filtrado',
+          triggers: { I10: [{ term: 'tensión', source: 'bert', weight: 0.3 }] },
+        });
+      });
+
+      const [codigo] = codigosDe(getCtx);
+      expect(codigo.trigger_detail?.map((d) => d.source)).toEqual(['dict', 'bert']);
+    });
+
+    it('un término que aportan los dos motores aparece una sola vez', async () => {
+      const getCtx = await conTarjetaDeCodigos([
+        { code: 'I10', confidence: 0.9, trigger_detail: [{ term: 'Hipertensión', source: 'dict', weight: null }] },
+      ]);
+      act(() => {
+        channelEvents['triggers_received']?.({
+          message_id: 'm1',
+          method: 'gradiente_filtrado',
+          triggers: { I10: [{ term: 'hipertensión', source: 'bert', weight: 0.5 }] },
+        });
+      });
+
+      const [codigo] = codigosDe(getCtx);
+      expect(codigo.triggers).toEqual(['Hipertensión']);
+    });
+
+    it('un código sin términos deja de esperar en vez de quedarse cargando', async () => {
+      const getCtx = await conTarjetaDeCodigos([{ code: 'I10', confidence: 0.9 }, { code: 'J45', confidence: 0.6 }]);
+      act(() => {
+        channelEvents['triggers_received']?.({
+          message_id: 'm1',
+          method: 'gradiente_filtrado',
+          triggers: { I10: [{ term: 'hipertensión', source: 'bert', weight: 0.4 }] },
+        });
+      });
+
+      const [, segundo] = codigosDe(getCtx);
+      expect(segundo.triggers_complete).toBe(true);
+      expect(segundo.triggers).toBeUndefined();
+    });
+
+    it('no toca las tarjetas de otro mensaje ni las que no son de códigos', async () => {
+      const getCtx = await conTarjetaDeCodigos([{ code: 'I10', confidence: 0.9 }]);
+      act(() => {
+        channelEvents['analysis_card_received']?.({
+          message_id: 'm2',
+          card_id: 'card-otro',
+          card_type: 'summary',
+          content: 'Resumen de otro mensaje',
+        });
+      });
+      act(() => {
+        channelEvents['triggers_received']?.({
+          message_id: 'm2',
+          method: 'gradiente_filtrado',
+          triggers: { I10: [{ term: 'hipertensión', source: 'bert', weight: 0.4 }] },
+        });
+      });
+
+      expect(codigosDe(getCtx)[0].triggers_complete).toBeUndefined();
+      const otra = getCtx().chatItems.find((i) => i.kind === 'card' && i.card_id === 'card-otro');
+      if (otra && otra.kind === 'card') expect(otra.content).toBe('Resumen de otro mensaje');
+    });
+  });
+
+  describe('verificación de términos', () => {
+    async function conCodigoPredicho() {
+      const getCtx = await conCanalActivo(renderProvider());
+      act(() => {
+        channelEvents['analysis_complete']?.({
+          message_id: 'm1',
+          predicted_codes: [{ code_id: 'c1', cie10_code: 'I10', reasoning: 'HTA', confidence: 0.9, status: 'pending', verified_triggers: [] }],
+        });
+      });
+      return getCtx;
+    }
+
+    it('marca el término antes de que responda el servidor', async () => {
+      const getCtx = await conCodigoPredicho();
+      act(() => { getCtx().verifyTrigger('c1', 'hipertensión', true); });
+
+      // Se pinta ya, sin esperar confirmación del servidor
+      expect(getCtx().predictedCodes[0].verified_triggers).toEqual(['hipertensión']);
+      expect(mockChannel.push).toHaveBeenCalledWith('verify_trigger', {
+        code_id: 'c1', trigger: 'hipertensión', verified: true,
+      });
+    });
+
+    it('desmarcar quita el término', async () => {
+      const getCtx = await conCodigoPredicho();
+      act(() => { getCtx().verifyTrigger('c1', 'hipertensión', true); });
+      act(() => { getCtx().verifyTrigger('c1', 'hipertensión', false); });
+
+      expect(getCtx().predictedCodes[0].verified_triggers).toEqual([]);
+    });
+
+    it('marcar dos veces el mismo término no lo duplica', async () => {
+      const getCtx = await conCodigoPredicho();
+      act(() => { getCtx().verifyTrigger('c1', 'hipertensión', true); });
+      act(() => { getCtx().verifyTrigger('c1', 'hipertensión', true); });
+
+      expect(getCtx().predictedCodes[0].verified_triggers).toEqual(['hipertensión']);
+    });
+
+    it('no toca los códigos que no son el indicado', async () => {
+      const getCtx = await conCodigoPredicho();
+      act(() => { getCtx().verifyTrigger('otro-id', 'hipertensión', true); });
+
+      expect(getCtx().predictedCodes[0].verified_triggers).toEqual([]);
+    });
+
+    it('sin canal no intenta enviar nada', async () => {
+      const getCtx = renderProvider();
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+      act(() => { getCtx().verifyTrigger('c1', 'hipertensión', true); });
+
+      expect(mockChannel.push).not.toHaveBeenCalled();
+    });
+
+    it('el servidor puede corregir la lista de términos verificados', async () => {
+      const getCtx = await conCodigoPredicho();
+      act(() => { channelEvents['trigger_verified']?.({ code_id: 'c1', verified_triggers: ['hipertensión', 'HTA'] }); });
+
+      expect(getCtx().predictedCodes[0].verified_triggers).toEqual(['hipertensión', 'HTA']);
+    });
+  });
+
+  describe('fallos al hablar con el canal', () => {
+    it('avisa si no se puede entrar en la conversación', async () => {
+      const { toast } = await import('sonner');
+      const getCtx = renderProvider();
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+      act(() => { getCtx().switchConversation('conv-1'); });
+      await waitFor(() => expect(mockSocket.channel).toHaveBeenCalled());
+
+      act(() => { joinCallbacks['error']?.({}); });
+
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('avisa si falla el envío del informe', async () => {
+      const { toast } = await import('sonner');
+      const getCtx = await conCanalActivo(renderProvider());
+      pushRespondeCon = 'error';
+
+      act(() => { getCtx().analyzeReport('Informe clínico'); });
+
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('avisa si falla el envío del informe pendiente al entrar', async () => {
+      const { toast } = await import('sonner');
+      const getCtx = renderProvider();
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+      act(() => { getCtx().createConversation(); });
+      act(() => { getCtx().analyzeReport('Informe pendiente'); });
+      await waitFor(() => expect(mockSocket.channel).toHaveBeenCalled());
+
+      pushRespondeCon = 'error';
+      act(() => {
+        joinCallbacks['ok']?.({ status: 'conversation_started', history: { messages: [], predicted_codes: [], analysis_cards: [] } });
+      });
+
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('avisa si falla la validación de un código', async () => {
+      const { toast } = await import('sonner');
+      const getCtx = await conCanalActivo(renderProvider());
+      pushRespondeCon = 'error';
+
+      act(() => { getCtx().validateCode('c1', 'I10'); });
+
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('avisa si falla el rechazo de un código', async () => {
+      const { toast } = await import('sonner');
+      const getCtx = await conCanalActivo(renderProvider());
+      pushRespondeCon = 'error';
+
+      act(() => { getCtx().rejectCode('c1', 'I10', 'no procede'); });
+
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('avisa si falla una sugerencia', async () => {
+      const { toast } = await import('sonner');
+      const getCtx = await conCanalActivo(renderProvider());
+      pushRespondeCon = 'error';
+
+      act(() => { getCtx().suggestCode('disnea', 'R06.0'); });
+
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('confirma al usuario que la sugerencia quedó guardada', async () => {
+      const { toast } = await import('sonner');
+      const getCtx = await conCanalActivo(renderProvider());
+      pushRespondeCon = 'ok';
+
+      act(() => { getCtx().suggestCode('disnea', 'R06.0'); });
+
+      expect(toast.success).toHaveBeenCalled();
+    });
+
+    it('rejectCode sin canal no envía nada', async () => {
+      const getCtx = renderProvider();
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+      act(() => { getCtx().rejectCode('c1', 'I10', 'motivo'); });
+
+      expect(mockChannel.push).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cambio de conversación', () => {
+    it('sale del canal anterior antes de entrar en el siguiente', async () => {
+      const getCtx = renderProvider();
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+      act(() => { getCtx().switchConversation('conv-1'); });
+      await waitFor(() => expect(mockSocket.channel).toHaveBeenCalledWith('conversation:conv-1', {}));
+
+      act(() => { getCtx().switchConversation('conv-2'); });
+      await waitFor(() => expect(mockSocket.channel).toHaveBeenCalledWith('conversation:conv-2', {}));
+
+      // Si no, se acumulan suscripciones y cada evento llega varias veces
+      expect(mockChannel.leave).toHaveBeenCalled();
+    });
+
+    it('vacía el chat al cambiar de conversación', async () => {
+      const getCtx = renderProvider();
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+      act(() => { getCtx().switchConversation('conv-1'); });
+      await waitFor(() => expect(mockSocket.channel).toHaveBeenCalled());
+      act(() => { channelEvents['new_message']?.({ message_id: 'm1', content: 'hola', user_id: 'user-1', timestamp: new Date().toISOString() }); });
+      expect(getCtx().chatItems).toHaveLength(1);
+
+      act(() => { getCtx().switchConversation('conv-2'); });
+
+      expect(getCtx().chatItems).toEqual([]);
+    });
+
+    it('guarda el motor que resolvió el análisis', async () => {
+      const getCtx = await conCanalActivo(renderProvider());
+      act(() => { channelEvents['analysis_complete']?.({ message_id: 'm1', engine: 'fused' }); });
+
+      expect(getCtx().engine).toBe('fused');
     });
   });
 });
