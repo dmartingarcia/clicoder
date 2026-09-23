@@ -21,11 +21,12 @@ defmodule App.Settings do
     field :prompt_paraphrase, :string
     field :user_prompt_summary, :string
     field :user_prompt_paraphrase, :string
+    field :explain_method, :string
 
     timestamps(type: :utc_datetime)
   end
 
-  @fields ~w(summarizer_model summarizer_mode prompt_summary prompt_paraphrase user_prompt_summary user_prompt_paraphrase)a
+  @fields ~w(summarizer_model summarizer_mode prompt_summary prompt_paraphrase user_prompt_summary user_prompt_paraphrase explain_method)a
 
   def changeset(settings, attrs) do
     settings
