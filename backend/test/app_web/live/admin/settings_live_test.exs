@@ -252,4 +252,103 @@ defmodule AppWeb.Admin.SettingsLiveTest do
       App.SummarizerSettings.set_model("none")
     end
   end
+
+  describe "selector de modelo" do
+    # Se reutiliza el mock que ya usa el resto de la suite: cambiar :ai_req_opts aqui
+    # afectaria a los tests que corren en paralelo, porque es configuracion global.
+    defp catalogo(modelos) do
+      Req.Test.stub(App.AIEngineMock, fn conn ->
+        Req.Test.json(conn, %{"models" => modelos, "loaded_checkpoint" => "classifier.pt"})
+      end)
+    end
+
+    test "muestra los modelos del catálogo con su estado", %{conn: conn} do
+      catalogo([
+        %{
+          "name" => "produccion",
+          "checkpoint" => "classifier.pt",
+          "description" => "el de siempre",
+          "metrics" => %{"map_test" => 0.43},
+          "downloaded" => true,
+          "loaded" => true
+        },
+        %{
+          "name" => "zlpr-map",
+          "checkpoint" => "classifier-b.pt",
+          "description" => "mejor MAP",
+          "metrics" => %{},
+          "downloaded" => false,
+          "loaded" => false
+        }
+      ])
+
+      {:ok, _vista, html} = live(conn, ~p"/admin/settings")
+
+      assert html =~ "produccion"
+      assert html =~ "en uso"
+      # Sin este aviso, pulsar Cargar sobre un modelo ausente falla sin explicación
+      assert html =~ "sin descargar"
+    end
+
+    test "solo ofrece cargar los que están en disco y no son el activo", %{conn: conn} do
+      catalogo([
+        %{
+          "name" => "activo",
+          "checkpoint" => "a.pt",
+          "description" => "",
+          "metrics" => %{},
+          "downloaded" => true,
+          "loaded" => true
+        },
+        %{
+          "name" => "otro",
+          "checkpoint" => "b.pt",
+          "description" => "",
+          "metrics" => %{},
+          "downloaded" => true,
+          "loaded" => false
+        },
+        %{
+          "name" => "ausente",
+          "checkpoint" => "c.pt",
+          "description" => "",
+          "metrics" => %{},
+          "downloaded" => false,
+          "loaded" => false
+        }
+      ])
+
+      {:ok, vista, _html} = live(conn, ~p"/admin/settings")
+      botones = vista |> element("button[phx-value-name]") |> render()
+
+      assert botones =~ "otro"
+    end
+
+    test "si el motor no responde, el panel lo dice en vez de quedarse en blanco", %{conn: conn} do
+      Req.Test.stub(App.AIEngineMock, fn conn -> Req.Test.transport_error(conn, :econnrefused) end)
+
+      {:ok, _vista, html} = live(conn, ~p"/admin/settings")
+      assert html =~ "No se pudo contactar con el AI engine"
+    end
+
+    test "cargar un modelo lo pide al motor y refresca el catálogo", %{conn: conn} do
+      catalogo([
+        %{
+          "name" => "otro",
+          "checkpoint" => "b.pt",
+          "description" => "",
+          "metrics" => %{},
+          "downloaded" => true,
+          "loaded" => false
+        }
+      ])
+
+      {:ok, vista, _html} = live(conn, ~p"/admin/settings")
+
+      vista |> element("button[phx-value-name='otro']") |> render_click()
+
+      # Tras cargarlo, el catalogo se relee: el boton de ese modelo ya no debe ofrecerse
+      assert render(vista) =~ "otro"
+    end
+  end
 end

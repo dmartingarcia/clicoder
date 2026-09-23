@@ -44,9 +44,13 @@ defmodule AppWeb.Admin.SettingsLive do
   @impl true
   def mount(_params, _session, socket) do
     summ = SummarizerSettings.get()
+    {modelos, modelos_error} = cargar_catalogo_modelos()
 
     {:ok,
      assign(socket,
+       modelos: modelos,
+       modelos_error: modelos_error,
+       modelo_cargando: nil,
        engine: AIEngineSettings.get_engine(),
        engines: @engines,
        explain_method: AIEngineSettings.get_explain_method(),
@@ -67,6 +71,39 @@ defmodule AppWeb.Admin.SettingsLive do
   end
 
   @impl true
+  def handle_event("refrescar_modelos", _params, socket) do
+    {modelos, error} = cargar_catalogo_modelos()
+    {:noreply, assign(socket, modelos: modelos, modelos_error: error)}
+  end
+
+  def handle_event("cargar_modelo", %{"name" => nombre}, socket) do
+    ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
+
+    peticion =
+      [json: %{name: nombre}, receive_timeout: 120_000] ++
+        Application.get_env(:app, :ai_req_opts, [])
+
+    case Req.post("#{ai_url}/admin/models", peticion) do
+      {:ok, %{status: 200}} ->
+        {modelos, error} = cargar_catalogo_modelos()
+
+        {:noreply,
+         socket
+         |> assign(modelos: modelos, modelos_error: error, modelo_cargando: nil)
+         |> put_flash(:info, "Modelo #{nombre} cargado.")}
+
+      {:ok, %{status: _, body: body}} ->
+        {:noreply, assign(socket, modelos_error: detalle_error(body), modelo_cargando: nil)}
+
+      {:error, reason} ->
+        {:noreply,
+         assign(socket,
+           modelos_error: "No se pudo contactar con el AI engine: #{inspect(reason)}",
+           modelo_cargando: nil
+         )}
+    end
+  end
+
   def handle_event("set_explain_method", %{"method" => metodo}, socket) do
     case AIEngineSettings.set_explain_method(metodo) do
       :ok -> {:noreply, assign(socket, explain_method: metodo, explain_saved: true)}
@@ -199,6 +236,78 @@ defmodule AppWeb.Admin.SettingsLive do
         <%= if @engine_saved do %>
           <p class="mt-4 text-sm text-green-600">Motor actualizado correctamente.</p>
         <% end %>
+      </div>
+
+      <%!-- Modelo del clasificador --%>
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-start justify-between mb-1">
+          <h2 class="text-lg font-semibold text-gray-700">Modelo del clasificador</h2>
+          <button
+            phx-click="refrescar_modelos"
+            class="text-sm text-indigo-600 hover:text-indigo-800 underline"
+          >
+            Actualizar
+          </button>
+        </div>
+        <p class="text-gray-500 text-sm mb-5">
+          Checkpoints publicados. Cambiar de modelo es inmediato y no reinicia el servicio, pero
+          uno que no esté descargado hay que traerlo antes con <code>make model-download</code>.
+        </p>
+
+        <%= if @modelos_error do %>
+          <p class="text-sm text-red-600 mb-4">{@modelos_error}</p>
+        <% end %>
+
+        <%= if @modelos == [] and is_nil(@modelos_error) do %>
+          <p class="text-sm text-gray-500">El motor no declara ningún modelo en su catálogo.</p>
+        <% end %>
+
+        <div class="space-y-3">
+          <%= for modelo <- @modelos do %>
+            <div class={
+              "border rounded-lg p-4 " <>
+                if(modelo["loaded"],
+                  do: "border-indigo-500 bg-indigo-50",
+                  else: "border-gray-200"
+                )
+            }>
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium text-gray-800">{modelo["name"]}</span>
+                    <%= if modelo["loaded"] do %>
+                      <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500 text-white">
+                        en uso
+                      </span>
+                    <% end %>
+                    <%= if not modelo["downloaded"] do %>
+                      <span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">
+                        sin descargar
+                      </span>
+                    <% end %>
+                  </div>
+                  <p class="text-sm text-gray-500 mt-1">{modelo["description"]}</p>
+                  <%= if modelo["metrics"] not in [nil, %{}] do %>
+                    <p class="text-xs text-gray-400 mt-1">
+                      <%= for {clave, valor} <- modelo["metrics"] do %>
+                        {clave}: {valor}&nbsp;&nbsp;
+                      <% end %>
+                    </p>
+                  <% end %>
+                </div>
+                <%= if modelo["downloaded"] and not modelo["loaded"] do %>
+                  <button
+                    phx-click="cargar_modelo"
+                    phx-value-name={modelo["name"]}
+                    class="shrink-0 px-3 py-1.5 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                  >
+                    Cargar
+                  </button>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
       </div>
 
       <%!-- Estrategia de explicabilidad --%>
@@ -379,4 +488,25 @@ defmodule AppWeb.Admin.SettingsLive do
     </div>
     """
   end
+
+  # El catalogo lo sirve el propio motor, que es quien sabe que checkpoints hay en disco y
+  # cual esta cargado. Si no responde, el panel lo dice en vez de quedarse en blanco.
+  defp cargar_catalogo_modelos do
+    ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
+    opts = [receive_timeout: 10_000] ++ Application.get_env(:app, :ai_req_opts, [])
+
+    # El rescue no es defensivo de mas: sin el, un motor caido impide abrir el panel entero,
+    # y el panel es justo donde se cambia de motor cuando algo va mal.
+    case Req.get("#{ai_url}/admin/models", opts) do
+      {:ok, %{status: 200, body: %{"models" => modelos}}} -> {modelos, nil}
+      {:ok, %{status: status}} -> {[], "El motor respondio #{status} al pedir el catalogo."}
+      {:error, reason} -> {[], "No se pudo contactar con el AI engine: #{inspect(reason)}"}
+    end
+  rescue
+    e -> {[], "No se pudo contactar con el AI engine: #{Exception.message(e)}"}
+  end
+
+  defp detalle_error(%{"detail" => %{"error" => error}}), do: error
+  defp detalle_error(%{"detail" => detail}) when is_binary(detail), do: detail
+  defp detalle_error(_), do: "Error desconocido al cargar el modelo."
 end
