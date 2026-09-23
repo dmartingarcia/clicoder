@@ -6,6 +6,7 @@ import '../helpers'; // apply i18n / socket / config mocks
 // ── Auth context mock ─────────────────────────────────────────────────────────
 const mockLogin = vi.fn();
 const mockRegister = vi.fn();
+const mockClearPending = vi.fn();
 let mockPendingEmail: string | null = null;
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -16,6 +17,7 @@ vi.mock('@/contexts/AuthContext', () => ({
     user: null,
     token: null,
     logout: vi.fn(),
+    clearPending: mockClearPending,
   }),
 }));
 
@@ -25,6 +27,7 @@ describe('AuthPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPendingEmail = null;
+    mockClearPending.mockClear();
     mockLogin.mockResolvedValue({});
     mockRegister.mockResolvedValue({});
   });
@@ -127,6 +130,42 @@ describe('AuthPage', () => {
       expect(screen.queryByPlaceholderText('doctor@hospital.com')).not.toBeInTheDocument();
       // The key "auth.check_email_title" is returned by our mock t()
       expect(screen.getByText('auth.check_email_title')).toBeInTheDocument();
+    });
+
+    it('volver al login limpia el correo pendiente', async () => {
+      mockPendingEmail = 'doctor@hospital.com';
+      const user = userEvent.setup();
+      render(<AuthPage />);
+
+      await user.click(screen.getByText('auth.back_to_login'));
+
+      // Sin esto la pantalla se repinta sola y el usuario se queda atascado
+      expect(mockClearPending).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('aviso de privacidad desde el registro', () => {
+    it('se abre desde el formulario de registro y se cierra desde su propio botón', async () => {
+      const user = userEvent.setup();
+      render(<AuthPage />);
+      await user.click(screen.getByText('auth.register'));
+
+      await user.click(screen.getByText('privacy.learn_more'));
+      expect(screen.getByText('privacy.intro')).toBeInTheDocument();
+
+      await user.click(screen.getByText('privacy.close'));
+      expect(screen.queryByText('privacy.intro')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('enlace inferior para cambiar de modo', () => {
+    it('pasa a registro desde el enlace de pie, no solo desde la pestaña superior', async () => {
+      const user = userEvent.setup();
+      render(<AuthPage />);
+
+      await user.click(screen.getByText('auth.sign_up'));
+
+      expect(screen.getByPlaceholderText('Juan')).toBeInTheDocument();
     });
   });
 });

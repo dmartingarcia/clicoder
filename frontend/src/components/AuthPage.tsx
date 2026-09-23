@@ -12,7 +12,7 @@ import { PrivacyModal } from '@/components/PrivacyModal';
 type Mode = 'login' | 'register';
 
 export function AuthPage() {
-  const { login, register, pendingEmail } = useAuth();
+  const { login, register, pendingEmail, clearPending } = useAuth();
   const { t } = useI18n();
   const [mode, setMode] = useState<Mode>('login');
 
@@ -51,7 +51,7 @@ export function AuthPage() {
             </p>
             <p className="text-xs text-gray-400">
               {t('auth.check_spam')}{' '}
-              <button onClick={() => setMode('login')} className="text-blue-600 hover:underline">
+              <button onClick={() => { clearPending(); setMode('login'); }} className="text-blue-600 hover:underline">
                 {t('auth.back_to_login')}
               </button>.
             </p>
