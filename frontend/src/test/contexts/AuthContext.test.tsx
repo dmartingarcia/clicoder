@@ -303,34 +303,7 @@ describe('AuthProvider', () => {
     });
   });
 
-  describe('?confirmed=1 redirect handling', () => {
-    it('fetches /auth/me and persists session when confirmed=1 params are present', async () => {
-      const user = { id: 'u9', first_name: 'C', last_name: 'D', username: 'cd', email: 'cd@h.com' };
-      mockFetch({ user });
-
-      // Set up location search params before mounting
-      Object.defineProperty(window, 'location', {
-        value: { ...window.location, search: '?confirmed=1&token=conf-tok&user_id=u9' },
-        writable: true,
-        configurable: true,
-      });
-
-      const getCtx = renderProvider();
-      await waitFor(() => expect(getCtx().mounted).toBe(true));
-      // fetch is called for /auth/me
-      await waitFor(() => expect(global.fetch).toHaveBeenCalled());
-      const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-      expect(url).toContain('/auth/me');
-      expect((opts as RequestInit).headers).toMatchObject({ Authorization: 'Bearer conf-tok' });
-    });
-
-    afterEach(() => {
-      // Restore clean location
-      Object.defineProperty(window, 'location', {
-        value: { ...window.location, search: '' },
-        writable: true,
-        configurable: true,
-      });
-    });
-  });
+  // El manejo de '?confirmed=1' se retiró cuando la confirmación de correo pasó a tener su
+  // propia página en el frontend, que llama a la API y hace el login por su cuenta. El test
+  // que lo cubría se conservó por error y llevaba fallando desde entonces.
 });

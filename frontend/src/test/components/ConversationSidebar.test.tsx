@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '../helpers';
 
@@ -70,7 +70,7 @@ describe('ConversationSidebar', () => {
     it('calls logout when logout button is clicked', async () => {
       const user = userEvent.setup();
       render(<ConversationSidebar />);
-      await user.click(screen.getByTitle('auth.logout'));
+      await user.click(screen.getByText('auth.logout'));
       expect(mockLogout).toHaveBeenCalledOnce();
     });
   });
@@ -169,4 +169,213 @@ describe('ConversationSidebar', () => {
       expect(mockRestoreConversation).toHaveBeenCalledWith('t1');
     });
   });
+  describe('acciones de protección de datos', () => {
+    it('abre el panel de derechos al pulsar privacidad', async () => {
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+
+      await user.click(screen.getByText('privacy.title'));
+
+      expect(screen.getAllByText('privacy.title').length).toBeGreaterThan(1);
+    });
+
+    it('descarga los datos del usuario al exportar', async () => {
+      const blob = new Blob(['{}'], { type: 'application/json' });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        blob: () => Promise.resolve(blob),
+      }) as unknown as typeof fetch;
+
+      const clickSpy = vi.fn();
+      const originalCreate = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        const el = originalCreate(tag);
+        if (tag === 'a') el.click = clickSpy;
+        return el;
+      });
+
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+      await user.click(screen.getByText('sidebar.export_data'));
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/users/export'),
+        expect.objectContaining({ headers: { Authorization: 'Bearer tok-123' } })
+      );
+      expect(clickSpy).toHaveBeenCalled();
+      vi.restoreAllMocks();
+    });
+
+    it('cierra la sesión si el token ha caducado al exportar', async () => {
+      global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401 }) as unknown as typeof fetch;
+
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+      await user.click(screen.getByText('sidebar.export_data'));
+
+      expect(mockLogout).toHaveBeenCalled();
+    });
+
+    it('no descarga nada si la exportación falla', async () => {
+      global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 }) as unknown as typeof fetch;
+      const clickSpy = vi.fn();
+      const originalCreate = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        const el = originalCreate(tag);
+        if (tag === 'a') el.click = clickSpy;
+        return el;
+      });
+
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+      await user.click(screen.getByText('sidebar.export_data'));
+
+      expect(clickSpy).not.toHaveBeenCalled();
+      vi.restoreAllMocks();
+    });
+
+    it('pide confirmación antes de borrar la cuenta', async () => {
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+
+      await user.click(screen.getByText('sidebar.delete_account'));
+
+      // Borrar la cuenta no puede ocurrir con un solo clic
+      expect(screen.getAllByText(/delete_account|confirm/i).length).toBeGreaterThan(1);
+    });
+
+    it('cancela el borrado de cuenta sin llamar a la API', async () => {
+      global.fetch = vi.fn();
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+
+      await user.click(screen.getByText('sidebar.delete_account'));
+      await user.click(screen.getByText('sidebar.cancel'));
+
+      expect(screen.queryByText('sidebar.delete_account_confirm')).not.toBeInTheDocument();
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('borra la cuenta y cierra la sesión tras confirmar', async () => {
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 }) as unknown as typeof fetch;
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+
+      await user.click(screen.getByText('sidebar.delete_account'));
+      await user.click(screen.getByText('sidebar.delete_account_confirm'));
+
+      await waitFor(() => expect(mockLogout).toHaveBeenCalled());
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/users/account'),
+        expect.objectContaining({ method: 'DELETE', headers: { Authorization: 'Bearer tok-123' } })
+      );
+    });
+
+    it('cierra la sesión sin borrar nada si el token ha caducado al confirmar', async () => {
+      global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401 }) as unknown as typeof fetch;
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+
+      await user.click(screen.getByText('sidebar.delete_account'));
+      await user.click(screen.getByText('sidebar.delete_account_confirm'));
+
+      await waitFor(() => expect(mockLogout).toHaveBeenCalled());
+    });
+
+    it('cierra el panel de privacidad sin dejar nada más abierto', async () => {
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+
+      await user.click(screen.getByText('privacy.title'));
+      await user.click(screen.getByText('privacy.close'));
+
+      expect(screen.queryByText('privacy.intro')).not.toBeInTheDocument();
+    });
+
+    it('exporta los datos desde el aviso de privacidad y lo cierra', async () => {
+      const blob = new Blob(['{}'], { type: 'application/json' });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        blob: () => Promise.resolve(blob),
+      }) as unknown as typeof fetch;
+      const clickSpy = vi.fn();
+      const originalCreate = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        const el = originalCreate(tag);
+        if (tag === 'a') el.click = clickSpy;
+        return el;
+      });
+
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+      await user.click(screen.getByText('privacy.title'));
+
+      const boton = screen.getByText('privacy.art15_title').closest('div.flex.items-start')!.querySelector('button')!;
+      await user.click(boton);
+
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/users/export'), expect.anything());
+      expect(screen.queryByText('privacy.intro')).not.toBeInTheDocument();
+      vi.restoreAllMocks();
+    });
+
+    it('encadena el borrado de cuenta desde el panel de privacidad', async () => {
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+      await user.click(screen.getByText('privacy.title'));
+
+      const boton = screen.getByText('privacy.art17_title').closest('div.flex.items-start')!.querySelector('button')!;
+      await user.click(boton);
+
+      // el panel de privacidad se cierra y en su lugar aparece la confirmación de borrado
+      expect(screen.queryByText('privacy.intro')).not.toBeInTheDocument();
+      expect(screen.getByText('sidebar.delete_account_confirm')).toBeInTheDocument();
+    });
+  });
+
+  describe('selector de idioma', () => {
+    it('abre el desplegable y cambia de idioma al elegir una opción', async () => {
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+
+      await user.click(screen.getByText('es'));
+      await user.click(screen.getByText('en'));
+
+      // se cierra tras elegir
+      expect(screen.queryByText('fr')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('interacción con una fila de conversación', () => {
+    beforeEach(() => {
+      mockConversations = [
+        { conversation_id: 'c1', started_at: now, status: 'active', deleted_at: null, message_count: 3, last_message: { content: 'Patient report', timestamp: now } },
+      ];
+    });
+
+    it('oculta el botón de borrar cuando el ratón sale de la fila', () => {
+      render(<ConversationSidebar />);
+      const fila = screen.getByText('Patient report').closest('div.relative.group')!;
+
+      fireEvent.mouseEnter(fila);
+      expect(screen.getByTitle('sidebar.delete')).toBeInTheDocument();
+
+      fireEvent.mouseLeave(fila);
+      expect(screen.queryByTitle('sidebar.delete')).not.toBeInTheDocument();
+    });
+
+    it('borra la conversación sin activarla al pulsar la papelera', async () => {
+      const user = userEvent.setup();
+      render(<ConversationSidebar />);
+      const fila = screen.getByText('Patient report').closest('div.relative.group')!;
+
+      fireEvent.mouseEnter(fila);
+      await user.click(screen.getByTitle('sidebar.delete'));
+
+      expect(mockDeleteConversation).toHaveBeenCalledWith('c1');
+      expect(mockSwitchConversation).not.toHaveBeenCalled();
+    });
+  });
+
 });
