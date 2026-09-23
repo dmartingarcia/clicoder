@@ -46,4 +46,27 @@ defmodule App.SettingsTest do
       assert row.summarizer_model == "qwen"
     end
   end
+
+  describe "método de explicabilidad" do
+    test "se guarda y se relee" do
+      # La fila exige modelo y modo del resumidor: sin ellos el insert no pasa la validacion.
+      {:ok, _} =
+        App.Settings.save(%{
+          summarizer_model: "none",
+          summarizer_mode: "summary",
+          explain_method: "exhaustivo"
+        })
+
+      assert App.Settings.load().explain_method == "exhaustivo"
+    end
+
+    test "guardarlo no pisa los ajustes del resumidor" do
+      {:ok, _} = App.Settings.save(%{summarizer_model: "gemma3", summarizer_mode: "summary"})
+      {:ok, _} = App.Settings.save(%{explain_method: "divide_y_venceras"})
+
+      guardado = App.Settings.load()
+      assert guardado.explain_method == "divide_y_venceras"
+      assert guardado.summarizer_model == "gemma3"
+    end
+  end
 end
