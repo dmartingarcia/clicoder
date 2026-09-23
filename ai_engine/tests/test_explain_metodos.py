@@ -155,3 +155,138 @@ def test_la_poda_descarta_grupos_sin_efecto():
     ctx.caida_al_enmascarar = espia
     _explicar_divide_y_venceras(ctx, list(range(32)))
     assert sum(llamadas) < 2 * 32 - 1  # menos que el árbol binario completo
+
+
+class ModeloSinBackward(torch.nn.Module):
+    """Falla al calcular el gradiente, pero funciona bajo torch.no_grad()."""
+
+    def __init__(self):
+        super().__init__()
+        self.embeddings = torch.nn.Module()
+        self.embeddings.word_embeddings = torch.nn.Embedding(100, 4)
+        self.encoder = torch.nn.Module()
+        self.encoder.embeddings = self.embeddings
+
+    def forward(self, input_ids, attention_mask=None, **_):
+        if torch.is_grad_enabled():
+            raise RuntimeError("backward no soportado")
+        base = torch.full((input_ids.shape[0], 1), 10.0)
+        for fila in range(input_ids.shape[0]):
+            for palabra, peso in IMPORTANTES.items():
+                if input_ids[fila, palabra] == MASK:
+                    base[fila, 0] -= peso
+        return base
+
+
+class ModeloSinUsarEmbeddings(torch.nn.Module):
+    """El logit no depende de la capa de embeddings: el hook nunca captura nada."""
+
+    def __init__(self):
+        super().__init__()
+        self.embeddings = torch.nn.Module()
+        self.embeddings.word_embeddings = torch.nn.Embedding(100, 4)
+        self.encoder = torch.nn.Module()
+        self.encoder.embeddings = self.embeddings
+
+    def forward(self, input_ids, attention_mask=None, **_):
+        return torch.ones(input_ids.shape[0], 1, requires_grad=True) * 10.0
+
+
+def test_sin_gradiente_se_degrada_al_exhaustivo():
+    modelo = ModeloSinBackward()
+    n = 12
+    ids = torch.arange(n).unsqueeze(0)
+    msk = torch.ones_like(ids)
+    wpos = {w: [w] for w in range(n)}
+    with torch.no_grad():
+        base = modelo(ids, msk)[0, [0]]
+    ctx = _CtxAtribucion(modelo, ids, msk, MASK, wpos, [0], base, n, 4)
+    imp = _explicar_gradiente_filtrado(ctx, list(range(n)))
+    # El resultado debe ser el mismo que el exhaustivo: solo cambió cómo se llegó a él.
+    assert set(_mejores(imp)) == set(IMPORTANTES)
+
+
+def test_sin_gradiente_en_los_embeddings_tambien_se_degrada():
+    modelo = ModeloSinUsarEmbeddings()
+    n = 6
+    ids = torch.arange(n).unsqueeze(0)
+    msk = torch.ones_like(ids)
+    wpos = {w: [w] for w in range(n)}
+    with torch.no_grad():
+        base = modelo(ids, msk)[0, [0]]
+    ctx = _CtxAtribucion(modelo, ids, msk, MASK, wpos, [0], base, n, 4)
+    imp = _explicar_gradiente_filtrado(ctx, list(range(n)))
+    # No revienta, y devuelve una medida (cero, porque el logit no depende de nada aquí).
+    assert all(v[0].item() == pytest.approx(0.0, abs=1e-6) for v in imp.values())
+
+
+# =============================================================================
+# Fidelidad sobre un caso exigente
+# =============================================================================
+#
+# Los casos de arriba usan 12 palabras y 2 importantes: cualquier estrategia los resuelve, de
+# modo que no protegen de una regresion real (bajar los candidatos del filtro, cambiar el
+# criterio de poda). Este escenario tiene 60 palabras y 8 con importancia repartida, que es la
+# forma que tiene un informe de verdad, y fija un suelo de coincidencia con el exhaustivo.
+
+IMPORTANTES_AMPLIO = {3: 9.0, 11: 7.5, 19: 6.0, 27: 4.5, 34: 3.5, 41: 2.5, 48: 1.5, 55: 0.8}
+
+
+class EncoderFalsoAmplio(EncoderFalso):
+    """Mismo contrato que el falso pequeño, con más palabras y más gradación."""
+
+    def forward(self, input_ids, attention_mask=None, **_):
+        base = torch.full((input_ids.shape[0], 1), 20.0)
+        for fila in range(input_ids.shape[0]):
+            for palabra, peso in IMPORTANTES_AMPLIO.items():
+                if input_ids[fila, palabra] == MASK:
+                    base[fila, 0] -= peso
+        emb = self.embeddings.word_embeddings(input_ids)
+        coef = torch.zeros(input_ids.shape[1], 1)
+        for palabra, peso in IMPORTANTES_AMPLIO.items():
+            coef[palabra, 0] = peso
+        gancho = (emb * coef.unsqueeze(0)).sum(dim=(1, 2), keepdim=False).unsqueeze(1)
+        return base + gancho - gancho.detach()
+
+
+def _contexto_amplio(n_palabras=60):
+    modelo = EncoderFalsoAmplio(n_palabras)
+    ids = torch.arange(n_palabras).unsqueeze(0)
+    msk = torch.ones_like(ids)
+    wpos = {w: [w] for w in range(n_palabras)}
+    with torch.no_grad():
+        base = modelo(ids, msk)[0, [0]]
+    return _CtxAtribucion(modelo, ids, msk, MASK, wpos, [0], base, n_palabras, 4)
+
+
+def _solape(a, b):
+    return len(set(a) & set(b)) / max(len(b), 1)
+
+
+@pytest.mark.parametrize(
+    "metodo,suelo",
+    [(_explicar_divide_y_venceras, 0.8), (_explicar_gradiente_filtrado, 0.8)],
+)
+def test_las_rapidas_no_se_alejan_del_exhaustivo(metodo, suelo):
+    """Suelo de coincidencia en el top-5 con la referencia, sobre 60 palabras."""
+    cand = list(range(60))
+    ref = _mejores(_explicar_exhaustivo(_contexto_amplio(), cand), 5)
+    obtenido = _mejores(metodo(_contexto_amplio(), cand), 5)
+
+    assert _solape(obtenido, ref) >= suelo, f"solape {_solape(obtenido, ref):.2f} < {suelo}"
+
+
+@pytest.mark.parametrize("metodo", [_explicar_divide_y_venceras, _explicar_gradiente_filtrado])
+def test_las_rapidas_aciertan_las_tres_mas_importantes(metodo):
+    """Las tres primeras son las que ve el usuario: ahí no vale degradarse."""
+    cand = list(range(60))
+    ref = _mejores(_explicar_exhaustivo(_contexto_amplio(), cand), 3)
+    assert _mejores(metodo(_contexto_amplio(), cand), 3) == ref
+
+
+def test_ninguna_rapida_reporta_una_palabra_irrelevante_en_el_top_5():
+    """Una palabra sin efecto en el top-5 sería una explicación falsa, no una imprecisa."""
+    cand = list(range(60))
+    for metodo in (_explicar_divide_y_venceras, _explicar_gradiente_filtrado):
+        for palabra in _mejores(metodo(_contexto_amplio(), cand), 5):
+            assert palabra in IMPORTANTES_AMPLIO
