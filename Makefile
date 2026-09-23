@@ -1,4 +1,4 @@
-.PHONY: ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 -include .env
 export
@@ -234,6 +234,25 @@ ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
 	$(COMPOSE) run --rm ai_engine python plot_runs.py
 	@echo "$(GREEN)Gráfico guardado en ai_engine/model/all_trainings_graph.png$(NC)"
 
+ai-bench-explain: ## Coste y fidelidad de los metodos de atribucion. Uso: make ai-bench-explain [DEVICE=cuda]
+	@echo "$(BLUE)Midiendo los metodos de explicabilidad ($(or $(DEVICE),cpu))...$(NC)"
+# La imagen del motor lleva torch de CPU, asi que para medir en GPU hay que usar la de
+# entrenamiento montando el codigo del motor y los CSV del corpus. La variante de diccionario
+# se omite ahi porque necesita spaCy, que esa imagen no trae, y ademas no usa el acelerador.
+ifeq ($(DEVICE),cuda)
+	$(COMPOSE) run --rm --no-deps \
+		-v $(PWD)/ai_engine:/app -v $(PWD)/training/csv_import_scripts:/data \
+		-w /app --entrypoint python3 training bench_explain.py --device cuda
+else
+	$(COMPOSE_CPU) run --rm --no-deps ai_engine python bench_explain.py --device cpu
+endif
+
+ai-error-analysis: ## Clasificar los errores del modelo sobre test (especificidad vs comprensión)
+	@echo "$(BLUE)Analizando los errores del modelo...$(NC)"
+	$(if $(GPU),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python error_analysis.py \
+		--test_file $(or $(TEST_FILE),/data/codiesp_csvs/codiesp_D_source_test.csv) \
+		--threshold $(or $(THRESHOLD),0.3)
+
 ai-eval-test: ## Evaluar sobre el test de CodiEsp. Uso: make ai-eval-test [GPU=1] [DEVICE=cpu|cuda] [THRESHOLD=0.3]
 	@echo "$(BLUE)Evaluando modelo sobre el conjunto de test...$(NC)"
 	$(if $(GPU),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python eval_test.py \
@@ -309,7 +328,10 @@ frontend-coverage: ## Cobertura de pruebas del frontend (vitest + v8)
 
 ai-coverage: ## Cobertura de pruebas del motor de IA (pytest-cov)
 	@echo "$(BLUE)Midiendo cobertura del motor de IA...$(NC)"
-	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c "pip install -q -r requirements-dev.txt pytest-cov && cd /app && python -m pytest tests/ -q -p no:cacheprovider --cov=. --cov-report=term --cov-config=/dev/null"
+# Se miden los módulos que se despliegan. Los guiones de entrenamiento, evaluación y figuras
+# se ejecutan a mano una vez y se verifican contra los artefactos que producen, así que
+# contarlos solo diluiría la cifra sin decir nada del servicio.
+	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c "pip install -q -r requirements-dev.txt pytest-cov && cd /app && python -m pytest tests/ -q -p no:cacheprovider --cov=main --cov=classifier --cov=baseline_dict --cov=summarizer --cov=rerank_map --cov=compare_runs --cov-report=term --cov-config=/dev/null"
 
 coverage: backend-coverage ai-coverage frontend-coverage ## Cobertura de los tres proyectos
 
