@@ -21,15 +21,26 @@ RUN apt-get update && \
         libpq-dev \
         && rm -rf /var/lib/apt/lists/*
 
+# Limitar la compilacion a 2 trabajos. llama-cpp-python se compila desde fuente y CMake
+# lanza un g++ por nucleo: en una maquina de 24 nucleos agota los 29 GB de RAM y el equipo
+# se reinicia. flash-attn ya iba limitado mas abajo, esta era la que faltaba.
+ENV MAX_JOBS=2 \
+    MAKEFLAGS=-j2 \
+    CMAKE_BUILD_PARALLEL_LEVEL=2
+
 # Copiar requirements y instalar dependencias ML
 COPY requirements-base.txt /tmp/requirements-base.txt
 RUN pip3 install --no-cache-dir -r /tmp/requirements-base.txt && \
     rm /tmp/requirements-base.txt
 RUN pip3 install packaging ninja
 
-# We're using 1 job, if not, it will take >32GB of RAM on compilation -> It can take 2 hours!
-# citar flash-attn en el doc
-RUN MAX_JOBS=1 pip3 install flash-attn --no-build-isolation
+# flash-attn no es opcional: el encoder lo usa y las ejecuciones registradas se hicieron con
+# el. Se instala desde la wheel precompilada, que casa con el torch 2.9.1 fijado en los
+# requirements, y se comprueba que importa. Si no importa, el build falla: una imagen sin
+# flash-attn daria numeros no comparables con los del historico.
+ARG FLASH_ATTN_WHEEL=https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3.post1/flash_attn-2.8.3+cu13torch2.9cxx11abiTRUE-cp312-cp312-linux_x86_64.whl
+RUN pip3 install --no-cache-dir "$FLASH_ATTN_WHEEL" && \
+    python3 -c "import flash_attn; print('flash-attn', flash_attn.__version__)"
 
 WORKDIR /app
 

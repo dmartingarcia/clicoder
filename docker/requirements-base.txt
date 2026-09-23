@@ -1,6 +1,8 @@
 # PyTorch
 --extra-index-url https://download.pytorch.org/whl/cu130
-torch==2.10.0+cu130
+# 2.9.1 y no 2.10: la rueda precompilada de flash-attn esta construida contra torch 2.9, y
+# flash-attn no compila contra 2.10 con CUDA 13.1 (ninja falla y su propia rueda da 404).
+torch==2.9.1+cu130
 
 # Transformers y NLP
 transformers==5.0.0
