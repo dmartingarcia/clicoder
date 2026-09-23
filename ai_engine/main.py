@@ -341,6 +341,8 @@ class AnalysisRequest(BaseModel):
         - ``"dict"`` : reglas por diccionario (determinista, sin GPU).
         - ``"both"`` : ambos motores en paralelo; los resultados se devuelven
           juntos con el campo ``engine`` identificando el origen de cada código.
+        - ``"fused"``: un único ranking; la confianza del diccionario suma al
+          logit del modelo antes de ordenar.
     """
 
     text: str
@@ -639,8 +641,10 @@ async def count_tokens(request: TokenCountRequest):
     summary="Predecir códigos CIE-10",
     description=(
         "Analiza el texto de un informe clínico y devuelve códigos CIE-10 candidatos. "
-        "El parámetro ``engine`` selecciona el motor de predicción: "
-        "``bert`` (default), ``dict`` (diccionario determinista) o ``both`` (ambos en paralelo)."
+        "El parámetro ``engine`` selecciona el motor de predicción: ``bert`` (default), "
+        "``dict`` (diccionario determinista), ``both`` (ambos en paralelo) o ``fused`` "
+        "(un único ranking). Los términos que justifican cada código se piden aparte "
+        "con ``/explain``, o se fuerzan aquí con ``include_triggers``."
     ),
 )
 async def predict_codes(request: AnalysisRequest):
@@ -1118,7 +1122,8 @@ async def summarize_stream(request: SummarizeRequest):
         while True:
             item = await queue.get()
             yield _json.dumps(item) + "\n"
-            if "done" in item or "error" in item:
+            # El error no corta: el finally del productor encola el done que cierra el NDJSON
+            if "done" in item:
                 break
 
         thread.join(timeout=5)
