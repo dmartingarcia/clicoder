@@ -1,0 +1,7 @@
+# Certificados de Traefik: son de root y el constructor clasico no puede leerlos.
+# Ademas no pintan nada en una imagen de ML.
+letsencrypt/
+grafana/
+prometheus/
+loki/
+promtail/
