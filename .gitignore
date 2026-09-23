@@ -104,3 +104,6 @@ tfg/**/*.pdf
 docker/letsencrypt/
 frontend/coverage/
 ai_engine/.coverage
+# Notas de trabajo: no forman parte de la entrega
+ROADMAP.md
+HECHO.md
