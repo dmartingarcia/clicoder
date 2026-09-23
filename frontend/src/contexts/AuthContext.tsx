@@ -21,6 +21,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ error?: string }>;
   register: (fields: { first_name: string; last_name: string; username: string; email: string; password: string }) => Promise<{ error?: string }>;
   logout: () => void;
+  clearPending: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -100,13 +101,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [persist]);
 
+  const clearPending = useCallback(() => setPendingEmail(null), []);
+
   const logout = useCallback(() => {
     persist(null);
     setPendingEmail(null);
   }, [persist]);
 
   return (
-    <AuthContext.Provider value={{ user: auth?.user ?? null, token: auth?.token ?? null, pendingEmail, mounted, login, register, logout }}>
+    <AuthContext.Provider value={{ user: auth?.user ?? null, token: auth?.token ?? null, pendingEmail, mounted, login, register, logout, clearPending }}>
       {children}
     </AuthContext.Provider>
   );
