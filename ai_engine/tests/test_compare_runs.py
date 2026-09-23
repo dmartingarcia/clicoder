@@ -10,7 +10,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from compare_runs import cohen_d, p_two_sided, t_critico, welch
+import compare_runs
+from compare_runs import cohen_d, describe, p_two_sided, t_critico, welch
 
 # (t, grados de libertad, p bilateral según tablas)
 TABLA_T = [
@@ -77,6 +78,57 @@ def test_t_critico_decrece_hacia_la_normal():
     # con 200 todavía vale 1,972, que es justo por lo que no sirve para n pequeños.
     assert valores[-1] == pytest.approx(1.96, abs=0.005)
     assert valores[-2] > 1.97
+
+
+def test_p_bilateral_con_t_extremo_no_desborda():
+    # t*t desborda a infinito en float64: x = df/(df+inf) cae exactamente a 0.
+    assert p_two_sided(1e200, 5) == pytest.approx(0.0, abs=1e-12)
+
+
+def test_describe_informa_de_n_media_y_rango(capsys):
+    describe("control", [0.42, 0.44, 0.43])
+    salida = capsys.readouterr().out
+    assert "n=3" in salida
+    assert "media=" in salida
+
+
+def _argv(control, tratamiento, extra=()):
+    return [
+        "compare_runs.py",
+        "--control",
+        *[str(v) for v in control],
+        "--tratamiento",
+        *[str(v) for v in tratamiento],
+        *extra,
+    ]
+
+
+class TestMain:
+    def test_menos_de_dos_ejecuciones_por_grupo_es_un_error_de_uso(self, monkeypatch):
+        monkeypatch.setattr(sys, "argv", _argv([0.4], [0.4, 0.5]))
+        with pytest.raises(SystemExit):
+            compare_runs.main()
+
+    def test_diferencia_significativa_se_anuncia_como_tal(self, monkeypatch, capsys):
+        control = [0.4315, 0.4317, 0.4421, 0.4335, 0.4406]
+        tratamiento = [0.4535, 0.4383, 0.4437, 0.4511]
+        monkeypatch.setattr(sys, "argv", _argv(control, tratamiento))
+        compare_runs.main()
+        assert "Diferencia significativa" in capsys.readouterr().out
+
+    def test_diferencia_no_significativa_se_anuncia_como_tal(self, monkeypatch, capsys):
+        control = [0.43, 0.44]
+        tratamiento = [0.431, 0.439]
+        monkeypatch.setattr(sys, "argv", _argv(control, tratamiento))
+        compare_runs.main()
+        assert "NO significativa" in capsys.readouterr().out
+
+    def test_la_etiqueta_del_tratamiento_aparece_en_la_salida(self, monkeypatch, capsys):
+        monkeypatch.setattr(
+            sys, "argv", _argv([0.43, 0.44], [0.45, 0.46], extra=["--etiqueta", "ZLPR+MAP"])
+        )
+        compare_runs.main()
+        assert "ZLPR+MAP" in capsys.readouterr().out
 
 
 def test_el_intervalo_es_coherente_con_el_contraste():
