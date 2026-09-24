@@ -29,6 +29,8 @@ La especificación completa de la API está disponible a través de la interfaz 
 
 \subsection{Autenticación}
 
+Los endpoints de registro, inicio de sesión, confirmación de email y cambio de idioma se listan en la Tabla~\ref{tab:api-auth}.
+
 \begin{table}[h]
 \centering
 \caption{Endpoints de autenticación.}
@@ -49,6 +51,8 @@ El token se almacena en \texttt{localStorage} bajo la clave \texttt{cie10\_auth}
 
 \subsection{Gestión de conversaciones}
 
+El detalle de los endpoints para listar, archivar, restaurar y purgar conversaciones está en la Tabla~\ref{tab:api-conv}.
+
 \begin{table}[h]
 \centering
 \caption{Endpoints de conversaciones.}
@@ -61,11 +65,14 @@ GET & \texttt{/conversations?\allowbreak{}user\_id=<uuid>} & Lista conversacione
 GET & \texttt{/conversations/trash?\allowbreak{}user\_id=<uuid>} & Lista conversaciones en papelera. \emph{Protegido.} \\
 DELETE & \texttt{/conversations/:id} & Borrado lógico (soft delete). \emph{Protegido.} \\
 PUT & \texttt{/conversations/\allowbreak{}:id/restore} & Restaura conversación de la papelera. \emph{Protegido.} \\
+DELETE & \texttt{/conversations/\allowbreak{}:id/purge} & Borrado permanente e irreversible (sección~\ref{sec:rgpd}). \emph{Protegido.} \\
 \hline
 \end{tabular}
 \end{table}
 
 \subsection{Catálogo CIE-10-ES}
+
+Los endpoints de búsqueda y consulta del catálogo se resumen en la Tabla~\ref{tab:api-cie10}.
 
 \begin{table}[h]
 \centering
@@ -83,6 +90,8 @@ GET & \texttt{/cie10/codes/\allowbreak{}:code/children} & Devuelve los códigos 
 \end{table}
 
 \subsection{Traducciones}
+
+El único endpoint de internacionalización aparece en la Tabla~\ref{tab:api-i18n}.
 
 \begin{table}[h]
 \centering
@@ -105,7 +114,7 @@ Cada conversación se suscribe a un canal propio con el topic \texttt{conversati
 
 \subsection{Mensajes entrantes (cliente \texorpdfstring{$\rightarrow$}{->} servidor)}
 
-El frontend envía siete tipos de mensajes al canal. El mensaje \texttt{join} se emite automáticamente al montar el componente de conversación y recibe como respuesta el historial completo del canal. Los mensajes de acción (\texttt{validate\_code}, \texttt{reject\_code} y \texttt{suggest\_code}) se generan cuando el codificador interactúa con los códigos predichos; cada uno emite el comando CQRS correspondiente sobre el agregado de análisis.
+El frontend envía siete tipos de mensajes al canal (Tabla~\ref{tab:ws-in}). El mensaje \texttt{join} se emite automáticamente al montar el componente de conversación y recibe como respuesta el historial completo del canal. Los mensajes de acción (\texttt{validate\_code}, \texttt{reject\_code} y \texttt{suggest\_code}) se generan cuando el codificador interactúa con los códigos predichos; cada uno emite el comando CQRS correspondiente sobre el agregado de análisis.
 
 \begin{table}[H]
 \centering
@@ -113,7 +122,7 @@ El frontend envía siete tipos de mensajes al canal. El mensaje \texttt{join} se
 \label{tab:ws-in}
 \begin{tabular}{lp{4.5cm}p{5.5cm}}
 \hline
-\textbf{Evento} & \textbf{Payload} & \textbf{Efecto} \\
+\textbf{Evento} & \textbf{Datos} & \textbf{Efecto} \\
 \hline
 \texttt{join} &  n/d & Une al cliente al canal; devuelve el historial de la conversación. \\
 \texttt{send\_message} & \texttt{\{content: string\}} & Guarda el mensaje y lo difunde al canal. \\
@@ -128,22 +137,25 @@ El frontend envía siete tipos de mensajes al canal. El mensaje \texttt{join} se
 
 \subsection{Mensajes salientes (servidor \texorpdfstring{$\rightarrow$}{->} cliente)}
 
+Los mensajes que el backend emite hacia el cliente se listan en la Tabla~\ref{tab:ws-out}.
+
 \begin{table}[h]
 \centering
 \caption{Mensajes emitidos por el backend hacia el cliente WebSocket.}
 \label{tab:ws-out}
 \begin{tabular}{lp{4.5cm}p{5cm}}
 \hline
-\textbf{Evento} & \textbf{Payload principal} & \textbf{Cuándo se emite} \\
+\textbf{Evento} & \textbf{Datos principales} & \textbf{Cuándo se emite} \\
 \hline
 \texttt{joined} & \texttt{\{history\}} & Al unirse al canal con éxito. \\
 \texttt{new\_message} & \texttt{\{message\_id, content, user\_id, timestamp\}} & Cuando cualquier participante envía un mensaje. \\
 \texttt{analysis\_started} & \texttt{\{message\_id\}} & Inmediatamente tras recibir \texttt{analyze\_report}. \\
 \texttt{analysis\_card\_received}& \texttt{\{card\_id, card\_type, content, message\_id\}} & Por cada tarjeta generada (códigos y resumen). \\
-\texttt{analysis\_complete} & \texttt{\{message\_id, predicted\_codes\}} & Al completarse la predicción IA. \\
+\texttt{analysis\_complete} & \texttt{\{message\_id, predicted\_codes, engine\}} & Al completarse la predicción IA. \\
 \texttt{code\_validated} & \texttt{\{code\_id, cie10\_code\}} & Tras confirmar la validación en el agregado. \\
 \texttt{code\_rejected} & \texttt{\{code\_id, cie10\_code, reason\}} & Tras confirmar el rechazo en el agregado. \\
 \texttt{summary\_token} & \texttt{\{message\_id, token\}} & Por cada fragmento del resumen generado en \emph{streaming}. \\
+\texttt{triggers\_received} & \texttt{\{message\_id, method, triggers\}} & Cuando llega la respuesta de \texttt{/explain}, posterior a la de códigos. \\
 \texttt{trigger\_verified} & \texttt{\{code\_id, trigger, verified\}} & Tras verificar un término disparador. \\
 \texttt{analysis\_failed} & \texttt{\{message\_id, error\}} & Si el motor de IA devuelve un error. \\
 \hline
@@ -202,4 +214,4 @@ Permite al backend verificar que el motor de IA está disponible y que el modelo
 
 \section{Mecanismo de resiliencia}
 
-Si la llamada al motor de IA tiene éxito pero el despacho del comando \texttt{ReceiveAIPrediction} mediante Commanded falla, el backend dispone de un mecanismo de escritura directa en base de datos (\texttt{persist\_prediction\_direct/3}) que garantiza que las tarjetas y los códigos predichos se guardan igualmente. Esto asegura que el usuario recibe una respuesta aunque el \emph{event store} experimente un problema transitorio.
+Si la llamada al motor de IA tiene éxito pero el despacho del comando \texttt{ReceiveAIPrediction} mediante Commanded falla, el backend dispone de un mecanismo de escritura directa en base de datos (\texttt{persist\_cards\_direct/3} y \texttt{persist\_predicted\_codes\_direct/2}) que garantiza que las tarjetas y los códigos predichos se guardan igualmente. Esto asegura que el usuario recibe una respuesta aunque el \emph{event store} experimente un problema transitorio.

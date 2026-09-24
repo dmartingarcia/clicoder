@@ -65,31 +65,56 @@ La Tabla~\ref{tab:final-results} muestra ambas métricas para el modelo de produ
 
 \begin{table}[h]
 \centering
-\caption{Resultados del modelo final (paso~36) en validación y prueba, por estrategia de umbral.}
+\caption{Resultados del modelo final (paso~36) en validación y prueba, por estrategia de umbral. Generada con \texttt{make ai-eval-test} (\texttt{ai\_engine/eval\_test.py}); los valores quedan en \texttt{model/eval\_test.json}.}
 \label{tab:final-results}
 \begin{tabular}{llrrl}
 \hline
 \textbf{Conjunto} & \textbf{Umbral} & \textbf{F1-micro} & \textbf{F1-macro} & \textbf{MAP} \\
 \hline
-Validación & global 0,3 & 0{,}4945 & 0{,}119 & 0{,}544$^{r}$ \\
-Validación & por clase  & 0{,}551  & 0{,}152 & n/d \\
-Test       & global 0,3 & 0{,}4887 & 0{,}109 & \textbf{0{,}437}$^{g}$ / 0{,}537$^{r}$ \\
-Test       & por clase  & 0{,}468  & 0{,}113 & n/d \\
+Validación & global 0,2 & 0{,}4861 & 0{,}106 & 0{,}558$^{r}$ \\
+Test       & global 0,2 & 0{,}4946 & 0{,}108 & \textbf{0{,}454}$^{g}$ / 0{,}555$^{r}$ \\
+Test       & por clase  & 0{,}485  & 0{,}112 & n/d \\
 \hline
 \end{tabular}
 
-\smallskip\par\footnotesize $^{g}$~MAP sobre el gold completo (directamente comparable con el \emph{benchmark} CodiEsp). $^{r}$~MAP restringido a los 1.767 códigos del vocabulario del modelo. Los umbrales por clase se ajustan sobre validación y sobreajustan (F1-micro 0,551 en validación frente a 0,468 en prueba), por lo que la configuración de producción emplea el umbral global de 0,3.
+\smallskip\par\footnotesize $^{g}$~MAP sobre el gold completo (directamente comparable con el \emph{benchmark} CodiEsp). $^{r}$~MAP restringido a los 1.767 códigos del vocabulario del modelo. Los umbrales por clase se ajustan sobre validación y no mejoran al global (F1-micro 0,485 frente a 0,495 en prueba), por lo que la configuración desplegada emplea el umbral global de 0,2.
 \end{table}
 
-La ejecución seleccionada como referencia de evaluación en profundidad es \texttt{20260530T030233Z} (paso~36). La política de despliegue en producción es dinámica (se detalla en el capítulo de Desarrollo, Anexo~\ref{cap:AnexoF}); esta ejecución fue, en su momento, la mejor de las registradas hasta ese punto. Con umbral global de 0,3 alcanza F1-micro = 0{,}4945 en validación y 0{,}4887 en prueba. Los umbrales por clase optimizados sobre validación llegan a F1-micro = 0{,}551, pero sobreajustan (0{,}468 en prueba), por lo que producción emplea el umbral global. El MAP por documento sobre el conjunto de prueba (métrica oficial del \emph{benchmark} CodiEsp) es \textbf{0{,}437} sobre el gold completo (0{,}537 restringido al vocabulario del modelo), situándose dentro del rango del \emph{benchmark}~\cite{miranda2020}, por detrás de los \emph{ensembles} y diccionarios de las primeras posiciones. El \emph{recall} de 0,458 debe leerse contra el techo de 0,825 que impone el vocabulario del modelo (497 de los 2.842 pares del \emph{gold} de prueba son códigos que no aparecen en entrenamiento): supone el 55,5\,\% del máximo alcanzable.
+La ejecución desplegada es \texttt{20260921T091919Z}, la de pérdida de ordenación descrita en la subsección~\ref{sec:anexoF-alineacion}, publicada en Hugging Face como \texttt{zlpr-map}. Con umbral global de 0,2 alcanza F1-micro = 0{,}4861 en validación y 0{,}4946 en prueba. El MAP no aparece para los umbrales por clase porque no depende del umbral: es una métrica de ordenación y sería el mismo valor repetido. Los umbrales por clase, ajustados sobre validación, no compensan: se quedan en 0,485 en prueba frente a los 0,495 del umbral global, de modo que se emplea este último. El MAP por documento sobre el conjunto de prueba (métrica oficial del \emph{benchmark} CodiEsp) es \textbf{0{,}454} sobre el gold completo (0{,}555 restringido al vocabulario del modelo), situándose dentro del rango del \emph{benchmark}~\cite{miranda2020}, por detrás de los \emph{ensembles} y diccionarios de las primeras posiciones. El \emph{recall} de 0,459 debe leerse contra el techo de 0,825 que impone el vocabulario del modelo (497 de los 2.842 pares del \emph{gold} de prueba son códigos que no aparecen en entrenamiento): supone el 55,7\,\% del máximo alcanzable.
 
-\paragraph{Procedencia de las cifras.} Las métricas de esta tabla proceden de dos pasadas de evaluación distintas: el barrido de umbral y el MAP de prueba se calculan con \texttt{eval\_test.py}, mientras que las cifras de validación reportadas como referencia del paso~36 provienen del registro de entrenamiento. Ambas difieren en la tercera cifra decimal (por ejemplo, F1-micro de validación 0,4945 frente a 0,4933, o MAP de prueba 0,4373 frente a 0,4342) porque la inferencia de una de ellas se realiza con precisión reducida. La diferencia no altera ninguna conclusión, pero conviene declararla para que el lector no la interprete como una inconsistencia.
+\section{Selección del modelo desplegado}
+\label{sec:anexoH-candidatos}
+
+La elección no se hizo por la mejor cifra de validación sino midiendo en prueba a todos los candidatos, porque la ordenación por validación no se transfiere: \texttt{c102909} tenía el mejor F1 de validación de toda la serie (0,5028) y en prueba queda por debajo del modelo al que sustituía en esa misma métrica. La Tabla~\ref{tab:candidatos} recoge la comparación, generada con \texttt{make ai-eval-candidatos} y \texttt{make ai-eval-candidatos-fusion} (\texttt{ai\_engine/eval\_test.py}, \texttt{rerank\_map.py} y \texttt{tabla\_candidatos.py}).
+
+\begin{table}[h]
+\centering
+\small
+\caption{Candidatos a despliegue, medidos sobre el conjunto de prueba. El MAP fusionado corresponde al motor \texttt{engine=fused}, con $\beta$ elegido en validación para cada modelo. La fila resaltada es el modelo desplegado.}
+\label{tab:candidatos}
+\begin{tabular}{llrrr}
+\hline
+\textbf{Modelo} & \textbf{Diferencia} & \textbf{MAP} & \textbf{MAP fusión} & \textbf{F1-micro} \\
+\hline
+\rowcolor{gray!15}
+\textbf{zlpr-map} & Pérdida ZLPR, checkpoint elegido por MAP & \textbf{0{,}454} & \textbf{0{,}553} & \textbf{0{,}495} \\
+c102909 & Mejor F1 de validación de la serie (0,503) & 0{,}444 & 0{,}547 & 0{,}482 \\
+Paso 36 & Modelo desplegado hasta esta selección & 0{,}437 & 0{,}545 & 0{,}489 \\
+c225633 & Variante descartada de la misma serie & 0{,}433 & n/d & 0{,}480 \\
+\hline
+\end{tabular}
+
+\vspace{2mm}
+{\footnotesize El modelo desplegado gana en las tres métricas, que es la condición que se impuso para promocionarlo: una mejora de MAP a costa del F1 habría mejorado un titular y empeorado otro. La fila \texttt{c225633} se conserva porque justifica su descarte; su checkpoint se borró tras medirlo y su MAP fusionado no llegó a calcularse.}
+\end{table}
+
+\paragraph{Procedencia de las cifras.} Las métricas de esta tabla proceden de dos pasadas de evaluación distintas: el barrido de umbral y el MAP de prueba se calculan con \texttt{eval\_test.py}, mientras que las cifras de validación reportadas como referencia del paso~36 provienen del registro de entrenamiento. Ambas difieren en la tercera cifra decimal (por ejemplo, MAP de prueba 0,4539 frente a 0,4535) porque la inferencia de una de ellas se realiza con precisión reducida. La diferencia no altera ninguna conclusión, pero conviene declararla para que el lector no la interprete como una inconsistencia.
 
 La diferencia entre F1-micro y F1-macro refleja el fuerte desequilibrio de clases del corpus: el modelo rinde bien sobre los códigos frecuentes, pero tiene dificultades con los poco representados. Este es un límite inherente al corpus de entrenamiento de 500 documentos, donde la mayoría de los 1.767 códigos aparecen menos de cinco veces.
 
 \section{Curvas de entrenamiento}
 
-La Figura~\ref{fig:epochs-graph} muestra la evolución del F1-micro de validación y la pérdida de entrenamiento a lo largo de las épocas para los \emph{runs} realizados con \texttt{IIC/RigoBERTa-Clinical}.
+La Figura~\ref{fig:epochs-graph} muestra la evolución del F1-micro de validación y la pérdida de entrenamiento a lo largo de las épocas para las ejecuciones realizadas con \texttt{IIC/RigoBERTa-Clinical}.
 
 \begin{figure}[h]
 \centering

@@ -1,13 +1,13 @@
 \chapter{Comparativa de modelos candidatos}
 \label{cap:AnexoA}
 
-Se consideraron diez modelos preentrenados como posible \emph{encoder} de texto para el clasificador CIE-10, seis de ellos evaluados experimentalmente. Los criterios de selección fueron: rendimiento en el corpus CodiEsp, especialización en español clínico, longitud de ventana de contexto y coste computacional de inferencia y entrenamiento.
+Se consideraron diez modelos preentrenados como posible \emph{encoder} de texto para el clasificador CIE-10, cinco de ellos evaluados experimentalmente. Los criterios de selección fueron: rendimiento en el corpus CodiEsp, especialización en español clínico, longitud de ventana de contexto y coste computacional de inferencia y entrenamiento.
 
 \section{Modelos evaluados}
 
 \subsection{\texttt{PlanTL-GOB-ES/roberta-base-biomedical-clinical-es}}
 
-Modelo RoBERTa~\cite{liu2019roberta} de 125M parámetros entrenado por el Barcelona Supercomputing Center sobre corpus clínico en español: historias clínicas, informes radiológicos y notas médicas. Ventana de contexto de 512 tokens. Ofrece el mejor equilibrio entre especialización médica y velocidad de inferencia en CPU. Obtuvo un F1 de 0{,}76 en las pruebas de nivel~1 (clasificación de capítulos).
+Modelo RoBERTa~\cite{liu2019roberta} de 125M parámetros entrenado por el Barcelona Supercomputing Center sobre corpus clínico en español: historias clínicas, informes radiológicos y notas médicas. Ventana de contexto de 512 tokens. Ofrece el mejor equilibrio entre especialización médica y velocidad de inferencia en CPU. Obtuvo un F1 de 0{,}780 en las pruebas de nivel~1 (clasificación de capítulos), promediando dos ejecuciones.
 
 \subsection{\texttt{PlanTL-GOB-ES/roberta-large-bne}}
 
@@ -19,19 +19,19 @@ Variante del modelo clínico del Barcelona Supercomputing Center con ventana de 
 
 \subsection{\texttt{IIC/RigoBERTa-2.0}}
 
-Modelo de propósito general basado en XLM-RoBERTa-large ($\sim$600M parámetros), desarrollado por el Instituto de Ingeniería del Conocimiento~\cite{vacaserrano2022rigoberta} sobre corpus español de gran escala. Ventana de contexto de 512 tokens (secuencias más largas se procesan mediante segmentación con solapamiento). Obtuvo un F1 de 0{,}74 en nivel~1 y se evaluó como base generalista frente a su variante clínica.
+Modelo de propósito general basado en XLM-RoBERTa-large ($\sim$600M parámetros), desarrollado por el Instituto de Ingeniería del Conocimiento~\cite{vacaserrano2022rigoberta} sobre corpus español de gran escala. Ventana de contexto de 512 tokens (secuencias más largas se procesan mediante segmentación con solapamiento). No llegó a entrenarse: se consideró como base generalista frente a su variante clínica.
 
 \subsection{\texttt{IIC/RigoBERTa-Clinical}}
 
-Variante clínica de RigoBERTa-2.0 desarrollada por el Instituto de Ingeniería del Conocimiento~\cite{garciasubies2026rigobertaclinical}, especializada en textos médicos en español mediante entrenamiento adicional sobre corpus clínico. Comparte la arquitectura XLM-RoBERTa-large de la versión base. Obtuvo el mejor F1 experimental (0{,}799 en nivel~1) y fue seleccionada como modelo base para el entrenamiento final en producción.
+Variante clínica de RigoBERTa-2.0 desarrollada por el Instituto de Ingeniería del Conocimiento~\cite{garciasubies2026rigobertaclinical}, especializada en textos médicos en español mediante entrenamiento adicional sobre corpus clínico. Comparte la arquitectura XLM-RoBERTa-large de la versión base. Obtuvo un F1 de 0{,}761 en nivel~1, promediando dos ejecuciones, y fue seleccionada como modelo base para el entrenamiento final en producción.
 
 \subsection{\texttt{jhu-clsp/mmBERT-base}}
 
-Encoder multilingüe moderno (\emph{Modern Multilingual BERT}) desarrollado por el Centro de Procesamiento del Lenguaje y del Habla de la Universidad Johns Hopkins~\cite{marone2025mmbert}, basado en la arquitectura ModernBERT. Ventana de contexto de 8.192 tokens; entrenado sobre más de 1800 lenguas. Obtuvo un F1-micro de 0{,}12 sobre los 809 códigos de bloque por ausencia de especialización en español clínico y fue descartado.
+Encoder multilingüe moderno (\emph{Modern Multilingual BERT}) desarrollado por el Centro de Procesamiento del Lenguaje y del Habla de la Universidad Johns Hopkins~\cite{marone2025mmbert}, basado en la arquitectura ModernBERT. Ventana de contexto de 8.192 tokens; entrenado sobre más de 1800 lenguas. Obtuvo un F1-micro de 0{,}707 en las pruebas de nivel~1, por debajo de los dos candidatos en español pese a ser multilingüe, por ausencia de especialización en español clínico.
 
 \subsection{\texttt{answerdotai/ModernBERT-base}}
 
-Arquitectura de nueva generación (2024) con mecanismo Flash Attention y ventana de contexto de 8.192 tokens~\cite{warner2024modernbert}. Obtuvo un F1-micro de 0{,}601 en las pruebas de nivel~1, inferior a RigoBERTa-Clinical, principalmente por operar en inglés frente a un corpus en español. Queda identificado como candidato para iteraciones futuras.
+Arquitectura de nueva generación (2024) con mecanismo Flash Attention y ventana de contexto de 8.192 tokens~\cite{warner2024modernbert}. Obtuvo un F1-micro de 0{,}632 en las pruebas de nivel~1, por debajo de los dos candidatos en español, lo que concuerda con estar entrenado únicamente en inglés frente a un corpus en castellano. Queda identificado como candidato para iteraciones futuras.
 
 \subsection{\texttt{dccuchile/bert-base-spanish-wwm-cased} (BETO)}
 
@@ -47,6 +47,8 @@ Versión destilada de BERT multilingüe con 66M parámetros~\cite{sanh2019distil
 
 \section{Tabla resumen}
 
+La comparativa de parámetros, ventana de contexto y F1 de los diez candidatos está en la Tabla~\ref{tab:modelos}.
+
 \begin{table}[h]
 \centering
 \caption{Comparativa de los modelos candidatos evaluados.}
@@ -55,22 +57,22 @@ Versión destilada de BERT multilingüe con 66M parámetros~\cite{sanh2019distil
 \hline
 \textbf{Modelo} & \textbf{Params} & \textbf{Ventana} & \textbf{F1 (tarea)} & \textbf{Dominio} \\
 \hline
-RoBERTa-BSC (base) & 125M & 512 & 0{,}778 & Clínico ES \\
+RoBERTa-BSC (base) & 125M & 512 & \textbf{0{,}780}$^{a}$ & Clínico ES \\
 RoBERTa-BSC (large) & 355M & 512 &  n/d & Español \\
 Longformer-BSC & $\sim$130M & 4.096 & 0{,}416$^{b}$ & Clínico ES \\
-IIC/RigoBERTa-2.0 & $\sim$600M & 512 & 0{,}74 & Español \\
-IIC/RigoBERTa-Clinical & $\sim$600M & 512 & \textbf{0{,}799} & Clínico ES \\
-mmBERT (JHU) & 307M & 8.192 & 0{,}12$^{b}$ & Multilingüe \\
-ModernBERT & 149M & 8.192 & 0{,}601 & General \\
+IIC/RigoBERTa-2.0 & $\sim$600M & 512 &  n/d & Español \\
+IIC/RigoBERTa-Clinical & $\sim$600M & 512 & 0{,}761$^{a}$ & Clínico ES \\
+mmBERT (JHU) & 307M & 8.192 & 0{,}707 & Multilingüe \\
+ModernBERT & 149M & 8.192 & 0{,}632 & General \\
 BETO & 110M & 512 &  n/d & Español \\
 MiniLM multilingüe & 33M & 512 &  n/d & Embeddings \\
 DistilBERT multilingüe & 66M & 512 &  n/d & Multilingüe \\
 \hline
 \end{tabular}
 
-\smallskip\par\footnotesize Salvo indicación contraria, el F1 corresponde a la clasificación de capítulos (21 clases). $^{b}$~medido sobre los 809 códigos de bloque, tarea distinta y no comparable con el resto de la columna.
+\smallskip\par\footnotesize Salvo indicación contraria, el F1 corresponde a la clasificación de capítulos (21 clases) y procede de la reejecución de los cuadernos de \texttt{training/bert-classifier/}, con idéntico presupuesto para los cuatro modelos evaluados. La ventana indicada es la máxima que admite la arquitectura; la efectivamente empleada en las pruebas figura en la Tabla~\ref{tab:modelos-capitulos}. Los modelos marcados \emph{n/d} no llegaron a entrenarse. $^{a}$~media de dos ejecuciones. $^{b}$~medido sobre los 809 códigos de bloque, tarea distinta y no comparable con el resto de la columna.
 \end{table}
 
 \section{Criterio de selección}
 
-\texttt{IIC/RigoBERTa-Clinical} fue seleccionado para el entrenamiento en producción por tres razones: (1)~especialización en dominio clínico español, que garantiza representaciones adecuadas del vocabulario médico del corpus; (2)~mejor F1-micro experimental (0{,}799 en clasificación de capítulos) entre todos los modelos evaluados; y (3)~el mejor equilibrio entre F1-micro y F1-macro, lo que indica capacidad para clasificar tanto los códigos frecuentes como los minoritarios. \texttt{answerdotai/ModernBERT-base} queda identificado como candidato para iteraciones futuras gracias a su ventana de 8.192 tokens, aunque su F1-micro de 0{,}601 en nivel~1 refleja la penalización de operar sobre corpus en español con un modelo entrenado en inglés.
+\texttt{IIC/RigoBERTa-Clinical} fue seleccionado para el entrenamiento en producción por tres razones: (1)~especialización en dominio clínico español, que garantiza representaciones adecuadas del vocabulario médico del corpus; (2)~un rendimiento en el cribado de capítulos equiparable al del mejor candidato, dentro de la dispersión que se observa entre ejecuciones; y (3)~la expectativa, derivada de esa cercanía al dominio, de un mejor comportamiento sobre la tarea real de 1.767 códigos, que es donde se concentró después toda la fase de optimización. \texttt{answerdotai/ModernBERT-base} queda identificado como candidato para iteraciones futuras gracias a su ventana de 8.192 tokens, aunque su F1-micro de 0{,}632 en nivel~1 refleja la penalización de operar sobre corpus en español con un modelo entrenado en inglés.

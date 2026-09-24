@@ -83,7 +83,7 @@ Las herramientas y tecnologías empleadas en el proyecto se agrupan en las sigui
  \item Mailpit como servidor SMTP de captura de email en el entorno local.
  \item Make como herramienta de automatización de tareas del ciclo de vida del proyecto.
  \item GitHub Packages para el alojamiento de la imagen Docker del motor de inferencia.
- \item VPS europeo con Docker Compose y Traefik para el entorno de producción.
+ \item Docker Compose y Traefik para el entorno de despliegue, publicado con un túnel de Cloudflare.
  \item Traefik como proxy inverso para la gestión de rutas y certificados en el entorno de producción.
  \item Prometheus y Grafana para el monitorización del rendimiento y la salud del sistema en producción.
  \item Sentry para la gestión de errores y excepciones en producción.
@@ -162,7 +162,7 @@ Tareas completadas:
  \item Arquitectura CQRS/Event Sourcing con Commanded y PostgreSQL como \emph{event store}.
  \item Canal WebSocket para comunicación en tiempo real con el frontend.
  \item Pipeline de análisis para la recepción del informe médico, la llamada al AI Engine y el almacenamiento de los resultados.
- \item Soporte de internacionalización (i18n) en español e inglés.
+ \item Soporte de internacionalización (i18n) en cinco idiomas (español, inglés, francés, italiano y alemán).
  \item Implementación de la suite de pruebas con ExUnit así como un informe de cobertura.
  \item Dockerización del entorno de desarrollo, pruebas y producción.
 \end{itemize}
@@ -189,7 +189,7 @@ Tareas completadas:
  \item Configuración de commitlint y Husky para validación de commits.
  \item Workflow de GitHub Actions para CI.
  \item Dockerización del entorno de entrenamiento con soporte CPU y GPU.
- \item Implementación del entorno de producción con VPS + Docker Compose + Traefik.
+ \item Implementación del entorno de despliegue con Docker Compose, Traefik y túnel de Cloudflare.
  \item Monitorización del servicio mediante Prometheus y Grafana.
  \item Gestión de errores utilizando el SaaS Sentry.
 \end{itemize}
@@ -242,7 +242,7 @@ Los costes del proyecto se dividen en dos categorías: costes de personal y cost
 \textbf{Costes de recursos materiales.}
 \begin{itemize}
  \item \textbf{Hardware de desarrollo}: El desarrollo se ha realizado sobre hardware propio ya amortizado, por lo que no genera un coste adicional directo. No obstante, si se imputa el coste del equipo de forma proporcional a la duración del proyecto (asumiendo un valor inicial de 2500~€ y una vida útil de cuatro años), el coste derivado de la amortización asciende a aproximadamente 156~€.
- \item \textbf{GPU para entrenamiento}: Se ha utilizado una GPU NVIDIA RTX 4080 en un entorno alimentado íntegramente por energía solar de autoconsumo. Aunque el coste eléctrico directo es nulo debido a la fuente renovable, se ha estimado el impacto económico combinando la amortización del hardware (con un valor inicial de 1200~€) y el coste de oportunidad de la red eléctrica convencional (0,12~€/kWh). Considerando un coste operativo simulado de entre 0,50~€ y 2~€ por hora, las aproximadamente 32~horas de GPU acumuladas en las 71 ejecuciones de la fase de experimentación equivalen a un máximo de unos 60~€. Sumando la amortización del hardware, el coste total imputado a la GPU se estima en un máximo de 200~€.
+ \item \textbf{GPU para entrenamiento}: Se ha utilizado una GPU NVIDIA RTX 4080 en un entorno alimentado íntegramente por energía solar de autoconsumo. Aunque el coste eléctrico directo es nulo debido a la fuente renovable, se ha estimado el impacto económico combinando la amortización del hardware (con un valor inicial de 1200~€) y el coste de oportunidad de la red eléctrica convencional (0,12~€/kWh). Considerando un coste operativo simulado de entre 0,50~€ y 2~€ por hora, las aproximadamente 39~horas de GPU acumuladas en las 78 ejecuciones registradas en \texttt{training\_runs.csv} equivalen a un máximo de unos 78~€. Sumando la amortización del hardware, el coste total imputado a la GPU se estima en un máximo de 200~€.
  \item \textbf{Software}: Todas las herramientas, \emph{frameworks} y modelos utilizados son de código abierto y gratuitos. El acceso al modelo RigoBERTa desde HuggingFace Hub requiere un token de usuario, cuya obtención es completamente gratuita.
  \item \textbf{Infraestructura de red y almacenamiento}: El corpus CodiEsp y los artefactos del modelo se almacenan localmente. Por tanto, no se han generado costes de almacenamiento en la nube ni de ancho de banda significativos.
 \end{itemize}
@@ -257,10 +257,10 @@ La Tabla~\ref{tab:costes} resume la estimación total, con el coste de personal 
 \hline
 Personal (376\,h × 20--25\,€/h) & 7.520\,€ & 9.400\,€ \\
 Amortización equipo desarrollo & 156\,€ & 156\,€ \\
-GPU (entrenamiento + experimentación) & 16\,€ & 200\,€ \\
+GPU (entrenamiento + experimentación) & 20\,€ & 200\,€ \\
 Software e infraestructura & 0\,€ & 0\,€ \\
 \hline
-\textbf{Total} & \textbf{7.692\,€} & \textbf{9.756\,€} \\
+\textbf{Total} & \textbf{7.696\,€} & \textbf{9.756\,€} \\
 \hline
 \end{tabular}
 \caption{Resumen de costes estimados del proyecto.}

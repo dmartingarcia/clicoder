@@ -79,8 +79,8 @@ El sistema admite tres modos de ejecución en función de la disponibilidad de h
 \hline
 \textbf{Modo} & \textbf{Comando} & \textbf{Requisito} \\
 \hline
-GPU & \texttt{make up} & GPU NVIDIA + modelo entrenado \\
-CPU & \texttt{make cpu-up} & Modelo entrenado (modo de producción) \\
+GPU & \texttt{make up} & GPU NVIDIA + modelo entrenado (preferente, entrenamiento/desarrollo/producción) \\
+CPU & \texttt{make cpu-up} & Modelo entrenado (soporte, cuando no hay GPU disponible) \\
 Mock & \texttt{make mock-up} & Ninguno (respuestas simuladas) \\
 \hline
 \end{tabular}
@@ -90,8 +90,8 @@ Cada modo se describe a continuación:
 
 \begin{sloppypar}
 \begin{itemize}
- \item \textbf{GPU} (\texttt{make up}): requiere una GPU NVIDIA con \texttt{nvidia-container-toolkit} y un modelo previamente entrenado montado en \texttt{ai\_engine/model/}. Ofrece la máxima velocidad de inferencia; es el modo empleado durante el entrenamiento y en desarrollo cuando se dispone de GPU.
- \item \textbf{CPU} (\texttt{make cpu-up}): carga el modelo real pero realiza la inferencia en CPU. Es el modo empleado en el despliegue de producción sobre VPS (Anexo~\ref{cap:AnexoI}); la respuesta tarda menos de 1 segundo por informe en hardware moderno, suficiente para el caso de uso.
+ \item \textbf{GPU} (\texttt{make up}): requiere una GPU NVIDIA con \texttt{nvidia-container-toolkit} y un modelo previamente entrenado montado en \texttt{ai\_engine/model/}. Es el modo preferente siempre que hay GPU disponible, tanto en desarrollo como en producción (\texttt{make deploy GPU=1}, Anexo~\ref{cap:AnexoI}) y durante el entrenamiento, porque ofrece la máxima velocidad de inferencia.
+ \item \textbf{CPU} (\texttt{make cpu-up}): carga el modelo real pero realiza la inferencia en CPU. Es el modo de soporte para cuando no hay GPU disponible, sea en desarrollo o en un despliegue sin acelerador (Anexo~\ref{cap:AnexoI}): proponer los códigos cuesta 0{,}331\,s por informe, aunque justificarlos sube a 16{,}2\,s, y de ahí que la atribución se sirva en una petición aparte.
  \item \textbf{Mock} (\texttt{make mock-up}): el motor de IA devuelve respuestas fijas sin cargar ningún modelo. Recomendado para desarrollo del frontend y pruebas funcionales del backend cuando no se dispone de modelo entrenado.
 \end{itemize}
 \end{sloppypar}
@@ -161,13 +161,15 @@ El clasificador neuronal se entrena con \texttt{train.py} sobre el corpus CodiEs
 make ai-train-gpu 2>&1 | tee /tmp/train.log
 \end{lstlisting}
 
-Cada \emph{run} guarda un checkpoint con el mejor F1-micro de validación, los umbrales por clase optimizados y un registro de métricas por época en \texttt{model/training\_runs.csv}. El proceso completo dura entre 2 y 4~horas en una GPU de la familia Ampere, dependiendo del número de épocas configurado.
+Cada ejecución guarda un \emph{checkpoint} con el mejor F1-micro de validación, los umbrales por clase optimizados y un registro de métricas por época en \texttt{model/training\_runs.csv}. El proceso completo dura entre 2 y 4~horas en una GPU de la familia Ampere, dependiendo del número de épocas configurado.
 
 \section{Monitorización con Prometheus y Grafana}
 
 El sistema incluye una pila de observabilidad compuesta por Prometheus y Grafana, levantada automáticamente junto con el resto de servicios al ejecutar \texttt{make up}.
 
 \subsection{URLs y credenciales}
+
+Las URLs y credenciales de acceso están en la Tabla~\ref{tab:monitoring-urls}.
 
 \begin{table}[h]
 \centering

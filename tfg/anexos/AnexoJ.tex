@@ -1,6 +1,6 @@
 \chapter{Tablero Kanban: listado completo de tareas}\label{cap:AnexoJ}
 
-Este anexo recoge el listado completo de tareas que componen el tablero Kanban del proyecto, organizadas por épica. Los identificadores de tarea (\texttt{T-XX}) son los empleados en el tablero durante el desarrollo para referenciar cada ítem. La última columna recoge la prioridad de atención dentro de cada épica o, en su caso, el estado de exclusión: \textbf{Alta} (bloquea el avance de otras tareas), \textbf{Media} (necesaria pero no bloqueante), \textbf{Baja} (mejora o calidad sin impacto crítico en el camino principal) y \textbf{Descartada} (identificada durante el desarrollo pero excluida explícitamente del alcance del proyecto).
+Este anexo recoge, en la Tabla~\ref{tab:kanban}, el listado completo de tareas que componen el tablero Kanban del proyecto, organizadas por épica. Los identificadores de tarea (\texttt{T-XX}) son los empleados en el tablero durante el desarrollo para referenciar cada ítem. La última columna recoge la prioridad de atención dentro de cada épica o, en su caso, el estado de exclusión: \textbf{Alta} (bloquea el avance de otras tareas), \textbf{Media} (necesaria pero no bloqueante), \textbf{Baja} (mejora o calidad sin impacto crítico en el camino principal) y \textbf{Descartada} (identificada durante el desarrollo pero excluida explícitamente del alcance del proyecto).
 
 \begin{center}
 \small
@@ -22,7 +22,7 @@ T-02 & Datos & Análisis estadístico del corpus: distribución de longitudes, f
 T-03 & Datos & Desarrollo del script de \emph{scraping} sobre el portal eCIE-maps para obtener el catálogo CIE-10-ES & Alta \\
 T-04 & Datos & Análisis estadístico del catálogo CIE-10-ES: cobertura, distribución por capítulos y vocabulario & Media \\
 T-05 & Datos & Generación de los ficheros CSV de entrenamiento, validación y test & Alta \\
-T-48 & Datos & Aumentación del corpus CodiEsp mediante retrotraducción con Azure Translator (F0 free tier) usando tres pivotes (EN, DE, FR), cuadruplicando el dataset de 500 a 2.000 documentos (evaluada y finalmente descartada por no superar la referencia de 500 documentos; véase el Anexo~\ref{cap:AnexoL}) & Media \\
+T-48 & Datos & Aumentación del corpus CodiEsp mediante retrotraducción con Azure Translator (F0, nivel gratuito) usando tres pivotes (EN, DE, FR), cuadruplicando el corpus de 500 a 2.000 documentos (evaluada y finalmente descartada por no superar la referencia de 500 documentos; véase el Anexo~\ref{cap:AnexoL}) & Media \\
 \hline
 T-06 & Modelo & Comparativa de modelos base candidatos (IIC/RigoBERTa-Clinical, mmBERT, BETO) & Alta \\
 T-07 & Modelo & Implementación del clasificador plano multilabel basado en BERT & Alta \\
@@ -30,7 +30,7 @@ T-08 & Modelo & Configuración del pipeline de entrenamiento (BCE con ponderaci�
 T-09 & Modelo & Implementación del clasificador de diccionario como \emph{baseline} & Media \\
 T-10 & Modelo & Entrenamiento y selección del mejor \emph{checkpoint} por F1-micro en validación & Alta \\
 T-11 & Modelo & Evaluación sobre el conjunto de test con métricas de precisión, \emph{recall} y F1 & Media \\
-T-46 & Modelo & Activación de FlashAttention~2 como implementación eficiente del mecanismo de atención: integrada en la imagen base GPU (\texttt{cie10-ml-base}) con fallback automático a SDPA; activa en todos los \emph{runs} de entrenamiento & Media \\
+T-46 & Modelo & Activación de FlashAttention~2 como implementación eficiente del mecanismo de atención: integrada en la imagen base GPU (\texttt{cie10-ml-base}) con fallback automático a SDPA; activa en todas las ejecuciones de entrenamiento & Media \\
 \hline
 T-12 & AI Engine & Implementación del servicio FastAPI con entorno virtualizado & Alta \\
 T-13 & AI Engine & Endpoint \texttt{POST /predict} y \texttt{GET /} & Alta \\
@@ -42,7 +42,7 @@ T-17 & Backend & Sistema de autenticación: registro, confirmación por email e 
 T-18 & Backend & Arquitectura CQRS/Event Sourcing con Commanded y PostgreSQL como \emph{event store} & Alta \\
 T-19 & Backend & Canal WebSocket para comunicación en tiempo real con el frontend & Alta \\
 T-20 & Backend & Pipeline de análisis: recepción del informe, llamada al AI Engine y almacenamiento & Alta \\
-T-21 & Backend & Soporte de internacionalización (i18n) en español e inglés & Media \\
+T-21 & Backend & Soporte de internacionalización (i18n) en cinco idiomas & Media \\
 T-22 & Backend & Suite de pruebas con ExUnit e informe de cobertura con excoveralls & Media \\
 T-23 & Backend & Dockerización del entorno de desarrollo, pruebas y producción & Media \\
 \hline
@@ -59,7 +59,7 @@ T-32 & Infraestructura & Makefile con \emph{targets} para el ciclo de vida compl
 T-33 & Infraestructura & Configuración de commitlint y Husky para validación de mensajes de commit & Baja \\
 T-34 & Infraestructura & Workflow de GitHub Actions para integración continua & Media \\
 T-35 & Infraestructura & Dockerización del entorno de entrenamiento con soporte CPU y GPU & Alta \\
-T-36 & Infraestructura & Despliegue en producción sobre VPS con Docker Compose y Traefik como proxy inverso (TLS automático de Let's Encrypt) & Media \\
+T-36 & Infraestructura & Despliegue con Docker Compose y Traefik como proxy inverso (TLS automático de Let's Encrypt), publicado mediante un túnel de Cloudflare & Media \\
 T-37 & Infraestructura & Monitorización con Prometheus y Grafana: el backend expone métricas de latencia HTTP, queries Ecto y VM BEAM en \texttt{:9568/metrics} mediante \texttt{telemetry\_metrics\_prometheus}; Prometheus scrapea todos los servicios y Grafana los visualiza con datasource provisionado automáticamente & Baja \\
 T-38 & Infraestructura & Gestión de errores y excepciones con Sentry: captura de excepciones HTTP mediante \texttt{Sentry.PlugCapture} en el endpoint Phoenix, captura de crashes OTP (GenServer, comandos Commanded) mediante \texttt{Sentry.LoggerHandler}, con stacktrace completo y etiqueta de entorno configurada vía \texttt{SENTRY\_DSN} & Baja \\
 T-47 & Infraestructura & Configuración del servidor de email en producción con registros SPF, DKIM y política DMARC para garantizar la entregabilidad y autenticidad de los emails transaccionales & Media \\

@@ -18,7 +18,7 @@ La Figura~\ref{fig:erd-bd} muestra el diagrama entidad-relación de la base de d
 
 \subsection{Tabla \texttt{users}}
 
-Almacena los usuarios registrados en el sistema.
+Almacena los usuarios registrados en el sistema (Tabla~\ref{tab:users}).
 
 \begin{table}[h]
 \centering
@@ -46,7 +46,7 @@ Almacena los usuarios registrados en el sistema.
 
 \subsection{Tabla \texttt{conversations}}
 
-Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario.
+Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario (Tabla~\ref{tab:conversations}).
 
 \begin{table}[h]
 \centering
@@ -72,7 +72,7 @@ Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario.
 
 \subsection{Tabla \texttt{messages}}
 
-Proyección CQRS de los mensajes intercambiados dentro de cada conversación.
+Proyección CQRS de los mensajes intercambiados dentro de cada conversación (Tabla~\ref{tab:messages}).
 
 \begin{table}[h]
 \centering
@@ -99,7 +99,7 @@ Proyección CQRS de los mensajes intercambiados dentro de cada conversación.
 
 \subsection{Tabla \texttt{analysis\_cards}}
 
-Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para cada mensaje de análisis.
+Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para cada mensaje de análisis (Tabla~\ref{tab:cards}).
 
 \begin{table}[h]
 \centering
@@ -126,7 +126,7 @@ Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para 
 
 \subsection{Tabla \texttt{predicted\_codes}}
 
-Proyección CQRS de los códigos CIE-10-ES predichos por el motor de IA, con su ciclo de vida de validación.
+Proyección CQRS de los códigos CIE-10-ES predichos por el motor de IA, con su ciclo de vida de validación (Tabla~\ref{tab:predicted-codes}).
 
 \begin{table}[h]
 \centering
@@ -156,7 +156,7 @@ Proyección CQRS de los códigos CIE-10-ES predichos por el motor de IA, con su 
 
 \subsection{Tabla \texttt{cie10\_codes}}
 
-Catálogo de referencia de los códigos CIE-10-ES cargados desde los ficheros CSV obtenidos del portal eCIE-maps.
+Catálogo de referencia de los códigos CIE-10-ES cargados desde los ficheros CSV obtenidos del portal eCIE-maps (Tabla~\ref{tab:cie10codes}).
 
 \begin{table}[h]
 \centering
@@ -181,7 +181,7 @@ El catálogo contiene aproximadamente 101.246 diagnósticos, 78.496 procedimient
 
 \subsection{Tabla \texttt{code\_suggestions}}
 
-Sugerencias manuales de código realizadas por el usuario al seleccionar un fragmento de texto del informe.
+Sugerencias manuales de código realizadas por el usuario al seleccionar un fragmento de texto del informe (Tabla~\ref{tab:suggestions}).
 
 \begin{table}[h]
 \centering
@@ -205,7 +205,7 @@ Sugerencias manuales de código realizadas por el usuario al seleccionar un frag
 
 \subsection{Tabla \texttt{projection\_versions}}
 
-Tabla de control interno de Commanded para garantizar la coherencia de las proyecciones al reproducir el registro de eventos.
+Registro de control interno de Commanded para garantizar la coherencia de las proyecciones al reproducir el registro de eventos (Tabla~\ref{tab:proj-versions}).
 
 \begin{table}[h]
 \centering
