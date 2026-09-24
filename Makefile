@@ -341,7 +341,7 @@ audit-python: ## Auditar CVEs en dependencias Python (pip-audit)
 	@echo "$(BLUE)Auditando dependencias Python...$(NC)"
 	$(COMPOSE_CPU) run --rm --no-deps \
 		-v $(CURDIR)/ai_engine:/audit:ro \
-		ai_engine sh -c 'pip install -q pip-audit && pip-audit -r /audit/requirements.txt -r /audit/requirements-dev.txt'
+		ai_engine sh -c 'pip install -q pip-audit && python -m pip_audit -r /audit/requirements.txt -r /audit/requirements-dev.txt'
 
 backend-dialyzer: ## Análisis estático de tipos del backend (Dialyzer)
 	$(BACKEND) mix deps.get
