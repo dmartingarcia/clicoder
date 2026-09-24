@@ -131,6 +131,23 @@ def main():
     # El diccionario solo: su confianza es la puntuación, sin modelo detrás.
     dicc = medir(datos["val"]["B"], datos["test"]["B"])
 
+    # Modo "both": concatena lo que cada motor devuelve por su cuenta, con su propio umbral de
+    # producción (el del clasificador en config.json; el diccionario no aplica ninguno, cualquier
+    # bloque con un patrón que haga match entra). No admite MAP: dos listas concatenadas de motores
+    # con escalas distintas no definen una única ordenación.
+    umbral_bert = float(clf.config.get("threshold", 0.5))
+    logit_bert = float(np.log(umbral_bert / (1 - umbral_bert)))
+    t = datos["test"]
+    P_bert = t["Z"] >= logit_bert
+    P_dict = t["B"] > 0
+    P_both = (P_bert | P_dict).astype(int)
+    both = {
+        "umbral_bert": umbral_bert,
+        "p": float(precision_score(t["T"], P_both, average="micro", zero_division=0)),
+        "r": float(recall_score(t["T"], P_both, average="micro", zero_division=0)),
+        "f1": float(f1_score(t["T"], P_both, average="micro", zero_division=0)),
+    }
+
     base = Path(args.model_dir)
     (base / "comparativa_motores.json").write_text(
         json.dumps(
@@ -139,6 +156,7 @@ def main():
                 "diccionario": dicc,
                 "modelo_solo": solo,
                 "modelo_fusion": fusion,
+                "ambos_concatenado": both,
                 "beta": beta,
             },
             indent=1,
@@ -170,6 +188,7 @@ def main():
             f"{nombre:<14}{m['map_strict']:9.4f}{m['p']:9.4f}{m['r']:9.4f}"
             f"{m['f1']:9.4f}{m['umbral']:10.3f}"
         )
+    print(f"{'ambos':<14}{'n/a':>9}{both['p']:9.4f}{both['r']:9.4f}{both['f1']:9.4f}{'':>10}")
 
 
 if __name__ == "__main__":

@@ -16,8 +16,8 @@ defmodule AppWeb.Admin.SettingsLive do
        "MAP 0,145 · F1 0,304: acierta el bloque pero no ordena dentro de él."},
     {"both", "Ambos",
      "Concatena las listas de los dos motores. Peor que cualquiera de ellos por separado " <>
-       "(F1 0,302), porque mezcla dos escalas de puntuación que no son comparables. " <>
-       "Se conserva para poder contrastar los dos motores lado a lado."},
+       "(F1 0,285), porque hereda los falsos positivos de los dos sin ningún criterio para " <>
+       "arbitrar entre ellos. Se conserva para poder contrastar los dos motores lado a lado."},
     {"fused", "Fusionado",
      "Suma la confianza del diccionario al logit del modelo antes de ordenar, en un único " <>
        "ranking. La mejor opción medida: MAP 0,554 · F1 0,610."}
