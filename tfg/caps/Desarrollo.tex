@@ -1038,6 +1038,10 @@ El \emph{endpoint} Phoenix incluye el \emph{plug} \texttt{put\_security\_headers
  \item \texttt{Strict-Transport-Security: max-age=31536000; includeSubDomains} (HSTS) obliga al navegador a usar HTTPS durante un año para el dominio y todos sus subdominios, eliminando la posibilidad de ataques de degradación de protocolo (\emph{SSL stripping}).
 \end{itemize}
 
+\subsubsection{Auditoría de dependencias}
+
+Un sistema que trata datos de salud hereda las vulnerabilidades de todo lo que importa, no solo las de su propio código, así que las tres bases de código se auditan por separado: \texttt{make audit-backend} (\texttt{mix hex.audit} sobre Elixir), \texttt{make audit-js} (\texttt{npm audit} sobre el frontend) y \texttt{make audit-python} (\texttt{pip-audit} sobre el motor de IA), agrupados bajo \texttt{make audit}. Elixir no tiene paquetes retirados ni vulnerables. El frontend partía de diecisiete avisos; \texttt{npm audit fix} resolvió catorce sin subir ninguna dependencia de versión mayor, y las tres restantes están en \texttt{@vitest/mocker}, herramienta de pruebas que no llega al navegador y para la que no hay parche publicado todavía. El motor de IA tiene un aviso sin arreglo publicado en \texttt{diskcache} (\texttt{PYSEC-2026-2447\allowbreak}); es una dependencia transitiva de \texttt{llama\_cpp\_python}, el motor del resumidor LLM, que no se importa desde ningún módulo propio y que además viene desactivado por defecto en producción (sección~\ref{sec:resumidor}), lo que acota el riesgo mientras no se publique una versión corregida.
+
 \subsection{Observabilidad}
 \label{sec:observabilidad}
 
