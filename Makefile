@@ -335,7 +335,9 @@ audit-backend: ## Auditar dependencias Elixir retiradas/vulnerables (mix hex.aud
 
 audit-js: ## Auditar CVEs en dependencias JS/Node (npm audit)
 	@echo "$(BLUE)Auditando dependencias JS...$(NC)"
-	$(COMPOSE_CPU) run --rm --no-deps frontend npm audit
+# El stage por defecto es el de producción, que no instala devDependencies ni trae el lockfile
+# completo, así que "npm audit" falla con ENOLOCK. Necesita el stage de desarrollo.
+	$(COMPOSE_DEV) run --rm --no-deps frontend npm audit
 
 audit-python: ## Auditar CVEs en dependencias Python (pip-audit)
 	@echo "$(BLUE)Auditando dependencias Python...$(NC)"
