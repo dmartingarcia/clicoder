@@ -61,7 +61,9 @@ defmodule App.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:telemetry_metrics_prometheus, "~> 1.1"},
-      {:sentry, "~> 10.0", only: :prod},
+      # Tambien en test: el filtro que impide que el informe clinico salga hacia un tercero
+      # es justo lo que no puede quedarse sin probar.
+      {:sentry, "~> 10.0", only: [:prod, :test]},
       {:hackney, "~> 1.8"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
