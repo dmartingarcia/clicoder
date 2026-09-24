@@ -20,8 +20,11 @@ sino que **no haya nada que un revisor pueda rebatir con el código o los datos 
    no se puede verificar, se reformula o se quita; no se rellena de memoria.
 3. **Terminología**: la persona es **codificador clínico**; el modelo es **`encoder`** (en cursiva).
    Nunca "codificador" para el modelo.
-4. **Nuestro resultado aparece UNA sola vez** en la comparativa con el benchmark, y es el del
-   **sistema realmente construido y desplegado**.
+4. **En la comparativa con el benchmark aparecen las dos configuraciones ejecutables** del
+   sistema, cada una en su puesto por MAP: el clasificador solo (0,437, último de diez) y el modo
+   fusionado (0,545, segundo). Ambas están implementadas y se pueden ejecutar. Lo que NO se puede
+   es presentar la buena sin decir que no es la que se sirve por defecto, ni mezclar cifras de
+   pasadas distintas sin declararlo: en la pasada de la fusión el clasificador solo da 0,434.
 5. **No inventar sistemas a posteriori.** Si tres ejecuciones probaban cosas distintas, promediarlas
    porque el número sale mejor NO es un sistema propuesto. Va al anexo como observación, nunca a la
    comparativa ni al titular.
@@ -30,6 +33,36 @@ sino que **no haya nada que un revisor pueda rebatir con el código o los datos 
 7. **Apuntar TODO en `ROADMAP.md`**, incluidos los hallazgos que no se arreglan.
 8. **Commits**: una línea, sin co-author. `make ai-lint` / `make backend-lint` / `make frontend-lint`
    antes de commitear si se tocó código.
+
+## Premisas del proyecto (hechos, no criterio)
+
+Esto es lo que el sistema **es**. No se deduce del texto ni se reinventa en cada revisión: si la
+memoria dice otra cosa, la memoria está mal. Cada una ha costado una corrección que tocaba varios
+capítulos a la vez.
+
+- **No hay VPS ni proveedor cloud.** El sistema se sirve desde la estación de trabajo de desarrollo
+  (AMD Ryzen 9 7900X, NVIDIA RTX 4080), publicada en Internet con un túnel de Cloudflare, sin abrir
+  puertos entrantes. Migrar a un servidor alojado o a cloud es trabajo futuro: hoy el coste no se
+  justifica porque el prototipo no tiene usuarios. Cualquier mención a un VPS, a un proveedor
+  concreto o a un coste mensual de hosting es residuo de una versión anterior.
+- **La máquina que sirve es la que mide.** Los tiempos del capítulo de desarrollo no son una
+  extrapolación a otro entorno. Y tiene GPU, de modo que **no vale argumentar que la atribución se
+  desacopla porque el despliegue no tiene acelerador**: se desacopla para que el sistema siga
+  respondiendo en modo CPU, que es un escenario soportado.
+- **Latencia, separada por fuerza.** Proponer códigos y justificarlos son dos costes de orden
+  distinto y el sistema los sirve en peticiones distintas. No se pueden resumir en una sola cifra:
+  0,331 s y 16,2 s en CPU; 0,017 s y 0,51 s en GPU (`make ai-bench-predict`,
+  `make ai-bench-explain`).
+- **Las copias de seguridad cubren dos bases de datos**, la de la aplicación y la del registro de
+  eventos (`make db-backup`). Residen en el mismo equipo que los datos, que es una limitación
+  declarada, no un descuido que haya que ocultar.
+- **La trazabilidad se cumple emitiendo un evento por predicción** con el identificador del informe,
+  el motor y la versión del modelo (nombre del \emph{encoder} más hash del fichero de pesos). El
+  canal escribe la tabla de lectura por su cuenta para poder emitir los códigos en el acto, así que
+  el proyector de ese evento no materializa nada: es solo el registro auditable.
+- **Un dato medido no se cita de memoria ni se adorna.** Si un párrafo dice «con calentamiento
+  previo», «en hardware moderno» o «suficiente para el caso de uso», o se sustituye por la cifra y
+  su guion, o se quita. Los adjetivos no son mediciones.
 
 ## Cómo revisar
 
@@ -48,12 +81,15 @@ Antes de fiarte de cualquier informe, comprueba tú los números.
 # nº real de ejecuciones y mejor modelo
 tail -n +2 ai_engine/model/training_runs.csv | grep -c .
 tail -n +2 ai_engine/model/training_runs.csv | awk -F',' \
-  '{for(i=1;i<=NF;i++)gsub(/^ +| +$/,"",$i); if($30=="1767") printf "%.4f run %d %s\n",$33,NR,$1}' \
+  '{split($0,a,","); for(i=1;i<=NF;i++)gsub(/^ +| +$/,"",$i); if($30=="1767") printf "%.4f run %d %s\n",$33,NR,a[1]}' \
   | sort -rn | head -3
 # OJO: val_f1_micro es la columna 33, NO la 32 (la 32 es val_r_micro)
+# OJO 2: nada de $1 suelto en los snippets de esta skill. Al invocarla con argumentos se
+# sustituye por el primero y el comando cambia de significado sin dar error. Usar split().
 
 # em-dashes en el PDF renderizado (la prueba definitiva)
-pdftotext tfg/build/uclmTFGesi.pdf - | grep -c "—"
+# grep -o, no grep -c: -c cuenta lineas y dos em-dashes en la misma linea contarian como uno
+pdftotext tfg/build/uclmTFGesi.pdf - | grep -o "—" | wc -l
 
 # celdas de tabla rotas por reemplazos globales
 grep -rn "&, \|&,$" tfg/caps/ tfg/anexos/
@@ -62,7 +98,9 @@ grep -rn "&, \|&,$" tfg/caps/ tfg/anexos/
 grep -rn "−" tfg/caps/ tfg/anexos/ tfg/preambulo/
 
 # figuras y tablas nunca citadas en el texto
-for l in $(grep -rhoE '\\label\{(fig|tab):[^}]+\}' tfg/caps/ tfg/anexos/ \
+# Los labels se buscan tambien en figs/ y preambulo/: hay figuras generadas por guion que
+# viven ahi, y si solo se barren caps/ y anexos/ quedan fuera del control sin avisar.
+for l in $(grep -rhoE '\\label\{(fig|tab):[^}]+\}' tfg/caps/ tfg/anexos/ tfg/figs/ tfg/preambulo/ \
            | sed -E 's/\\label\{(.*)\}/\1/' | sort -u); do
   n=$(grep -rho "ref{$l}" tfg/caps/ tfg/anexos/ tfg/preambulo/ | wc -l)
   [ "$n" -eq 0 ] && echo "SIN CITAR: $l"
@@ -111,15 +149,16 @@ estructura.
 No basta con que las cifras publicadas sean correctas. Hay que comprobar que **el análisis que los
 datos ya permiten hacer está hecho**, y que lo que se afirma sobre ellos es lo que se ha medido.
 
-### 1. El modelo que se reporta ES el que está desplegado
-Regla 4 aplicada al pie de la letra. Esta deriva ya ha ocurrido tres veces.
+### 1. El modelo que se reporta ES el que está cargado
+Las cifras titulares tienen que salir del artefacto que `config.json` carga de verdad, no de la
+mejor ejecución del CSV. Esta deriva ya ha ocurrido tres veces.
 
 ```bash
 # quién está realmente en producción vs. qué dice el TFG
 cat ai_engine/model/config.json
 grep -rn "20260530T030233Z\|paso~36\|modelo desplegado" tfg/anexos/AnexoH.tex
 # el mejor run registrado, ¿tiene evaluación en test?
-tail -n +2 ai_engine/model/training_runs.csv | awk -F',' '{if($30=="1767") printf "%.4f %s\n",$33,$1}' | sort -rn | head -3
+tail -n +2 ai_engine/model/training_runs.csv | awk -F',' '{split($0,a,","); if($30=="1767") printf "%.4f %s\n",$33,a[1]}' | sort -rn | head -3
 ls ai_engine/model/eval_*.json
 ```
 Si `config.json` apunta a un artefacto distinto del que reportan AnexoH/Desarrollo/Resumen, o si su
@@ -320,7 +359,7 @@ entrenó. Ninguno se habría colado si cada cifra hubiera tenido que declarar su
   vuelve a medir o se quita.
 
 ```bash
-# Tablas cuyo entorno no menciona ningun guion ni comando: candidatas a revisar
+# Tablas cuyo entorno no menciona ningún guion ni comando: candidatas a revisar
 for l in $(grep -rhoE '\\label\{tab:[^}]+\}' tfg/caps/ tfg/anexos/ | sed -E 's/.*\{(.*)\}/\1/'); do
   f=$(grep -rl "label{$l}" tfg/caps/ tfg/anexos/ | head -1)
   n=$(grep -n "label{$l}" "$f" | cut -d: -f1)
@@ -334,6 +373,33 @@ done
 grep -rnoE "[^0-9]0[,.][0-9]{3}[^0-9]" tfg/caps/*.tex | head -40
 ```
 
+**Barrido completo de valores numéricos.** Lo anterior mira capítulos y solo decimales del tipo
+`0,xxx`. Cuando se promociona un modelo, se reevalúa algo o se rehace una medición, hay que barrer
+**todas** las cifras del documento y comprobar una por una contra su fuente: lo que se cuela no es
+la cifra que se cambia, sino la copia de esa cifra que vivía en otro capítulo y nadie recordaba.
+
+```bash
+# Toda cifra decimal del documento, agrupada por valor, con dónde aparece.
+# Dos apariciones del mismo número en ficheros distintos son la señal a mirar: o es la misma
+# medición (y entonces solo una debe ser la fuente) o son dos cosas distintas que coinciden.
+grep -rnoE "[0-9]+\{?,\}?[.,][0-9]+" tfg/caps/ tfg/anexos/ tfg/preambulo/ \
+  | sed 's/{,}/,/' | awk -F: '{print $3"\t"$1":"$2}' | sort | uniq -c | sort -rn | head -60
+```
+
+Después, para cada cifra titular, comprobar que **todas** sus apariciones dicen lo mismo:
+
+```bash
+for n in 0,437 0,545 0,489 0,109; do
+  echo "## $n"; grep -rn -- "$n" tfg/caps/ tfg/anexos/ tfg/preambulo/ | sed 's/{,}/,/' | cut -c1-120
+done
+```
+
+Ojo con dos trampas propias de este documento: las cifras del diario de experimentos
+(`anexos/AnexoF.tex`) son **históricas** y no se actualizan al promocionar un modelo, porque
+registran lo que midió cada paso; y el mismo modelo aparece con dos valores según la pasada de
+evaluación (precisión completa frente a comparable), de modo que una discrepancia en la tercera
+decimal puede ser correcta y hay que declararla, no corregirla.
+
 ### 4. Tono académico
 El TFG no es un blog ni un pitch. Fuera:
 
@@ -341,8 +407,9 @@ El TFG no es un blog ni un pitch. Fuera:
   «AI-as-a-Service», «umbral de rentabilidad extremadamente bajo».
 - Entusiasmo sin respaldo: «casi infalible», «extremadamente», «el paso más directo»,
   «viabilidad real de mercado».
-- Comparaciones tramposas: contraponer la latencia de inferencia (un segundo) al acto completo
-  de codificar un alta (14 minutos) no es una comparación, es un titular.
+- Comparaciones tramposas: contraponer la latencia de inferencia (0,331 s) al acto completo
+  de codificar un alta (14 minutos) no es una comparación, es un titular: el sistema propone
+  candidatos, no cierra el alta.
 
 Lo que sí va: qué se midió, cómo, con qué resultado y qué limitación tiene.
 
@@ -363,7 +430,8 @@ equivalente natural y se traducen.
 
 **Se quedan en inglés** (con `\emph{}` cuando procede): `batch`, `batch size`, `mini-batch`,
 `pretrain`, `mock`, `benchmark`, `snippet`, `endpoint`, `pipeline`, `encoder`, `ranking`,
-`feature toggle` (nombre del patrón en la bibliografía), `wheel` (el paquete precompilado de
+`em-dash` (el signo, para no confundirlo con el guion ni con la raya), `feature toggle`
+(nombre del patrón en la bibliografía), `wheel` (el paquete precompilado de
 Python, nunca "rueda"), `Workflow de GitHub Actions` (nombre oficial del producto).
 
 **Se traducen siempre:**
@@ -411,6 +479,30 @@ Revisar siempre que:
 - Las **cifras titulares** son idénticas en Resumen ES, Abstract EN, Desarrollo, Conclusiones y anexos.
 - Ninguna afirmación absoluta ("ningún algoritmo puede…") que el propio documento contradiga.
 
+## La skill se revisa a sí misma
+
+Antes de dar una revisión por terminada, repasa **este mismo fichero** con el mismo criterio que
+aplicas al TFG: erratas, faltas de ortografía y errores semánticos. Una skill con un comando roto
+o una regla que se contradice hace más daño que no tenerla, porque la revisión pasa igual y el
+fallo se da por comprobado.
+
+Qué mirar, con los casos que ya han aparecido:
+
+- **Ortografía y tildes**, incluidas las que están dentro de las reglas y no solo en la prosa
+  («ultimo», «estan», «fusion», «ningun» llegaron a convivir con reglas que exigen rigor).
+- **Los comandos hacen lo que dice el comentario que hacen.** Ejecútalos. `grep -c` cuenta
+  *líneas*, no ocurrencias, de modo que dos em-dashes en el mismo renglón contaban como uno.
+- **Los barridos cubren todo el árbol que dicen cubrir.** El de figuras sin citar solo miraba
+  `caps/` y `anexos/`, y se dejaba fuera las figuras generadas por guion que viven en `figs/`.
+- **Nada de `$1` suelto en los snippets.** Al invocar la skill con argumentos se sustituye por el
+  primero y el comando cambia de significado sin dar error. Usar `split()` en `awk`.
+- **Las referencias cruzadas entre secciones siguen siendo ciertas.** Si una sección dice «regla 4
+  aplicada al pie de la letra» y la regla 4 se ha reescrito, la referencia miente.
+- **Las cifras de ejemplo de la propia skill caducan** igual que las del TFG. Si un ejemplo cita
+  una latencia o un MAP, tiene que ser el vigente.
+- **La lista cerrada de anglicismos incluye los que la propia skill usa.** Si el texto dice
+  «em-dash» treinta veces, «em-dash» va en la lista.
+
 ## Al terminar
 
 1. Recompilar y confirmar `make tfg-pdf` → exit 0, 0 errores, 0 referencias sin definir,
@@ -420,3 +512,5 @@ Revisar siempre que:
    requiere decisión del autor.
 4. Presentar los hallazgos separando: errores reales / cuestiones de criterio / cosmético, y
    **preguntar antes de tocar** lo que cambie el discurso del trabajo (titulares, alcance, tono).
+5. Repasar esta skill buscando erratas, faltas y errores semánticos, y ejecutar sus comandos para
+   confirmar que siguen haciendo lo que dicen.
