@@ -310,7 +310,7 @@ con $\beta$ ajustado exclusivamente sobre validación. El barrido se extendió h
 \begin{table}[h]
 \centering
 \small
-\caption{Todas las configuraciones de los dos motores, medidas sobre el conjunto de prueba y en el mismo espacio de 1.767 códigos completos. El umbral de decisión de cada configuración se ajusta sobre validación y se aplica sin retocar a prueba. Generada con \texttt{ai\_engine/rerank\_map.py}; el barrido de $\beta$ queda en \texttt{model/fusion\_sweep.json}.}
+\caption{Todas las configuraciones de los dos motores, medidas sobre el conjunto de prueba y en el mismo espacio de 1.767 códigos completos. El umbral de decisión de cada configuración de diccionario/fusión se ajusta sobre validación y se aplica sin retocar a prueba; las filas \texttt{both} no lo optimizan, porque concatenan lo que cada motor ya decide con su propio umbral de producción (nota al pie). Generada con \texttt{ai\_engine/rerank\_map.py}; el barrido de $\beta$ queda en \texttt{model/fusion\_sweep.json}.}
 \label{tab:map-fusion}
 \begin{tabular}{lrrrr}
 \hline
@@ -323,10 +323,13 @@ Modelo de producción solo & 0{,}4342 & 0{,}516 & 0{,}462 & 0{,}487 \\
 \quad + diccionario fusionado & \textbf{0{,}5446} & 0{,}640 & 0{,}560 & \textbf{0{,}597} \\
 \hline
 Mejor modelo entrenado solo & 0{,}4535 & 0{,}549 & 0{,}455 & 0{,}497 \\
-\quad + diccionario concatenado (\texttt{both}) & n/d & 0{,}185 & 0{,}839 & 0{,}304 \\
+\quad + diccionario concatenado (\texttt{both})$^{\dagger}$ & n/d & 0{,}171 & 0{,}851 & 0{,}285 \\
 \quad + diccionario fusionado & \textbf{0{,}5535} & 0{,}644 & 0{,}581 & \textbf{0{,}611} \\
 \hline
 \end{tabular}
+
+\vspace{2mm}
+{\footnotesize $^{\dagger}$ Fila del modelo desplegado, generada con \texttt{make ai-motores} (\texttt{ai\_engine/motores\_eval.py}), que concatena las predicciones de cada motor con su propio umbral de producción (clasificador: 0,2; diccionario: cualquier bloque con un patrón que haga match) y queda en \texttt{model/comparativa\_motores.json} (\texttt{ambos\_concatenado}). La fila equivalente del modelo del paso~36, más arriba, es una medición anterior a este guion y no se ha podido reproducir con la misma herramienta.}
 \end{table}
 
 La tabla contiene tres lecturas que conviene separar.
