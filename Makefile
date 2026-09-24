@@ -1,4 +1,4 @@
-.PHONY: e2e-tests ai-bench-predict ai-eval-candidatos ai-eval-candidatos-fusion ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: e2e-tests ai-bench-predict ai-eval-candidatos ai-eval-candidatos-fusion ai-motores ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 -include .env
 export
@@ -302,6 +302,15 @@ ai-eval-candidatos-fusion: ## MAP de los candidatos en modo fusionado con el dic
 			--out "/app/model/rerank_cand_$$nombre.json" || exit 1; \
 	done
 	@python3 ai_engine/tabla_candidatos.py
+
+ai-motores: ## Comparativa de los cuatro motores y barrido de beta de la fusion (GPU)
+	@echo "$(BLUE)Comparando motores y barriendo beta...$(NC)"
+# De aqui salen las cifras titulares del modo fusionado. Necesita spaCy (diccionario) y CUDA,
+# que es lo que trae la imagen de entrenamiento.
+	$(COMPOSE) run --rm --no-deps \
+		-v $(PWD)/ai_engine:/app -v $(PWD)/training/csv_import_scripts:/data \
+		-w /app --entrypoint python3 training motores_eval.py --device $(or $(DEVICE),cuda)
+	@echo "$(GREEN)Resultados en ai_engine/model/comparativa_motores.json y fusion_sweep.json$(NC)"
 
 ai-eval-test: ## Evaluar sobre el test de CodiEsp. Uso: make ai-eval-test [GPU=1] [DEVICE=cpu|cuda] [THRESHOLD=0.3]
 	@echo "$(BLUE)Evaluando modelo sobre el conjunto de test...$(NC)"
