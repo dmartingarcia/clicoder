@@ -1,4 +1,4 @@
-.PHONY: ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: e2e-tests ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 -include .env
 export
@@ -701,3 +701,10 @@ up: frontend-install ## Levantar todos los servicios. GPU=1 para modo GPU
 	@echo "  - PostgreSQL:    localhost:5432"
 
 .DEFAULT_GOAL := help
+
+e2e-tests: ## Tests de extremo a extremo con Playwright (requiere la aplicacion levantada)
+	@echo "$(GREEN)Tests de extremo a extremo...$(NC)"
+	@test -d e2e/.venv || python3 -m venv e2e/.venv
+	@e2e/.venv/bin/pip install -q -r e2e/requirements.txt
+	@e2e/.venv/bin/playwright install chromium
+	cd e2e && .venv/bin/pytest

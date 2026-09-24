@@ -298,3 +298,58 @@ jobs:
 
       - name: Format check ai_engine_mock
         run: ruff format --check ai_engine_mock/
+
+  # ── End to end ───────────────────────────────────────────────────────────────
+  e2e:
+    name: End to end, flujos basicos
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # El navegador pesa unos 170 MB y compilar el entorno cuesta mas que los propios tests.
+      - name: Cache del entorno de Playwright
+        uses: actions/cache@v4
+        with:
+          path: |
+            e2e/.venv
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-e2e-${{ hashFiles('e2e/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-e2e-
+
+      # Las librerias de sistema de Chromium van por apt, asi que no entran en el cache.
+      - name: Dependencias de sistema de Chromium
+        run: |
+          python -m venv e2e/.venv
+          e2e/.venv/bin/pip install -q -r e2e/requirements.txt
+          sudo e2e/.venv/bin/playwright install-deps chromium
+
+      - name: Configurar el entorno
+        run: |
+          cp .env.example .env
+          sed -i "s|^SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$(openssl rand -base64 48)|" .env
+
+      - name: Levantar base de datos y correo
+        run: |
+          make network-create
+          docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --wait db mailpit
+
+      - name: Preparar la base de datos
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.mock.yml run --rm --no-deps backend \
+            sh -c "mix ecto.create && mix ecto.migrate && mix event_store.create && mix event_store.init && mix run priv/repo/seeds.exs"
+
+      - name: Levantar la aplicacion con el motor simulado
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --wait ai_engine backend frontend
+
+      - name: Tests de extremo a extremo
+        run: make e2e-tests
+
+      - name: Logs de los servicios si algo falla
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.mock.yml logs --tail 200
