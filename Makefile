@@ -1,4 +1,4 @@
-.PHONY: e2e-tests ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: e2e-tests ai-bench-predict ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 -include .env
 export
@@ -247,6 +247,16 @@ else
 	$(COMPOSE_CPU) run --rm --no-deps ai_engine python bench_explain.py --device cpu
 endif
 
+ai-bench-predict: ## Latencia de proponer codigos. Uso: make ai-bench-predict [DEVICE=cuda] [N=30]
+	@echo "$(BLUE)Midiendo la latencia de prediccion ($(or $(DEVICE),cpu))...$(NC)"
+ifeq ($(DEVICE),cuda)
+	$(COMPOSE) run --rm --no-deps \
+		-v $(PWD)/ai_engine:/app -v $(PWD)/training/csv_import_scripts:/data \
+		-w /app --entrypoint python3 training bench_predict.py --device cuda --n $(or $(N),30)
+else
+	$(COMPOSE_CPU) run --rm --no-deps ai_engine python bench_predict.py --device cpu --n $(or $(N),30)
+endif
+
 ai-error-analysis: ## Clasificar los errores del modelo sobre test (especificidad vs comprensión)
 	@echo "$(BLUE)Analizando los errores del modelo...$(NC)"
 	$(if $(GPU),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python error_analysis.py \
@@ -403,9 +413,12 @@ cpu-up: frontend-install network-create ## Levantar servicios en modo CPU (sin G
 	@echo "  - Prometheus:    http://localhost:9090"
 	@echo "  - PostgreSQL:    localhost:5432"
 
-db-backup: ## Backup de la base de datos
+# Las dos bases de datos, no solo la de la aplicacion: el registro de eventos es el historial
+# inmutable de decisiones y es lo unico que no se puede reconstruir si se pierde.
+db-backup: ## Backup de la aplicacion y del registro de eventos
 	@echo "$(GREEN)Creando backup...$(NC)"
-	$(COMPOSE) exec db pg_dump -U postgres cie10_app > backup_$(shell date +%Y%m%d_%H%M%S).sql
+	$(COMPOSE) exec -T db pg_dump -U postgres cie10_app > backup_app_$(shell date +%Y%m%d_%H%M%S).sql
+	$(COMPOSE) exec -T db pg_dump -U postgres cie10_eventstore > backup_eventstore_$(shell date +%Y%m%d_%H%M%S).sql
 	@echo "$(GREEN)Backup creado!$(NC)"
 
 db-reset: ## Reset completo: drop + backend-seed
