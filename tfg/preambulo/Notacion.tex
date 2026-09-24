@@ -16,8 +16,6 @@ $z_c$        & : & \emph{Logit} del código $c$: salida del clasificador antes d
 $\sigma(z)$  & : & Función sigmoide, que convierte un \emph{logit} en una probabilidad entre 0 y 1 \\
 $\tau$       & : & Umbral de decisión: un código se propone si $\sigma(z_c) \geq \tau$ \\
 $\beta$      & : & Peso del diccionario en el modo fusionado: $s_c = z_c + \beta \cdot \mathrm{conf}(\mathrm{bloque}(c))$ \\
-$\lambda, \gamma$ & : & Parámetros de la calibración entre clases de la reordenación posterior \\
-$\mu_c, \sigma_c$ & : & Media y desviación típica del \emph{logit} de la clase $c$ sobre un corpus de referencia \\
 $w_c$        & : & \texttt{pos\_weight} de la clase $c$: peso del término positivo en la pérdida, que compensa el desequilibrio \\
 $|W|$        & : & Número de palabras candidatas de un informe en el cálculo de la atribución \\
 \end{tabular}
