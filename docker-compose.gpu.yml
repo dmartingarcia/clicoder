@@ -3,6 +3,8 @@ services:
     build:
       args:
         BUILD_WITH_CUDA: "1"
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
     # Sin esto la imagen se compila con CUDA pero el servicio arranca igualmente en CPU, porque
     # el Dockerfile deja DEVICE=cpu por defecto. El sintoma no es un error: el motor funciona,
     # solo que la atribucion pasa de medio segundo a diez y la tarjeta se queda sin usar.

@@ -54,7 +54,15 @@ ENV MODEL_DIR=/app/model
 ENV DEVICE=cpu
 ENV HF_HOME=/cache/huggingface
 
-RUN groupadd appuser && useradd -g appuser -m appuser && \
+# El uid se fija a proposito. La base CUDA ya trae un usuario en el 1000, asi que un useradd
+# sin -u caia en el 1001 y el contenedor no podia escribir en la cache de Hugging Face montada
+# desde el host, que es del 1000. El sintoma era enganoso: el servicio arrancaba y respondia,
+# pero sin modelo, porque la descarga fallaba con un permiso denegado.
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN if getent passwd ${USER_ID} >/dev/null; then userdel -r "$(getent passwd ${USER_ID} | cut -d: -f1)" 2>/dev/null || true; fi && \
+    if getent group ${GROUP_ID} >/dev/null; then groupdel "$(getent group ${GROUP_ID} | cut -d: -f1)" 2>/dev/null || true; fi && \
+    groupadd -g ${GROUP_ID} appuser && useradd -u ${USER_ID} -g appuser -m appuser && \
     chown -R appuser:appuser /app
 
 USER appuser
