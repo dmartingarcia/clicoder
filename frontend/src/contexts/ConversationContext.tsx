@@ -257,6 +257,16 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
     ch.on('analysis_failed', (payload: { error: string }) => {
       setIsAnalyzing(false);
       toast.error(t('errors.analysis_failed', { error: payload.error }));
+      // Si el resumen habia empezado a llegar, su tarjeta se queda con el indicador de
+      // "escribiendo" para siempre: el evento que lo retira es analysis_complete, que ya no
+      // va a llegar. Se cierra aqui con lo que hubiera alcanzado a escribir.
+      setChatItems((prev) =>
+        prev.map((item) =>
+          item.kind === 'card' && item.card_id.startsWith('streaming-summary-')
+            ? { ...item, card_id: `done-summary-${item.message_id}` }
+            : item
+        )
+      );
     });
 
     ch.on('code_validated', (payload: { code_id: string }) => {

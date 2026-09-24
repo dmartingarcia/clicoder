@@ -4,14 +4,23 @@ defmodule AppWeb.Admin.SettingsLive do
   alias App.AIEngineSettings
   alias App.SummarizerSettings
 
+  # Las cifras son las medidas sobre el conjunto de prueba (ver AnexoF del TFG). Se muestran en
+  # el panel porque la diferencia entre opciones es grande y no es evidente: "Ambos" suena a
+  # mejor que cada uno por separado y en realidad rinde peor que cualquiera de los dos.
   @engines [
     {"bert", "BERT (RigoBERTa)",
-     "Clasificador neuronal multi-label. Requiere GPU/CPU con modelo entrenado."},
+     "Clasificador neuronal multi-label. Requiere GPU/CPU con modelo entrenado. " <>
+       "MAP 0,434 · F1 0,487."},
     {"dict", "Diccionario",
-     "Reglas deterministas por términos clínicos. Sin GPU, siempre disponible."},
-    {"both", "Ambos", "BERT y diccionario en paralelo. Muestra predicciones de los dos motores."},
+     "Reglas deterministas por términos clínicos. Sin GPU, siempre disponible. " <>
+       "MAP 0,145 · F1 0,304: acierta el bloque pero no ordena dentro de él."},
+    {"both", "Ambos",
+     "Concatena las listas de los dos motores. Peor que cualquiera de ellos por separado " <>
+       "(F1 0,302), porque mezcla dos escalas de puntuación que no son comparables. " <>
+       "Se conserva para poder contrastar los dos motores lado a lado."},
     {"fused", "Fusionado",
-     "Combina las puntuaciones de ambos antes de ordenar, en vez de concatenar sus listas."}
+     "Suma la confianza del diccionario al logit del modelo antes de ordenar, en un único " <>
+       "ranking. La mejor opción medida: MAP 0,545 · F1 0,597."}
   ]
 
   # Las cuatro estrategias devuelven términos medidos de verdad; lo que cambia es a cuántas
@@ -193,8 +202,9 @@ defmodule AppWeb.Admin.SettingsLive do
       <div>
         <h1 class="text-2xl font-bold text-gray-800 mb-2">Configuración</h1>
         <p class="text-gray-500 text-sm">
-          Ajustes globales del sistema. Los cambios se aplican de inmediato pero
-          se pierden al reiniciar el servidor.
+          Ajustes globales del sistema. Los cambios se aplican de inmediato. El motor
+          de análisis vuelve a su valor por defecto al reiniciar el servidor, porque
+          sirve para comparar durante la evaluación; el resto se conserva.
         </p>
       </div>
 

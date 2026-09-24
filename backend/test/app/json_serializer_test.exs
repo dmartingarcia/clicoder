@@ -74,7 +74,6 @@ defmodule App.JsonSerializerTest do
           conversation_id: "conv-1",
           message_id: "msg-1",
           user_id: "user-1",
-          content: "Hello",
           timestamp: nil
         })
 
@@ -82,7 +81,7 @@ defmodule App.JsonSerializerTest do
       result = JsonSerializer.deserialize(json, type: type)
 
       assert %App.Events.MessageSent{} = result
-      assert result.content == "Hello"
+      assert result.user_id == "user-1"
     end
 
     test "deserializes a non-map value (list) without struct conversion" do
