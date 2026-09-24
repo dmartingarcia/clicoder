@@ -219,9 +219,10 @@ describe('I18nProvider', () => {
       });
 
       const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
-      const putCall = calls.find(([url, opts]: [string, RequestInit]) =>
-        url.includes('/users/locale') && (opts as RequestInit).method === 'PUT'
-      );
+      const putCall = calls.find((call) => {
+        const [url, opts] = call as [string, RequestInit];
+        return url.includes('/users/locale') && opts.method === 'PUT';
+      });
       expect(putCall).toBeDefined();
       expect((putCall![1] as RequestInit).headers).toMatchObject({
         Authorization: 'Bearer my-token',
@@ -239,7 +240,7 @@ describe('I18nProvider', () => {
       await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
       const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
-      const putCall = calls.find(([url]: [string]) => url.includes('/users/locale'));
+      const putCall = calls.find((call) => (call as [string])[0].includes('/users/locale'));
       expect(putCall).toBeUndefined();
     });
   });
