@@ -10,7 +10,7 @@ defmodule AppWeb.Admin.SettingsLive do
   @engines [
     {"bert", "BERT (RigoBERTa)",
      "Clasificador neuronal multi-label. Requiere GPU/CPU con modelo entrenado. " <>
-       "MAP 0,434 · F1 0,487."},
+       "MAP 0,454 · F1 0,497."},
     {"dict", "Diccionario",
      "Reglas deterministas por términos clínicos. Sin GPU, siempre disponible. " <>
        "MAP 0,145 · F1 0,304: acierta el bloque pero no ordena dentro de él."},
@@ -20,7 +20,7 @@ defmodule AppWeb.Admin.SettingsLive do
        "Se conserva para poder contrastar los dos motores lado a lado."},
     {"fused", "Fusionado",
      "Suma la confianza del diccionario al logit del modelo antes de ordenar, en un único " <>
-       "ranking. La mejor opción medida: MAP 0,545 · F1 0,597."}
+       "ranking. La mejor opción medida: MAP 0,554 · F1 0,610."}
   ]
 
   # Las cuatro estrategias devuelven términos medidos de verdad; lo que cambia es a cuántas
