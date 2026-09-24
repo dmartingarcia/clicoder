@@ -124,7 +124,11 @@ class TestEnsureDownloaded:
             def st_size(self):
                 return 10**12
 
-        monkeypatch.setattr(Path, "stat", lambda self: _StatConTamanoFalso(stat_real(self)))
+        # Acepta los kwargs de Path.stat (follow_symlinks): sin ellos, la limpieza de
+        # directorios temporales de pytest revienta en Python 3.12 al llamar a exists().
+        monkeypatch.setattr(
+            Path, "stat", lambda self, **kw: _StatConTamanoFalso(stat_real(self, **kw))
+        )
 
         llamadas = []
         monkeypatch.setattr(
