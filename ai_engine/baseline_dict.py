@@ -195,13 +195,16 @@ def _get_nlp():
     Modelo transformer para lematización. Más preciso que el estadístico porque
     usa contexto completo de la frase para desambiguar lemas y POS.
     No tiene word vectors propios, por eso se carga un segundo modelo para sinónimos.
-    Usa GPU automáticamente si cupy está disponible (spacy.prefer_gpu).
+    Se fija a CPU a proposito. Con `prefer_gpu` el pipeline quedaba a medias entre dispositivos
+    y la lematizacion fallaba con «Expected all tensors to be on the same device», tumbando el
+    motor fusionado entero en cuanto el contenedor veia la tarjeta. Tampoco hay nada que ganar:
+    este modelo no consulta el encoder del clasificador y su coste no depende del acelerador.
     """
     global _nlp_trf
     if _nlp_trf is None:
         import spacy
 
-        spacy.prefer_gpu()
+        spacy.require_cpu()
         _nlp_trf = spacy.load("es_dep_news_trf", disable=["ner"])
     return _nlp_trf
 
