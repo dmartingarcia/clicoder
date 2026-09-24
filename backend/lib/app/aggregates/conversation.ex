@@ -48,7 +48,6 @@ defmodule App.Aggregates.Conversation do
       conversation_id: cmd.conversation_id,
       message_id: cmd.message_id,
       user_id: cmd.user_id,
-      content: cmd.content,
       timestamp: cmd.timestamp
     }
   end
@@ -60,7 +59,6 @@ defmodule App.Aggregates.Conversation do
     %AnalysisRequested{
       conversation_id: cmd.conversation_id,
       message_id: cmd.message_id,
-      report_text: cmd.report_text,
       requested_at: DateTime.utc_now()
     }
   end
@@ -74,7 +72,8 @@ defmodule App.Aggregates.Conversation do
       reasoning: cmd.reasoning,
       confidence_scores: cmd.confidence_scores,
       received_at: DateTime.utc_now(),
-      engine: cmd.engine
+      engine: cmd.engine,
+      model_version: cmd.model_version
     }
   end
 
@@ -126,7 +125,6 @@ defmodule App.Aggregates.Conversation do
     message = %{
       message_id: evt.message_id,
       user_id: evt.user_id,
-      content: evt.content,
       timestamp: evt.timestamp
     }
 

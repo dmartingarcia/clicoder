@@ -4,6 +4,7 @@ Una sola pasada del encoder produce probabilidades para los ~1767 códigos a la 
 Contiene además el registro de estrategias de atribución que usa /explain.
 """
 
+import hashlib
 import json
 import logging
 import sys
@@ -131,6 +132,9 @@ class _CtxAtribucion:
     baseline: torch.Tensor
     max_len: int
     batch_size: int
+    # Palabras que se verifican siempre, aunque el gradiente no las priorice. Las aporta el
+    # diccionario: son frases clinicas que ya sabemos que disparan alguno de los codigos.
+    prioritarias: frozenset[int] = frozenset()
 
     def caida_al_enmascarar(self, grupos: list[list[int]]) -> torch.Tensor:
         """Cuánto baja el logit de cada código al enmascarar cada grupo de palabras.
@@ -151,6 +155,28 @@ class _CtxAtribucion:
                 logits = self.modelo(ids, self.base_mask.repeat(len(trozo), 1))
                 salida.append((self.baseline - logits[:, self.code_indices].cpu()).clamp(min=0))
         return torch.cat(salida, 0) if salida else torch.zeros(0, len(self.code_indices))
+
+
+def _indices_prioritarios(
+    raw_words: list[str], candidatas: list[int], terminos: set[str] | None
+) -> frozenset[int]:
+    """Traduce terminos del diccionario a indices de palabra dentro de las candidatas.
+
+    Un termino del diccionario puede ser una frase ("dolor abdominal"), asi que se casa palabra
+    a palabra: cualquier candidata que aparezca en algun termino entra. Es deliberadamente
+    generoso, porque el coste de verificar una palabra de mas es una pasada del encoder y el de
+    dejar fuera la que justifica el codigo es una explicacion incompleta.
+    """
+    import string as _string
+
+    if not terminos:
+        return frozenset()
+    sueltas = {p for t in terminos for p in str(t).lower().split() if len(p) >= 4}
+    return frozenset(
+        w
+        for w in candidatas
+        if w < len(raw_words) and raw_words[w].strip(_string.punctuation).lower() in sueltas
+    )
 
 
 def _explicar_exhaustivo(ctx: _CtxAtribucion, candidatas: list[int]) -> dict[int, torch.Tensor]:
@@ -181,12 +207,16 @@ def _explicar_divide_y_venceras(
     sí (tapar una sola no baja el logit porque la otra sostiene la predicción), motivo por
     el que el umbral se deja bajo y por el que conviene contrastar con el exhaustivo.
 
-    MEDIDO: en este corpus NO compensa. Sobre informes de CodiEsp resulta un 73 % MÁS LENTO
-    que el exhaustivo (79,4 s frente a 45,8 s; 218 evaluaciones de grupo frente a 128), y
-    además pierde algo de fidelidad. La razón es estructural y no de implementación: el árbol
-    de recursión tiene aproximadamente el doble de nodos que hojas, de modo que solo gana si
-    la poda dispara a menudo, y aquí casi nunca dispara porque demasiadas palabras mueven el
-    logit por encima del umbral. La importancia no es lo bastante dispersa.
+    MEDIDO: en este corpus NO compensa, y no es cuestión de ajustar el umbral. Con el valor por
+    defecto resulta un 72 % más lento que el exhaustivo (3,09 s frente a 1,80 s en GPU) porque
+    el árbol tiene el doble de nodos que hojas y la poda casi nunca dispara: un informe tiene
+    unas 147 palabras candidatas y con umbral 0,05 el 71,9 % supera el corte.
+
+    Subir el umbral acelera pero destruye la fidelidad: 0,25 iguala al exhaustivo en tiempo con
+    solape 0,77, y 0,50 baja a 0,61. La comparación que zanja el asunto es con el filtro por
+    gradiente: con 96 candidatos alcanza el mismo solape 0,96 en 1,38 s, menos de la mitad. A
+    igualdad de fidelidad es más barato, y a igualdad de coste es más fiel. Esta estrategia está
+    dominada en todos los puntos de operación.
 
     Se conserva en el registro porque el resultado es reproducible y porque en un corpus con
     importancia más concentrada sí ganaría, pero NO debe usarse como método por defecto.
@@ -254,7 +284,12 @@ def _explicar_gradiente_filtrado(
         w: float(sum(saliencia[p] for p in ctx.word_positions[w] if p < len(saliencia)))
         for w in candidatas
     }
-    mejores = sorted(candidatas, key=lambda w: -puntuacion[w])[:n_verificar]
+    # Las prioritarias entran de oficio; el gradiente reparte lo que queda del presupuesto.
+    forzadas = [w for w in candidatas if w in ctx.prioritarias]
+    resto = sorted(
+        (w for w in candidatas if w not in ctx.prioritarias), key=lambda w: -puntuacion[w]
+    )
+    mejores = (forzadas + resto)[:n_verificar]
     caidas = ctx.caida_al_enmascarar([[w] for w in mejores])
     return {w: caidas[i] for i, w in enumerate(mejores)}
 
@@ -298,6 +333,11 @@ class CIE10Classifier:
 
         # Checkpoint
         model_file = self.config.get("model_file", "classifier.pt")
+        # La trazabilidad exige saber con qué pesos se predijo cada informe. El nombre del
+        # fichero no sirve: el despliegue copia siempre sobre 'classifier.pt'. El hash del
+        # contenido sí identifica los pesos sin ambiguedad.
+        digest = hashlib.sha256((model_path / model_file).read_bytes()).hexdigest()[:12]
+        self.version = f"{self.config['model_name']}@{digest}"
         ckpt = torch.load(
             model_path / model_file,
             map_location=self.device,
@@ -440,6 +480,7 @@ class CIE10Classifier:
         batch_size: int = 16,
         with_scores: bool = False,
         method: str | None = None,
+        prioritarias: set[str] | None = None,
     ) -> dict[int, list]:
         """Atribución por enmascaramiento (masking perturbation) por código predicho.
 
@@ -532,6 +573,7 @@ class CIE10Classifier:
                 baseline=baseline,
                 max_len=max_len,
                 batch_size=batch_size,
+                prioritarias=_indices_prioritarios(raw_words, candidates, prioritarias),
             )
             elegido = method or self.config.get("explain_method", EXPLAIN_POR_DEFECTO)
             if elegido not in METODOS_EXPLAIN:

@@ -10,6 +10,7 @@ defmodule AppWeb.ConversationChannel do
     StartConversation,
     SendMessage,
     AnalyzeReport,
+    ReceiveAIPrediction,
     ValidateCode,
     RejectCode
   }
@@ -20,6 +21,7 @@ defmodule AppWeb.ConversationChannel do
     ConversationProjection,
     PredictedCodeProjection,
     AnalysisCardProjection,
+    MessageProjection,
     CodeSuggestionProjection
   }
 
@@ -105,6 +107,7 @@ defmodule AppWeb.ConversationChannel do
     }
 
     CommandedApplication.dispatch(msg_cmd)
+    persist_report_text(conversation_id, message_id, user_id, report_text, timestamp)
 
     analyze_cmd = %AnalyzeReport{
       conversation_id: conversation_id,
@@ -313,6 +316,33 @@ defmodule AppWeb.ConversationChannel do
     }
   end
 
+  # El texto del informe no viaja en los eventos (categoria especial del articulo 9 del RGPD, y
+  # el registro de eventos no se puede borrar). Se escribe aqui, sobre la proyeccion, que es lo
+  # que elimina el purgado. El upsert cubre las dos carreras posibles con el proyector: si llega
+  # antes, actualiza la fila que este creo; si llega despues, no pisa nada.
+  defp persist_report_text(conversation_id, message_id, user_id, texto, timestamp) do
+    case Repo.get_by(ConversationProjection, conversation_id: conversation_id) do
+      nil ->
+        :ok
+
+      conversation ->
+        %MessageProjection{
+          message_id: message_id,
+          content: texto,
+          user_id: user_id,
+          timestamp: DateTime.truncate(timestamp, :second),
+          message_type: "user_message",
+          conversation_id: conversation.id
+        }
+        |> Repo.insert(
+          on_conflict: [set: [content: texto]],
+          conflict_target: :message_id
+        )
+
+        :ok
+    end
+  end
+
   # Inserts analysis cards directly (fallback when CQRS projection is delayed/fails).
   defp persist_cards_direct(conversation_id, message_id, cards) do
     conversation = Repo.get_by(ConversationProjection, conversation_id: conversation_id)
@@ -422,6 +452,37 @@ defmodule AppWeb.ConversationChannel do
 
   # Always inserts predicted codes directly with pre-generated UUIDs so we can
   # broadcast them immediately in analysis_complete (avoids async CQRS timing issues).
+  # Auditoria: deja en el registro inmutable que informe se analizo, con que motor y con que
+  # pesos. Sin la version del modelo no se puede reconstruir a posteriori por que el sistema
+  # propuso un codigo concreto, que es justo lo que exige la trazabilidad clinica.
+  defp registrar_prediccion(conversation_id, message_id, cards, engine, model_version) do
+    codigos =
+      cards
+      |> Enum.find(%{}, fn c -> c["type"] == "codes" end)
+      |> Map.get("content", [])
+
+    cmd = %ReceiveAIPrediction{
+      conversation_id: conversation_id,
+      message_id: message_id,
+      cards: [],
+      predicted_codes: Enum.map(codigos, & &1["code"]),
+      confidence_scores: Enum.map(codigos, & &1["confidence"]),
+      engine: engine,
+      model_version: model_version
+    }
+
+    case CommandedApplication.dispatch(cmd) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("No se pudo registrar la prediccion",
+          reason: inspect(reason),
+          conversation_id: conversation_id
+        )
+    end
+  end
+
   defp persist_predicted_codes_direct(conversation_id, cards) do
     conversation = Repo.get_by(ConversationProjection, conversation_id: conversation_id)
 
@@ -497,6 +558,7 @@ defmodule AppWeb.ConversationChannel do
           )
 
           persist_cards_direct(conversation_id, message_id, cards)
+          registrar_prediccion(conversation_id, message_id, cards, engine, body["model_version"])
           request_triggers_async(ai_url, report_text, message_id, conversation_id, cards, socket)
 
           Enum.each(cards, fn card ->

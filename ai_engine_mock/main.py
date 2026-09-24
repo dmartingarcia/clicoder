@@ -139,7 +139,9 @@ def _add_relative_confidence(codes: list[dict]) -> list[dict]:
     lo, hi = min(values), max(values)
     spread = hi - lo
     for c in codes:
-        c["relative_confidence"] = round((c["confidence"] - lo) / spread, 4) if spread > 1e-6 else 1.0
+        c["relative_confidence"] = (
+            round((c["confidence"] - lo) / spread, 4) if spread > 1e-6 else 1.0
+        )
     return codes
 
 
@@ -178,9 +180,7 @@ def build_summary(text: str, codes: list[dict]) -> str:
 
 def build_recommendations(codes: list[dict]) -> str:
     if not codes or codes[0]["code"] == "Z03.89":
-        return (
-            "No se identificaron patologías específicas. Se recomienda revisión manual del informe."
-        )
+        return "No se identificaron patologías específicas. Se recomienda revisión manual del informe."
 
     parts = []
     code_set = {c["code"] for c in codes}
@@ -198,7 +198,9 @@ def build_recommendations(codes: list[dict]) -> str:
             "Evaluar función respiratoria y considerar derivación a neumología si hay progresión."
         )
     if "F32.9" in code_set:
-        parts.append("Considerar evaluación psiquiátrica y seguimiento en salud mental.")
+        parts.append(
+            "Considerar evaluación psiquiátrica y seguimiento en salud mental."
+        )
     if not parts:
         parts.append(
             "Revisar los códigos asignados con el equipo clínico y confirmar el diagnóstico."
@@ -250,7 +252,7 @@ async def predict_codes(request: AnalysisRequest):
     await asyncio.sleep(random.uniform(0.3, 0.9))
     engine = request.engine if request.engine in ("bert", "dict") else "bert"
     codes = analyze_text(text, engine=engine)
-    return {"cards": [{"type": "codes", "content": codes}]}
+    return {"cards": [{"type": "codes", "content": codes}], "model_version": "mock@000000000000"}
 
 
 @app.post("/summarize/stream", summary="Resumen médico en streaming (NDJSON, mock)")

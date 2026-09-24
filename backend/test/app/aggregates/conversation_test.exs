@@ -7,6 +7,7 @@ defmodule App.Aggregates.ConversationTest do
     StartConversation,
     SendMessage,
     AnalyzeReport,
+    ReceiveAIPrediction,
     ValidateCode,
     RejectCode
   }
@@ -90,7 +91,7 @@ defmodule App.Aggregates.ConversationTest do
         timestamp: @now
       }
 
-      assert %MessageSent{message_id: "msg-1", content: "Hello"} =
+      assert %MessageSent{message_id: "msg-1"} =
                Conversation.execute(started_conversation(), cmd)
     end
   end
@@ -103,7 +104,6 @@ defmodule App.Aggregates.ConversationTest do
         conversation_id: @conversation_id,
         message_id: "msg-1",
         user_id: @user_id,
-        content: "Hello",
         timestamp: @now
       }
 
@@ -119,7 +119,6 @@ defmodule App.Aggregates.ConversationTest do
         Conversation.apply(conv, %MessageSent{
           message_id: "m1",
           user_id: @user_id,
-          content: "A",
           timestamp: @now,
           conversation_id: @conversation_id
         })
@@ -128,7 +127,6 @@ defmodule App.Aggregates.ConversationTest do
         Conversation.apply(conv, %MessageSent{
           message_id: "m2",
           user_id: @user_id,
-          content: "B",
           timestamp: @now,
           conversation_id: @conversation_id
         })
@@ -158,7 +156,6 @@ defmodule App.Aggregates.ConversationTest do
       event = %AnalysisRequested{
         conversation_id: @conversation_id,
         message_id: "m1",
-        report_text: "R",
         requested_at: @now
       }
 
@@ -177,7 +174,6 @@ defmodule App.Aggregates.ConversationTest do
       event = %AnalysisRequested{
         conversation_id: @conversation_id,
         message_id: "m",
-        report_text: "R",
         requested_at: @now
       }
 
@@ -190,7 +186,6 @@ defmodule App.Aggregates.ConversationTest do
       event_req = %AnalysisRequested{
         conversation_id: @conversation_id,
         message_id: "m",
-        report_text: "R",
         requested_at: @now
       }
 
@@ -411,11 +406,10 @@ defmodule App.Aggregates.ConversationTest do
           conversation_id: "c1",
           message_id: "m1",
           user_id: "u1",
-          content: "informe",
           timestamp: DateTime.utc_now()
         })
 
-      assert [%{message_id: "m1", content: "informe"}] = conv.messages
+      assert [%{message_id: "m1", user_id: "u1"}] = conv.messages
     end
   end
 
@@ -432,6 +426,30 @@ defmodule App.Aggregates.ConversationTest do
       }
 
       assert {:error, :cannot_reject_validated_code} = Conversation.execute(conv, cmd)
+    end
+  end
+
+  describe "ReceiveAIPrediction" do
+    # Sin la version del modelo no se puede reconstruir a posteriori por que el sistema propuso
+    # un codigo concreto: los pesos cambian con cada reentrenamiento y el fichero desplegado se
+    # llama siempre igual. Es el requisito de trazabilidad, de modo que se fija aqui.
+    test "el evento lleva la version del modelo y el informe analizado" do
+      cmd = %ReceiveAIPrediction{
+        conversation_id: @conversation_id,
+        message_id: "msg-1",
+        cards: [],
+        predicted_codes: ["I10"],
+        confidence_scores: [0.91],
+        engine: "bert",
+        model_version: "IIC/RigoBERTa-Clinical@410b958b2160"
+      }
+
+      assert %AIPredictionReceived{
+               message_id: "msg-1",
+               engine: "bert",
+               model_version: "IIC/RigoBERTa-Clinical@410b958b2160"
+             } =
+               Conversation.execute(%Conversation{conversation_id: @conversation_id}, cmd)
     end
   end
 end
