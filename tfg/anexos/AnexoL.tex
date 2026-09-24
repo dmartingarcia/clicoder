@@ -37,7 +37,7 @@ Desde la perspectiva del aprendizaje estadístico, añadir ejemplos retrotraduci
 
 \begin{itemize}
   \item \textbf{Amplía la distribución de entrada.} El modelo ve la misma nota expresada con diferentes frases, reduciendo la dependencia hacia formulaciones concretas presentes solo en el entrenamiento.
-  \item \textbf{Reduce el sobreajuste.} Al cuadruplicar el tamaño del dataset con variantes distintas, la ratio parámetros/ejemplos mejora sin necesidad de reducir la capacidad del modelo.
+  \item \textbf{Reduce el sobreajuste.} Al cuadruplicar el tamaño del corpus con variantes distintas, la ratio parámetros/ejemplos mejora sin necesidad de reducir la capacidad del modelo.
   \item \textbf{Beneficia especialmente a las clases minoritarias.} Cada código raro que aparece en un documento pasa a aparecer también en sus tres versiones retrotraducidas, cuadruplicando la señal de entrenamiento para esa clase.
 \end{itemize}
 
@@ -67,6 +67,8 @@ Se eligió Azure Translator por la combinación de calidad y ausencia de requisi
 
 \subsection{Límites del nivel gratuito F0}
 
+Las condiciones del nivel F0 se resumen en la Tabla~\ref{tab:azure-f0}.
+
 \begin{table}[h]
 \centering
 \caption{Características del nivel gratuito F0 de Azure Translator.}
@@ -85,7 +87,7 @@ Latencia típica            & 200--800 ms por lote \\
 \end{tabular}
 \end{table}
 
-El corpus CodiEsp de entrenamiento contiene \textbf{1.158.623 caracteres}. Con pivot EN (ES→EN→ES), cada carácter se traduce dos veces, lo que produce un consumo estimado de \textbf{2.317.246 caracteres}: un 16\,\% por encima del límite mensual del nivel F0. Los primeros 2.000.000 caracteres se consumieron con la cuota gratuita del tier F0; los \textasciitilde317.000 restantes se facturaron en modalidad \emph{pay-as-you-go}, cubiertos por el \textbf{crédito gratuito de 200\,\$} que Azure concede a las cuentas nuevas. Esto permitió completar la aumentación en una sola sesión sin coste real.
+El corpus CodiEsp de entrenamiento contiene \textbf{1.158.623 caracteres}. Cada pivote traduce ida y vuelta (por ejemplo ES→EN→ES), de modo que consume el doble: \textbf{2.317.246 caracteres por pivote}, ya un 16\,\% por encima del límite mensual del nivel F0. Con los tres pivotes empleados el total asciende a \textbf{6.951.738 caracteres}, equivalentes a 3,5 cuotas mensuales gratuitas. Los primeros 2.000.000 se cubrieron con la cuota mensual del nivel F0 y los 4.951.738 restantes se facturaron en modalidad \emph{pay-as-you-go} contra el \textbf{crédito gratuito de 200\,\$} que Azure concede a las cuentas nuevas, que quedó agotado al completar los tres pivotes. La aumentación no tuvo coste real, pero conviene dejar claro que \textbf{no cabe en el nivel gratuito}: quien quiera reproducirla necesita ese crédito inicial, repartir la carga entre varios recursos F0 en regiones distintas o extenderla a lo largo de varios meses.
 
 Si el crédito gratuito se agotase antes de completar las notas, el script permite reanudar con \texttt{RESUME=1}: cuenta las filas ya escritas en el CSV de salida y retoma desde la siguiente sin retraducir nada. Como alternativa, Azure permite crear múltiples recursos Translator F0 en diferentes regiones bajo la misma cuenta, cada uno con su cuota independiente.
 
@@ -95,7 +97,7 @@ Si el crédito gratuito se agotase antes de completar las notas, el script permi
 
 \subsection{Distribución de códigos antes y después}
 
-El corpus de entrenamiento de CodiEsp contiene 500 documentos con una media de \textbf{11,28 etiquetas por documento}, cubriendo los 1.767 códigos presentes en el conjunto de entrenamiento. La distribución de frecuencias es marcadamente sesgada: el \textbf{56,5\,\%} de los códigos aparece exactamente una vez, y el \textbf{88,7\,\%} tiene cinco o menos apariciones. Solo 200 códigos (11,3\,\%) superan las cinco ocurrencias.
+El corpus de entrenamiento de CodiEsp contiene 500 documentos con una media de \textbf{11,28 etiquetas por documento}, cubriendo los 1.767 códigos presentes en el conjunto de entrenamiento. La distribución de frecuencias es marcadamente sesgada: el \textbf{56,5\,\%} de los códigos aparece exactamente una vez, y el \textbf{88,7\,\%} tiene cinco o menos apariciones. Solo 200 códigos (11,3\,\%) superan las cinco ocurrencias (Tabla~\ref{tab:code-dist}).
 
 \begin{table}[h]
 \centering
@@ -114,6 +116,8 @@ $>$ 5 apariciones   & 200  & 11,3\,\% \\
 \hline
 \end{tabular}
 \end{table}
+
+La evolución del corpus en cada etapa de aumentación queda recogida en la Tabla~\ref{tab:aug-results}.
 
 \begin{table}[h]
 \centering
@@ -158,6 +162,8 @@ $\Delta$ palabras (rango)   & $-398$ a $+404$     & $-74$ a $+96$   & $-61$ a $+
 \end{table}
 
 Los tres pivotes muestran patrones claramente distintos que se complementan. El inglés produce la mayor variación absoluta en caracteres (rango $\pm$2600), con un sesgo positivo que refleja la tendencia del español recuperado a ser más explícito. El alemán reduce el recuento de caracteres ($-2{,}4$ de media) pero aumenta el de palabras ($+5{,}9$): sus compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) se descomponen al retraducirse al español en frases de varias palabras. El francés es el pivote más conservador, con mediana de variación en caracteres de $0{,}0$ y el rango más estrecho ($\pm$305~caracteres, $\pm$61~palabras), lo que era esperado dada su proximidad lingüística al español.
+
+Agrupando las notas en intervalos de 5 palabras se obtiene la distribución de la Tabla~\ref{tab:bt-dist}.
 
 \begin{table}[h]
 \centering
@@ -273,7 +279,7 @@ Cada combinación de backend y lengua pivote genera un fichero CSV independiente
 \texttt{<base>\_<backend>\_<pivot>.csv}
 \end{center}
 
-Por ejemplo, con el fichero base \texttt{codiesp\_D\_source\_train\_augmented.csv}:
+Por ejemplo, con el fichero base \texttt{codiesp\_D\_source\_train\_augmented.csv}, se generan los ficheros de la Tabla~\ref{tab:augment-files}:
 
 \begin{table}[h]
 \centering

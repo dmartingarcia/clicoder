@@ -5,13 +5,13 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 
 \section{ADR-01: Elixir y Phoenix como backend}
 
-\textbf{Contexto.} El sistema requiere gestión de múltiples conexiones WebSocket concurrentes (una por sesión activa), comunicación asíncrona con el motor de IA (cuya respuesta tarda menos de un segundo tanto en GPU como en CPU de gama alta) y un modelo de datos con trazabilidad de todas las operaciones.
+\textbf{Contexto.} El sistema requiere gestión de múltiples conexiones WebSocket concurrentes (una por sesión activa), comunicación asíncrona con el motor de IA (que propone los códigos en menos de un segundo, pero tarda decenas de segundos en justificarlos cuando no hay acelerador) y un modelo de datos con trazabilidad de todas las operaciones.
 
 \textbf{Decisión.} Se elige Elixir 1.15 con el framework Phoenix 1.8~\cite{phoenix2024}.
 
 \textbf{Justificación.}
 \begin{itemize}
-    \item WebSocket permite que el servidor notifique al cliente en cuanto la predicción está lista, evitando el \emph{polling}: sin él, el frontend tendría que interrogar al servidor repetidamente hasta obtener respuesta, lo que introduce latencia innecesaria y carga superflua. Con WebSocket la comunicación es asíncrona de forma nativa: el frontend queda a la espera y el servidor empuja el resultado en cuanto está disponible.
+    \item WebSocket permite que el servidor notifique al cliente en cuanto la predicción está lista, evitando el sondeo periódico: sin él, el frontend tendría que interrogar al servidor repetidamente hasta obtener respuesta, lo que introduce latencia innecesaria y carga superflua. Con WebSocket la comunicación es asíncrona de forma nativa: el frontend queda a la espera y el servidor empuja el resultado en cuanto está disponible.
     \item El modelo de actores de la BEAM (\emph{Erlang VM}) gestiona de forma nativa miles de procesos ligeros concurrentes sin bloqueos, lo que encaja directamente con el modelo de canales WebSocket de Phoenix~\cite{phoenix2024}.
     \item Phoenix Channels proporciona soporte integrado para WebSocket con reconexión automática, multiplexación de temas y difusión (\emph{broadcast}) a todos los clientes suscritos a un canal.
     \item La tolerancia a fallos de la BEAM (supervisores OTP) garantiza que un error en el procesamiento de una conversación no afecta al resto.
@@ -43,7 +43,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 
 \section{ADR-03: Next.js y React 19 como frontend}
 
-\textbf{Contexto.} La interfaz necesita renderizado en tiempo real (tarjetas de análisis que aparecen progresivamente), navegación entre conversaciones sin recarga de página e internacionalización (español e inglés).
+\textbf{Contexto.} La interfaz necesita renderizado en tiempo real (tarjetas de análisis que aparecen progresivamente), navegación entre conversaciones sin recarga de página e internacionalización (cinco idiomas).
 
 \textbf{Decisión.} Se elige Next.js 16~\cite{nextjs2024} con React 19 y TypeScript.
 
@@ -113,6 +113,8 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 \end{itemize}
 
 \section{Resumen de decisiones}
+
+Las siete decisiones se resumen en la Tabla~\ref{tab:adr-resumen}.
 
 \begin{table}[h]
 \centering

@@ -27,7 +27,7 @@ El \emph{notebook} \texttt{5\_clasificador\_jerarquico\_mmBert.ipynb} inició lo
 
 \subsection{Fase 4: ModernBERT (evaluación)}
 
-El \emph{notebook} \texttt{4\_clasificador\_jerarquico\_ModernBert.ipynb} evaluó la arquitectura ModernBERT~\cite{warner2024modernbert}, que obtuvo un F1-micro de 0{,}601 en pruebas de nivel~1. No se entrenó a fondo por restricciones de tiempo; queda identificado como candidato para iteraciones futuras (véase el Anexo~\ref{cap:AnexoA}).
+El \emph{notebook} \texttt{4\_clasificador\_jerarquico\_ModernBert.ipynb} evaluó la arquitectura ModernBERT~\cite{warner2024modernbert}, que obtuvo un F1-micro de 0{,}632 en pruebas de nivel~1 con el mismo presupuesto que los demás candidatos. No se llevó más allá porque está entrenado únicamente en inglés; queda identificado como candidato para iteraciones futuras (véase el Anexo~\ref{cap:AnexoA}).
 
 \subsection{Fase 5: IIC/RigoBERTa-Clinical (entrenamiento intensivo)}
 
@@ -58,7 +58,7 @@ La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de las 62
 39 & RigoBERTa-Clinical & 1767 & 96 & 0{,}481 & Ajuste umbral y \emph{pos\_weight} \\
 44 & RigoBERTa-Clinical & 1767 & 150 & 0{,}489 & Configuración 32b de referencia \\
 55 & RigoBERTa-Clinical & 1767 & 150 & 0{,}4945 & Referencia de evaluación: \texttt{20260530T030233Z} (paso 36) \\
-68 & RigoBERTa-Clinical & 1767 & 112 & 0{,}5028 & Mejor ejecución registrada hasta la fecha \\
+67 & RigoBERTa-Clinical & 1767 & 112 & 0{,}5028 & Mejor ejecución registrada hasta la fecha \\
 \hline
 \end{tabular}
 \end{table}
@@ -79,9 +79,12 @@ La Figura~\ref{fig:all-trainings} muestra la comparativa de F1-micro y F1-macro 
 
 Las 62~ejecuciones anteriores optimizaron el F1-micro, por las razones expuestas en el capítulo de desarrollo. El MAP por documento, sin embargo, es la métrica oficial del \emph{benchmark} CodiEsp y la única homogénea con los sistemas participantes, por lo que se realizó una serie de experimentos dirigidos específicamente a mejorarla.
 
+\paragraph{Procedencia de las cifras de esta sección.}
+Conviene fijarla antes de leer las tablas, porque el mismo modelo aparece con dos valores. Las cifras del modelo del paso~36 (MAP de prueba 0,4373; F1-micro 0,4887) proceden de \texttt{eval\_test.py} en precisión completa, y fueron las cifras titulares hasta que la comparación de candidatos en test (Anexo~\ref{cap:AnexoH}, sección~\ref{sec:anexoH-candidatos}) promocionó \texttt{zlpr-map} en su lugar; el cuerpo de la memoria cita ahora 0,454 y 0,495 para ese modelo. Las tablas de esta sección son anteriores a esa promoción y \textbf{comparan varias ejecuciones entre sí} con la pasada de \texttt{ensemble\_eval.py}, en precisión reducida, donde el modelo del paso~36 da 0,4342: lo que las hace comparables entre sí es que todas las filas salen de la misma pasada, no que coincidan con ninguna cifra titular. La diferencia está en la tercera cifra decimal y no altera ninguna conclusión, pero mezclar ambas procedencias al citar sí produciría una contradicción aparente.
+
 \subsection{Variabilidad estocástica como referencia}
 
-Antes de atribuir una mejora a cualquier cambio es necesario conocer el ruido del proceso. Dos ejecuciones con configuración \textbf{idéntica} (\texttt{20260530T030233Z} y \texttt{20260530T134649Z}) obtuvieron MAP de 0{,}5442 y 0{,}5317 en validación: una dispersión de \textbf{1{,}35~puntos porcentuales} atribuible únicamente a la inicialización aleatoria y al no determinismo del entrenamiento en GPU. Conviene precisar que esa cifra está medida sobre el MAP de validación restringido al vocabulario del modelo, que es la métrica que registraba el entrenamiento en ese momento, y sobre dos ejecuciones. La subsección~\ref{sec:anexoF-distribuciones} la sustituye por una estimación con cinco réplicas sobre la métrica que de verdad decide, el MAP del \emph{gold} completo en prueba: desviación típica de 0{,}0051 y rango de 1{,}06~pp. Con cualquiera de las dos lecturas la conclusión operativa es la misma: ninguna diferencia inferior al punto porcentual puede considerarse una mejora real a partir de una sola ejecución.
+Antes de atribuir una mejora a cualquier cambio es necesario conocer el ruido del proceso. Dos ejecuciones con configuración \textbf{idéntica} (\texttt{20260530T030233Z} y \texttt{20260530T134649Z}) obtuvieron MAP de 0{,}5442 y 0{,}5317 en validación: una dispersión de \textbf{1{,}25~puntos porcentuales} atribuible únicamente a la inicialización aleatoria y al no determinismo del entrenamiento en GPU. Esa cifra está medida sobre el MAP de validación restringido al vocabulario del modelo, que es la métrica que registraba el entrenamiento en ese momento, y sobre dos ejecuciones. La subsección~\ref{sec:anexoF-distribuciones} la sustituye por una estimación con cinco réplicas sobre la métrica que de verdad decide, el MAP del \emph{gold} completo en prueba: desviación típica de 0{,}0051 y rango de 1{,}06~pp. Con cualquiera de las dos lecturas la conclusión operativa es la misma: ninguna diferencia inferior al punto porcentual puede considerarse una mejora real a partir de una sola ejecución.
 
 \subsection{Selección de checkpoint por MAP}
 
@@ -110,7 +113,7 @@ El MAP evalúa el \emph{ranking} de códigos dentro de cada documento, de modo q
 
 \subsection{Observación incidental: promediado de las ejecuciones}
 
-Una variabilidad de 1{,}35~pp sugiere que reducir la varianza puede ser más rentable que perseguir configuraciones marginalmente mejores. Para comprobarlo se promediaron las probabilidades de salida de los tres \emph{checkpoints} anteriores, con los resultados de la Tabla~\ref{tab:map-ensemble}. Conviene subrayar qué es y qué no es esta prueba: los tres \emph{checkpoints} no se entrenaron para combinarse, sino que persiguen objetivos distintos (un control y dos variantes que, individualmente, resultaron peores). No se trata, por tanto, de un sistema de combinación diseñado ni evaluado como tal, sino de una comprobación posterior sobre los modelos disponibles. Por ese motivo el resultado no se reporta como resultado de este trabajo ni se emplea en la comparación con el \emph{benchmark}, que utiliza el modelo de producción.
+Una variabilidad de 1{,}25~pp sugiere que reducir la varianza puede ser más rentable que perseguir configuraciones marginalmente mejores. Para comprobarlo se promediaron las probabilidades de salida de los tres \emph{checkpoints} anteriores, con los resultados de la Tabla~\ref{tab:map-ensemble}. Conviene subrayar qué es y qué no es esta prueba: los tres \emph{checkpoints} no se entrenaron para combinarse, sino que persiguen objetivos distintos (un control y dos variantes que, individualmente, resultaron peores). No se trata, por tanto, de un sistema de combinación diseñado ni evaluado como tal, sino de una comprobación posterior sobre los modelos disponibles. Por ese motivo el resultado no se reporta como resultado de este trabajo ni se emplea en la comparación con el \emph{benchmark}, que utiliza el modelo de producción.
 
 \begin{table}[h]
 \centering
@@ -131,7 +134,7 @@ El promedio supera al modelo de producción en 3{,}1~pp de MAP sobre el gold com
 
 \subsection{Destilación del promedio}
 
-El promediado deja una pregunta abierta: si la ganancia existe pero no cabe en el VPS, ¿puede transferirse a un único modelo? La vía estándar es la destilación de conocimiento~\cite{hinton2015distilling}: entrenar un clasificador nuevo (alumno) contra las probabilidades que produce el promedio (profesor), en lugar de contra las etiquetas binarias del corpus. La hipótesis es que las probabilidades del profesor contienen información que las etiquetas no tienen (sobre todo en los negativos, donde el orden relativo entre códigos plausibles y códigos absurdos es precisamente lo que mide el MAP) y que el alumno puede aprenderla conservando el coste de inferencia de un solo modelo.
+El promediado deja una pregunta abierta: si la ganancia existe pero no cabe en el presupuesto de inferencia, ¿puede transferirse a un único modelo? La vía estándar es la destilación de conocimiento~\cite{hinton2015distilling}: entrenar un clasificador nuevo (alumno) contra las probabilidades que produce el promedio (profesor), en lugar de contra las etiquetas binarias del corpus. La hipótesis es que las probabilidades del profesor contienen información que las etiquetas no tienen (sobre todo en los negativos, donde el orden relativo entre códigos plausibles y códigos absurdos es precisamente lo que mide el MAP) y que el alumno puede aprenderla conservando el coste de inferencia de un solo modelo.
 
 Se amplió primero el promedio de tres a cinco ejecuciones (Tabla~\ref{tab:map-distill}) y se entrenó el alumno con una pérdida mixta $\alpha \cdot \mathcal{L}_{\text{blanda}} + (1-\alpha) \cdot \mathcal{L}_{\text{dura}}$ con $\alpha = 0{,}5$, siendo $\mathcal{L}_{\text{blanda}}$ la entropía cruzada binaria contra las probabilidades del profesor.
 
@@ -181,7 +184,7 @@ mínimo cuando todos los códigos correctos de un documento superan a todos los 
 
 \subsubsection*{Ejecución 40b: media móvil exponencial de los pesos}
 
-\textbf{Diagnóstico que ataca.} Que la única ganancia real medida hasta ahora venga de reducir varianza, y que la forma conocida de hacerlo (promediar ejecuciones) no quepa en el VPS.
+\textbf{Diagnóstico que ataca.} Que la única ganancia real medida hasta ahora venga de reducir varianza, y que la forma conocida de hacerlo (promediar ejecuciones) multiplique el coste de inferencia.
 
 \textbf{Mecanismo.} Se mantiene una media móvil de los pesos entrenables a lo largo del entrenamiento y se evalúa y guarda esa media, no los pesos del último paso. Persigue el mismo efecto que el promediado de modelos, pero dentro de una sola trayectoria: los puntos que promedia están en la misma cuenca de la función de pérdida por construcción, y el resultado sigue siendo un único modelo con el coste de inferencia de siempre. El decaimiento, $0{,}99$, se fija a partir de los pasos reales del optimizador: 500 documentos con \emph{batch} efectivo de 32 dan unos 15 pasos por época, de modo que $0{,}99$ promedia una ventana de unos 100 pasos (siete épocas), mientras que el $0{,}999$ habitual en corpus grandes abarcaría media ejecución y quedaría permanentemente rezagado.
 
@@ -203,7 +206,7 @@ mínimo cuando todos los códigos correctos de un documento superan a todos los 
 
 Las tres se lanzan en paralelo sobre la misma GPU (RTX 4080, 16~GB), cada una con su propio directorio de salida para que no compitan por los mismos artefactos ni sobrescriban la configuración de producción. Con las tres simultáneas la ocupación de memoria es de 12{,}3~GB y el tiempo por paso pasa de unos 0{,}25~s a 0{,}6-0{,}9~s, de modo que la concurrencia no reduce el tiempo total de cómputo: reparte el mismo trabajo, con la ventaja de que los tres resultados llegan a la vez y son comparables entre sí.
 
-El criterio de decisión se fija \emph{antes} de ver los resultados, para que la comparación no se acomode a ellos: una ejecución solo cuenta como mejora si su MAP supera el \textbf{máximo} del grupo de referencia (0{,}4442 en validación y 0{,}4421 en prueba), no su media. Con una dispersión de 2~pp entre semillas idénticas, superar la media es indistinguible de haber tenido suerte con el sorteo. Y una ejecución que supere ese listón no se dará por buena hasta repetirse con otra semilla: es exactamente el error que esta serie de experimentos ha aprendido a evitar.
+El criterio de decisión se fija \emph{antes} de ver los resultados, para que la comparación no se acomode a ellos: una ejecución solo cuenta como mejora si su MAP supera el \textbf{máximo} del grupo de referencia (0{,}4442 en validación y 0{,}4421 en prueba), no su media. Con una dispersión entre semillas idénticas del orden de 1~a~2~pp según qué se mida (1,25~pp entre las dos primeras ejecuciones, 1,06~pp sobre las cinco réplicas de control de la sección~\ref{sec:anexoF-map}), superar la media es indistinguible de haber tenido suerte con el sorteo. Y una ejecución que supere ese listón no se dará por buena hasta repetirse con otra semilla: es exactamente el error que esta serie de experimentos ha aprendido a evitar.
 
 \subsubsection*{Resultados}
 
@@ -254,7 +257,7 @@ Ejecuciones previas disponibles (rango)$^{*}$ & 0{,}4166--0{,}4442 & 0{,}4192--0
 40a original & 0{,}4369 & 0{,}4440 & 0{,}4917 \\
 \hline
 41a: 40a con semilla fija & 0{,}4257 & 0{,}4326 & 0{,}4801 \\
-41b: 40a con \texttt{select\_metric=map\_macro} & \textbf{0{,}4451} & \textbf{0{,}4533} & \textbf{0{,}4931} \\
+41b: 40a con \texttt{select\_metric=map\_macro} & \textbf{0{,}4451} & \textbf{0{,}4535} & \textbf{0{,}4931} \\
 \hline
 \end{tabular}
 
@@ -307,7 +310,7 @@ con $\beta$ ajustado exclusivamente sobre validación. El barrido se extendió h
 \begin{table}[h]
 \centering
 \small
-\caption{Todas las configuraciones de los dos motores, medidas sobre el conjunto de prueba y en el mismo espacio de 1.767 códigos completos. El umbral de decisión de cada configuración se ajusta sobre validación y se aplica sin retocar a prueba.}
+\caption{Todas las configuraciones de los dos motores, medidas sobre el conjunto de prueba y en el mismo espacio de 1.767 códigos completos. El umbral de decisión de cada configuración se ajusta sobre validación y se aplica sin retocar a prueba. Generada con \texttt{ai\_engine/rerank\_map.py}; el barrido de $\beta$ queda en \texttt{model/fusion\_sweep.json}.}
 \label{tab:map-fusion}
 \begin{tabular}{lrrrr}
 \hline
@@ -334,13 +337,13 @@ La tabla contiene tres lecturas que conviene separar.
 
 \textbf{La fusión de puntuaciones sí combina.} Sube el MAP en 11{,}0~pp sobre el modelo de producción y el F1 en 11{,}0~pp, y lo hace mejorando \emph{a la vez} precisión y \emph{recall}, que es la señal de que está arbitrando entre las dos fuentes en lugar de acumularlas. La diferencia con la concatenación no está en la información disponible, que es idéntica, sino en combinarla antes de decidir y no después.
 
-El barrido completo de $\beta$ y las cifras de esta tabla quedan registrados en \texttt{model/fusion\_sweep.json}, de modo que son reproducibles sin repetir la inferencia. Proceden, como las del resto de la sección, de una única pasada de evaluación en precisión reducida, que es lo que las hace comparables entre sí; difieren en la tercera cifra decimal de la reportada en el Anexo~\ref{cap:AnexoH} (0{,}437 para el modelo de producción), que es la cifra titular del trabajo y procede del guion de evaluación en precisión completa. Esa diferencia, de 0{,}03~pp, es dos órdenes de magnitud menor que los efectos que aquí se discuten.
+El barrido completo de $\beta$ y las cifras de esta tabla quedan registrados en \texttt{model/fusion\_sweep.json}, de modo que son reproducibles sin repetir la inferencia. Proceden, como las del resto de la sección, de una única pasada de evaluación en precisión reducida, que es lo que las hace comparables entre sí; difieren en la tercera cifra decimal de la reportada en el Anexo~\ref{cap:AnexoH} (0{,}437 para el modelo del paso~36), que fue la cifra titular del trabajo hasta la promoción de \texttt{zlpr-map} y procede del guion de evaluación en precisión completa. Esa diferencia, de 0{,}03~pp, es dos órdenes de magnitud menor que los efectos que aquí se discuten.
 
-La mejora es de casi diez puntos porcentuales de MAP, un orden de magnitud por encima de todo lo obtenido modificando el entrenamiento. La explicación está en el rendimiento de cada sistema por separado: el diccionario \emph{por sí solo} obtiene 0{,}1452, un resultado pésimo, porque predice bloques y asigna la misma puntuación a todos los códigos que cuelgan de un mismo bloque, de modo que no establece ningún orden dentro de él. Conviene precisar que esa cifra está medida sobre el espacio de 1.767 códigos completos, que es el de esta tabla; evaluado en su propio espacio de bloques, como se hace en el capítulo de desarrollo, el mismo clasificador obtiene 0{,}461. No son resultados contradictorios sino dos tareas distintas. El modelo neuronal ordena bien dentro del bloque pero se equivoca al decidir qué bloques son pertinentes. Cada sistema es fuerte exactamente donde el otro es débil, y la fusión no suma dos aproximaciones redundantes sino dos descripciones complementarias del mismo problema.
+La mejora es de casi diez puntos porcentuales de MAP, un orden de magnitud por encima de todo lo obtenido modificando el entrenamiento. La explicación está en el rendimiento de cada sistema por separado: el diccionario \emph{por sí solo} obtiene 0{,}1452 por las razones expuestas más arriba, mientras que el modelo neuronal ordena bien dentro del bloque pero se equivoca al decidir qué bloques son pertinentes. Cada sistema es fuerte exactamente donde el otro es débil, y la fusión no suma dos aproximaciones redundantes sino dos descripciones complementarias del mismo problema.
 
 Un detalle de medición confirma ese diagnóstico por una vía independiente. El MAP del diccionario en solitario calculado con la implementación de \emph{scikit-learn} (0{,}1452) difiere del calculado con la implementación propia (0{,}2144), mientras que en la fusión la discrepancia entre ambas cae por debajo de $10^{-4}$. La discrepancia aparece únicamente cuando hay empates masivos en las puntuaciones, que es precisamente lo que produce un sistema que puntúa por bloques.
 
-Sobre la validez de la medida: el diccionario se construye a partir de los conjuntos de entrenamiento y validación y \textbf{nunca a partir del de prueba}, y tanto $\beta$ como el umbral se ajustaron sobre validación, de modo que la cifra de prueba no está contaminada. En cuanto al coste, la fusión no exige hardware adicional: el diccionario ya estaba implementado y desplegado, y su ejecución (lematización y coincidencia de patrones) es de CPU, no de GPU, a diferencia de las pasadas adicionales del \emph{encoder} que exigía el promediado de modelos. Sí añade una pasada del diccionario respecto al modo por defecto, que solo ejecuta el clasificador neuronal, de modo que el coste no es literalmente nulo sino de otra naturaleza: no multiplica el componente que satura el VPS.
+Sobre la validez de la medida: el diccionario se construye a partir de los conjuntos de entrenamiento y validación y \textbf{nunca a partir del de prueba}, y tanto $\beta$ como el umbral se ajustaron sobre validación, de modo que la cifra de prueba no está contaminada. En cuanto al coste, la fusión no exige hardware adicional: el diccionario ya estaba implementado y desplegado, y su ejecución (lematización y coincidencia de patrones) es de CPU, no de GPU, a diferencia de las pasadas adicionales del \emph{encoder} que exigía el promediado de modelos. Sí añade una pasada del diccionario respecto al modo por defecto, que solo ejecuta el clasificador neuronal, de modo que el coste no es literalmente nulo sino de otra naturaleza: no multiplica el componente que domina el coste de inferencia.
 
 El sistema expone esta combinación como un modo de inferencia propio, distinto del que ya existía: el modo anterior devolvía juntas las predicciones de ambos motores y dejaba la reconciliación al usuario, mientras que el nuevo combina las puntuaciones antes de ordenar. Requiere un umbral propio, expresado en el espacio de la puntuación fusionada, porque la bonificación satura la probabilidad de todo código cuyo bloque haya sido detectado y el umbral heredado dejaría de discriminar.
 
@@ -358,3 +361,37 @@ En cuanto a la explicabilidad, las dos fuentes se reportan etiquetadas por orige
  \item Cuando la mejora dentro del modelo toca techo, conviene preguntarse qué evidencia no está usando el modelo en lugar de seguir ajustándolo. En este trabajo, una fuente léxica complementaria que ya estaba implementada rindió una ganancia un orden de magnitud mayor que la obtenida modificando la función de pérdida.
  \item Antes de dar por bueno el óptimo de un barrido, comprobar que no está en el borde del espacio explorado. El valor inicialmente elegido para la fusión lo estaba, y solo al extender la rejilla pudo confirmarse que existía un óptimo interior.
 \end{itemize}
+
+
+\section{Pasos 33 a 35: intentos de superar la configuración de referencia}
+\label{sec:anexoF-pasos3335}
+
+Desarrollo detallado de las ejecuciones resumidas en el capítulo de desarrollo. La referencia es el paso~32b, con F1-micro~0,4888.
+
+\paragraph{Paso 33b: schedule corregido (resultado).}
+Con \texttt{UNFREEZE\_EVERY=8} el descongelado progresivo se comportó exactamente como se esperaba: cinco grupos de capas se liberaron en las épocas 8, 16, 24, 32 y 40, hasta llegar a 303\,M parámetros entrenables. El mejor resultado, F1-micro~\textbf{0,4572}, se obtuvo tras el tercer descongelado (capas~8--11, $\sim$época~30); abrir las capas inferiores a partir de ese punto no aportó nada y el \emph{early stop} cerró el experimento en la época~60.
+
+La mejora de schedule no fue suficiente: el modelo sigue por debajo de la referencia ($-0{,}032$ frente a 32b). El diagnóstico apunta a un problema más profundo que el calendario de descongelados: el corpus de entrenamiento es ahora \emph{back-translated}, pero el conjunto de validación sigue siendo español original. El modelo aprende una distribución ligeramente diferente, construcciones sintácticas características de texto retraducido, y esa brecha penaliza la evaluación. Los datos sintéticos añaden variedad léxica pero no resuelven la escasez de señal real; en este contexto, introducen más ruido del que aportan.
+
+\paragraph{Pasos 34a y 34b: batch efectivo 64, preentrenamiento reducido y mayor margen de entrenamiento.}
+\begin{sloppypar}
+Descartada la aumentación como vía principal, se diseñó un experimento que acumulaba todos los ajustes identificados a lo largo del proceso pero que aún no habían aparecido juntos: reducción del pre-entrenamiento a 3 épocas (lo suficiente para saturar el loss sin memorizar), mayor batch efectivo (\texttt{GRAD\_ACCUM=8}, batch~64 frente al batch~32 de 32b), más margen de entrenamiento (\texttt{EPOCHS=200}, \texttt{PATIENCE=25}) y una tasa de aprendizaje ligeramente más alta para las capas descongeladas (\texttt{UNFREEZE\_LR\_RATIO=0.2}, es decir $2\times10^{-5}$ frente a $10^{-5}$). Las dos ejecuciones se lanzaron en paralelo sobre la misma GPU: el paso~34a sobre los 500 documentos originales (sin aumentación) y el paso~34b sobre el corpus aumentado de 2000, cada uno con \texttt{UNFREEZE\_EVERY} ajustado a su tamaño de corpus (30 y 8 respectivamente).
+\end{sloppypar}
+
+Los resultados fueron F1-micro~\textbf{0,4568} para 34a y \textbf{0,4518} para 34b, ambos por debajo de 32b. La causa de la regresión en 34a es \texttt{GRAD\_ACCUM=8}: con \texttt{BATCH\_SIZE=8} y 500 documentos hay 63~mini-batches por época, de modo que la acumulación doble deja solo $\lfloor 63/8 \rfloor = 7$ actualizaciones del optimizador por época. Con esa cadencia tan baja el scheduler plateau apenas recibe señal de mejora, el \emph{warmup} consume proporcionalmente más del presupuesto de entrenamiento y el descongelado progresivo opera con gradientes menos informativos. El paso~32b, con \texttt{GRAD\_ACCUM=4}, mantenía $\lfloor 63/4 \rfloor = 15$ actualizaciones del optimizador por época, el doble de granularidad que 34a, y ese ajuste resultó ser más crítico de lo esperado. El paso~34b arrastra además el problema de distribución ya identificado en los pasos 33 y 33b.
+
+\begin{sloppypar}
+La lección transversal de los pasos 33--34 es que los hiperparámetros de schedule (\texttt{GRAD\_ACCUM}, \texttt{UNFREEZE\_EVERY}, \texttt{PATIENCE}) no son independientes del tamaño del corpus: todos ellos fijan una cadencia de señal por época y deben calibrarse conjuntamente cada vez que cambia el número de muestras.
+\end{sloppypar}
+
+\paragraph{Pasos 35a--35d: replicación de 32b con preentrenamiento reducido y mayor margen (35a: datos originales; 35b: corpus aumentado 4×).}
+El objetivo del paso~35 es verificar si la configuración ganadora (32b, F1-micro~0,4888) es replicable o incluso superable aplicando únicamente los ajustes que no implican riesgo de regresión: reducir el pre-entrenamiento a 3 épocas, suficiente para saturar el loss sin memorizar, y ampliar el presupuesto de entrenamiento a 200 épocas con \texttt{PATIENCE=25}, dado que el paso~32b alcanzó su mejor resultado en la época~135 con un límite de 150. El resto de hiperparámetros es idéntico a 32b, en particular \texttt{GRAD\_ACCUM=4} y \texttt{UNFREEZE\_LR\_RATIO=0.1}. Como en el paso~34, se lanza en paralelo una variante sobre el corpus aumentado (35b) con \texttt{UNFREEZE\_EVERY=8} para mantener la cadencia de descongelado equivalente.
+
+Los resultados fueron F1-micro~\textbf{0,4643} para 35a y \textbf{0,4569} para 35b, ambos por debajo de la referencia. La regresión de 35a respecto a 32b ($-0{,}025$), con todo lo demás idéntico, apunta a \texttt{PRETRAIN\_EPOCHS=3} como causa. Aunque el loss de pre-entrenamiento llegaba a valores próximos a cero ya en la primera época, esto no implica que las representaciones internas estuviesen consolidadas: con 10 épocas el modelo continúa refinando sus pesos aunque la señal de error sea casi nula, y ese refinamiento silencioso resulta beneficioso para el \emph{fine-tuning} posterior. La aparente saturación del loss no es equivalente a sobreajuste evitable; es convergencia gradual de las representaciones.
+
+\begin{sloppypar}
+El paso~35c repitió la configuración exacta de 32b, incluyendo \texttt{PRETRAIN\_EPOCHS=10}, añadiendo únicamente \texttt{EPOCHS=200} y \texttt{PATIENCE=25} para dar más margen tras el último descongelado. El resultado fue F1-micro~\textbf{0,4888} en la época~124: recuperar las 10 épocas de pre-entrenamiento restaura íntegramente el rendimiento perdido en 35a, cerrando la hipótesis de que el loss cero implica que esas épocas son prescindibles. Aunque el F1-macro fue 0,111 frente a 0,120 de 32b, dentro de la variabilidad esperada entre ejecuciones.
+\end{sloppypar}
+
+El paso~35d repitió la misma configuración sobre el corpus aumentado de 2.000 documentos, obteniendo F1-micro~\textbf{0,4766} y F1-macro~0,114 en la época~29. Es el mejor resultado obtenido con aumentación en todo el proceso, pero sigue por debajo de 32b. La parada temprana (época~29 frente a~124 del 35c) confirma el patrón observado desde el paso~33: con 2.000 documentos el modelo converge rápidamente pero no generaliza bien sobre el conjunto de validación en español original. La Tabla~\ref{tab:paso35} compara las cuatro variantes del paso~35 frente a la referencia 32b.
+

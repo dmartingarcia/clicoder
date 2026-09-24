@@ -1,25 +1,32 @@
 \chapter{Arquitectura de producción}
 \label{cap:AnexoI}
 
-Este anexo describe la arquitectura de producción del sistema: un VPS europeo orquestado con Docker Compose y Traefik como proxy inverso. El mismo \emph{stack} que se usa en desarrollo se despliega en producción sin modificaciones, añadiendo únicamente la capa de enrutamiento y TLS que proporciona Traefik.
+Este anexo describe la arquitectura de despliegue del sistema: una estación de trabajo local, orquestada con Docker Compose y con Traefik como proxy inverso, publicada en Internet a través de un túnel de Cloudflare. El mismo \emph{stack} que se usa en desarrollo se despliega sin modificaciones, añadiendo únicamente la capa de enrutamiento y TLS que proporciona Traefik.
 
 \section{Motivación y elección de infraestructura}
 
-La elección de un VPS frente a proveedores cloud gestionados responde principalmente al coste. El motor de IA requiere un nodo con GPU para inferencia en tiempo real; en Azure o Google Cloud Platform, un nodo de ese tipo supera los 1.000\,€/mes. Un VPS con CPU moderna en Europa cuesta aproximadamente 130\,€/año, con el motor de IA ejecutándose en modo CPU (latencia inferior a 1\,s por informe, suficiente para el caso de uso).
+La elección de una máquina propia frente a proveedores cloud gestionados responde al coste. El motor de IA se beneficia de una GPU, y un nodo con acelerador en Azure o Google Cloud Platform supera los 1.000\,€/mes, cifra que ningún prototipo sin usuarios justifica. La estación de trabajo ya existía como equipo de desarrollo, de modo que alojar en ella el sistema no añade coste: es el mismo AMD Ryzen 9 7900X con una NVIDIA RTX 4080 sobre el que se han hecho todas las mediciones de este trabajo.
+
+Que la máquina que sirve sea la misma que mide no basta para que el servicio use el acelerador, y conviene declararlo porque durante buena parte del desarrollo no lo usó. El fichero de superposición compilaba la imagen con CUDA y reservaba la tarjeta, pero no cambiaba la variable \texttt{DEVICE}, que el \texttt{Dockerfile} deja en \texttt{cpu}. El síntoma no era un error sino una lentitud aceptada: el sistema funcionaba y respondía, solo que el ciclo completo costaba 11\,s en lugar de medio segundo. Al corregirlo aparecieron dos fallos más que solo se manifiestan con la tarjeta visible, ambos descritos en el capítulo de desarrollo.
+
+Usando la GPU, que es como se sirve hoy el motor de IA en esta máquina, el ciclo completo por informe baja a \textbf{0,53\,s} (0,017\,s en proponer y 0,51\,s en justificar) frente a los \textbf{16,5\,s} que costaría el mismo ciclo en CPU (0,331\,s y 16,2\,s respectivamente; Tabla~\ref{tab:latencia} del capítulo de desarrollo, que detalla cómo se mide cada cifra). Tener GPU no elimina la necesidad de desacoplar la atribución en una petición aparte: el modo CPU sigue siendo un escenario de despliegue soportado (Anexo~\ref{cap:AnexoK}), por ejemplo si la tarjeta no estuviera disponible, y ahí justificar un código sigue costando dos órdenes de magnitud más que proponerlo.
 
 La simplicidad operativa es el segundo factor. No hay clúster que gestionar, ni \emph{control plane}, ni herramientas adicionales: \texttt{provision.sh} + \texttt{make setup} + \texttt{make deploy} y el sistema está en funcionamiento. El número de piezas que pueden fallar es mínimo.
 
-La portabilidad futura no se compromete: todos los servicios están dockerizados y las únicas piezas específicas del entorno son los ficheros de superposición de Docker Compose (\texttt{docker-compose.prod.yml}, \texttt{docker-compose.cpu.yml} y \texttt{docker-compose-proxy.yml}) junto con el script \texttt{provision.sh}. Si en el futuro el volumen de usuarios justifica el coste de un clúster cloud o Kubernetes, la migración no requiere cambios en ningún componente de la aplicación.
+Publicar una máquina local en Internet exigiría abrir puertos en el router, disponer de dirección estable y exponer la superficie de ataque del propio equipo. Un túnel de Cloudflare evita las tres cosas: el contenedor \texttt{cloudflared} abre una conexión saliente hacia la red de Cloudflare y el tráfico entra por ahí, sin que ningún puerto del equipo quede accesible desde fuera.
+
+La portabilidad futura no se compromete: todos los servicios están dockerizados y las únicas piezas específicas del entorno son los ficheros de superposición de Docker Compose (\texttt{docker-compose.prod.yml}, \texttt{docker-compose.gpu.yml} y \texttt{docker-compose-proxy.yml}) junto con el script \texttt{provision.sh}. Si el volumen de usuarios llegara a justificar el coste, la migración a un servidor alojado o a un clúster cloud no requiere cambios en ningún componente de la aplicación. Hoy ese coste no está justificado: el sistema es un prototipo de demostración sin usuarios reales, y pagar por una infraestructura dimensionada para una carga que no existe sería gasto sin contrapartida.
 
 \section{Infraestructura}
 
-El servidor es un VPS de Contabo\footnote{\url{https://contabo.com}} ubicado en Europa (Frankfurt). La pila de software se compone de:
+El servidor es la estación de trabajo de desarrollo (AMD Ryzen 9 7900X, NVIDIA RTX 4080), publicada en Internet mediante un túnel de Cloudflare. La pila de software se compone de:
 
 \begin{itemize}
     \item \textbf{Sistema operativo}: Ubuntu LTS.
     \item \textbf{Docker Engine}: gestor de contenedores y red.
     \item \textbf{Docker Compose}: orquestación de los servicios de la aplicación.
     \item \textbf{Traefik v3}: proxy inverso, terminación TLS y enrutamiento por dominio.
+    \item \textbf{cloudflared}: túnel saliente que publica los servicios sin abrir puertos entrantes.
 \end{itemize}
 
 La Figura~\ref{fig:infra-prod} resume la topología resultante, desde la entrada del tráfico por Cloudflare hasta los contenedores de la aplicación.
@@ -27,7 +34,7 @@ La Figura~\ref{fig:infra-prod} resume la topología resultante, desde la entrada
 \begin{figure}[ht]
 \centering
 \resizebox{0.85\textwidth}{!}{\input{figs/infra-prod}}
-\caption{Arquitectura de producción: el tráfico entra por Cloudflare (WAF, DDoS y TLS de borde) y llega al VPS, donde Traefik actúa de proxy inverso con TLS de Let's Encrypt y enruta a los servicios Docker (frontend, backend, motor de IA en CPU y PostgreSQL), monitorizados con Prometheus y Grafana.}
+\caption{Arquitectura de despliegue: el tráfico entra por Cloudflare (WAF, DDoS y TLS de borde) y baja por el túnel hasta la estación de trabajo, donde Traefik actúa de proxy inverso con TLS de Let's Encrypt y enruta a los servicios Docker (frontend, backend, motor de IA con GPU y PostgreSQL), monitorizados con Prometheus y Grafana.}
 \label{fig:infra-prod}
 \end{figure}
 
@@ -73,12 +80,12 @@ Los certificados TLS se obtienen y renuevan automáticamente mediante Let's Encr
 
 \section{Protección con Cloudflare}
 
-El dominio \texttt{clicoder.app} está configurado con el proxy de Cloudflare activado. El tráfico de los usuarios pasa primero por la red de Cloudflare antes de llegar al VPS, lo que aporta tres capas de protección sin coste adicional:
+El dominio \texttt{clicoder.app} está configurado con el proxy de Cloudflare activado. El tráfico de los usuarios pasa primero por la red de Cloudflare antes de llegar al servicio, lo que aporta tres capas de protección sin coste adicional:
 
 \begin{itemize}
     \item \textbf{Protección frente a bots y \emph{scraping}}: Cloudflare filtra el tráfico automatizado malicioso y bloquea los agentes de rastreo no autorizados antes de que alcancen el servidor.
-    \item \textbf{Mitigación de ataques de denegación de servicio} (DDoS): la red distribuida de Cloudflare absorbe el tráfico volumétrico sin que el VPS llegue a recibir la carga.
-    \item \textbf{Ocultación de la IP del servidor}: la dirección IP real del VPS no es visible desde el exterior; los atacantes solo conocen las IPs de Cloudflare, lo que reduce la superficie de ataque directa.
+    \item \textbf{Mitigación de ataques de denegación de servicio} (DDoS): la red distribuida de Cloudflare absorbe el tráfico volumétrico sin que los contenedores lleguen a recibir la carga.
+    \item \textbf{Ocultación de la IP del servidor}: la dirección IP real del servidor no es visible desde el exterior; los atacantes solo conocen las IPs de Cloudflare, lo que reduce la superficie de ataque directa.
 \end{itemize}
 
 Esta capa de protección es complementaria a Traefik: Cloudflare actúa en el borde de la red, antes de que el paquete llegue al servidor, mientras que Traefik gestiona el enrutamiento y TLS una vez que el tráfico ya ha pasado por el proxy.
@@ -87,7 +94,7 @@ Esta capa de protección es complementaria a Traefik: Cloudflare actúa en el bo
 
 Como alternativa al proxy DNS, el despliegue admite un \textbf{túnel de Cloudflare} (\texttt{cloudflared}), que se activa con \texttt{make start-tunnel} y requiere un \texttt{CLOUDFLARE\_TUNNEL\_TOKEN} en el fichero \texttt{.env}. El contenedor establece una conexión \emph{saliente} y persistente hacia la red de Cloudflare, de modo que el tráfico entrante se entrega a través de ese túnel.
 
-La diferencia operativa es relevante: con el túnel el servidor \textbf{no necesita exponer los puertos 80 y 443}, por lo que la ocultación de la dirección IP deja de depender de la configuración del DNS y pasa a ser una propiedad estructural del despliegue. Reduce así la superficie de ataque directa sobre el VPS. El mismo fichero \texttt{docker-compose-proxy.yml} define además un servicio de \emph{página de mantenimiento} (nginx) que permite servir un aviso estático mientras la aplicación está detenida.
+La diferencia operativa es relevante: con el túnel el servidor \textbf{no necesita exponer los puertos 80 y 443}, por lo que la ocultación de la dirección IP deja de depender de la configuración del DNS y pasa a ser una propiedad estructural del despliegue. Reduce así la superficie de ataque directa sobre el servicio. El mismo fichero \texttt{docker-compose-proxy.yml} define además un servicio de \emph{página de mantenimiento} (nginx) que permite servir un aviso estático mientras la aplicación está detenida.
 
 \section{Protección con Fail2ban}
 
@@ -95,7 +102,7 @@ Cloudflare filtra el tráfico en el borde de la red, pero no actúa sobre intent
 
 La distinción respecto al \emph{rate limiting} de Traefik es relevante. El \emph{middleware} de Traefik devuelve \texttt{429 Too Many Requests}, pero la IP sigue abriendo conexiones TCP y consumiendo recursos del servidor. Fail2ban, en cambio, inserta una regla en \texttt{iptables} que descarta los paquetes antes de que lleguen a ningún servicio.
 
-El script \texttt{provision.sh} instala y configura fail2ban con dos \emph{jails}:
+El script \texttt{provision.sh} instala y configura fail2ban con las dos \emph{jails} de la Tabla~\ref{tab:fail2ban-jails}:
 
 \begin{table}[h]
 \centering
@@ -115,21 +122,29 @@ El \emph{jail} de Traefik se apoya en que el servicio escribe los \emph{access l
 
 \section{Copias de seguridad}
 
-Contabo incluye en el plan contratado un servicio de \emph{snapshots} diarias automáticas del servidor completo. Cada \emph{snapshot} captura el estado íntegro del sistema, incluyendo los volúmenes Docker donde reside la base de datos PostgreSQL, por lo que no es necesario implementar un mecanismo de backup con \texttt{pg\_dump} adicional.
+La copia de seguridad se hace con \texttt{pg\_dump} sobre las dos bases de datos que el sistema mantiene: la de la aplicación y la del registro de eventos. Volcarlas por separado no es un detalle de implementación: la segunda contiene el historial inmutable de decisiones, que es lo que sostiene el requisito de trazabilidad, de modo que una copia que solo cubriera la primera dejaría fuera precisamente lo que no se puede reconstruir.
+
+El comando es \texttt{make db-backup}, y se programa con una entrada de \emph{cron} en el equipo anfitrión:
+
+\begin{lstlisting}[language=bash, caption={Programacion diaria de la copia de seguridad.}, label=lst:cron-backup]
+0 4 * * * cd /ruta/al/proyecto && make db-backup >> /var/log/cie10-backup.log 2>&1
+\end{lstlisting}
+
+Conviene declarar la limitación: al tratarse de una máquina única, la copia reside en el mismo equipo que los datos. Eso protege frente a un error de la aplicación o un borrado accidental, pero no frente a la pérdida del equipo. Replicarla a un almacenamiento externo queda como trabajo futuro, y es la primera pieza que habría que añadir antes de tratar datos clínicos reales.
 
 \section{Comparativa de costes}
 
-La Tabla~\ref{tab:vps-vs-cloud} muestra la diferencia de coste entre el setup actual y dos alternativas cloud gestionadas: una con instancia GPU dedicada y otra íntegramente en CPU.
+La Tabla~\ref{tab:local-vs-cloud} muestra la diferencia de coste entre el despliegue actual y dos alternativas cloud gestionadas: una con instancia GPU dedicada y otra íntegramente en CPU.
 
 \begin{table}[h]
 \centering
-\caption{Comparativa de costes: VPS vs.\ cloud gestionado (GCP, región europea, on-demand, junio 2026).}
-\label{tab:vps-vs-cloud}
+\caption{Comparativa de costes: local frente a cloud gestionado (GCP, región europea, on-demand, junio 2026).}
+\label{tab:local-vs-cloud}
 \begin{tabular}{llr}
 \hline
 \textbf{Setup} & \textbf{Descripción} & \textbf{Coste aprox.} \\
 \hline
-VPS (actual)          & VPS CPU, Contabo Frankfurt, Docker Compose    & $\sim$130\,€/año \\
+Local (actual)        & Docker Compose y túnel de Cloudflare sobre equipo propio & $\sim$330\,€/año\footnotemark[5] \\
 \hline
 Cloud con GPU\footnotemark[1]
                       & Nodos CPU (frontend + backend)                & $\sim$140\,€/mes \\
@@ -148,5 +163,6 @@ Cloud solo CPU        & Nodos CPU (frontend + backend)                & $\sim$14
 \footnotetext[2]{Instancia n1-standard-8 + 1$\times$ NVIDIA V100: \$2,55/h GPU + \$0,35/h VM $\approx$ \$2.117/mes $\approx$ 1.950\,€/mes.}
 \footnotetext[3]{Cloud SQL PostgreSQL, 4\,vCPU / 16\,GB RAM, estimado para europe-west4. Fuente: \url{https://cloud.google.com/sql/pricing}}
 \footnotetext[4]{Instancia n1-standard-8 (8\,vCPU, 30\,GB RAM) para alojar el modelo RigoBERTa-Clinical en CPU ($\sim$13\,GB de RAM en inferencia).}
+\footnotetext[5]{Solo consumo eléctrico: el equipo ya existía como estación de desarrollo, de modo que su compra no es un coste imputable al despliegue. Estimado a partir de 250\,W medios continuos y un precio de 0{,}15\,€/kWh. El túnel de Cloudflare se usa en su plan gratuito.}
 
-La GPU no es estrictamente necesaria para servir tráfico: el motor de IA ya opera en modo CPU en el VPS actual con latencia inferior a 1\,s por informe. Sin embargo, la opción cloud en CPU sigue siendo más de 40 veces más cara que el VPS, dado que las instancias de aplicación son pequeñas pero el modelo requiere un nodo con suficiente RAM ($\sim$13\,GB) para cargarse íntegramente. En ambos escenarios cloud el coste está dominado por componentes que en el VPS se comparten en un único nodo sin sobrecoste.
+La GPU no es estrictamente necesaria para proponer códigos: el motor opera igualmente en CPU y la predicción se resuelve por debajo del segundo. Sí lo es para justificarlos sin espera, y de ahí que el diseño desacople la atribución en una petición aparte. Aun renunciando al acelerador, la opción cloud solo en CPU cuesta más de veinte veces al año lo que el despliegue actual, porque las instancias de aplicación son pequeñas pero el modelo exige un nodo con suficiente RAM ($\sim$13\,GB) para cargarse íntegramente. En ambos escenarios cloud el coste está dominado por componentes que en un único equipo se comparten sin sobrecoste. La conclusión no es que el cloud sea mala opción, sino que su coste se justifica con una carga de usuarios que este prototipo todavía no tiene.

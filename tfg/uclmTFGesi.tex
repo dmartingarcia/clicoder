@@ -64,6 +64,9 @@
 %=== PAQUETE QUE ACOMPAÑA A LA PLANTILLA
 %--- Paquetes empleados por la plantilla
 \usepackage{uclmTFGesi} % Carga de paquetes en background
+
+% Resaltado de los terminos que justifican una prediccion (figura de explicabilidad)
+\definecolor{amarillo}{RGB}{255,214,10}
 %===
 
 % OPT: Nivles de índice y numeración de secciones
@@ -123,8 +126,8 @@
 % (EN: BACHELOR IN COMPUTING ENGINEERING)
 \tipoDoc{TRABAJO FIN DE GRADO} % (EN: BACHELOR DISSERTATION)
 % Si las fechas se desean en inglés hay que ponerla explícita.
-\mesTF{julio} 	% Mes de defensa (incluir siempre)
-\monthTF{July} 	% En inglés (incluir siempre)
+\mesTF{diciembre} 	% Mes de defensa (incluir siempre)
+\monthTF{December} 	% En inglés (incluir siempre)
 \yearTF{2026} 	% Año de defensa
 \cityTF{Ciudad Real}	% Ciudad de defensa
 
@@ -307,7 +310,7 @@
 \include{./anexos/AnexoF} % Anexo F: Proceso de aprendizaje
 \include{./anexos/AnexoG} % Anexo G: Análisis estadístico del corpus
 \include{./anexos/AnexoH} % Anexo H: Configuración y resultados del entrenamiento final
-\include{./anexos/AnexoI} % Anexo I: Arquitectura de producción (VPS + Docker Compose + Traefik)
+\include{./anexos/AnexoI} % Anexo I: Arquitectura de despliegue (Docker Compose + Traefik + tunel de Cloudflare)
 \include{./anexos/AnexoJ} % Anexo J: Tablero Kanban, listado completo de tareas
 \include{./anexos/AnexoK} % Anexo K: Guía de arranque del sistema
 \include{./anexos/AnexoL} % Anexo L: Aumentación de datos mediante retrotraducción

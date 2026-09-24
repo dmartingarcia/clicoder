@@ -21,7 +21,7 @@ El backend Phoenix expone análogamente su documentación interactiva en \texttt
 \label{fig:swagger}
 \end{figure}
 
-\paragraph{Obtención en vivo.} Con el sistema en marcha, la especificación completa y siempre actualizada está disponible sin salir del navegador en \texttt{http://localhost:8000/docs} (Swagger UI interactivo) y en \texttt{http://localhost:8000/openapi.json} (esquema OpenAPI 3.1 en JSON, apto para importar en Postman o generar clientes automáticamente). El siguiente fragmento, generado automáticamente por FastAPI, corresponde al \emph{endpoint} \texttt{/predict} y al esquema de su petición:
+\paragraph{Obtención en vivo.} Con el sistema en marcha, la especificación completa y siempre actualizada está disponible sin salir del navegador en \texttt{http://localhost:8000/docs} (Swagger UI interactivo) y en \texttt{http://localhost:8000/openapi.json} (esquema OpenAPI 3.1 en JSON, apto para importar en Postman o generar clientes automáticamente). El siguiente fragmento, generado automáticamente por FastAPI, corresponde al \emph{endpoint} \texttt{/predict} y a los esquemas de las dos peticiones que componen un análisis:
 
 {\small
 \begin{verbatim}
@@ -48,7 +48,23 @@ El backend Phoenix expone análogamente su documentación interactiva en \texttt
  "required": ["text"],
  "properties": {
  "text": { "type": "string", "title": "Text" },
- "engine": { "type": "string", "title": "Engine", "default": "bert" }
+ "engine": { "type": "string", "title": "Engine", "default": "bert",
+ "enum": ["bert", "dict", "both", "fused"] },
+ "include_triggers": { "type": "boolean", "title": "Include Triggers",
+ "default": false }
+ }
+}
+
+"ExplainRequest": {
+ "type": "object",
+ "required": ["text", "codes"],
+ "properties": {
+ "text": { "type": "string", "title": "Text" },
+ "codes": { "type": "array", "items": { "type": "string" },
+ "title": "Codes" },
+ "method": { "anyOf": [{ "type": "string" }, { "type": "null" }],
+ "title": "Method" },
+ "top_k": { "type": "integer", "title": "Top K", "default": 5 }
  }
 }
 \end{verbatim}
@@ -75,7 +91,10 @@ POST & \texttt{/summarize/stream} & Genera el resumen del informe en \emph{strea
 POST & \texttt{/jobs/predict} & Predicción asíncrona: devuelve un \texttt{job\_id} de forma inmediata. \\
 POST & \texttt{/jobs/summarize} & Resumen asíncrono: devuelve un \texttt{job\_id} de forma inmediata. \\
 GET & \texttt{/jobs/\{job\_id\}} & Consulta el estado y el resultado de un trabajo asíncrono. \\
+GET & \texttt{/admin/models} & Lista los modelos publicados y señala cuál está cargado. \\
+POST & \texttt{/admin/models} & Carga otro modelo en caliente, sin reiniciar el servicio. \\
 POST & \texttt{/admin/summarizer} & Recarga en caliente el modelo de resumen (LLM) y sus \emph{prompts}. \\
+GET & \texttt{/metrics} & Métricas en formato Prometheus. \\
 \hline
 \end{tabular}
 \end{table}
@@ -128,7 +147,7 @@ La atribución de importancia viaja en un \emph{endpoint} separado porque cuesta
 
 Por ese motivo \texttt{/predict} admite el campo \texttt{include\_triggers}, desactivado por defecto: activarlo reproduce el comportamiento anterior, en el que la respuesta completa esperaba a la atribución.
 
-La petición indica el texto, los códigos que se quieren justificar y, opcionalmente, la estrategia. La respuesta incluye siempre el método empleado, de modo que ante un término inesperado se puede saber si lo produjo la versión fiel o una de las rápidas.
+La petición indica el texto, los códigos que se quieren justificar y, opcionalmente, la estrategia. La respuesta incluye siempre el método empleado, de modo que ante un término inesperado se puede saber si lo produjo la versión fiel o una de las rápidas (Tabla~\ref{tab:explain-metodos}).
 
 \begin{table}[h]
 \centering
