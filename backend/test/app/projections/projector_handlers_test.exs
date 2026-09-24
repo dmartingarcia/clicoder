@@ -73,7 +73,6 @@ defmodule App.Projections.ProjectorHandlersTest do
             conversation_id: conversation_id,
             message_id: UUID.uuid4(),
             user_id: user_id,
-            content: "Paciente con disnea",
             timestamp: DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
           },
           metadata()
@@ -81,7 +80,11 @@ defmodule App.Projections.ProjectorHandlersTest do
 
       conv = Repo.get_by!(ConversationProjection, conversation_id: conversation_id)
       mensaje = Repo.get_by!(MessageProjection, conversation_id: conv.id)
-      assert mensaje.content == "Paciente con disnea"
+      # El proyector ya no materializa el texto: el evento no lo lleva, porque el registro de
+      # eventos es inmutable y el informe clinico no se podria borrar nunca. El contenido lo
+      # escribe el canal sobre esta misma fila, que si desaparece al purgar la conversacion.
+      assert mensaje.content == nil
+      assert mensaje.message_type == "user_message"
     end
   end
 
@@ -114,7 +117,8 @@ defmodule App.Projections.ProjectorHandlersTest do
             ],
             received_at:
               DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601(),
-            engine: "bert"
+            engine: "bert",
+            model_version: "IIC/RigoBERTa-Clinical@410b958b2160"
           },
           metadata()
         )
@@ -123,15 +127,18 @@ defmodule App.Projections.ProjectorHandlersTest do
       %{conv: conv, conversation_id: conversation_id, user_id: user_id}
     end
 
-    test "persiste la tarjeta de análisis", %{conv: conv} do
-      assert Repo.get_by!(AnalysisCardProjection, conversation_id: conv.id).card_type == "codes"
-    end
-
-    # Conducta actual, deliberada pero con consecuencias: el proyector NO materializa los
-    # códigos predichos, aunque el evento los lleve. Los escribe el canal directamente para
-    # poder emitirlos en el acto sin esperar al procesado asíncrono del registro de eventos.
+    # Conducta deliberada pero con consecuencias: el proyector NO materializa ni las tarjetas ni
+    # los códigos predichos, aunque el evento los lleve. Los escribe el canal directamente para
+    # poder emitirlos en el acto sin esperar al procesado asíncrono del registro de eventos, y
+    # hacerlo también aquí los duplicaría. El evento cumple el otro cometido, que es dejar
+    # constancia auditable de con qué motor y con qué pesos se predijo.
     # El efecto secundario es que esa parte de la tabla de lectura no se reconstruye
     # reproduciendo el registro, que es justo la garantía por la que se eligió CQRS.
+    test "no materializa las tarjetas: las escribe el canal", %{conv: conv} do
+      assert Repo.all(AnalysisCardProjection) |> Enum.filter(&(&1.conversation_id == conv.id)) ==
+               []
+    end
+
     test "no materializa los códigos predichos: los escribe el canal", %{conv: conv} do
       assert Repo.all(PredictedCodeProjection) |> Enum.filter(&(&1.conversation_id == conv.id)) ==
                []

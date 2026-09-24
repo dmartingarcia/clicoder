@@ -18,7 +18,8 @@ defmodule App.Commands.ReceiveAIPrediction do
     :predicted_codes,
     :reasoning,
     :confidence_scores,
-    :engine
+    :engine,
+    :model_version
   ]
 end
 

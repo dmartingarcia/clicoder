@@ -407,6 +407,8 @@ class PredictResponse(BaseModel):
 
     cards: list[Card]
     timing: TimingInfo
+    model_version: str = ""
+    """Pesos con los que se predijo, para auditar la prediccion a posteriori."""
 
 
 class TokenCountRequest(BaseModel):
@@ -429,11 +431,16 @@ class SummarizeRequest(BaseModel):
 # ==================== ENDPOINTS ====================
 
 
+def _version_modelo() -> str:
+    return getattr(classifier, "version", "") if classifier else ""
+
+
 @app.get("/", summary="Health check")
 def health_check():
     return {
         "status": "online",
         "model": "rigoberta-cie10-flat",
+        "model_version": _version_modelo(),
         "model_loaded": classifier is not None,
         "dict_loaded": dict_classifier is not None,
         "summarizer_model": summarizer.model_name
@@ -653,12 +660,18 @@ async def predict_codes(request: AnalysisRequest):
         raise HTTPException(status_code=422, detail="El texto no puede estar vacío.")
 
     if request.engine == "dict":
-        return await _predict_dict(text)
-    if request.engine == "both":
-        return await _predict_both(text)
-    if request.engine == "fused":
-        return await _predict_fused(text, request.include_triggers)
-    return await _predict_bert(text, request.include_triggers)
+        resultado = await _predict_dict(text)
+    elif request.engine == "both":
+        resultado = await _predict_both(text)
+    elif request.engine == "fused":
+        resultado = await _predict_fused(text, request.include_triggers)
+    else:
+        resultado = await _predict_bert(text, request.include_triggers)
+
+    # Quien audite una prediccion necesita saber con que pesos se hizo. El motor de
+    # diccionario no usa ninguno, de ahi que el campo pueda venir vacio.
+    resultado["model_version"] = _version_modelo()
+    return resultado
 
 
 def _add_relative_confidence(codes: list[dict]) -> list[dict]:
@@ -1047,10 +1060,29 @@ async def explain_codes(request: ExplainRequest):
             indices.append(int(idx))
             conocidos.append(code)
 
+    # Las frases que el diccionario reconoce en el informe se verifican siempre, aunque el
+    # gradiente no las priorice. Sale gratis (el filtro tiene el mismo presupuesto) y sube el
+    # solape con el metodo exhaustivo de 0,83 a 0,87, con el termino principal coincidiendo
+    # siempre. Si el diccionario no esta cargado, se sigue como antes.
+    prioritarias = None
+    if dict_classifier is not None:
+        try:
+            hits = await asyncio.to_thread(dict_classifier.predict, texto)
+            prioritarias = {t for h in hits for t in h.get("matched_terms", [])}
+        except Exception as exc:
+            logger.warning("no se pudieron obtener los terminos del diccionario: %s", exc)
+
     _t0 = time.perf_counter()
     explicaciones = (
         await asyncio.to_thread(
-            classifier.explain, texto, indices, request.top_k, 16, True, request.method
+            classifier.explain,
+            texto,
+            indices,
+            request.top_k,
+            16,
+            True,
+            request.method,
+            prioritarias,
         )
         if indices
         else {}

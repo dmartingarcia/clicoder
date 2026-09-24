@@ -5,12 +5,17 @@ end
 
 defmodule App.Events.MessageSent do
   @derive Jason.Encoder
-  defstruct [:conversation_id, :message_id, :user_id, :content, :timestamp]
+  # Sin :content a proposito. El informe clinico es una categoria especial del articulo 9 del
+  # RGPD y el registro de eventos es inmutable: lo que entra aqui no se puede borrar nunca. El
+  # evento deja constancia del hecho (quien, cuando, en que conversacion) y el texto vive solo
+  # en la proyeccion, que si se elimina al ejercer el derecho de supresion.
+  defstruct [:conversation_id, :message_id, :user_id, :timestamp]
 end
 
 defmodule App.Events.AnalysisRequested do
   @derive Jason.Encoder
-  defstruct [:conversation_id, :message_id, :report_text, :requested_at]
+  # Sin :report_text, por la misma razon que MessageSent.
+  defstruct [:conversation_id, :message_id, :requested_at]
 end
 
 defmodule App.Events.AIPredictionReceived do
@@ -23,7 +28,8 @@ defmodule App.Events.AIPredictionReceived do
     :reasoning,
     :confidence_scores,
     :received_at,
-    :engine
+    :engine,
+    :model_version
   ]
 end
 

@@ -15,8 +15,7 @@ defmodule App.Projections.ConversationProjector do
   alias App.Projections.{
     ConversationProjection,
     MessageProjection,
-    PredictedCodeProjection,
-    AnalysisCardProjection
+    PredictedCodeProjection
   }
 
   project(%ConversationStarted{} = evt, _metadata, fn multi ->
@@ -37,51 +36,27 @@ defmodule App.Projections.ConversationProjector do
       timestamp = DateTime.truncate(timestamp, :second)
       conversation = repo.get_by!(ConversationProjection, conversation_id: evt.conversation_id)
 
+      # El evento ya no lleva el texto del informe, de modo que aqui solo se materializa el
+      # hecho. El contenido lo escribe el canal directamente sobre esta misma fila, porque es
+      # el unico sitio donde existe y porque asi desaparece al borrar la conversacion.
       message = %MessageProjection{
         message_id: evt.message_id,
-        content: evt.content,
+        content: nil,
         user_id: evt.user_id,
         timestamp: timestamp,
         message_type: "user_message",
         conversation_id: conversation.id
       }
 
-      repo.insert(message)
+      repo.insert(message, on_conflict: :nothing, conflict_target: :message_id)
     end)
   end)
 
-  project(%AIPredictionReceived{} = evt, _metadata, fn multi ->
-    Ecto.Multi.run(multi, :ai_prediction, fn repo, _changes ->
-      conversation = repo.get_by!(ConversationProjection, conversation_id: evt.conversation_id)
-
-      # Guardar tarjetas de análisis
-      evt.cards
-      |> Enum.with_index()
-      |> Enum.each(fn {card, idx} ->
-        card_type = card[:type] || card["type"]
-        card_content = card[:content] || card["content"]
-
-        content =
-          case card_type do
-            "codes" -> Jason.encode!(card_content)
-            _ -> card_content
-          end
-
-        %AnalysisCardProjection{
-          card_id: UUID.uuid4(),
-          card_type: card_type,
-          content: content,
-          position: idx,
-          message_id: evt.message_id,
-          conversation_id: conversation.id,
-          engine: evt.engine
-        }
-        |> repo.insert()
-      end)
-
-      {:ok, nil}
-    end)
-  end)
+  # El canal escribe las tarjetas en cuanto llegan, porque la interfaz las va pintando segun
+  # se reciben y el proyector es asincrono. Aqui volver a insertarlas las duplicaria, asi que
+  # este evento cumple solo su otro cometido: dejar en el registro inmutable con que motor y
+  # con que pesos se predijo cada informe, que es lo que exige la trazabilidad.
+  project(%AIPredictionReceived{}, _metadata, fn multi -> multi end)
 
   project(%CodeValidated{} = evt, _metadata, fn multi ->
     Ecto.Multi.run(multi, :validate_code, fn repo, _changes ->
