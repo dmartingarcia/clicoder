@@ -86,6 +86,7 @@ plt.close(fig)
 # --- 3. Benchmark CodiEsp-D 2020: MAP por sistema (test) ---
 systems = [
     ("IXA-AAA", 0.593),
+    ("Este trabajo, modo fusionado", 0.554),
     ("IAM", 0.521),
     ("FLE", 0.519),
     ("The Mental Strokers", 0.517),
@@ -93,13 +94,13 @@ systems = [
     ("Anuj", 0.505),
     ("MEDIA", 0.488),
     ("ICB-UMA", 0.482),
+    ("Este trabajo, configuración por defecto", 0.454),
     ("IMS", 0.449),
-    ("Este trabajo", 0.437),
 ]
 systems.sort(key=lambda s: -s[1])
 names = [s[0] for s in systems]
 maps = [s[1] for s in systems]
-colors = [ORANGE if n == "Este trabajo" else GREY for n in names]
+colors = [ORANGE if n.startswith("Este trabajo") else GREY for n in names]
 fig, ax = plt.subplots(figsize=(7, 4))
 y = np.arange(len(names))
 ax.barh(y, maps, color=colors)
@@ -179,7 +180,7 @@ if pc:
     ax.set_yticks(yy)
     ax.set_yticklabels(chs, fontsize=8)
     ax.invert_yaxis()
-    ax.set_xlabel("F1-micro (test, umbral 0,3)")
+    ax.set_xlabel(f"F1-micro (test, umbral {ev['best_threshold_val']:.1f})".replace(".", ","))
     ax.set_title("F1-micro por capítulo CIE-10 (soporte entre paréntesis)")
     for i, v in enumerate(f1s):
         ax.text(v + 0.005, i, f"{v:.2f}", va="center", fontsize=7)
@@ -217,11 +218,12 @@ if sweep:
             color=GREY,
             label="Validación",
         )
+    umbral_prod = ev["best_threshold_val"]
     for r, pr, t in zip(rs, ps, ths, strict=False):
-        if abs(t - 0.3) < 1e-9:
+        if abs(t - umbral_prod) < 1e-9:
             ax.plot([r], [pr], marker="o", ms=11, mfc="none", mec=ORANGE, mew=2)
             ax.annotate(
-                "umbral 0,3\n(producción)",
+                f"umbral {umbral_prod:.1f}\n(producción)".replace(".", ","),
                 (r, pr),
                 textcoords="offset points",
                 xytext=(12, 10),
