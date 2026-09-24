@@ -107,3 +107,6 @@ ai_engine/.coverage
 # Notas de trabajo: no forman parte de la entrega
 ROADMAP.md
 HECHO.md
+
+# Entorno de los tests de extremo a extremo
+e2e/.venv/
