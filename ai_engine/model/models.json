@@ -6,7 +6,7 @@
     "produccion": {
       "checkpoint": "classifier.pt",
       "thresholds": "thresholds.json",
-      "descripcion": "Modelo del paso 36. Es el que documenta la memoria y el que sirve el sistema por defecto.",
+      "descripcion": "Modelo del paso 36. Es el que documentó la memoria hasta la promoción de zlpr-map; se conserva seleccionable para poder reproducir sus cifras.",
       "entrenamiento": "20260530T030233Z",
       "umbral": 0.3,
       "fusion_threshold": 2.9,
@@ -22,16 +22,16 @@
       }
     },
     "zlpr-map": {
-      "checkpoint": "classifier-zlpr-map.pt",
-      "thresholds": "thresholds-zlpr-map.json",
-      "descripcion": "Pérdida de ordenación ZLPR con selección de checkpoint por MAP. Mejor MAP medido de toda la serie de experimentos.",
+      "checkpoint": "zlpr-map.pt",
+      "thresholds": "zlpr-map.thresholds.json",
+      "descripcion": "Pérdida de ordenación ZLPR con selección de checkpoint por MAP. Mejor de la serie en las tres métricas y modelo que sirve el sistema por defecto.",
       "entrenamiento": "20260921T091919Z",
       "umbral": 0.2,
       "fusion_threshold": 2.1,
       "titulares": {
         "f1_micro_val": 0.4848,
-        "f1_micro_test": null,
-        "map_test": null
+        "f1_micro_test": 0.4946,
+        "map_test": 0.4539
       },
       "comparables": {
         "f1_micro_test": 0.4972,

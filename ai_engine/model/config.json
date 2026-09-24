@@ -1,12 +1,12 @@
 {
   "model_name": "IIC/RigoBERTa-Clinical",
-  "model_file": "classifier.pt",
-  "thresholds_file": "thresholds.json",
+  "model_file": "zlpr-map.pt",
+  "thresholds_file": "zlpr-map.thresholds.json",
   "max_length": 512,
-  "threshold": 0.3,
+  "threshold": 0.2,
   "threshold_configured": 0.3,
   "full_codes": true,
   "fusion_beta": 6.0,
-  "fusion_threshold": 2.9,
+  "fusion_threshold": 2.1,
   "explain_method": "gradiente_filtrado"
 }

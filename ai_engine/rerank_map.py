@@ -199,6 +199,14 @@ def main():
         choices=["val", "train", "both"],
         help="Corpus sobre el que se calculan mu_c y sigma_c (sin usar sus etiquetas)",
     )
+    # La rejilla por defecto corta en 4, pero el optimo de la fusion que sirve el motor esta en
+    # beta=6 (model/fusion_sweep.json). Quien compare contra la cifra titular tiene que ampliarla,
+    # o medira una fusion peor que la desplegada y concluira lo contrario de lo que pasa.
+    ap.add_argument(
+        "--betas",
+        default="0,0.25,0.5,1,2,4",
+        help="Rejilla de beta para la fusion con el diccionario, separada por comas.",
+    )
     ap.add_argument("--cache_dir", default="/app/model/logits_cache")
     ap.add_argument("--out", default="/app/model/rerank_map.json")
     args = ap.parse_args()
@@ -264,7 +272,7 @@ def main():
     # Barrido conjunto sobre VALIDACIÓN
     lambdas = [0.0, 0.25, 0.5, 0.75, 1.0]
     gammas = [0.0, 0.25, 0.5, 0.75, 1.0]
-    betas = [0.0, 0.25, 0.5, 1.0, 2.0, 4.0] if B is not None else [0.0]
+    betas = [float(b) for b in args.betas.split(",")] if B is not None else [0.0]
     grid = []
     best = None
     print("\n[sweep] MAP strict de validación", flush=True)

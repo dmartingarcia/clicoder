@@ -89,3 +89,20 @@ def test_el_catalogo_real_del_repo_es_valido():
         assert meta["thresholds"].endswith(".json"), nombre
         assert "fusion_threshold" in meta, nombre
         assert "map_test" in meta["comparables"], nombre
+
+
+def test_los_nombres_del_catalogo_son_los_que_deja_la_descarga():
+    """`make model-download NAME=x` guarda `x.pt` y `x.thresholds.json`, con el nombre remoto.
+
+    Si el catálogo declara otros, /admin/models busca un fichero que la descarga nunca crea y
+    responde 404 «no está descargado» justo después de haberlo descargado. Ya pasó con zlpr-map.
+    """
+    ruta = Path(__file__).parent.parent / "model" / "models.json"
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
+    for nombre, meta in datos["modelos"].items():
+        if nombre == "produccion":  # el de siempre se llama classifier.pt en el repositorio
+            assert meta["checkpoint"] == "classifier.pt"
+            assert meta["thresholds"] == "thresholds.json"
+        else:
+            assert meta["checkpoint"] == f"{nombre}.pt", nombre
+            assert meta["thresholds"] == f"{nombre}.thresholds.json", nombre
