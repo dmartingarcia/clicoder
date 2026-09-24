@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from classifier import CIE10Classifier
+from classifier import CIE10Classifier, load_code_descriptions
 
 ESCAPES = {
     "&": r"\&",
@@ -44,12 +44,13 @@ def main():
     args = ap.parse_args()
 
     clf = CIE10Classifier(args.model_dir)
+    descripciones = load_code_descriptions(args.model_dir)
     df = pd.read_csv(args.test_file)
     df.columns = df.columns.str.strip()
     texto = " ".join(str(df.dropna(subset=["text"])["text"].iloc[args.doc]).split())
     texto = " ".join(texto.split()[: args.max_palabras])
 
-    pred = clf.predict(texto, top_k=3)
+    pred = clf.predict(texto, top_k=3, code_descriptions=descripciones)
     codigos = [p["code"] for p in pred if p["code"] in clf.code_to_idx]
     if not codigos:
         raise SystemExit("El informe elegido no produce ningún código; prueba con otro --doc.")
