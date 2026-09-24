@@ -1198,7 +1198,7 @@ Las pruebas del motor de IA se realizan en dos niveles. A nivel de \emph{baselin
 \subsection{Pruebas del backend}
 \label{sec:pruebas-backend}
 
-El backend incluye una suite de 310~pruebas ExUnit organizada en \texttt{backend/test/}, ejecutadas con \texttt{make backend-test}. La cobertura se mide por separado en cada uno de los tres proyectos (Tabla~\ref{tab:cobertura}), porque son bases de código independientes con herramientas y naturaleza distintas, y promediarlas no significaría nada. A ellos se añade una cuarta suite, de extremo a extremo, que no aporta cobertura de línea porque no mide líneas sino recorridos.
+El backend incluye una suite de 316~pruebas ExUnit organizada en \texttt{backend/test/}, ejecutadas con \texttt{make backend-test}. La cobertura se mide por separado en cada uno de los tres proyectos (Tabla~\ref{tab:cobertura}), porque son bases de código independientes con herramientas y naturaleza distintas, y promediarlas no significaría nada. A ellos se añade una cuarta suite, de extremo a extremo, que no aporta cobertura de línea porque no mide líneas sino recorridos.
 
 \begin{table}[h]
 \centering
@@ -1209,7 +1209,7 @@ El backend incluye una suite de 310~pruebas ExUnit organizada en \texttt{backend
 \hline
 \textbf{Proyecto} & \textbf{Herramienta} & \textbf{Pruebas} & \textbf{Cobertura} \\
 \hline
-Backend (Elixir) & \texttt{excoveralls} & 310 & 92{,}9\,\% \\
+Backend (Elixir) & \texttt{excoveralls} & 316 & 92{,}9\,\% \\
 Motor de IA (Python) & \texttt{pytest-cov} & 383 & 91{,}0\,\%$^{*}$ \\
 Frontend (TypeScript) & \texttt{vitest} + \texttt{v8} & 217 & \textbf{98{,}9\,\%}$^{\dagger}$ \\
 Extremo a extremo & \texttt{playwright} + \texttt{pytest} & 11 & n/a$^{\ddagger}$ \\
