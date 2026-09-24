@@ -8,6 +8,7 @@ import hashlib
 import json
 import logging
 import sys
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -117,6 +118,21 @@ class _FlatClassifier(nn.Module):
 # Son versiones sucesivas de la misma funcionalidad, no alternativas equivalentes:
 # la exhaustiva es la referencia contra la que se miden las demás, y siempre se puede
 # volver a ella si una versión rápida se comporta mal.
+
+
+def _huella(ruta: Path) -> str:
+    """Identifica unos pesos por su contenido, para poder auditar una predicción a posteriori.
+
+    El nombre del fichero no sirve: el despliegue copia siempre sobre ``classifier.pt``, de modo
+    que dos modelos distintos comparten nombre. Si el fichero no se puede leer se cae al nombre,
+    porque quedarse sin cargar el modelo por no poder calcular una huella sería peor que servir
+    con una identificación menos precisa; el caso se anota para que no pase inadvertido.
+    """
+    try:
+        return hashlib.sha256(ruta.read_bytes()).hexdigest()[:12]
+    except OSError as exc:
+        logger.warning("no se pudo calcular la huella de %s: %s", ruta.name, exc)
+        return ruta.name
 
 
 @dataclass
@@ -238,6 +254,14 @@ def _explicar_divide_y_venceras(
     return importancia
 
 
+# El hook del gradiente se registra sobre la capa de embeddings, que es compartida por todas las
+# peticiones que atiende el proceso. Mientras esta puesto, cualquier otra pasada hacia delante lo
+# dispara: una prediccion concurrente entraba con requires_grad=False y el retain_grad la tumbaba
+# con un 500, y dos atribuciones a la vez se pisaban el tensor capturado. El cerrojo solo serializa
+# la parte con hook, que dura una pasada; las predicciones siguen siendo concurrentes.
+_CERROJO_GRADIENTE = threading.Lock()
+
+
 def _explicar_gradiente_filtrado(
     ctx: _CtxAtribucion, candidatas: list[int], n_verificar: int = 32
 ) -> dict[int, torch.Tensor]:
@@ -256,22 +280,27 @@ def _explicar_gradiente_filtrado(
     capturado: dict[str, torch.Tensor] = {}
 
     def _hook(_mod, _entrada, salida):
+        # Guarda imprescindible: sin ella, una predicción concurrente entra aquí bajo no_grad
+        # y `retain_grad` lanza, devolviendo un 500 a un usuario que no pidió ninguna explicación.
+        if not salida.requires_grad:
+            return
         salida.retain_grad()
         capturado["emb"] = salida
 
-    asa = embeddings.register_forward_hook(_hook)
-    try:
-        ctx.modelo.zero_grad(set_to_none=True)
-        logits = ctx.modelo(ctx.base_ids, ctx.base_mask)
-        logits[0, ctx.code_indices].sum().backward()
-    except RuntimeError as exc:
-        # Sin gradiente no hay filtro. Se degrada al exhaustivo en vez de fallar: más lento,
-        # pero el usuario recibe su explicación.
-        logger.warning("gradiente no disponible, se usa el método exhaustivo: %s", exc)
-        ctx.modelo.zero_grad(set_to_none=True)
-        return _explicar_exhaustivo(ctx, candidatas)
-    finally:
-        asa.remove()
+    with _CERROJO_GRADIENTE:
+        asa = embeddings.register_forward_hook(_hook)
+        try:
+            ctx.modelo.zero_grad(set_to_none=True)
+            logits = ctx.modelo(ctx.base_ids, ctx.base_mask)
+            logits[0, ctx.code_indices].sum().backward()
+        except RuntimeError as exc:
+            # Sin gradiente no hay filtro. Se degrada al exhaustivo en vez de fallar: más lento,
+            # pero el usuario recibe su explicación.
+            logger.warning("gradiente no disponible, se usa el método exhaustivo: %s", exc)
+            ctx.modelo.zero_grad(set_to_none=True)
+            return _explicar_exhaustivo(ctx, candidatas)
+        finally:
+            asa.remove()
 
     emb = capturado.get("emb")
     if emb is None or emb.grad is None:
@@ -333,11 +362,7 @@ class CIE10Classifier:
 
         # Checkpoint
         model_file = self.config.get("model_file", "classifier.pt")
-        # La trazabilidad exige saber con qué pesos se predijo cada informe. El nombre del
-        # fichero no sirve: el despliegue copia siempre sobre 'classifier.pt'. El hash del
-        # contenido sí identifica los pesos sin ambiguedad.
-        digest = hashlib.sha256((model_path / model_file).read_bytes()).hexdigest()[:12]
-        self.version = f"{self.config['model_name']}@{digest}"
+        self.version = f"{self.config['model_name']}@{_huella(model_path / model_file)}"
         ckpt = torch.load(
             model_path / model_file,
             map_location=self.device,

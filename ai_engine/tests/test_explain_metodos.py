@@ -7,6 +7,7 @@ que respeta el contrato común.
 """
 
 import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -55,8 +56,8 @@ class EncoderFalso(torch.nn.Module):
         return base + gancho - gancho.detach()
 
 
-def _contexto(n_palabras=12):
-    modelo = EncoderFalso(n_palabras)
+def _contexto(n_palabras=12, modelo=None):
+    modelo = modelo if modelo is not None else EncoderFalso(n_palabras)
     ids = torch.arange(n_palabras).unsqueeze(0)
     msk = torch.ones_like(ids)
     wpos = {w: [w] for w in range(n_palabras)}
@@ -290,3 +291,71 @@ def test_ninguna_rapida_reporta_una_palabra_irrelevante_en_el_top_5():
     for metodo in (_explicar_divide_y_venceras, _explicar_gradiente_filtrado):
         for palabra in _mejores(metodo(_contexto_amplio(), cand), 5):
             assert palabra in IMPORTANTES_AMPLIO
+
+
+# =============================================================================
+# Concurrencia: el hook del gradiente vive en el modelo compartido
+# =============================================================================
+
+
+def test_una_prediccion_concurrente_no_revienta_por_el_hook():
+    """Reproduce el 500 que aparecía al analizar mientras se explicaba otro informe.
+
+    El filtro por gradiente registra un hook sobre la capa de embeddings, que es única para
+    todo el proceso. Mientras está puesto, cualquier otra pasada hacia delante lo dispara, y
+    una predicción normal entra bajo `no_grad`: el `retain_grad` del hook lanzaba
+    `RuntimeError: can't retain_grad on Tensor that has requires_grad=False` y el usuario
+    recibía un error de un análisis que ni siquiera pedía explicación.
+    """
+    ctx = _contexto()
+    fallos = []
+    listo = threading.Event()
+    parar = threading.Event()
+
+    def predecir_sin_parar():
+        listo.set()
+        while not parar.is_set():
+            try:
+                with torch.no_grad():
+                    ctx.modelo(ctx.base_ids, ctx.base_mask)
+            except RuntimeError as exc:
+                fallos.append(exc)
+                return
+
+    hilo = threading.Thread(target=predecir_sin_parar, daemon=True)
+    hilo.start()
+    listo.wait(timeout=5)
+    try:
+        for _ in range(20):
+            _explicar_gradiente_filtrado(ctx, list(range(12)), n_verificar=4)
+    finally:
+        parar.set()
+        hilo.join(timeout=5)
+
+    assert fallos == [], f"una predicción concurrente falló: {fallos[0]}"
+
+
+def test_dos_atribuciones_a_la_vez_no_se_pisan_el_resultado():
+    """Sin serializar, el hook de una atribución captura el tensor de la pasada de la otra.
+
+    El síntoma no sería un error sino una explicación silenciosamente equivocada, que es peor:
+    el sistema justificaría un código con las palabras de otro informe.
+    """
+    # Un solo modelo para los cuatro hilos: es lo que hay en producción, y es la condición
+    # que hace que los hooks se pisen. Con un modelo por hilo el fallo no se reproduce.
+    modelo = EncoderFalso(12)
+    resultados = []
+
+    def atribuir():
+        imp = _explicar_gradiente_filtrado(_contexto(modelo=modelo), list(range(12)), n_verificar=4)
+        resultados.append(_mejores(imp))
+
+    hilos = [threading.Thread(target=atribuir) for _ in range(4)]
+    for h in hilos:
+        h.start()
+    for h in hilos:
+        h.join(timeout=30)
+
+    assert len(resultados) == 4
+    for mejores in resultados:
+        assert set(mejores) == set(IMPORTANTES), f"atribución corrompida: {mejores}"

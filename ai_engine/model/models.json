@@ -38,6 +38,24 @@
         "map_test": 0.4535,
         "map_test_con_diccionario": 0.5535
       }
+    },
+    "c102909": {
+      "checkpoint": "c102909.pt",
+      "thresholds": "c102909.thresholds.json",
+      "descripcion": "Mejor F1 de validación de toda la serie (0,5028). En prueba no lo confirma: gana en MAP al modelo del paso 36 pero pierde en F1, y queda por debajo de zlpr-map en las tres métricas. Se conserva porque documenta que la ordenación por validación no se transfiere.",
+      "entrenamiento": "20260915T102909Z",
+      "umbral": 0.4,
+      "fusion_threshold": 2.9,
+      "titulares": {
+        "f1_micro_val": 0.5028,
+        "f1_micro_test": 0.4817,
+        "map_test": 0.4435
+      },
+      "comparables": {
+        "f1_micro_test": 0.4817,
+        "map_test": 0.4435,
+        "map_test_con_diccionario": 0.5474
+      }
     }
   },
   "nota_fusion": "La fusión con el diccionario no es un modelo aparte: es una combinación en tiempo de ejecución entre cualquiera de estos checkpoints y baseline_dict.json, gobernada por fusion_beta y fusion_threshold en config.json. Sube el MAP unos 11 pp sobre el modelo solo, sea cual sea el que se elija."
