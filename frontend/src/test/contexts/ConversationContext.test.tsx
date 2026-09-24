@@ -812,6 +812,24 @@ describe('ConversationProvider', () => {
   });
 
   describe('fallos al hablar con el canal', () => {
+    it('un análisis fallido cierra la tarjeta de resumen a medio escribir', async () => {
+      const getCtx = await conCanalActivo(renderProvider());
+      act(() => { channelEvents['summary_token']?.({ message_id: 'm1', token: 'Paciente con' }); });
+
+      const antes = getCtx().chatItems[0];
+      if (antes.kind === 'card') expect(antes.card_id).toBe('streaming-summary-m1');
+
+      act(() => { channelEvents['analysis_failed']?.({ error: 'el motor no responde' }); });
+
+      // Sin esto la tarjeta se queda con el indicador de "escribiendo" para siempre, porque
+      // el evento que lo retira es analysis_complete y ya no va a llegar.
+      const despues = getCtx().chatItems[0];
+      if (despues.kind === 'card') {
+        expect(despues.card_id).toBe('done-summary-m1');
+        expect(despues.content).toBe('Paciente con');
+      }
+    });
+
     it('avisa si no se puede entrar en la conversación', async () => {
       const { toast } = await import('sonner');
       const getCtx = renderProvider();

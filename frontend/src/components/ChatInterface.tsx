@@ -485,6 +485,12 @@ function ChatItemView({
 }
 
 // ─── Main interface ───────────────────────────────────────────────────────────
+function nombreMotor(engine: string, t: (k: never) => string): string {
+  const clave = `chat.engine_${engine}` as never;
+  const etiqueta = t(clave);
+  return etiqueta === clave ? engine : etiqueta;
+}
+
 export function ChatInterface() {
   const { activeConversationId, pendingConversation, chatItems, predictedCodes, isAnalyzing, engine, analyzeReport, validateCode, rejectCode, verifyTrigger, createConversation } = useConversation();
   const { t } = useI18n();
@@ -556,7 +562,7 @@ export function ChatInterface() {
               <h2 className="font-semibold text-gray-800">{t('chat.analysis_header')}</h2>
               <p className="text-xs text-gray-400">
                 ID: {activeConversationId}
-                {engine && <span className="ml-3 text-blue-500 font-medium">{t('chat.engine_label')}: {engine}</span>}
+                {engine && <span className="ml-3 text-blue-500 font-medium">{t('chat.engine_label')}: {nombreMotor(engine, t)}</span>}
               </p>
             </div>
           </div>
