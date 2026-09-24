@@ -27,8 +27,22 @@ defmodule AppWeb.ConversationChannel do
 
   require Logger
 
+  # Un error sin contexto no se puede investigar, pero el contexto no puede ser el informe.
+  # Se envian solo identificadores de la base de datos: con ellos se localiza la conversacion
+  # y al usuario en local, y el tercero que recibe el aviso no ve ni el texto ni quien es.
+  defp contexto_de_errores(user_id, conversation_id) do
+    if Code.ensure_loaded?(Sentry) do
+      Sentry.Context.set_user_context(%{id: user_id})
+      Sentry.Context.set_tags_context(%{conversation_id: conversation_id})
+    end
+
+    :ok
+  end
+
   @impl true
   def join("conversation:" <> conversation_id, _payload, socket) do
+    contexto_de_errores(socket.assigns.user_id, conversation_id)
+
     case Repo.get_by(ConversationProjection, conversation_id: conversation_id) do
       nil ->
         user_id = socket.assigns.user_id
