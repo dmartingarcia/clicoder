@@ -31,8 +31,11 @@ def main():
     d.columns = d.columns.str.strip()
     textos = d.dropna(subset=["text"])["text"].astype(str).tolist()[:6]
 
-    variantes = [("exhaustivo", "exhaustivo", {}), ("divide y venceras", "divide_y_venceras", {})]
+    variantes = [("exhaustivo", "exhaustivo", {})]
+    # El umbral de poda es la palanca: con 0,05 casi nunca dispara y se paga el arbol entero.
+    variantes += [(f"divide u={u}", "divide_y_venceras", {"umbral": u}) for u in (0.05, 0.25, 0.5)]
     variantes += [(f"gradiente n={n}", "gradiente_filtrado", {"n": n}) for n in (16, 32, 64, 96)]
+    variantes += [("gradiente n=32 +dicc", "gradiente_filtrado", {"n": 32, "dicc": True})]
     variantes += [("diccionario", "diccionario", {})]
 
     # El diccionario no pasa por el encoder: sus términos son las frases que hicieron match, de
@@ -66,21 +69,31 @@ def main():
             continue
         ref = None
         for nombre, metodo, extra in variantes:
+            original = None
             if extra:
                 import classifier as C
 
-                original = C.METODOS_EXPLAIN["gradiente_filtrado"]
-                C.METODOS_EXPLAIN["gradiente_filtrado"] = lambda ctx, cand, n=extra["n"]: (
-                    C._explicar_gradiente_filtrado(ctx, cand, n)
-                )
+                if "n" in extra:
+                    original = ("gradiente_filtrado", C.METODOS_EXPLAIN["gradiente_filtrado"])
+                    C.METODOS_EXPLAIN["gradiente_filtrado"] = lambda ctx, cand, n=extra["n"]: (
+                        C._explicar_gradiente_filtrado(ctx, cand, n)
+                    )
+                else:
+                    original = ("divide_y_venceras", C.METODOS_EXPLAIN["divide_y_venceras"])
+                    C.METODOS_EXPLAIN["divide_y_venceras"] = lambda ctx, cand, u=extra["umbral"]: (
+                        C._explicar_divide_y_venceras(ctx, cand, u)
+                    )
+            prio = None
+            if extra.get("dicc") and dic is not None:
+                prio = {t for h in dic.predict(texto) for t in h.get("matched_terms", [])}
             t0 = time.perf_counter()
             if metodo == "diccionario":
                 res = explicar_diccionario(texto, codes)
             else:
-                res = clf.explain(texto, codes, top_k=5, method=metodo)
+                res = clf.explain(texto, codes, top_k=5, method=metodo, prioritarias=prio)
             dt = time.perf_counter() - t0
-            if extra:
-                C.METODOS_EXPLAIN["gradiente_filtrado"] = original
+            if original:
+                C.METODOS_EXPLAIN[original[0]] = original[1]
             if ref is None:
                 ref = res
             acum[nombre]["t"].append(dt)

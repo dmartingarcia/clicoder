@@ -11,6 +11,12 @@ RUN pip3 install --no-cache-dir grequests progressbar2
 # nbconvert no imprime nada hasta terminar, lo que deja un entrenamiento largo a ciegas.
 RUN pip3 install --no-cache-dir papermill
 
+# spaCy y sus modelos en español: los necesita el clasificador de diccionario, y sin ellos los
+# bancos de pruebas que lo incluyen no se pueden ejecutar sobre GPU desde esta imagen.
+RUN pip3 install --no-cache-dir "spacy>=3.7.0" && \
+    python3 -m spacy download es_core_news_lg && \
+    python3 -m spacy download es_dep_news_trf
+
 # Copiar el código fuente de entrenamiento (contexto = training/)
 COPY training/bert-classifier bert-classifier
 COPY training/csv_import_scripts csv_import_scripts
