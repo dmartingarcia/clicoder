@@ -1,4 +1,4 @@
-.PHONY: e2e-tests ai-bench-predict ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: e2e-tests ai-bench-predict ai-eval-candidatos ai-eval-candidatos-fusion ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 -include .env
 export
@@ -7,6 +7,12 @@ export
 COMPOSE            = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
 COMPOSE_CPU        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
 COMPOSE_MOCK       = docker compose -f docker-compose.yml -f docker-compose.mock.yml
+
+# Candidatos a promocion, en formato nombre:checkpoint:umbrales (ver ai-eval-candidatos)
+CANDIDATOS = \
+  produccion:classifier.pt:thresholds.json \
+  c102909:classifier_20260915T102909Z_f1=0.5028_map=0.5566.pt:thresholds_20260915T102909Z.json \
+  zlpr-map:zlpr-map.pt:zlpr-map.thresholds.json
 COMPOSE_MONITORING     = docker compose -f docker-compose.monitoring.yml
 COMPOSE_MONITORING_DEV = docker compose -f docker-compose.monitoring.yml -f docker-compose.monitoring.dev.yml
 COMPOSE_PROXY      = docker compose -f docker-compose-proxy.yml
@@ -262,6 +268,40 @@ ai-error-analysis: ## Clasificar los errores del modelo sobre test (especificida
 	$(if $(GPU),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python error_analysis.py \
 		--test_file $(or $(TEST_FILE),/data/codiesp_csvs/codiesp_D_source_test.csv) \
 		--threshold $(or $(THRESHOLD),0.3)
+
+ai-eval-candidatos: ## Evaluar en test los candidatos a promocion y sacar la tabla comparativa
+	@echo "$(BLUE)Evaluando candidatos en test (GPU)...$(NC)"
+# Como ai-bench-explain: la imagen del motor lleva torch de CPU, asi que para GPU se usa la de
+# entrenamiento montando el codigo del motor y los CSV del corpus. Cada checkpoint se evalua con
+# sus propios umbrales y sin tocar config.json, que seguiria apuntando al modelo que sirve.
+	@for c in $(CANDIDATOS); do \
+		nombre=$${c%%:*}; resto=$${c#*:}; pt=$${resto%%:*}; thr=$${resto##*:}; \
+		echo "$(BLUE)--- $$nombre ---$(NC)"; \
+		$(COMPOSE) run --rm --no-deps \
+			-v $(PWD)/ai_engine:/app -v $(PWD)/training/csv_import_scripts:/data \
+			-w /app --entrypoint python3 training eval_test.py --device cuda \
+			--model_file "$$pt" --thresholds_file "$$thr" \
+			--out "model/eval_cand_$$nombre.json" || exit 1; \
+	done
+	@python3 ai_engine/tabla_candidatos.py
+
+ai-eval-candidatos-fusion: ## MAP de los candidatos en modo fusionado con el diccionario
+	@echo "$(BLUE)Midiendo la fusion con diccionario de cada candidato (GPU)...$(NC)"
+# El titular del trabajo es el modo fusionado, y su beta se ajusta por modelo, de modo que la
+# comparativa sin diccionario no basta para decidir una promocion. La ablacion 'solo_diccionario'
+# de rerank_map es la que corresponde al motor 'fused' que sirve el sistema.
+	@for c in $(CANDIDATOS); do \
+		nombre=$${c%%:*}; resto=$${c#*:}; pt=$${resto%%:*}; \
+		echo "$(BLUE)--- $$nombre ---$(NC)"; \
+		$(COMPOSE) run --rm --no-deps \
+			-v $(PWD)/ai_engine:/app -v $(PWD)/training/csv_import_scripts:/data \
+			-w /app --entrypoint python3 training rerank_map.py --device cuda \
+			--ckpt "/app/model/$$pt" --label "$$nombre" \
+			--dict_patterns /app/model/baseline_dict.json \
+			--betas 0,1,2,4,6,8,12 \
+			--out "/app/model/rerank_cand_$$nombre.json" || exit 1; \
+	done
+	@python3 ai_engine/tabla_candidatos.py
 
 ai-eval-test: ## Evaluar sobre el test de CodiEsp. Uso: make ai-eval-test [GPU=1] [DEVICE=cpu|cuda] [THRESHOLD=0.3]
 	@echo "$(BLUE)Evaluando modelo sobre el conjunto de test...$(NC)"
@@ -545,7 +585,7 @@ model-use: ## Activar un modelo ya descargado. Uso: make model-use NAME=zlpr-map
 	cfg.update({'model_file': m['checkpoint'], 'thresholds_file': m['thresholds'], \
 	            'threshold': m['umbral'], 'fusion_threshold': m['fusion_threshold']}); \
 	json.dump(cfg, open('$(MODEL_DIR)/config.json','w'), indent=2, ensure_ascii=False); \
-	print('activo:', m['checkpoint'], '· MAP', m['map_test'])"
+	print('activo:', m['checkpoint'], '· MAP', (m.get('titulares') or {}).get('map_test', 'sin evaluar'))"
 	@echo "$(GREEN)Reinicia el motor para que cargue el modelo nuevo$(NC)"
 
 network-create: ## Crear red Docker compartida entre stacks (proxy, app, monitoring)

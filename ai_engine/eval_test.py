@@ -191,13 +191,25 @@ def main():
     ap.add_argument("--threshold", type=float, default=0.3, help="Umbral global de referencia.")
     ap.add_argument("--batch_size", type=int, default=8)
     ap.add_argument("--out", default=None)
+    # Evaluar un checkpoint concreto sin tocar config.json: comparar candidatos exige medirlos
+    # uno tras otro, y reescribir el fichero entre medias deja el servicio apuntando a otro.
+    ap.add_argument("--model_file", default=None, help="Checkpoint a evaluar.")
+    ap.add_argument("--thresholds_file", default=None, help="Umbrales por clase del checkpoint.")
     args = ap.parse_args()
 
     device = args.device
     if device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    clf = CIE10Classifier(args.model_dir, device=device)
+    overrides = {
+        k: v
+        for k, v in (
+            ("model_file", args.model_file),
+            ("thresholds_file", args.thresholds_file),
+        )
+        if v
+    }
+    clf = CIE10Classifier(args.model_dir, device=device, overrides=overrides or None)
     code_to_idx = clf.code_to_idx
     num_codes = len(code_to_idx)
     full_codes = bool(clf.config.get("full_codes", True))
