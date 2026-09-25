@@ -299,6 +299,29 @@ jobs:
       - name: Format check ai_engine_mock
         run: ruff format --check ai_engine_mock/
 
+  # ── TFG: compila y publica ────────────────────────────────────────────────
+  tfg:
+    name: TFG, compila memoria
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compilar TFG
+        run: make tfg-lint
+
+      - name: Publicar PDF como release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: tfg-latest
+          name: TFG (build automático)
+          body: PDF compilado automáticamente desde ${{ github.sha }}
+          make_latest: false
+          files: tfg/build/uclmTFGesi.pdf
+
   # ── End to end ───────────────────────────────────────────────────────────────
   e2e:
     name: End to end, flujos basicos
