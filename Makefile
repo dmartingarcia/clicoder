@@ -3,6 +3,9 @@
 -include .env
 export
 
+# Autodetecta GPU; GPU=0 fuerza CPU.
+GPU ?= $(shell command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1 && echo 1)
+
 # Variables: compose stacks
 COMPOSE            = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
 COMPOSE_CPU        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
@@ -265,7 +268,7 @@ endif
 
 ai-error-analysis: ## Clasificar los errores del modelo sobre test (especificidad vs comprensión)
 	@echo "$(BLUE)Analizando los errores del modelo...$(NC)"
-	$(if $(GPU),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python error_analysis.py \
+	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python error_analysis.py \
 		--test_file $(or $(TEST_FILE),/data/codiesp_csvs/codiesp_D_source_test.csv) \
 		--threshold $(or $(THRESHOLD),0.3)
 
@@ -314,7 +317,7 @@ ai-motores: ## Comparativa de los cuatro motores y barrido de beta de la fusion 
 
 ai-eval-test: ## Evaluar sobre el test de CodiEsp. Uso: make ai-eval-test [GPU=1] [DEVICE=cpu|cuda] [THRESHOLD=0.3]
 	@echo "$(BLUE)Evaluando modelo sobre el conjunto de test...$(NC)"
-	$(if $(GPU),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python eval_test.py \
+	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python eval_test.py \
 		--test_file $(or $(TEST_FILE),/data/codiesp_csvs/codiesp_D_source_test.csv) \
 		--device $(or $(DEVICE),auto) \
 		--threshold $(or $(THRESHOLD),0.3)
@@ -322,7 +325,7 @@ ai-eval-test: ## Evaluar sobre el test de CodiEsp. Uso: make ai-eval-test [GPU=1
 
 ai-tfg-figures: ## Generar las figuras de datos del TFG (lee model/eval_test.json). Uso: make ai-tfg-figures [GPU=1]
 	@echo "$(BLUE)Generando figuras del TFG...$(NC)"
-	$(if $(GPU),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python plot_tfg_figures.py
+	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python plot_tfg_figures.py
 	@echo "$(BLUE)Copiando a tfg/figs/...$(NC)"
 	cp ai_engine/model/tfg_*.png tfg/figs/
 	@echo "$(GREEN)Figuras actualizadas en tfg/figs/$(NC)"
