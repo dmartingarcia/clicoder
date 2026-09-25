@@ -140,8 +140,11 @@ ai-install: ## Instalar dependencias del AI engine
 ai-test: ## Tests del AI engine (pytest). Uso: make ai-test [ARGS="-k chapter -v"]
 	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c "pip install -q -r requirements-dev.txt && python -m pytest tests/ -q -p no:cacheprovider $(ARGS)"
 
-ai-lint: ## Lint del AI engine (ruff check + format check)
-	$(COMPOSE) run --rm ai_engine sh -c "pip install -q ruff && python -m ruff check --cache-dir /tmp/ruff . && python -m ruff format --check --cache-dir /tmp/ruff ."
+ai-lint: ## Lint del AI engine y su mock, igual que la CI (ruff check + format check)
+	$(COMPOSE) run --rm -v $(PWD)/ai_engine_mock:/ai_engine_mock ai_engine sh -c "\
+		pip install -q ruff && \
+		python -m ruff check --cache-dir /tmp/ruff . /ai_engine_mock && \
+		python -m ruff format --check --cache-dir /tmp/ruff . /ai_engine_mock"
 
 ai-train: ## Entrenar clasificador CIE-10 en CPU (MODEL=IIC/RigoBERTa-Clinical, requiere HF_TOKEN en .env)
 	@echo "$(BLUE)Entrenando clasificador CIE-10 (CPU)$(NC)"
@@ -358,11 +361,12 @@ backend-format: ## Formatear código del backend
 backend-install: ## Instalar dependencias del backend
 	$(COMPOSE_CPU) run --rm backend sh -c "mix deps.get && mix deps.compile && mix compile"
 
-backend-lint: ## Lint del backend (format check + credo)
+backend-lint: ## Lint del backend, igual que la CI (format + compile estricto + credo + dialyzer)
 	$(BACKEND) mix deps.get
-	$(BACKEND) mix compile
 	$(BACKEND) mix format --check-formatted
+	$(BACKEND) mix compile --warnings-as-errors
 	$(BACKEND) mix credo --strict
+	$(BACKEND) mix dialyzer --format dialyxir
 
 backend-migrate: ## Ejecutar migraciones de Ecto
 	$(COMPOSE_CPU) up -d db
