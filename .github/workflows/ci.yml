@@ -361,10 +361,20 @@ jobs:
           make network-create
           docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --wait db mailpit
 
+      - name: Cache de deps del backend
+        uses: actions/cache@v4
+        with:
+          path: |
+            backend/deps
+            backend/_build
+          key: ${{ runner.os }}-e2e-backend-${{ hashFiles('backend/mix.lock') }}
+          restore-keys: ${{ runner.os }}-e2e-backend-
+
       - name: Preparar la base de datos
         run: |
+          sudo chown -R 1000:1000 backend
           docker compose -f docker-compose.yml -f docker-compose.mock.yml run --rm --no-deps backend \
-            sh -c "mix ecto.create && mix ecto.migrate && mix event_store.create && mix event_store.init && mix run priv/repo/seeds.exs"
+            sh -c "mix deps.get && mix deps.compile && mix ecto.create && mix ecto.migrate && mix event_store.create && mix event_store.init && mix run priv/repo/seeds.exs"
 
       - name: Levantar la aplicacion con el motor simulado
         run: |
