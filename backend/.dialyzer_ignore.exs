@@ -3,5 +3,6 @@
 # in Dialyzer PLTs, causing spurious warnings in mix task modules.
 [
   {"lib/mix/tasks/cie10_import.ex", :callback_info_missing},
-  {"lib/mix/tasks/cie10_import.ex", :unknown_function}
+  {"lib/mix/tasks/cie10_import.ex", :unknown_function},
+  {"deps/commanded_ecto_projections/lib/projections/ecto.ex", :call_without_opaque}
 ]

@@ -252,7 +252,10 @@ async def predict_codes(request: AnalysisRequest):
     await asyncio.sleep(random.uniform(0.3, 0.9))
     engine = request.engine if request.engine in ("bert", "dict") else "bert"
     codes = analyze_text(text, engine=engine)
-    return {"cards": [{"type": "codes", "content": codes}], "model_version": "mock@000000000000"}
+    return {
+        "cards": [{"type": "codes", "content": codes}],
+        "model_version": "mock@000000000000",
+    }
 
 
 @app.post("/summarize/stream", summary="Resumen médico en streaming (NDJSON, mock)")

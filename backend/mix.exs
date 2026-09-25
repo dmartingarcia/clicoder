@@ -12,7 +12,7 @@ defmodule App.MixProject do
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
       test_coverage: [tool: ExCoveralls],
-      dialyzer: [ignore_warnings: ".dialyzer_ignore.exs"],
+      dialyzer: [ignore_warnings: ".dialyzer_ignore.exs", plt_add_apps: [:sentry]],
       preferred_cli_env: [
         coveralls: :test,
         "coveralls.detail": :test,
@@ -63,7 +63,7 @@ defmodule App.MixProject do
       {:telemetry_metrics_prometheus, "~> 1.1"},
       # Tambien en test: el filtro que impide que el informe clinico salga hacia un tercero
       # es justo lo que no puede quedarse sin probar.
-      {:sentry, "~> 10.0", only: [:prod, :test]},
+      {:sentry, "~> 10.0", only: [:prod, :dev, :test], runtime: Mix.env() == :prod},
       {:hackney, "~> 1.8"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
