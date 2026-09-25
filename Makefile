@@ -1,4 +1,4 @@
-.PHONY: e2e-tests ai-bench-predict ai-eval-candidatos ai-eval-candidatos-fusion ai-motores ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: e2e-tests ai-bench-predict ai-eval-candidatos ai-eval-candidatos-fusion ai-motores ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-lint tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 -include .env
 export
@@ -703,6 +703,8 @@ tfg-clean: ## Limpiar artefactos de compilación del TFG
 	@echo "$(YELLOW)Limpiando build del TFG...$(NC)"
 	@rm -rf $(TFG_OUT)
 	@echo "$(GREEN)Limpio$(NC)"
+
+tfg-lint: tfg-pdf ## Comprobar que el TFG compila sin errores (usado en CI)
 
 tfg-pdf: ## Compilar memoria TFG a PDF (requiere Docker)
 	@echo "$(BLUE)Compilando TFG con pdflatex + bibtex...$(NC)"
