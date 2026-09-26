@@ -82,7 +82,7 @@ jobs:
         if: always()
         with:
           name: frontend-coverage
-          path: frontend/coverage/
+          path: /tmp/vitest-coverage
           retention-days: 14
 
       - name: Coverage summary → step summary
@@ -90,10 +90,10 @@ jobs:
         run: |
           echo "## Frontend Coverage" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -f coverage/coverage-summary.json ]; then
+          if [ -f /tmp/vitest-coverage/coverage-summary.json ]; then
             node -e "
               const fs = require('fs');
-              const summary = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              const summary = JSON.parse(fs.readFileSync('/tmp/vitest-coverage/coverage-summary.json', 'utf8'));
               const entries = Object.entries(summary).filter(([k]) => k !== 'total');
               const total = summary.total;
               const bar = (pct) => pct >= 80 ? '🟢' : pct >= 50 ? '🟡' : '🔴';
@@ -311,14 +311,14 @@ jobs:
         run: cp .env.example .env
 
       - name: Test con cobertura
-        run: make ai-coverage | tee /tmp/ai-coverage.txt
+        run: make ai-coverage | sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' | tee /tmp/ai-coverage.txt
 
       - name: Coverage summary → step summary
         if: always()
         run: |
           echo "## AI Engine Coverage" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          tail -12 /tmp/ai-coverage.txt >> $GITHUB_STEP_SUMMARY
+          sed -n '/^Name /,/passed/p' /tmp/ai-coverage.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
   # ── TFG: compila y publica ────────────────────────────────────────────────
@@ -395,7 +395,7 @@ jobs:
           COMPOSE_PROJECT_NAME: cie-10
         run: |
           REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          docker buildx bake -f docker-compose.yml -f docker-compose.mock.yml backend frontend ai_engine \
+          docker buildx bake -f docker-compose.yml -f docker-compose.mock.yml -f docker-compose.prod.yml backend frontend ai_engine \
             --load \
             --set backend.tags=cie-10-backend \
             --set backend.cache-from=type=registry,ref=ghcr.io/$REPO_LC/cache-backend \
@@ -412,27 +412,26 @@ jobs:
           make network-create
           docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --wait db mailpit
 
-      - name: Cache de deps del backend
-        uses: actions/cache@v6
-        with:
-          path: |
-            backend/deps
-            backend/_build
-          key: ${{ runner.os }}-e2e-backend-${{ hashFiles('backend/mix.lock') }}
-          restore-keys: ${{ runner.os }}-e2e-backend-
-
       - name: Preparar la base de datos
         run: |
-          sudo chown -R 1000:1000 backend
-          docker compose -f docker-compose.yml -f docker-compose.mock.yml run --rm --no-deps backend \
-            sh -c "mix deps.get && mix deps.compile && mix ecto.create && mix ecto.migrate && mix event_store.create && mix event_store.init && mix run priv/repo/seeds.exs"
+          docker compose -f docker-compose.yml -f docker-compose.mock.yml -f docker-compose.ci.yml run --rm --no-deps backend \
+            sh -c "mix ecto.create && mix ecto.migrate && mix event_store.create && mix event_store.init && mix run priv/repo/seeds.exs"
 
       - name: Levantar la aplicacion con el motor simulado
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --wait ai_engine backend frontend
+          docker compose -f docker-compose.yml -f docker-compose.mock.yml -f docker-compose.prod.yml -f docker-compose.ci.yml up -d --wait ai_engine backend frontend
 
       - name: Tests de extremo a extremo
         run: make e2e-tests
+
+      - name: Capturas de los fallos
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: e2e/screenshots/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Logs de los servicios si algo falla
         if: failure()

@@ -110,6 +110,7 @@ HECHO.md
 
 # Entorno de los tests de extremo a extremo
 e2e/.venv/
+e2e/screenshots/
 
 # Volcados de base de datos
 backup_*.sql

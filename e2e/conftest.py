@@ -32,6 +32,18 @@ INFORME = (
 )
 
 
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Captura de pantalla en el fallo, antes de que la propia página se cierre."""
+    outcome = yield
+    rep = outcome.get_result()
+    if rep.when == "call" and rep.failed:
+        pag = item.funcargs.get("pagina") or item.funcargs.get("sesion")
+        if pag:
+            os.makedirs("screenshots", exist_ok=True)
+            pag.screenshot(path=f"screenshots/{item.name}.png")
+
+
 @pytest.fixture(scope="session")
 def navegador():
     with sync_playwright() as p:
@@ -41,7 +53,7 @@ def navegador():
 
 
 def _nueva_pagina(navegador) -> Page:
-    contexto = navegador.new_context(viewport={"width": 1280, "height": 900})
+    contexto = navegador.new_context(viewport={"width": 1280, "height": 900}, locale="es-ES")
     pag = contexto.new_page()
     # Un fallo de red o una excepción de JavaScript suelen ser la causa real de que un test caiga
     # por "no encuentro el elemento". Verlos en el informe ahorra media hora de bisección.
