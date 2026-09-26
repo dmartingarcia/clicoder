@@ -299,6 +299,28 @@ jobs:
       - name: Format check ai_engine_mock
         run: ruff format --check ai_engine_mock/
 
+  # ── AI Engine: test con cobertura ─────────────────────────────────────────
+  ai-test:
+    name: AI Engine, test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configurar el entorno
+        run: cp .env.example .env
+
+      - name: Test con cobertura
+        run: make ai-coverage | tee /tmp/ai-coverage.txt
+
+      - name: Coverage summary → step summary
+        if: always()
+        run: |
+          echo "## AI Engine Coverage" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -12 /tmp/ai-coverage.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
   # ── TFG: compila y publica ────────────────────────────────────────────────
   tfg:
     name: TFG, compila memoria
