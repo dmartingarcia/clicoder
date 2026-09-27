@@ -388,7 +388,7 @@ Con pivot EN se generaron 500 variantes retrotraducidas de las 500 notas origina
 \end{itemize}
 
 \paragraph{Implementación.}
-Se diseñó el script \texttt{ai\_engine/augment.py} con dos \emph{backends} intercambiables: NLLB-200~\cite{costa-jussa2022nllb200} (modelo local de código abierto de Meta, sin coste externo) y Azure Translator (servicio cloud con nivel gratuito de 2M caracteres/mes sin tarjeta de crédito). El script incluye checkpoint incremental para reanudar traducciones interrumpidas. La integración con el flujo de entrenamiento se realiza mediante el target \texttt{make ai-augment} del \texttt{Makefile} y el parámetro \texttt{--train\_file} de \texttt{train.py}.
+Se diseñó el script \texttt{ai\_engine/augment.py} con dos \emph{backends} intercambiables: NLLB-200~\cite{costa-jussa2022nllb200} (modelo local de código abierto de Meta, sin coste externo) y Azure Translator (servicio cloud con nivel gratuito de 2M caracteres/mes). El script incluye checkpoint incremental para reanudar traducciones interrumpidas. La integración con el flujo de entrenamiento se realiza mediante el target \texttt{make ai-augment} del \texttt{Makefile} y el parámetro \texttt{--train\_file} de \texttt{train.py}.
 
 Se aplicaron tres pivotes independientes (EN, DE, FR), lo que cuadruplica el corpus de entrenamiento hasta 2.000 documentos. Las variantes se combinan mediante \texttt{ai\_engine/combine\_augmented.py} en un único CSV de entrenamiento. El proceso de configuración, los límites del servicio gratuito, las estadísticas de calidad por pivote y los comandos de uso se documentan en el Anexo~\ref{cap:AnexoL}.
 
