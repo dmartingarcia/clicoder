@@ -393,15 +393,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      # El navegador pesa unos 170 MB y compilar el entorno cuesta mas que los propios tests.
-      - name: Cache del entorno de Playwright
+      - name: Cache del navegador de Playwright
         uses: actions/cache@v6
         with:
-          path: |
-            e2e/.venv
-            ~/.cache/ms-playwright
-          key: ${{ runner.os }}-e2e-${{ hashFiles('e2e/requirements.txt') }}
-          restore-keys: ${{ runner.os }}-e2e-
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('e2e/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-playwright-
 
       # Las librerias de sistema de Chromium van por apt, asi que no entran en el cache.
       - name: Dependencias de sistema de Chromium
