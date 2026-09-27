@@ -1,0 +1,172 @@
+%%%%%%%%%%%%%%
+% Fichero: principal.tex
+% Autor: Jesús Salido Tercero (https://www.esi.uclm.es/www/jsalido)
+% Fecha (creación): febrero 2010
+% Rev. : abril 2025
+% Descripción: Plantilla para memoria de TFG
+% (Escuela Sup. de Informática, UCLM). Creada para el curso
+% “LaTeX esencial para preparación de TFG, Tesis y otros documentos
+% académicos” (Esc. Sup. Informática-UCLM)
+%
+%### Compilación
+%
+% Esta plantilla ha sido preparada para compilarse con `pdflatex`
+% (bibliografía con `bibtex`). Se recomienda emplear una distribución
+% de LaTeX como MiKTeX o TeXLive.
+%
+% Una versión revisada de esta plantilla está disponible en Overleaf para
+% trabajar online.
+%
+% Si deseas acceder a la versión de desarrollo puedes encontrarla en GitHub:
+%	https://github.com/JesusSalido/TFG_ESI_UCLM
+%%%%%%%%%%%%%%
+
+% Al llamar a la clase puedes pasarle opciones que indican el idioma pral.
+% del documento (spanish o english), el tipo de dispositivo (normal, para
+% imprimir en papel y screen para leer en pantalla), y si se desea
+% numeración de páginas en el pie (pageonfooter=true) o en la cabecera
+% (pageonfooter=false).
+\documentclass[final, % final o draft (sin figuras)
+			   spanish, % Idioma pral. (spanish o english)
+			   device=normal, % Tipo de dispositivo (normal o screen)
+			   pageonfooter=false % Paginación en el pie
+]{TFGesi}
+
+% -------------------------
+% EDITA: Los datos del documento con la información de tu trabajo.
+%
+% IMPORTANTE: Todos los campos son obligatorios,
+% pero \cotutline se puede dejar vacío.
+%
+% Algunos datos deben declararse en el idioma alternativo al pral.
+% del documento. Estos datos se emplean en el resumen en el idioma
+% alternativo.
+%
+% La clase TFGesi los usa para generar el contenido personalizado.
+% Puedes usarlos en cualquier parte del documento suprimiendo
+% el carácter '@', p.ej., \titulo
+% -------------------------
+\makeatletter
+\@titulo{Sistema de Codificación de Diagnósticos Clínicos a través de la norma CIE-10} % 1ª Línea
+\@tituloCorto{Sistema de Codificación de Diagnósticos Clínicos} % En idioma pral.
+\@tituloCortoAlt{Clinical Diagnosis Coding System} % En idioma alt.
+\@autoria{David Martin Garcia}
+\@email{davidmartingarcia0@gmail.com}
+\@autorline{Autor: \autoria}
+\@tutline{Tutor/a: José Antonio Cruz Lemus}
+\@cotutline{Cotutor/a: Francisco Pascual Romero Chicharro}
+\@instEdu{UNIVERSIDAD DE CASTILLA-LA MANCHA}
+\@centroEdu{ESCUELA SUPERIOR DE INFORMÁTICA}
+\@titulacion{GRADO EN INGENIERÍA INFORMÁTICA} % En idioma pral.
+\@titulacionAlt{BACHELOR IN COMPUTING ENGINEERING} % En idioma alt.
+\@especialidad{Computación}
+\@depto{Depto. de Tecnologías y Sistemas de Información}
+\@tipoDoc{TRABAJO FIN DE GRADO} % En idioma pral.
+\@tipoDocAlt{BACHELOR DISSERTATION} % En idioma alt.
+\@mesTF{Diciembre}        	% Mes de defensa
+\@monthTF{December}        	% En inglés
+\@yearTF{2026}        	% Año de defensa
+\@cityTF{Ciudad Real}	% Ciudad de defensa
+\@escudo{esiLogo}       % Logo centro (pdf, png o jpg)
+\makeatother
+
+% Resaltado de los términos que justifican una predicción (figura de explicabilidad)
+\definecolor{amarillo}{RGB}{255,214,10}
+\usepackage{longtable} % Tablas de varias páginas (AnexoJ)
+\usepackage{comment}   % Exclusión de porciones de texto
+\usetikzlibrary{babel,shadows,shapes.geometric,shapes.multipart,arrows.meta,positioning,fit,backgrounds,calc} % Diagramas de los anexos/capítulos
+% -------------------------
+
+% Palabras clave: Son importantes para facilitar búsqueda en Internet
+% Se añaden como metadatos al PDF final.
+% Dejar lista vacía si no se quieren incluir keywords.
+% Si se comenta el comando no se incluye ningún metadato.
+\setkeywords{% (hasta 5 o 6 máx.)
+	CIE-10, %
+	BERT, %
+	clasificación multilabel, %
+	codificación clínica, %
+	procesamiento de lenguaje natural%
+}
+
+
+% -------------------------
+% CUERPO del documento
+% -------------------------
+% Para pruebas, limita los ficheros incluidos.
+%\includeonly{}
+\begin{document}
+
+% -------------------------
+% Portadas, créditos, resumen, agradecimiento, notación e índices.
+\frontmatter
+\input{preambulo} % Contiene portadas y otros elementos preliminares
+% -------------------------
+
+% -------------------------
+% Capítulos
+\mainmatter
+%\onehalfspacing % Ajusta interlineado a 1.5 líneas
+
+% Ubicados en ./Caps por mayor comodidad.
+% Pueden modificarse los nombres y rutas a conveniencia.
+% No se precisa nombre precedido por número (se hace por claridad).
+\include{./Caps/1_Introduccion}
+\include{./Caps/2_Objetivo}
+\include{./Caps/3_Planificacion}
+\include{./Caps/4_Desarrollo}
+\include{./Caps/5_Conclusiones}
+
+\singlespacing % Resto del documento siempre en espaciado sencillo
+% -------------------------
+
+
+
+% -------------------------
+% --- BIBLIOGRAFÍA (Obligatoria)
+% -------------------------
+\bibliography{bibliografia} % Nombre del fichero .bib
+\bibliographystyle{plain} % Elige el estilo adecuado.
+% Estilos nativos incluidos con LaTeX (plain, abbrv, alpha, unsrt).
+%
+% plain: citación en estilo numérico. En la bibliografía las entradas
+%        aparecen en orden alfabético.
+%
+% abbrv: Cita numérica. En la bibliografía los nombres aparecen
+%        sólo con la inicial.
+%
+% unsrt: Cita numérica. La bibliografía por orden de cita en el texto.
+%
+% -------------------------
+%        Estilos incluidos con BibTeX no nativos, pero populares
+%        en ingeniería (no requieren paquetes adicionales).
+%
+% acm:   Cita numérica. En la bibliografía con los nombre de autores
+%        en mayúsculas y con ordenación alfabética.
+%
+% ieeetr:IEEE Transactions, con citación numérica y ordenación por orden
+%        de cita.
+% -------------------------
+% (FIN BIBLIOGRAFÍA)
+% -------------------------
+
+
+% -------------------------
+% ANEXOS
+% -------------------------
+\appendix
+\include{./Anexos/AnexoA} % Anexo A: Comparativa de modelos candidatos
+\include{./Anexos/AnexoB} % Anexo B: Arquitectura de servicios
+\include{./Anexos/AnexoC} % Anexo C: Comunicación entre servicios
+\include{./Anexos/AnexoD} % Anexo D: Modelo de datos
+\include{./Anexos/AnexoE} % Anexo E: Decisiones de arquitectura
+\include{./Anexos/AnexoF} % Anexo F: Proceso de aprendizaje
+\include{./Anexos/AnexoG} % Anexo G: Análisis estadístico del corpus
+\include{./Anexos/AnexoH} % Anexo H: Configuración y resultados del entrenamiento final
+\include{./Anexos/AnexoI} % Anexo I: Arquitectura de despliegue (Docker Compose + Traefik + túnel de Cloudflare)
+\include{./Anexos/AnexoJ} % Anexo J: Tablero Kanban, listado completo de tareas
+\include{./Anexos/AnexoK} % Anexo K: Guía de arranque del sistema
+\include{./Anexos/AnexoL} % Anexo L: Aumentación de datos mediante retrotraducción
+\include{./Anexos/AnexoM} % Anexo M: Especificación de la API (OpenAPI + NDJSON)
+%--- (FIN DOCUMENTO)
+\end{document}

@@ -1,0 +1,210 @@
+%\input{./Anexos/PortadaETSII} % Por ej.,: Otras portadas
+%\includepdf{fichero_portada.pdf} % Incluso como fichero PDF
+
+% -------------------------------------------------------------------------
+% PORTADA PRAL. (1)
+% -------------------------------------------------------------------------
+
+% \portadaOld % Portada pral.
+\portadaNew
+
+% -------------------------------------------------------------------------
+% PORTADA INTERIOR (2)
+% -------------------------------------------------------------------------
+\portadaInt %Portada interior
+
+
+% -------------------------
+% CRÉDITOS
+% -------------------------
+\begin{creditos}[\titulo] % Editar a conveniencia (se pasa el título deseado)
+Este documento se distribuye con licencia CC BY-NC-SA 4.0. El texto completo de la licencia se puede obtener en \url{https://creativecommons.org/licenses/by-nc-sa/4.0/}. La copia y distribución de esta obra está permitida en todo el mundo, sin regalías y por cualquier medio, siempre que esta nota sea preservada. Se concede permiso para copiar y distribuir traducciones de este libro desde el español original a otro idioma, siempre que la traducción sea aprobada por el autor del libro y tanto el aviso de copyright como esta nota de permiso, sean preservados en todas las copias.
+
+\noindent \includegraphics[width=0.15\linewidth]{by-nc-sa}
+
+\noindent Este documento se ha elaborado a partir de la plantilla de TFG de la ESI-UCLM de Jesús Salido~\cite{salidoTFG}.
+
+% Para citar este plantilla empleando bibtex puedes emplear el registro siguiente:
+%@www{salidoTFG,
+%  author       = {Jesús Salido},
+%  title        = {Plantilla guía de TFG para la ESI-UCLM},
+%  year         = {2019},
+%  editor       = {GitHub},
+%  organization = {Universidad de Castilla-La Mancha},
+%  url          = {https://github.com/JesusSalido/TFG_ESI_UCLM},
+%  doi          = {10.5281/zenodo.4574562}
+%}
+\end{creditos}
+
+
+% -------------------------
+% CALIFICACIÓN DEL TRIBUNAL  (No necesario en versión electrónica)
+% -------------------------
+%\tribunal % Página opcional para calificación
+
+
+% -------------------------
+% DEDICATORIA
+% -------------------------
+\begin{dedicatoria} % (no confundir con los agradecimientos)
+\emph{A mi familia y amigos,\\por ser el impulso constante en cada paso\\de este camino de aprendizaje y crecimiento}
+\end{dedicatoria}
+
+\pagestyle{plain}	% Páginas sólo con numeración inferior al pie
+
+
+% -------------------------
+% RESÚMENES:
+% -------------------------
+% EDITAR: Resumen en idioma pral. default=spanish (máx. 1 pág.)
+\begin{resumenPral}[spanish]{\titulo} % Se pasa el idioma (opcional) y título
+La codificación manual de diagnósticos clínicos en sistemas CIE-10 presenta importantes desafíos operativos: complejidad creciente (68.069 códigos frente a los 14.025 de CIE-9) y tiempos medios de 14 minutos por caso~\cite{sanidad2016cie10,gogorcena2017cie10es}, con el agravante de requerir personal especializado para evitar errores de clasificación.
+
+Este trabajo propone un sistema automático de codificación mediante modelos BERT multilabel adaptados a narrativas clínicas en español, abordando tres problemáticas clave:
+
+\begin{itemize}
+ \item Procesamiento de lenguaje clínico no estructurado.
+ \item Asignación múltiple de códigos jerárquicamente relacionados.
+ \item Adaptación a los requisitos de trazabilidad y auditabilidad del Reglamento UE 2017/745~\cite{eu2017745}, aplicable al software de apoyo a la decisión clínica.
+\end{itemize}
+
+La metodología combina técnicas de PLN con conocimiento clínico estructurado: preentrenamiento débil sobre las descripciones oficiales del catálogo CIE-10-ES, \emph{fine-tuning} del modelo RigoBERTa-Clinical~\cite{garciasubies2026rigobertaclinical} con función de pérdida Binary Cross-Entropy ponderada para combatir el desequilibrio extremo de clases, y estudio de la estrategia de umbral de decisión (global frente a por código) sobre el conjunto de validación del corpus CodiEsp~\cite{miranda2020}.
+
+Sobre el conjunto de prueba de CodiEsp, el sistema obtiene un F1-micro de 0,495 y un F1-macro de 0,108 (umbral de decisión global de 0,2, seleccionado sobre el conjunto de validación). La calidad del \emph{ranking} de códigos, medida como MAP por documento, es de 0,454 sobre el conjunto completo de códigos de referencia, métrica directamente comparable con el \emph{benchmark} CodiEsp~\cite{miranda2020}, y de 0,555 al restringirla al vocabulario de códigos que el modelo puede predecir. Con el clasificador solo, esa cifra lo deja en el penúltimo lugar de los diez sistemas comparados, lo que resulta razonable para un único clasificador plano entrenado con 500 documentos. El sistema implementa además un \textbf{modo fusionado} que combina el clasificador con un diccionario de patrones clínicos en un único \emph{ranking}: en esa configuración alcanza un \textbf{MAP de 0,554 y ocupa la segunda posición} de la comparativa, por delante de los diccionarios construidos a mano y de todos los sistemas basados en \emph{transformers}. Diez puntos de diferencia que no vienen de un modelo mejor, sino de combinar dos fuentes de evidencia que se equivocan en sitios distintos. Sobre la máquina de desarrollo, el modelo propone los códigos de un informe en 0,331~s de mediana. Ese tiempo no es comparable con los 14 minutos que la bibliografía atribuye a codificar un alta, porque ese proceso abarca mucho más que proponer candidatos: lo que el sistema aporta es un punto de partida, no un resultado final. Con un F1-micro de 0,495 la propuesta exige revisión completa por parte del codificador clínico, de modo que el sistema se plantea como apoyo a la decisión y no como sustituto.
+
+El trabajo demuestra la viabilidad de sistemas basados en transformers para codificación clínica automatizada, proponiendo un \emph{pipeline} reproducible que integra un clasificador multilabel, un servicio de inferencia con API REST y una interfaz web de demostración en tiempo real. Las limitaciones identificadas (cobertura reducida de códigos poco frecuentes y ausencia de datos de hospitales reales) establecen las líneas prioritarias para trabajos futuros.
+\end{resumenPral}
+
+
+% EDITAR: Resumen en idioma alternativo default=english (máx. 1 pág.)
+%---
+\begin{resumenAlt}[english]{\tituloCortoAlt}
+% Se pasa el idioma (opcional) y título
+Manual coding of clinical diagnoses in ICD-10 systems presents significant operational challenges: growing complexity (68,069 codes versus 14,025 in ICD-9) and an average coding time of 14 minutes per case~\cite{sanidad2016cie10,gogorcena2017cie10es}, compounded by the need for specialist staff to avoid classification errors.
+
+This work proposes an automatic coding system based on multilabel BERT models adapted to clinical narratives in Spanish, addressing three key problems:
+
+\begin{itemize}
+ \item Processing of unstructured clinical language.
+ \item Multiple assignment of hierarchically related codes.
+ \item Compliance with the traceability and auditability requirements of EU Regulation 2017/745~\cite{eu2017745}, applicable to clinical decision-support software.
+\end{itemize}
+
+The methodology combines NLP techniques with structured clinical knowledge: weakly supervised pre-training on the official ICD-10-ES catalogue descriptions, fine-tuning of the RigoBERTa-Clinical model~\cite{garciasubies2026rigobertaclinical} with weighted Binary Cross-Entropy loss to address extreme class imbalance, and a study of the decision-threshold strategy (global versus per-code) on the CodiEsp validation set~\cite{miranda2020}.
+
+On the CodiEsp test set, the system achieves an F1-micro of 0.495 and an F1-macro of 0.108 (global decision threshold of 0.2, selected on the validation set). Ranking quality, measured as per-document MAP, is 0.454 over the full reference code set (directly comparable with the CodiEsp benchmark~\cite{miranda2020}) and 0.555 when restricted to the code vocabulary the model can predict. With the classifier alone, that figure places it second to last among the ten systems compared, a reasonable outcome for a single flat classifier trained on 500 documents. The system also implements a \textbf{fused mode} that combines the classifier with a dictionary of clinical patterns into a single ranking: in that configuration it reaches a \textbf{MAP of 0.554 and ranks second} in the comparison, ahead of the hand-built dictionaries and of every transformer-based system. Ten points of difference that come not from a better model but from combining two sources of evidence that fail in different places. On the development machine, the model proposes the codes for a report in a median of 0.331 s. That figure is not comparable with the 14 minutes the literature attributes to coding a discharge report, since that process covers far more than proposing candidates: what the system provides is a starting point, not a final result. With a micro-F1 of 0.495, its output requires full review by the clinical coder, so the system is presented as decision support rather than as a replacement.
+
+The work demonstrates the feasibility of transformer-based systems for automated clinical coding, proposing a reproducible pipeline integrating a multilabel classifier, a REST API inference service, and a real-time web interface. Identified limitations (limited coverage of rare codes and absence of real hospital data) define the priority directions for future work.
+\end{resumenAlt}
+
+% Ajuste al idioma pral.
+\ifbool{ESI@spanish}{\selectlanguage{spanish}}{\selectlanguage{english}}
+
+
+% -------------------------
+% AGRADECIMIENTOS (máx. recomendable: 1 pág.)
+% -------------------------
+\auxchapter{Agradecimientos}
+Doce años dan para mucho, y hay gente sin la que nada de esto habría sido posible. En ese tiempo pasé por Affirm - Returnly, Sonnen - Shell, Rollbox - Personio, Bizneo y, actualmente, TeamSystem - Quipu. Acumulé experiencia, responsabilidades, muchos viajes y, sobre todo, compañeros y compañeras que dejaron huella y que, de un modo u otro, también forman parte de lo que hoy entrego. Este trabajo quedó pendiente, por todos estos momentos, es una cuenta sin saldar que hoy, por fin, se cierra.
+
+A mis directores, \textbf{José Antonio Cruz Lemus} y \textbf{Francisco Pascual Romero Chicharro}: gracias por una paciencia que merece figurar en los libros. Desaparecí durante más de un año por cambios de trabajo y vicisitudes varias, y aun así bastaba con un correo para que estuvierais al otro lado, dispuestos a retomar el hilo. Me siento muy afortunado de haberlos tenido como tutores.
+
+A \textbf{Raquel}, mi novia y compañera en este viaje, por las incontables horas leyendo y editando este documento. Sin ella esto seguiría siendo un borrador perdido en alguna carpeta. Gracias por hacerme siempre las preguntas correctas, que son las más difíciles y las más necesarias. Y gracias, sobre todo, por creer en que esto llegaría a buen puerto incluso en los momentos en que yo mismo lo dudaba.
+
+A Prado, mi \textbf{madre}, por insistir tanto en que terminara de una vez. Tenías razón, era una espina que había que quitarse. Espero que ahora puedas dormir un poco más tranquila. Tampoco es casualidad que este trabajo trate sobre la CIE-10, tú, que eres codificadora clínica, has sido mi beta tester favorita y la primera en validar que esto tenía sentido más allá del papel.
+
+A mis \textbf{amigos}, que llevan años con el mismo chascarrillo: \emph{<<¿Qué pasará antes, que Jordi Hurtado se retire o tú acabes la carrera?>>}. Pues bien, señores, la respuesta ya está aquí.
+
+Por último, a todos los \textbf{profesores de la Escuela Superior de Informática de Ciudad Real}. Sin vuestras enseñanzas no habría podido llegar a donde estoy hoy. Fue una etapa genial, y es momento de cerrarla como se merece.
+
+\firma % Nombre, lugar y año (automático, no cambies)
+
+
+% -------------------------
+% -NOTACIÓN: Lista de símbolos con significado especial.
+% -------------------------
+\auxchapter{Notación y acrónimos}
+\section*{Notacion}
+
+\begin{tabular}{r r p{0.78\linewidth}}
+$z_c$        & : & \emph{Logit} del código $c$: salida del clasificador antes de la sigmoide. Puede tomar cualquier valor real \\
+$\sigma(z)$  & : & Función sigmoide, que convierte un \emph{logit} en una probabilidad entre 0 y 1 \\
+$\tau$       & : & Umbral de decisión: un código se propone si $\sigma(z_c) \geq \tau$ \\
+$\beta$      & : & Peso del diccionario en el modo fusionado: $s_c = z_c + \beta \cdot \mathrm{conf}(\mathrm{bloque}(c))$ \\
+$w_c$        & : & \texttt{pos\_weight} de la clase $c$: peso del término positivo en la pérdida, que compensa el desequilibrio \\
+$|W|$        & : & Número de palabras candidatas de un informe en el cálculo de la atribución \\
+\end{tabular}
+
+\section*{Lista de acrónimos}
+% OJO: Esta lista debería estar ordenada alfabeticamente (hacer de modo manual).
+
+\begin{tabular}{r r p{0.78\linewidth}}
+API   & : & \emph{Application Programming Interface}, interfaz de programación \\
+BCE   & : & \emph{Binary Cross-Entropy}, entropía cruzada binaria; función de pérdida del clasificador \\
+BERT  & : & \emph{Bidirectional Encoder Representations from Transformers} \\
+BSC   & : & Barcelona Supercomputing Center \\
+CIE-10 & : & Clasificación Internacional de Enfermedades, décima revisión \\
+CIE-10-ES & : & Edición española de la CIE-10, la que usa el Sistema Nacional de Salud \\
+CORS  & : & \emph{Cross-Origin Resource Sharing}, control de peticiones entre dominios \\
+CPU   & : & \emph{Central Processing Unit}, procesador de propósito general \\
+CQRS  & : & \emph{Command Query Responsibility Segregation}, separación entre el modelo que escribe y el que lee \\
+CSV   & : & \emph{Comma-Separated Values}, formato tabular en texto plano \\
+DSN   & : & \emph{Data Source Name}, cadena de conexión; aquí identifica el proyecto de Sentry \\
+F1    & : & Media armónica de precisión y \emph{recall} \\
+GGUF  & : & Formato de pesos cuantizados que emplea \texttt{llama.cpp} \\
+GPU   & : & \emph{Graphics Processing Unit}, acelerador empleado en entrenamiento e inferencia \\
+HSTS  & : & \emph{HTTP Strict Transport Security}, cabecera que fuerza el uso de HTTPS \\
+HTTP  & : & \emph{HyperText Transfer Protocol} \\
+LLM   & : & \emph{Large Language Model}, modelo de lenguaje generativo \\
+MAP   & : & \emph{Mean Average Precision}, métrica oficial del \emph{benchmark} CodiEsp (véase el glosario) \\
+NDJSON & : & \emph{Newline-Delimited JSON}, un objeto JSON por línea; formato del resumen en \emph{streaming} \\
+OTP   & : & \emph{Open Telecom Platform}, biblioteca de concurrencia y supervisión de Erlang \\
+PLN   & : & Procesamiento del Lenguaje Natural (en inglés, NLP) \\
+REST  & : & \emph{Representational State Transfer}, estilo arquitectónico de la API \\
+RGPD  & : & Reglamento General de Protección de Datos, Reglamento (UE) 2016/679 \\
+SDK   & : & \emph{Software Development Kit}, biblioteca de integración \\
+SMTP  & : & \emph{Simple Mail Transfer Protocol}, protocolo de envío de correo \\
+TLS   & : & \emph{Transport Layer Security}, cifrado del tráfico en tránsito \\
+UUID  & : & \emph{Universally Unique Identifier} \\
+ZLPR  & : & \emph{Zero-bounded Log-sum-exp \& Pairwise Rank-based loss}, pérdida de ordenación multietiqueta \\
+\end{tabular}
+
+\section*{Glosario de términos}
+
+Términos que el texto emplea con un significado preciso y que conviene fijar antes de leerlo.
+
+\begin{tabular}{r r p{0.78\linewidth}}
+Atribución & : & Palabras del informe que sostienen un código predicho. Se calcula enmascarándolas y midiendo cuánto cae el \emph{logit} \\
+\emph{Benchmark} & : & Tarea compartida con datos y métrica fijos que permite comparar sistemas. Aquí, CodiEsp-D 2020 \\
+Bloque & : & Los tres primeros caracteres de un código CIE-10. Agrupa códigos de la misma familia (por ejemplo, \texttt{E11} para la diabetes tipo 2) \\
+Codificador clínico & : & La persona que asigna los códigos a un informe. No confundir con el \emph{encoder} del modelo \\
+Cola larga & : & Distribución en la que unos pocos códigos concentran casi todos los ejemplos y la mayoría aparece muy pocas veces \\
+\emph{Encoder} & : & La parte del modelo que convierte el texto en vectores. Aquí, RigoBERTa-Clinical \\
+\emph{Event Sourcing} & : & Guardar la secuencia inmutable de hechos ocurridos en lugar del estado final, que se deriva de ellos \\
+\emph{Fine-tuning} & : & Ajustar un modelo ya preentrenado sobre la tarea concreta, en vez de entrenarlo desde cero \\
+\emph{Logit} & : & Salida del clasificador antes de aplicar la sigmoide. Ordena los códigos aunque no sea una probabilidad \\
+MAP & : & Para cada informe se mide la precisión media de su lista ordenada de códigos, y se promedian esos valores entre informes. No depende del umbral: mide el orden, no la decisión \\
+MAP alcanzable & : & MAP calculado solo sobre los códigos que el modelo puede predecir. No es comparable con el de otros sistemas \\
+MAP estricto & : & MAP sobre el \emph{gold} completo, penalizando los códigos fuera del vocabulario. Es el comparable con el \emph{benchmark} \\
+Modo fusionado & : & Motor que suma la confianza del diccionario al \emph{logit} del clasificador y ordena con la puntuación resultante \\
+Multietiqueta & : & Cada informe puede llevar varios códigos a la vez, de modo que las clases no se excluyen entre sí \\
+\emph{Pipeline} & : & Cadena de etapas de procesado encadenadas \\
+\texttt{pos\_weight} & : & Peso que la pérdida da a los ejemplos positivos de cada clase, para que los códigos raros no se ignoren \\
+Proyección & : & Tabla de solo lectura derivada de los eventos, que es la que consulta la aplicación \\
+\emph{Ranking} & : & Lista de códigos ordenada por confianza, sin decidir cuáles se aceptan \\
+\emph{Recall} & : & Proporción de los códigos correctos que el sistema llega a proponer \\
+Retrotraducción & : & Generar variantes de un texto traduciéndolo a otra lengua y de vuelta, para aumentar el corpus \\
+Umbral & : & Valor a partir del cual una probabilidad se convierte en un código propuesto. Afecta al F1, no al MAP \\
+Vocabulario del modelo & : & Los 1.767 códigos presentes en el entrenamiento, que son los únicos que el clasificador puede proponer \\
+\end{tabular}
+
+
+% -------------------------
+% ÍNDICES: Elimina los innecesarios.
+% -------------------------
+\idxGral
+\idxFiguras
+\idxTablas
+\idxListados
+\idxAlgoritmos
+%---

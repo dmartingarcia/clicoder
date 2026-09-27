@@ -368,6 +368,10 @@ jobs:
       - name: Compilar TFG
         run: make tfg-lint
 
+      - name: Renombrar PDF para mantener el nombre del release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: cp tfg/build/principal.pdf tfg/build/uclmTFGesi.pdf
+
       - name: Publicar PDF como release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v3

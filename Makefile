@@ -39,7 +39,7 @@ AI_MODEL_DIR = /app/model
 
 # Variables: TFG
 TFG_DIR   = tfg
-TFG_MAIN  = uclmTFGesi
+TFG_MAIN  = principal
 TFG_OUT   = $(TFG_DIR)/build
 TFG_IMAGE = texlive/texlive:latest
 
@@ -713,7 +713,7 @@ tfg-pdf: ## Compilar memoria TFG a PDF (requiere Docker)
 		-v "$$(pwd)/$(TFG_DIR)":/tfg \
 		-w /tfg \
 		$(TFG_IMAGE) \
-		sh -c 'mkdir -p build build/caps build/preambulo build/anexos && \
+		sh -c 'mkdir -p build build/Caps build/Anexos && \
 		       pdflatex -interaction=nonstopmode -output-directory=build $(TFG_MAIN).tex && \
 		       cd build && BIBINPUTS=../ bibtex $(TFG_MAIN) && cd .. && \
 		       pdflatex -interaction=nonstopmode -output-directory=build $(TFG_MAIN).tex && \
