@@ -10,7 +10,7 @@ jobs:
   # ── Commit lint ─────────────────────────────────────────────────────────────
   commitlint:
     name: Commit lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v5
@@ -28,7 +28,7 @@ jobs:
   # ── Frontend: lint & build ───────────────────────────────────────────────
   frontend-lint:
     name: Frontend, lint & build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: frontend
@@ -57,7 +57,7 @@ jobs:
   # ── Frontend: test with coverage ─────────────────────────────────────────
   frontend-test:
     name: Frontend, test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: frontend
@@ -115,7 +115,7 @@ jobs:
   # ── Backend: format, compile & static analysis ───────────────────────────
   backend-lint:
     name: Backend, lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: backend
@@ -173,7 +173,7 @@ jobs:
   # ── Backend: test with coverage ──────────────────────────────────────────
   backend-test:
     name: Backend, test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: backend
@@ -229,7 +229,9 @@ jobs:
           mix event_store.init
 
       - name: Test with coverage
-        run: mix coveralls.html 2>&1 | tee /tmp/coveralls_output.txt
+        run: |
+          set -o pipefail
+          mix coveralls.json 2>&1 | tee /tmp/coveralls_output.txt
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
@@ -274,7 +276,7 @@ jobs:
   # ── AI Engine ────────────────────────────────────────────────────────────────
   ai-engine:
     name: AI Engine, lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v5
@@ -302,16 +304,21 @@ jobs:
   # ── AI Engine: test con cobertura ─────────────────────────────────────────
   ai-test:
     name: AI Engine, test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v5
 
       - name: Configurar el entorno
-        run: cp .env.example .env
+        run: |
+          cp .env.example .env
+          make network-create
+          sudo chown -R 1000:1000 ai_engine
 
       - name: Test con cobertura
-        run: make ai-coverage | sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' | tee /tmp/ai-coverage.txt
+        run: |
+          set -o pipefail
+          make ai-coverage | sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' | tee /tmp/ai-coverage.txt
 
       - name: Coverage summary → step summary
         if: always()
@@ -324,7 +331,7 @@ jobs:
   # ── TFG: compila y publica ────────────────────────────────────────────────
   tfg:
     name: TFG, compila memoria
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
 
@@ -347,7 +354,7 @@ jobs:
   # ── End to end ───────────────────────────────────────────────────────────────
   e2e:
     name: End to end, flujos basicos
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
