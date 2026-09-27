@@ -26,9 +26,7 @@ Dado que el sistema se puede descomponer de forma natural en módulos independie
 
 \begin{enumerate}
 
- \item \textbf{Adquisición y construcción de las fuentes de datos.} Obtención del corpus CodiEsp y del diccionario oficial CIE-10-ES; este objetivo incluye el diseño e implementación de los scripts de \emph{scraping} sobre el portal eCIE-maps~\cite{eciemaps2024}, la carga del corpus en una base de datos y la generación de los ficheros CSV que alimentan las fases posteriores.
-
- \item \textbf{Módulo de preprocesamiento y gestión del corpus.} Módulo encargado de la carga, limpieza y transformaciones de las anotaciones al formato multilabel requerido por el modelo.
+ \item \textbf{Adquisición y construcción de las fuentes de datos.} Obtención del corpus CodiEsp y del diccionario oficial CIE-10-ES; este objetivo incluye el diseño e implementación de los scripts de \emph{scraping} sobre el portal eCIE-maps~\cite{eciemaps2024}, la carga del corpus en una base de datos y la generación de los ficheros CSV que alimentan las fases posteriores, así como de la carga, limpieza y transformaciones de las anotaciones al formato multilabel requerido por el modelo.
 
  \item \textbf{Análisis estadístico de las fuentes de datos.} Análisis estadístico de las diferentes fuentes de datos, caracterizando la longitud, la distribución de etiquetas, el solapamiento entre particiones y la relación entre las descripciones oficiales de los códigos y su presencia en el corpus. Este análisis fundamenta las decisiones de diseño del modelo y las futuras estrategias de entrenamiento.
 
@@ -38,7 +36,7 @@ Dado que el sistema se puede descomponer de forma natural en módulos independie
 
  \item \textbf{Servicio de inferencia (API REST).} Componente que expone las capacidades del modelo mediante una interfaz REST documentada. Para cada informe de entrada devolverá la lista de códigos predichos junto con su puntuación de confianza, permitiendo que un codificador humano filtre y valide los resultados antes de su registro definitivo.
 
- \item \textbf{Módulo de generación de resúmenes.} Componente que produce, mediante un modelo de lenguaje generativo ligero ejecutable en CPU, un resumen o paráfrasis del informe clínico que se presenta junto a los códigos predichos para agilizar la revisión del codificador.
+ \item \textbf{Módulo de generación de resúmenes.} Componente que produce, mediante un modelo de lenguaje generativo ligero, un resumen o paráfrasis del informe clínico que se presenta para agilizar la revisión del codificador.
 
  \item \textbf{Interfaz web de demostración.} Página web que permite a los usuarios cargar informes clínicos en español y visualizar las predicciones del sistema en tiempo real, facilitando la evaluación e interacción con el prototipo.
 \end{enumerate}
