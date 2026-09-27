@@ -3,21 +3,22 @@
 
 El objetivo de este trabajo es el \textbf{diseño e implementación de un sistema de codificación clínica automática en el estándar CIE-10-ES} capaz de asignar, a partir de informes de alta hospitalaria en español, uno o más códigos de diagnóstico siguiendo la nomenclatura CIE-10-ES. La codificación de procedimientos (CIE-10-ES-PCS) queda explícitamente fuera del alcance de este trabajo y se plantea como línea futura.
 
-El resultado del proyecto es un prototipo funcional compuesto por un modelo de clasificación multilabel basado en BERT, un módulo de generación de resúmenes clínicos mediante un modelo de lenguaje ligero, un servicio de inferencia accesible mediante una API REST y una página web para interactuar con dicha API.
+Como resultado, tendremos un prototipo funcional compuesto por un modelo de clasificación multilabel basado en BERT, un módulo de generación de resúmenes clínicos mediante un modelo de lenguaje ligero, un servicio de inferencia accesible mediante una API REST y una página web para interactuar con dicha API.
 
 El corpus CodiEsp~\cite{miranda2020} es el conjunto de datos de referencia para la codificación clínica automática en español. Proporciona informes clínicos anotados con sus correspondientes códigos CIE-10-ES tanto para diagnósticos como para procedimientos, e incluye las palabras del texto identificadas como evidencia de cada código.
 
 También se requerirá la adquisición del catálogo oficial de códigos CIE-10-ES, que contiene las descripciones en español de todos los códigos válidos, mediante técnicas de \emph{scraping} sobre el portal eCIE-maps~\cite{eciemaps2024} del Ministerio de Sanidad, dado que no existe ningún formato de descarga pública estructurada.
 
-El sistema busca asistir al codificador, nunca sustituirlo, ofreciéndole una propuesta de codificación con un nivel de confianza asociado para que centre su atención en los casos ambiguos o de baja certeza.
+El sistema busca asistir al codificador clínico, nunca sustituirlo: el flujo previsto (Figura~\ref{fig:c4-contexto}) es que el codificador envíe el informe de alta y revise la lista de códigos propuestos con su nivel de confianza asociado, interviniendo manualmente solo en los casos ambiguos o de baja certeza; el sistema no automatiza el registro final en el sistema de información hospitalario ni sustituye el criterio del codificador, que conserva la decisión sobre cada diagnóstico.
 
-La necesidad de partida es la ya cuantificada en la introducción: un tiempo medio de 14~minutos por alta hospitalaria y un catálogo de 68.069 códigos posibles convierten la codificación manual en un cuello de botella difícil de escalar sin más personal especializado~\cite{sanidad2016cie10}. El valor que aporta el prototipo no es sustituir a ese personal, sino reducir el tiempo dedicado a los diagnósticos claros para concentrar la atención humana en los casos ambiguos, y dejar además un registro auditable de cada predicción y de la versión del modelo empleada, en línea con lo que exige el Reglamento UE 2017/745~\cite{eu2017745} al software de apoyo a la decisión clínica.
+\begin{figure}[ht]
+\centering
+\resizebox{0.9\textwidth}{!}{\input{figs/c4-contexto}}
+\caption{Diagrama de contexto C4 (nivel~1): actores y sistemas externos del sistema de codificación CIE-10-ES. El diagrama de contenedores, con más detalle técnico, se recoge en el Anexo~\ref{cap:AnexoB}.}
+\label{fig:c4-contexto}
+\end{figure}
 
-El flujo de trabajo previsto es el siguiente (Figura~\ref{fig:c4-contexto}): el codificador clínico lee el informe de alta, envía el texto al sistema y consulta la clasificación que este propone; a continuación revisa cada código, lo valida o lo rechaza, y solo interviene manualmente cuando el sistema no acierta o su confianza es baja. Este trabajo se centra en esa fase de propuesta de códigos para revisión humana: no automatiza el registro final en el sistema de información hospitalario ni sustituye el criterio del codificador, que conserva la decisión sobre cada diagnóstico.
-
-El resultado que se presenta es, por tanto, un prototipo que propone códigos de diagnóstico CIE-10-ES completos a partir de texto clínico libre, junto con la evaluación de su rendimiento sobre el corpus CodiEsp; no es un sistema de codificación autónomo ni un producto certificado para uso clínico real.
-
-El sistema se entrena y evalúa exclusivamente con los conjuntos de datos mencionados, por lo que su rendimiento fuera de ese dominio no está garantizado.
+La necesidad de partida, ya cuantificada en la introducción (68.069 códigos posibles y 14~minutos de media por alta hospitalaria), convierte la codificación manual en un cuello de botella difícil de escalar sin más personal especializado~\cite{sanidad2016cie10}. El valor del prototipo no es sustituir a ese personal, sino reducir el tiempo dedicado a los diagnósticos claros y dejar un registro auditable de cada predicción y de la versión del modelo empleada, en línea con el Reglamento UE 2017/745~\cite{eu2017745}. El resultado es, por tanto, un prototipo —no un sistema autónomo ni un producto certificado para uso clínico real— entrenado y evaluado exclusivamente sobre el corpus CodiEsp, por lo que su rendimiento fuera de ese dominio no está garantizado.
 
 \section{Objetivos secundarios}
 

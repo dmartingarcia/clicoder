@@ -3,17 +3,6 @@
 
 Este anexo describe la topología de despliegue del sistema, los servicios que lo componen, sus dependencias y las variantes de configuración disponibles. El sistema se orquesta mediante Docker Compose.
 
-\section{Diagrama de contexto}
-
-La Figura~\ref{fig:c4-contexto} muestra la vista de contexto (C4 nivel~1): el sistema, el codificador clínico que lo utiliza y la fuente de datos externa (el portal eCIE-maps del Ministerio de Sanidad, empleado en la fase de adquisición del catálogo).
-
-\begin{figure}[ht]
-\centering
-\resizebox{0.9\textwidth}{!}{\input{figs/c4-contexto}}
-\caption{Diagrama de contexto C4 (nivel~1): actores y sistemas externos del sistema de codificación CIE-10-ES.}
-\label{fig:c4-contexto}
-\end{figure}
-
 \section{Diagrama de contenedores}
 
 La Figura~\ref{fig:c4-contenedores} muestra la vista de contenedores C4 del sistema: los cuatro componentes desplegables, sus tecnologías y los canales de comunicación entre ellos.
