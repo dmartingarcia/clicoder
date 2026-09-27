@@ -64,7 +64,6 @@ defmodule App.MixProject do
       # Tambien en test: el filtro que impide que el informe clinico salga hacia un tercero
       # es justo lo que no puede quedarse sin probar.
       {:sentry, "~> 10.0", only: [:prod, :dev, :test], runtime: Mix.env() == :prod},
-      {:hackney, "~> 1.8"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
