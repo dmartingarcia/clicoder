@@ -11,6 +11,12 @@ También se requerirá la adquisición del catálogo oficial de códigos CIE-10-
 
 El sistema busca asistir al codificador, nunca sustituirlo, ofreciéndole una propuesta de codificación con un nivel de confianza asociado para que centre su atención en los casos ambiguos o de baja certeza.
 
+La necesidad de partida es la ya cuantificada en la introducción: un tiempo medio de 14~minutos por alta hospitalaria y un catálogo de 68.069 códigos posibles convierten la codificación manual en un cuello de botella difícil de escalar sin más personal especializado~\cite{sanidad2016cie10}. El valor que aporta el prototipo no es sustituir a ese personal, sino reducir el tiempo dedicado a los diagnósticos claros para concentrar la atención humana en los casos ambiguos, y dejar además un registro auditable de cada predicción y de la versión del modelo empleada, en línea con lo que exige el Reglamento UE 2017/745~\cite{eu2017745} al software de apoyo a la decisión clínica.
+
+El flujo de trabajo previsto es el siguiente (Figura~\ref{fig:c4-contexto}): el codificador clínico lee el informe de alta, envía el texto al sistema y consulta la clasificación que este propone; a continuación revisa cada código, lo valida o lo rechaza, y solo interviene manualmente cuando el sistema no acierta o su confianza es baja. Este trabajo se centra en esa fase de propuesta de códigos para revisión humana: no automatiza el registro final en el sistema de información hospitalario ni sustituye el criterio del codificador, que conserva la decisión sobre cada diagnóstico.
+
+El resultado que se presenta es, por tanto, un prototipo que propone códigos de diagnóstico CIE-10-ES completos a partir de texto clínico libre, junto con la evaluación de su rendimiento sobre el corpus CodiEsp; no es un sistema de codificación autónomo ni un producto certificado para uso clínico real.
+
 El sistema se entrena y evalúa exclusivamente con los conjuntos de datos mencionados, por lo que su rendimiento fuera de ese dominio no está garantizado.
 
 \section{Objetivos secundarios}
@@ -36,36 +42,4 @@ Dado que el sistema se puede descomponer de forma natural en módulos independie
  \item \textbf{Interfaz web de demostración.} Página web que permite a los usuarios cargar informes clínicos en español y visualizar las predicciones del sistema en tiempo real, facilitando la evaluación e interacción con el prototipo.
 \end{enumerate}
 
-\section{Requisitos}
-
-A continuación se especifican los requisitos que debe cumplir el sistema, distinguiendo entre los funcionales, que describen qué debe hacer, y los no funcionales, que acotan cómo debe comportarse.
-
-\subsection{Requisitos funcionales}
-
-\begin{itemize}
- \item \textbf{1. Entrada de datos:} Aceptar como entrada textos clínicos en español en formato libre, sin requerir marcado ni estructura predefinida.
- \item \textbf{2. Predicción de códigos:} Predecir uno o más códigos CIE-10-ES de diagnóstico para cada texto de entrada.
- \item \textbf{3. Puntuación de confianza:} Devolver una puntuación de confianza por cada código predicho, para priorizar la revisión humana de los casos de baja certeza.
- \item \textbf{4. Inferencia por lotes:} Admitir el procesamiento de múltiples textos de manera simultánea, devolviendo los resultados en el mismo orden que las entradas recibidas.
- \item \textbf{5. API REST:} Exponer las funcionalidades a través de una API REST documentada con al menos un endpoint de inferencia y uno de comprobación del estado del servicio.
-\end{itemize}
-
-Los cinco anteriores acotan el motor de inteligencia artificial, que es el componente central. El sistema que se entrega, sin embargo, abarca los ocho subobjetivos enumerados al principio del capítulo, de modo que los requisitos siguientes cubren las piezas restantes: el backend que orquesta el flujo, el módulo de resúmenes y la interfaz. Se enumeran aparte porque su verificación es de otra naturaleza, funcional y no métrica.
-
-\begin{itemize}
- \item \textbf{6. Gestión de cuentas:} Permitir el alta de un usuario con verificación de la dirección de correo antes de conceder acceso, y autenticar las peticiones posteriores.
- \item \textbf{7. Orquestación del análisis:} Recibir un informe desde la interfaz, solicitar la predicción al motor y entregar los resultados de forma progresiva, sin que la parte más lenta del análisis retrase la aparición de los códigos.
- \item \textbf{8. Revisión de los códigos propuestos:} Permitir al codificador clínico validar o rechazar cada código, exigiendo un motivo en el rechazo, y conservar esas decisiones asociadas al análisis.
- \item \textbf{9. Resumen del informe:} Generar, mediante un modelo de lenguaje ejecutable en CPU, un resumen o paráfrasis del informe que se muestre junto a los códigos para agilizar la revisión.
- \item \textbf{10. Interfaz web:} Ofrecer una interfaz que permita enviar informes, seguir el análisis mientras se produce, consultar los términos que justifican cada código y recuperar los análisis anteriores.
-\end{itemize}
-
-\subsection{Requisitos no funcionales}
-
-\begin{itemize}
- \item \textbf{1. Rendimiento:} El sistema debe situarse dentro del rango de resultados de los sistemas participantes en el \emph{benchmark} CodiEsp~\cite{miranda2020}, que actúa como referencia, medido con la métrica oficial de la tarea (MAP por documento) sobre el mismo conjunto de prueba.
- \item \textbf{2. Latencia:} La propuesta de códigos debe completarse por debajo del segundo por informe en CPU de gama alta, de modo que el codificador clínico reciba los candidatos sin espera apreciable. La atribución de los términos que justifican cada código queda fuera de ese límite: es un orden de magnitud más cara, se sirve en una petición independiente y puede llegar después de los códigos, porque el usuario la consulta solo cuando despliega un código concreto.
- \item \textbf{3. Modularidad:} Los diferentes módulos del sistema deben tener interfaces bien definidas y ser sustituibles de forma independiente, de modo que, por ejemplo, el modelo base pueda cambiarse sin modificar el servicio de inferencia.
- \item \textbf{4. Trazabilidad:} El sistema debe registrar para cada predicción la versión del modelo empleada y el identificador del informe procesado, en línea con los principios de auditabilidad del Reglamento UE 2017/745~\cite{eu2017745} aplicable al software de apoyo a la decisión clínica.
- \item \textbf{5. Privacidad y protección de datos:} El tratamiento de los informes clínicos y de los datos de usuario debe ajustarse al Reglamento General de Protección de Datos (RGPD)~\cite{RGPD16}: minimización de datos, cifrado en tránsito y ejercicio de los derechos de supresión y portabilidad.
-\end{itemize}
+Los requisitos funcionales y no funcionales que debe cumplir el sistema se especifican en la sección~\ref{sec:requisitos} del capítulo~\ref{cap:Desarrollo}, junto con los modelos de análisis (conceptual, de casos de uso y de interfaz) de los que se derivan.

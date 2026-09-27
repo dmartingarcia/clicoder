@@ -1,0 +1,44 @@
+% Modelo de casos de uso: actores y sus casos de uso principales
+% Uso: \input{figs/casos-uso} dentro de figure+\centering+\resizebox{\textwidth}{!}{...}
+
+\begin{tikzpicture}[
+  every node/.style={font=\small\sffamily},
+  actor/.style={draw=aquaESI!80, fill=aquaESI!12, thick, rectangle, rounded corners=3pt,
+                minimum width=2.6cm, minimum height=1.0cm, align=center},
+  actorsec/.style={draw=ocre!85, fill=ocre!15, thick, rectangle, rounded corners=3pt,
+                minimum width=2.6cm, minimum height=1.0cm, align=center},
+  sysbox/.style={draw=gray!70, thick, rounded corners=5pt, inner sep=8pt},
+  uc/.style={font=\scriptsize\sffamily, align=left},
+  title/.style={font=\scriptsize\sffamily\bfseries},
+]
+
+\node[actor] (cod) at (0,0) {Codificador\\clínico};
+\node[actorsec] (admin) at (0,-5.6) {Administrador};
+\node[actorsec] (ia) at (14.2,-2.8) {Motor de IA};
+
+\node[sysbox, minimum width=8.6cm, minimum height=4.6cm] (sys) at (7.3,0) {};
+\node[title, above] at (7.3,2.35) {Sistema de codificación clínica};
+\node[uc, align=left] at (7.3,0) {
+  \textbullet\ Registrarse e iniciar sesión\\
+  \textbullet\ Crear un análisis y enviar un informe\\
+  \textbullet\ Consultar códigos predichos y confianza\\
+  \textbullet\ Validar o rechazar un código\\
+  \textbullet\ Sugerir manualmente un código\\
+  \textbullet\ Consultar el historial de análisis\\
+  \textbullet\ Exportar o eliminar sus datos (RGPD)\\
+  \textbullet\ Cambiar el idioma de la interfaz
+};
+
+\node[sysbox, minimum width=8.6cm, minimum height=1.8cm] (adminbox) at (7.3,-5.6) {};
+\node[uc, align=left] at (7.3,-5.6) {
+  \textbullet\ Seleccionar el motor de predicción activo\\
+  \textbullet\ Configurar el modelo de resumen, modo y \emph{prompts}\\
+  \textbullet\ Consultar usuarios y conversaciones registradas
+};
+
+\draw[gray!60, thick] (cod.east) -- (sys.west |- cod);
+\draw[gray!60, thick] (admin.east) -- (adminbox.west |- admin);
+\draw[gray!60, thick, dashed] (ia.west) -- (sys.east |- ia)
+  node[midway, above, font=\tiny\sffamily, sloped]{\guillemotleft usa\guillemotright};
+
+\end{tikzpicture}

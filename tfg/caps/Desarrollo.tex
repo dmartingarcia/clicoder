@@ -5,7 +5,7 @@ En este capítulo se describe el proceso de desarrollo del sistema de codificaci
 
 \section{Requisitos y análisis del sistema}
 
-Los requisitos funcionales y no funcionales del sistema quedan recogidos en el capítulo~\ref{cap:Objetivo}. En este apartado se presentan los modelos de análisis que permiten comprender la estructura del sistema antes de abordar su diseño.
+Este apartado presenta los modelos de análisis que permiten comprender la estructura del sistema antes de abordar su diseño, y a continuación especifica los requisitos funcionales y no funcionales que debe cumplir.
 
 \subsection{Modelo conceptual}
 
@@ -18,6 +18,15 @@ El sistema maneja las siguientes entidades principales:
  \item \textbf{Código predicho}: cada código CIE-10-ES sugerido por el modelo, con su puntuación de confianza y su estado de revisión (pendiente, validado o rechazado por el codificador).
  \item \textbf{Código CIE-10-ES}: entrada del catálogo oficial, con su código alfanumérico, descripción en español y metadatos clínicos (restricciones de sexo, edad, etc.).
 \end{itemize}
+
+La Figura~\ref{fig:modelo-conceptual} resume estas entidades y sus relaciones; es la vista conceptual de las mismas tablas que el Anexo~\ref{cap:AnexoD} detalla a nivel de esquema de base de datos.
+
+\begin{figure}[ht]
+\centering
+\resizebox{0.85\textwidth}{!}{\input{figs/modelo-conceptual}}
+\caption{Modelo conceptual: un usuario tiene varios análisis, cada análisis agrupa varias tarjetas de respuesta, y una tarjeta de tipo \texttt{codes} contiene varios códigos predichos, cada uno referido a una entrada del catálogo CIE-10-ES.}
+\label{fig:modelo-conceptual}
+\end{figure}
 
 \subsection{Modelo de casos de uso}
 
@@ -34,7 +43,14 @@ Los actores del sistema son el \textbf{codificador clínico} (usuario autenticad
  \item Cambiar el idioma de la interfaz.
 \end{itemize}
 
-El administrador dispone además de un conjunto propio de casos de uso, accesibles desde el \emph{backoffice} en \texttt{/admin}: seleccionar el motor de predicción activo, configurar el modelo de resumen junto con su modo y sus \emph{prompts}, y consultar los usuarios y las conversaciones registradas en el sistema.
+El administrador dispone además de un conjunto propio de casos de uso, accesibles desde el \emph{backoffice} en \texttt{/admin}: seleccionar el motor de predicción activo, configurar el modelo de resumen junto con su modo y sus \emph{prompts}, y consultar los usuarios y las conversaciones registradas en el sistema. La Figura~\ref{fig:casos-uso} resume los tres actores y sus casos de uso principales.
+
+\begin{figure}[ht]
+\centering
+\resizebox{\textwidth}{!}{\input{figs/casos-uso}}
+\caption{Modelo de casos de uso: el codificador clínico y el administrador son actores principales que inician acciones sobre el sistema; el motor de IA es un actor secundario, invocado por el sistema para resolver la predicción de códigos.}
+\label{fig:casos-uso}
+\end{figure}
 
 \subsection{Modelo de interfaz de usuario}
 \label{sec:modelo-interfaz}
@@ -48,7 +64,44 @@ La interfaz sigue un esquema de dos columnas: un panel lateral izquierdo con el 
 \label{fig:ui-analysis}
 \end{figure}
 
+\subsection{Requisitos}
+\label{sec:requisitos}
+
+A continuación se especifican los requisitos que debe cumplir el sistema, distinguiendo entre los funcionales, que describen qué debe hacer, y los no funcionales, que acotan cómo debe comportarse.
+
+\subsubsection{Requisitos funcionales}
+
+\begin{itemize}
+ \item \textbf{1. Entrada de datos:} Aceptar como entrada textos clínicos en español en formato libre, sin requerir marcado ni estructura predefinida.
+ \item \textbf{2. Predicción de códigos:} Predecir uno o más códigos CIE-10-ES de diagnóstico para cada texto de entrada.
+ \item \textbf{3. Puntuación de confianza:} Devolver una puntuación de confianza por cada código predicho, para priorizar la revisión humana de los casos de baja certeza.
+ \item \textbf{4. Inferencia por lotes:} Admitir el procesamiento de múltiples textos de manera simultánea, devolviendo los resultados en el mismo orden que las entradas recibidas.
+ \item \textbf{5. API REST:} Exponer las funcionalidades a través de una API REST documentada con al menos un endpoint de inferencia y uno de comprobación del estado del servicio.
+\end{itemize}
+
+Los cinco anteriores acotan el motor de inteligencia artificial, que es el componente central. El sistema que se entrega, sin embargo, abarca los ocho subobjetivos enumerados al principio del capítulo~\ref{cap:Objetivo}, de modo que los requisitos siguientes cubren las piezas restantes: el backend que orquesta el flujo, el módulo de resúmenes y la interfaz. Se enumeran aparte porque su verificación es de otra naturaleza, funcional y no métrica.
+
+\begin{itemize}
+ \item \textbf{6. Gestión de cuentas:} Permitir el alta de un usuario con verificación de la dirección de correo antes de conceder acceso, y autenticar las peticiones posteriores.
+ \item \textbf{7. Orquestación del análisis:} Recibir un informe desde la interfaz, solicitar la predicción al motor y entregar los resultados de forma progresiva, sin que la parte más lenta del análisis retrase la aparición de los códigos.
+ \item \textbf{8. Revisión de los códigos propuestos:} Permitir al codificador clínico validar o rechazar cada código, exigiendo un motivo en el rechazo, y conservar esas decisiones asociadas al análisis.
+ \item \textbf{9. Resumen del informe:} Generar, mediante un modelo de lenguaje ejecutable en CPU, un resumen o paráfrasis del informe que se muestre junto a los códigos para agilizar la revisión.
+ \item \textbf{10. Interfaz web:} Ofrecer una interfaz que permita enviar informes, seguir el análisis mientras se produce, consultar los términos que justifican cada código y recuperar los análisis anteriores.
+\end{itemize}
+
+\subsubsection{Requisitos no funcionales}
+
+\begin{itemize}
+ \item \textbf{1. Rendimiento:} El sistema debe situarse dentro del rango de resultados de los sistemas participantes en el \emph{benchmark} CodiEsp~\cite{miranda2020}, que actúa como referencia, medido con la métrica oficial de la tarea (MAP por documento) sobre el mismo conjunto de prueba.
+ \item \textbf{2. Latencia:} La propuesta de códigos debe completarse por debajo del segundo por informe en CPU de gama alta, de modo que el codificador clínico reciba los candidatos sin espera apreciable. La atribución de los términos que justifican cada código queda fuera de ese límite: es un orden de magnitud más cara, se sirve en una petición independiente y puede llegar después de los códigos, porque el usuario la consulta solo cuando despliega un código concreto.
+ \item \textbf{3. Modularidad:} Los diferentes módulos del sistema deben tener interfaces bien definidas y ser sustituibles de forma independiente, de modo que, por ejemplo, el modelo base pueda cambiarse sin modificar el servicio de inferencia.
+ \item \textbf{4. Trazabilidad:} El sistema debe registrar para cada predicción la versión del modelo empleada y el identificador del informe procesado, en línea con los principios de auditabilidad del Reglamento UE 2017/745~\cite{eu2017745} aplicable al software de apoyo a la decisión clínica.
+ \item \textbf{5. Privacidad y protección de datos:} El tratamiento de los informes clínicos y de los datos de usuario debe ajustarse al Reglamento General de Protección de Datos (RGPD)~\cite{RGPD16}: minimización de datos, cifrado en tránsito y ejercicio de los derechos de supresión y portabilidad.
+\end{itemize}
+
 \section{Diseño del sistema}
+
+Esta sección describe el diseño del sistema de fuera hacia dentro: primero la arquitectura general de contenedores y sus interfaces, después el diseño del componente más crítico, el motor de inteligencia artificial (adquisición de datos, arquitectura del clasificador y proceso de entrenamiento), y por último el backend y el frontend que lo integran en un producto utilizable.
 
 \subsection{Arquitectura general}
 
@@ -1260,11 +1313,17 @@ Lo que sigue descubierto son ramas de error que exigirían provocar fallos de in
 
 \subsection{Pruebas del frontend}
 
-El frontend utiliza Vitest como \emph{framework} de pruebas. La configuración se encuentra en \texttt{frontend/\allowbreak vitest.config.ts} y los informes se escriben fuera del árbol del proyecto porque el directorio por defecto quedó en manos de \texttt{root} tras ejecutar el contenedor como superusuario, y \emph{vitest} lo borra al arrancar. Las pruebas cubren todos los componentes de interfaz y los contextos de estado.
+El frontend utiliza Vitest como \emph{framework} de pruebas, con \texttt{@testing-library/react} sobre \texttt{jsdom} para montar componentes sin un navegador real. La configuración se encuentra en \texttt{frontend/\allowbreak vitest.config.ts} y los informes se escriben fuera del árbol del proyecto porque el directorio por defecto quedó en manos de \texttt{root} tras ejecutar el contenedor como superusuario, y \emph{vitest} lo borra al arrancar. Las 217~pruebas se reparten en ocho ficheros: dos contextos concentran la mayoría (\texttt{ConversationContext.test.tsx}, 65~pruebas; \texttt{AuthContext.test.tsx} e \texttt{I18nContext.test.tsx}) y dos componentes cubren la interfaz de análisis (\texttt{ChatInterface.test.tsx}, 45~pruebas; \texttt{ConversationSidebar.test.tsx}).
+
+El punto de diseño que hace testable el frontend es que ninguna prueba abre una conexión real: el módulo \texttt{@/lib/socket} se sustituye por un doble en memoria que expone las mismas funciones \texttt{join}/\texttt{on}/\texttt{push}/\texttt{leave} del cliente de Phoenix, pero sin \emph{socket} de por medio. Los tests capturan el \emph{callback} que la aplicación registra para cada evento y lo invocan directamente con el \emph{payload} que quieran simular, de modo que \texttt{ConversationContext.test.tsx} ejercita el mismo recorrido descrito en la subsección anterior (recepción de \texttt{analysis\_card\_received} y \texttt{triggers\_received}) sin levantar el backend. Sobre esa base, \texttt{ChatInterface.test.tsx} cubre la validación y el rechazo de un código (exigiendo motivo), la aparición progresiva de las evidencias de un código antes y después de que lleguen los \emph{triggers}, el aviso de longitud máxima de tokens y el atajo de teclado \texttt{Ctrl+Enter}.
 
 \subsection{Pruebas de sistema}
 
 Las pruebas de sistema verifican el flujo completo de uso: registro, inicio de sesión, envío de un informe clínico, recepción de las tarjetas de análisis y validación de códigos. En el entorno de desarrollo se utiliza el motor de IA simulado (\texttt{ai\_engine\_mock}) para desacoplar las pruebas de sistema del proceso de entrenamiento.
+
+\paragraph{Un caso real, de principio a fin.} Tomando el informe de la Figura~\ref{fig:ejemplo-explicabilidad}, el recorrido completo de un análisis es el siguiente: el frontend envía el texto al backend por el canal WebSocket (\texttt{analyze\_report}); el backend lo reenvía a \texttt{POST /predict} del motor de IA, que devuelve entre sus códigos el \texttt{F17.210} (dependencia de nicotina, cigarrillos); el backend persiste el código como \texttt{PredictedCode} pendiente de revisión y emite el evento \texttt{analysis\_card\_received} por \texttt{ConversationChannel}, que la interfaz muestra de inmediato como una tarjeta de códigos. Al desplegar el código, una segunda petición a \texttt{/explain} devuelve los términos que lo justifican —\emph{cigarrillos} (0,41), \emph{posteriormente} (0,16), \emph{micciones} (0,14), \emph{persistente} (0,12) y \emph{normales} (0,11), los mismos que resalta la Figura~\ref{fig:ejemplo-explicabilidad}— y el codificador clínico valida o rechaza el código con esa evidencia delante.
+
+Conviene precisar qué parte de ese recorrido está comprobada con el modelo real y cuál con el simulado, porque no coinciden. La figura citada sí procede del \emph{checkpoint} de producción: \texttt{ai\_engine/figura\_explicabilidad.py} carga el modelo entrenado y predice sobre un informe real del conjunto de prueba de CodiEsp. La suite automática de pruebas, en cambio, no llega a tocarlo en ningún nivel: los propios tests del motor de IA (\texttt{ai\_engine/tests/test\_api.py}) sustituyen el clasificador por un doble (\texttt{unittest.mock.MagicMock}) para no cargar 600\,M de parámetros en cada ejecución, y las pruebas de sistema y de extremo a extremo corren contra \texttt{ai\_engine\_mock}, un servicio distinto que ni siquiera importa \texttt{classifier.py}. El modelo real solo se ejercita fuera de la suite de tests: durante el propio entrenamiento y evaluación (sección~\ref{sec:entrenamiento} y Anexo~\ref{cap:AnexoH}) y en los guiones de análisis que producen las cifras y figuras de este capítulo (\texttt{bench\_predict.py}, \texttt{bench\_explain.py}, \texttt{error\_analysis.py}, \texttt{figura\_explicabilidad.py}). Es una separación deliberada y no un descuido: medir el modelo es un problema estadístico que se resuelve con F1 y MAP sobre el conjunto de prueba, mientras que las pruebas de software verifican que las piezas se comunican correctamente, algo que un doble barato comprueba igual de bien y mucho más rápido que cargar el \emph{encoder} en cada ejecución.
 
 \section{Despliegue}
 

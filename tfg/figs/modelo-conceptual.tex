@@ -1,0 +1,72 @@
+% Modelo conceptual: entidades principales y sus relaciones (versión sin tipos
+% ni claves de las tablas del Anexo D, figs/erd-bd.tex)
+% Uso: \input{figs/modelo-conceptual} dentro de figure+\centering+\resizebox{\textwidth}{!}{...}
+
+\begin{tikzpicture}[
+  every node/.style={font=\scriptsize\sffamily},
+  ent/.style={
+    rectangle split, rectangle split parts=2,
+    rectangle split part fill={aquaESI!70, white},
+    draw=aquaESI!80, thick, rounded corners=3pt,
+    align=left, text width=3.6cm
+  },
+  entref/.style={
+    rectangle split, rectangle split parts=2,
+    rectangle split part fill={gray!50, white},
+    draw=gray!60, thick, rounded corners=3pt,
+    align=left, text width=3.6cm
+  },
+  rel/.style={->, >=Stealth, thick, gray!60},
+  card/.style={font=\tiny\sffamily},
+  node distance=1.2cm and 2.0cm
+]
+
+\node[ent] (usuario) {
+  \textbf{Usuario}
+  \nodepart{two}
+  nombre, apellidos\\
+  usuario, email\\
+  contraseña (hash)\\
+  idioma\\
+  confirmado / no confirmado
+};
+
+\node[ent, right=of usuario] (analisis) {
+  \textbf{Análisis}
+  \nodepart{two}
+  informe clínico enviado\\
+  tarjetas de respuesta
+};
+
+\node[ent, right=of analisis] (tarjeta) {
+  \textbf{Tarjeta de análisis}
+  \nodepart{two}
+  tipo: resumen \textbar{} códigos
+};
+
+\node[ent, below=of tarjeta] (codigo) {
+  \textbf{Código predicho}
+  \nodepart{two}
+  confianza\\
+  estado: pendiente \textbar{}\\
+  validado \textbar{} rechazado
+};
+
+\node[entref, below=of analisis] (cie10) {
+  \textbf{Código CIE-10-ES}
+  \nodepart{two}
+  código, descripción\\
+  metadatos clínicos\\
+  (sexo, edad, POA\ldots)
+};
+
+\draw[rel] (analisis.west) -- node[card, above]{N} ++(-0.5,0) -- (usuario.east)
+  node[card, pos=0.95]{1};
+\draw[rel] (tarjeta.west) -- node[card, above]{N} ++(-0.5,0) -- (analisis.east)
+  node[card, pos=0.95]{1};
+\draw[rel] (codigo.north) -- node[card, right]{N} ++(0,0.4) -- (tarjeta.south)
+  node[card, pos=0.9]{1};
+\draw[rel] (codigo.west) -- node[card, above]{N} ++(-0.6,0) |- (cie10.east)
+  node[card, pos=0.95]{1};
+
+\end{tikzpicture}
