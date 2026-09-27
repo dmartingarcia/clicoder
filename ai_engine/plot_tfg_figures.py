@@ -86,7 +86,7 @@ plt.close(fig)
 # --- 3. Benchmark CodiEsp-D 2020: MAP por sistema (test) ---
 systems = [
     ("IXA-AAA", 0.593),
-    ("Este trabajo, modo fusionado", 0.554),
+    ("Este trabajo, fusionado", 0.554),
     ("IAM", 0.521),
     ("FLE", 0.519),
     ("The Mental Strokers", 0.517),
@@ -94,7 +94,7 @@ systems = [
     ("Anuj", 0.505),
     ("MEDIA", 0.488),
     ("ICB-UMA", 0.482),
-    ("Este trabajo, configuración por defecto", 0.454),
+    ("Este trabajo, por defecto", 0.454),
     ("IMS", 0.449),
 ]
 systems.sort(key=lambda s: -s[1])
