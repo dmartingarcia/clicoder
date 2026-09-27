@@ -312,6 +312,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: jlumbroso/free-disk-space@v2.0.0
+        with:
+          docker-images: false
+
+      - name: Disco disponible en el runner
+        run: df -h /
+
       - uses: docker/setup-buildx-action@v4
 
       - name: Login en GHCR
@@ -332,7 +339,7 @@ jobs:
           REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker buildx build -f ai_engine/Dockerfile \
             --cache-from type=registry,ref=ghcr.io/$REPO_LC/cache-ai-engine-cpu \
-            --cache-to type=registry,ref=ghcr.io/$REPO_LC/cache-ai-engine-cpu,mode=max \
+            --cache-to type=registry,ref=ghcr.io/$REPO_LC/cache-ai-engine-cpu,mode=min \
             --tag cie-10-ai_engine --load .
 
       - name: Test con cobertura
