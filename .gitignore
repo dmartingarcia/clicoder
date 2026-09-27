@@ -15,7 +15,7 @@
 .env
 
 # Logs y temporales del proyecto
-/tmp/*.log
+/tmp/
 
 # Training artifacts
 training/bert-classifier/aclImdb*
