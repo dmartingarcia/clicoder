@@ -9,8 +9,6 @@ defmodule App.Translations do
   @supported_locales ~w(es en)
   @default_locale "es"
 
-  # ── Public API ─────────────────────────────────────────────────────────────
-
   def start_link(_opts), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
   @doc """
@@ -40,8 +38,6 @@ defmodule App.Translations do
   def supported_locales, do: @supported_locales
   def default_locale, do: @default_locale
 
-  # ── GenServer callbacks ────────────────────────────────────────────────────
-
   @impl true
   def init(_) do
     translations =
@@ -62,8 +58,6 @@ defmodule App.Translations do
   def handle_call({:get, locale}, _from, state) do
     {:reply, Map.get(state, locale, %{}), state}
   end
-
-  # ── Private ────────────────────────────────────────────────────────────────
 
   defp interpolate(str, []), do: str
 

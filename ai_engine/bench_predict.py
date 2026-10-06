@@ -28,9 +28,8 @@ def main():
     d.columns = d.columns.str.strip()
     textos = d.dropna(subset=["text"])["text"].astype(str).tolist()[: args.n]
 
-    # La primera pasada no mide lo mismo que las siguientes: paga la reserva de memoria del
-    # backend de torch y, en GPU, la creacion del contexto y la eleccion de kernels. Se informa
-    # aparte en lugar de descartarla en silencio, que es lo unico que significa "calentar".
+    # La primera pasada no mide lo mismo: paga la reserva de memoria de torch y, en GPU, el contexto y
+    # la elección de kernels. Se informa aparte en lugar de descartarla en silencio.
     t0 = time.perf_counter()
     clf.predict(textos[0], top_k=5)
     fria = time.perf_counter() - t0

@@ -24,33 +24,31 @@ from transformers import AutoModel, AutoTokenizer
 
 logger = logging.getLogger("cie10_engine")
 
-# Rangos de categoría (3 caracteres) → capítulo CIE-10 (número romano).
-# La letra inicial NO basta: la D se reparte entre neoplasias (C00-D49) y enfermedades de
-# la sangre (D50-D89), y la H entre ojo (H00-H59) y oído (H60-H95). Mapear solo por letra
-# colapsaba los capítulos III y VIII sobre el II y el VII.
+# Capítulo por rango de categoría, no por letra: la D se reparte entre neoplasias (C00-D49) y
+# sangre (D50-D89), y la H entre ojo y oído; mapear por letra colapsaba los capítulos III y VIII.
 CHAPTER_RANGES: list[tuple[str, str, str]] = [
-    ("I", "A00", "B99"),  # Enfermedades infecciosas y parasitarias
-    ("II", "C00", "D49"),  # Neoplasias
-    ("III", "D50", "D89"),  # Sangre y órganos hematopoyéticos
-    ("IV", "E00", "E89"),  # Endocrinas, nutricionales y metabólicas
-    ("V", "F01", "F99"),  # Trastornos mentales y del comportamiento
-    ("VI", "G00", "G99"),  # Sistema nervioso
-    ("VII", "H00", "H59"),  # Ojo y anejos
-    ("VIII", "H60", "H95"),  # Oído y apófisis mastoides
-    ("IX", "I00", "I99"),  # Sistema circulatorio
-    ("X", "J00", "J99"),  # Sistema respiratorio
-    ("XI", "K00", "K95"),  # Sistema digestivo
-    ("XII", "L00", "L99"),  # Piel y tejido subcutáneo
-    ("XIII", "M00", "M99"),  # Sistema osteomuscular y tejido conjuntivo
-    ("XIV", "N00", "N99"),  # Sistema genitourinario
-    ("XV", "O00", "O9A"),  # Embarazo, parto y puerperio
-    ("XVI", "P00", "P96"),  # Afecciones del periodo perinatal
-    ("XVII", "Q00", "Q99"),  # Malformaciones congénitas
-    ("XVIII", "R00", "R99"),  # Síntomas y signos mal definidos
-    ("XIX", "S00", "T88"),  # Traumatismos y envenenamientos
-    ("XX", "V00", "Y99"),  # Causas externas de morbilidad
-    ("XXI", "Z00", "Z99"),  # Factores que influyen en el estado de salud
-    ("XXII", "U00", "U85"),  # Códigos para propósitos especiales
+    ("I", "A00", "B99"),
+    ("II", "C00", "D49"),
+    ("III", "D50", "D89"),
+    ("IV", "E00", "E89"),
+    ("V", "F01", "F99"),
+    ("VI", "G00", "G99"),
+    ("VII", "H00", "H59"),
+    ("VIII", "H60", "H95"),
+    ("IX", "I00", "I99"),
+    ("X", "J00", "J99"),
+    ("XI", "K00", "K95"),
+    ("XII", "L00", "L99"),
+    ("XIII", "M00", "M99"),
+    ("XIV", "N00", "N99"),
+    ("XV", "O00", "O9A"),
+    ("XVI", "P00", "P96"),
+    ("XVII", "Q00", "Q99"),
+    ("XVIII", "R00", "R99"),
+    ("XIX", "S00", "T88"),
+    ("XX", "V00", "Y99"),
+    ("XXI", "Z00", "Z99"),
+    ("XXII", "U00", "U85"),
 ]
 
 # Compatibilidad: mapeo por letra para los casos sin ambigüedad. Las letras D y H no
@@ -106,20 +104,6 @@ class _FlatClassifier(nn.Module):
         return self.classifier(cls)
 
 
-# ============================================================================
-# Métodos de atribución (explicabilidad)
-# ============================================================================
-#
-# Las tres estrategias responden a la misma pregunta (qué palabras del informe
-# sostienen cada código predicho) y devuelven el mismo tipo de respuesta: la caída
-# real del logit al enmascarar la palabra. Lo que cambia es a cuántas palabras se
-# pregunta, porque preguntar cuesta una pasada del encoder por palabra.
-#
-# Son versiones sucesivas de la misma funcionalidad, no alternativas equivalentes:
-# la exhaustiva es la referencia contra la que se miden las demás, y siempre se puede
-# volver a ella si una versión rápida se comporta mal.
-
-
 def _huella(ruta: Path) -> str:
     """Identifica unos pesos por su contenido, para poder auditar una predicción a posteriori.
 
@@ -148,8 +132,6 @@ class _CtxAtribucion:
     baseline: torch.Tensor
     max_len: int
     batch_size: int
-    # Palabras que se verifican siempre, aunque el gradiente no las priorice. Las aporta el
-    # diccionario: son frases clinicas que ya sabemos que disparan alguno de los codigos.
     prioritarias: frozenset[int] = frozenset()
 
     def caida_al_enmascarar(self, grupos: list[list[int]]) -> torch.Tensor:
@@ -254,11 +236,8 @@ def _explicar_divide_y_venceras(
     return importancia
 
 
-# El hook del gradiente se registra sobre la capa de embeddings, que es compartida por todas las
-# peticiones que atiende el proceso. Mientras esta puesto, cualquier otra pasada hacia delante lo
-# dispara: una prediccion concurrente entraba con requires_grad=False y el retain_grad la tumbaba
-# con un 500, y dos atribuciones a la vez se pisaban el tensor capturado. El cerrojo solo serializa
-# la parte con hook, que dura una pasada; las predicciones siguen siendo concurrentes.
+# El hook del gradiente se registra sobre la capa de embeddings, compartida por todas las peticiones:
+# una predicción concurrente entraba con requires_grad=False y retain_grad la tumbaba con un 500. El cerrojo solo serializa la parte con hook.
 _CERROJO_GRADIENTE = threading.Lock()
 
 
@@ -294,8 +273,7 @@ def _explicar_gradiente_filtrado(
             logits = ctx.modelo(ctx.base_ids, ctx.base_mask)
             logits[0, ctx.code_indices].sum().backward()
         except RuntimeError as exc:
-            # Sin gradiente no hay filtro. Se degrada al exhaustivo en vez de fallar: más lento,
-            # pero el usuario recibe su explicación.
+            # Sin gradiente no hay filtro: se degrada al exhaustivo (más lento) en vez de fallar.
             logger.warning("gradiente no disponible, se usa el método exhaustivo: %s", exc)
             ctx.modelo.zero_grad(set_to_none=True)
             return _explicar_exhaustivo(ctx, candidatas)
@@ -313,7 +291,6 @@ def _explicar_gradiente_filtrado(
         w: float(sum(saliencia[p] for p in ctx.word_positions[w] if p < len(saliencia)))
         for w in candidatas
     }
-    # Las prioritarias entran de oficio; el gradiente reparte lo que queda del presupuesto.
     forzadas = [w for w in candidatas if w in ctx.prioritarias]
     resto = sorted(
         (w for w in candidatas if w not in ctx.prioritarias), key=lambda w: -puntuacion[w]
@@ -344,23 +321,19 @@ class CIE10Classifier:
         self.device = torch.device(device)
         model_path = Path(model_dir)
 
-        # Config
         with open(model_path / "config.json") as f:
             self.config = json.load(f)
         if overrides:
             self.config = {**self.config, **overrides}
 
-        # Capítulos (para display)
         chapters_path = model_path / "cie10_chapters.json"
         self.chapters: dict = {}
         if chapters_path.exists():
             with open(chapters_path, encoding="utf-8") as f:
                 self.chapters = json.load(f)
 
-        # Tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(self.config["model_name"])
 
-        # Checkpoint
         model_file = self.config.get("model_file", "classifier.pt")
         self.version = f"{self.config['model_name']}@{_huella(model_path / model_file)}"
         ckpt = torch.load(
@@ -379,7 +352,6 @@ class CIE10Classifier:
         self.model.to(self.device)
         self.model.eval()
 
-        # Thresholds por clase (generados en entrenamiento)
         self.per_class_thresholds: list[float] | None = None
         thresholds_file = self.config.get("thresholds_file")
         if thresholds_file:
@@ -455,7 +427,6 @@ class CIE10Classifier:
         if fused and score_threshold is None:
             raise ValueError("logit_bonus requiere score_threshold: ver docstring")
 
-        # Recoger predicciones por encima del umbral (por clase si disponible)
         predictions = []
         for idx, prob in enumerate(probs):
             if fused:
@@ -486,7 +457,6 @@ class CIE10Classifier:
                 entry["dict_bonus"] = float(logit_bonus[idx])
             predictions.append(entry)
 
-        # Priorizar hijos sobre padres: si K13.0 está predicho, eliminar K13
         codes_set = {p["code"] for p in predictions}
         predictions = [
             p
@@ -550,20 +520,17 @@ class CIE10Classifier:
             max_length=self.config["max_length"],
             truncation=True,
         )
-        word_ids = enc.word_ids()  # posición token → índice de palabra (None para especiales)
+        word_ids = enc.word_ids()
         input_ids_list = enc["input_ids"]
         attention_mask_list = enc["attention_mask"]
 
-        # Agrupar posiciones de token por palabra
         word_positions: dict[int, list[int]] = {}
         for pos, wid in enumerate(word_ids):
             if wid is not None:
                 word_positions.setdefault(wid, []).append(pos)
 
-        # Palabras de origen para display
         raw_words = text.split()
 
-        # Filtrar palabras cortas o de puntuación pura
         candidates = [
             wid
             for wid in word_positions
@@ -573,7 +540,6 @@ class CIE10Classifier:
         if not candidates:
             return {idx: [] for idx in code_indices}
 
-        # Padding hasta max_length para hacer batching uniforme
         max_len = self.config["max_length"]
         pad_id = self.tokenizer.pad_token_id or 0
         seq_len = len(input_ids_list)
@@ -584,9 +550,8 @@ class CIE10Classifier:
         base_mask = torch.tensor([padded_mask], dtype=torch.long, device=self.device)
 
         try:
-            # Logits de referencia (sin máscara)
             with torch.no_grad():
-                baseline = self.model(base_ids, base_mask)[0, code_indices].cpu()  # [K]
+                baseline = self.model(base_ids, base_mask)[0, code_indices].cpu()
 
             ctx = _CtxAtribucion(
                 modelo=self.model,
@@ -604,11 +569,9 @@ class CIE10Classifier:
             if elegido not in METODOS_EXPLAIN:
                 logger.warning("método de explicabilidad desconocido: %s", elegido)
                 elegido = EXPLAIN_POR_DEFECTO
-            # importance[wid][k] = caída en logit_k al enmascarar wid
             importance = METODOS_EXPLAIN[elegido](ctx, candidates)
             candidates = [w for w in candidates if w in importance]
 
-            # Por cada código, ordenar palabras por importancia y devolver top_k
             results: dict[int, list[str]] = {}
             for k_pos, code_idx in enumerate(code_indices):
                 scored = sorted(
@@ -618,7 +581,7 @@ class CIE10Classifier:
                 )
                 pares = [
                     (raw_words[wid].strip(_string.punctuation), importance[wid][k_pos].item())
-                    for wid in scored[: top_k * 2]  # margen para filtrar residuos
+                    for wid in scored[: top_k * 2]
                     if importance[wid][k_pos].item() > 0
                     and len(raw_words[wid].strip(_string.punctuation)) >= 4
                 ]
@@ -637,16 +600,8 @@ class CIE10Classifier:
             logger.warning("explain() falló para %d códigos: %s", len(code_indices), exc)
             return {idx: [] for idx in code_indices}
 
-    # ------------------------------------------------------------------
-    # Nota sobre la explicabilidad en modo fusión (véase main.py):
-    # las dos fuentes explican cosas distintas y no se fusionan en un único
-    # ranking. El diccionario aporta frases exactas que justifican el BLOQUE;
-    # el modelo aporta palabras que justifican el CÓDIGO concreto dentro de ese
-    # bloque. Ordenarlas juntas exigiría una escala común entre la confianza de
-    # un patrón regex y la caída de un logit por enmascaramiento, y esa escala
-    # no existe: inventarla sería justo el tipo de calibración sin fundamento que
-    # se midió y se descartó en el Anexo F.
-    # ------------------------------------------------------------------
+    # En fusión no se mezclan las explicaciones: el diccionario justifica el BLOQUE y el modelo el CÓDIGO,
+    # y no hay escala común entre confianza regex y caída de logit (calibración descartada, Anexo F).
 
 
 if __name__ == "__main__":

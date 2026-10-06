@@ -87,11 +87,6 @@ def cliente_completo(tmp_path):
         os.environ["MODEL_DIR"] = anterior
 
 
-# =============================================================================
-# /explain
-# =============================================================================
-
-
 class TestExplain:
     def test_sin_modelo_devuelve_503(self, cliente_sin_modelo):
         r = cliente_sin_modelo.post("/explain", json={"text": "hola", "codes": ["I10"]})
@@ -147,11 +142,6 @@ class TestExplain:
         assert r.json()["triggers"]["I10"][0]["weight"] is None
 
 
-# =============================================================================
-# /admin/models
-# =============================================================================
-
-
 class TestCatalogoModelos:
     def test_lista_los_modelos_del_catalogo(self, cliente_completo):
         r = cliente_completo.get("/admin/models")
@@ -175,11 +165,6 @@ class TestCatalogoModelos:
 
     def test_sin_catalogo_la_lista_va_vacia(self, cliente_sin_modelo):
         assert cliente_sin_modelo.get("/admin/models").json()["models"] == []
-
-
-# =============================================================================
-# Predicción con términos diferidos
-# =============================================================================
 
 
 class TestPrediccionDiferida:

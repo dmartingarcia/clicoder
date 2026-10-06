@@ -7,7 +7,6 @@ type Translations = Record<string, Record<string, string>>;
 
 interface I18nContextType {
   locale: string;
-  /** Pass the auth token to also persist the locale to the backend */
   setLocale: (locale: string, token?: string) => void;
   t: (key: string, vars?: Record<string, string | number>) => string;
   ready: boolean;
@@ -49,14 +48,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   const applyTranslations = useCallback(async (loc: string) => {
-    // 1. Serve cache instantly if available
     const cached = readCache(loc);
     if (cached) {
       setTranslations(cached);
       setReady(true);
     }
 
-    // 2. Fetch fresh in background; update cache + state when done
     try {
       const res = await fetch(`${config.apiUrl}/translations/${loc}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -70,7 +67,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Runs once after hydration: safe to read localStorage here
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     const browser = navigator.language.split('-')[0];
@@ -94,7 +90,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ locale: loc }),
-      }).catch(() => {/* best effort */});
+      }).catch(() => {});
     }
   }, [applyTranslations]);
 

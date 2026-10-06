@@ -86,7 +86,6 @@ def main():
     print(f"  micro: P={p_micro:.4f}  R={r_micro:.4f}  F1={f1_micro:.4f}")
     print(f"  macro: F1={f1_macro:.4f}")
 
-    # Sweep de thresholds para encontrar el óptimo
     print("\n[sweep] F1-micro por threshold:")
     for thr in (0.1, 0.2, 0.3, 0.4, 0.5, 0.6):
         p = (Y_prob >= thr).astype(int)

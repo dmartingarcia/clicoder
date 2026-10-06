@@ -54,7 +54,6 @@ defmodule AppWeb.Cie10Controller do
     ]
   )
 
-  # GET /api/cie10/search?q=<query>&limit=<n>&type=<diagnosis|procedure|chemical>
   def search(conn, %{"q" => q} = params) do
     q_trimmed = String.trim(q)
 
@@ -96,7 +95,6 @@ defmodule AppWeb.Cie10Controller do
     ]
   )
 
-  # GET /api/cie10/codes/:code
   def show(conn, %{"code" => code}) do
     case Repo.get_by(Cie10Code, code: String.upcase(code)) do
       nil ->
@@ -134,7 +132,6 @@ defmodule AppWeb.Cie10Controller do
     ]
   )
 
-  # GET /api/cie10/codes/:code/children
   def children(conn, %{"code" => code}) do
     prefix = String.upcase(code)
     like_pattern = "#{sanitize(prefix)}%"

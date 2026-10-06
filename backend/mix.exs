@@ -22,9 +22,6 @@ defmodule App.MixProject do
     ]
   end
 
-  # Configuration for the OTP application.
-  #
-  # Type `mix help compile.app` for more information.
   def application do
     [
       mod: {App.Application, []},
@@ -38,13 +35,9 @@ defmodule App.MixProject do
     ]
   end
 
-  # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # Specifies your project dependencies.
-  #
-  # Type `mix help deps` for examples and options.
   defp deps do
     [
       {:phoenix, "~> 1.8.7"},
@@ -68,14 +61,10 @@ defmodule App.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-
-      # Event Sourcing + CQRS
       {:commanded, "~> 1.4"},
       {:commanded_ecto_projections, "~> 1.3"},
       {:commanded_eventstore_adapter, "~> 1.4"},
       {:eventstore, "~> 1.4"},
-
-      # Utilities
       {:uuid, "~> 1.1"},
       {:cors_plug, "~> 3.0"},
       {:bcrypt_elixir, "~> 3.0"},
@@ -83,23 +72,13 @@ defmodule App.MixProject do
       {:gen_smtp, "~> 1.2"},
       {:yaml_elixir, "~> 2.9"},
       {:nimble_csv, "~> 1.2"},
-
-      # OpenAPI / Swagger
       {:open_api_spex, "~> 3.21"},
-
-      # Dev / test
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 
-  # Aliases are shortcuts or tasks specific to the current project.
-  # For example, to install project dependencies and perform other setup tasks, run:
-  #
-  #     $ mix setup
-  #
-  # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
       setup: ["deps.get", "ecto.setup"],

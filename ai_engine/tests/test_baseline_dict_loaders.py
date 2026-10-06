@@ -45,7 +45,7 @@ class _LexFalso:
 
 class _VectoresFalsos:
     def __init__(self, candidatos):
-        self._candidatos = candidatos  # [(indice, score), ...]
+        self._candidatos = candidatos
 
     def most_similar(self, queries, n):
         elegidos = self._candidatos[:n]
@@ -63,7 +63,7 @@ class _VocabFalso:
     def __init__(self, lex_by_word, vectors, palabras):
         self._lex = lex_by_word
         self.vectors = vectors
-        self.strings = palabras  # lista: índice -> palabra
+        self.strings = palabras
 
     def __getitem__(self, word):
         return self._lex.get(word, _LexFalso())
@@ -157,7 +157,7 @@ class TestBuildSynonymMap:
         assert bd.build_synonym_map({"cualquier cosa"}, cache_file=cache_file) == {
             "ya": ["cacheado"]
         }
-        assert llamado["n"] == 0  # no se llegó a tocar spaCy
+        assert llamado["n"] == 0
 
     def test_guarda_en_cache_tras_calcular(self, tmp_path, monkeypatch):
         cache_file = str(tmp_path / "syn.pkl")
@@ -224,7 +224,7 @@ class TestBuildBlockPatterns:
 
         monkeypatch.setattr(bd, "lemmatize", contador)
         bd._build_block_patterns(pares, "diagnoses", 3, str(tmp_path), claves, 1.0)
-        assert llamadas["n"] == 0  # segunda vez sale todo de la caché
+        assert llamadas["n"] == 0
 
 
 class TestLoadDiagnoses:
@@ -251,7 +251,7 @@ class TestLoadProcedures:
         csv.write_text("code,class_name,subclass_name\n0DTJ4ZZ,Bypass,Cardiaco\n", encoding="utf-8")
         resultado = bd.load_procedures(str(csv), 3, None)
         assert "0DT" in resultado
-        assert len(resultado["0DT"]) == 2  # una entrada por columna presente
+        assert len(resultado["0DT"]) == 2
 
     def test_columnas_ausentes_no_dan_error(self, tmp_path):
         csv = tmp_path / "proc.csv"
@@ -473,7 +473,7 @@ class TestLoadCorpus:
             ngram_min=2,
             ngram_max=2,
         )
-        assert bloques == {}  # ningún bigrama se repite dos veces
+        assert bloques == {}
 
     def test_min_precision_descarta_ngramas_poco_discriminativos(self, tmp_path):
         # "nota de" aparece en las dos notas, en bloques distintos: precisión 0.5.
@@ -557,4 +557,4 @@ class TestLoadClinical:
         bd.load_clinical([str(ruta)], min_len=3, cache_dir=cache_dir)
         assert llamadas["n"] == 1
         bd.load_clinical([str(ruta)], min_len=3, cache_dir=cache_dir)
-        assert llamadas["n"] == 1  # la segunda llamada sale de la caché de patrones
+        assert llamadas["n"] == 1

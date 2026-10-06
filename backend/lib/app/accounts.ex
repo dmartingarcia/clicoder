@@ -31,9 +31,8 @@ defmodule App.Accounts do
 
   def get_user(id), do: Repo.get(User, id)
 
-  # Los idiomas que la interfaz sabe servir. Guardar cualquier otro no falla en el momento,
-  # pero deja al usuario con una interfaz que cae al idioma por defecto y con los correos en
-  # un idioma que nadie eligió, así que se rechaza al entrar en vez de degradar en silencio.
+  # Idiomas que la interfaz sabe servir; se rechaza otro al entrar en vez de degradar en silencio
+  # (interfaz y correos en un idioma que nadie eligio).
   @idiomas_admitidos ~w(es en fr it de)
 
   @doc "Idiomas admitidos por la interfaz."

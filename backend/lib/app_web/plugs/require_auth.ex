@@ -9,9 +9,7 @@ defmodule AppWeb.Plugs.RequireAuth do
     with ["Bearer " <> token] <- get_req_header(conn, "authorization"),
          {:ok, user_id} <-
            Phoenix.Token.verify(AppWeb.Endpoint, "user auth", token, max_age: 3_600) do
-      # Un error en una peticion HTTP llegaba a Sentry sin saber a quien le habia pasado, de modo
-      # que no se podia investigar. Solo el identificador: el correo y la IP se filtran aparte
-      # porque salen del sistema, y con el id la cuenta se localiza en la base de datos local.
+      # Solo el id llega a Sentry: correo e IP se filtran aparte y el id basta para localizar la cuenta.
       if Code.ensure_loaded?(Sentry.Context) do
         Sentry.Context.set_user_context(%{id: user_id})
       end

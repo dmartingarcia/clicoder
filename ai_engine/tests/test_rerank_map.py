@@ -27,10 +27,6 @@ from rerank_map import (
     to_logits,
 )
 
-# =============================================================================
-# _ap: debe coincidir con sklearn, que es la referencia usada en eval_test.py
-# =============================================================================
-
 
 def test_ap_coincide_con_sklearn():
     rng = np.random.default_rng(0)
@@ -52,11 +48,6 @@ def test_ap_ranking_perfecto_es_uno():
 
 def test_ap_sin_positivos_es_cero():
     assert _ap(np.array([1.0, 2.0]), np.zeros(2, dtype=np.int8)) == 0.0
-
-
-# =============================================================================
-# to_logits / calibrate
-# =============================================================================
 
 
 def test_to_logits_es_monotona():
@@ -88,11 +79,6 @@ def test_calibrar_reordena_dentro_del_documento():
     assert np.argmax(calibrate(doc, mu, sigma, 1.0, 0.0)[0]) == 1
 
 
-# =============================================================================
-# build_gold: el gold fuera de vocabulario cuenta en n_total pero no en n_reach
-# =============================================================================
-
-
 def test_build_gold_separa_alcanzable_de_total():
     c2i = {"A01": 0, "B02": 1}
     T, n_total, n_reach = build_gold([["A01", "Z99"], [], ["B02", "B02"]], c2i, 2)
@@ -103,9 +89,9 @@ def test_build_gold_separa_alcanzable_de_total():
 
 def test_map_estricto_penaliza_el_gold_fuera_de_vocabulario():
     c2i = {"A01": 0, "B02": 1}
-    gold = [["A01", "Z99"]]  # la mitad del gold es inalcanzable
+    gold = [["A01", "Z99"]]
     T, n_total, n_reach = build_gold(gold, c2i, 2)
-    S = np.array([[9.0, 1.0]])  # ranking perfecto sobre lo alcanzable
+    S = np.array([[9.0, 1.0]])
     reach, strict = map_scores(T, S, n_total, n_reach)
     assert reach == pytest.approx(1.0)
     assert strict == pytest.approx(0.5)
@@ -138,8 +124,8 @@ def test_calibrar_con_gamma_reescala_por_desviacion_tipica():
     mu = np.array([0.0, 0.0])
     sigma = np.array([2.0, 4.0])
     resultado = calibrate(z, mu, sigma, lam=0.0, gamma=1.0)
-    assert resultado[0, 0] == pytest.approx(2.0)  # 4 / 2
-    assert resultado[0, 1] == pytest.approx(1.0)  # 4 / 4
+    assert resultado[0, 0] == pytest.approx(2.0)
+    assert resultado[0, 1] == pytest.approx(1.0)
 
 
 def test_load_split_reutiliza_parse_labels_de_train(tmp_path):
@@ -183,4 +169,4 @@ class TestDictBonusMatrix:
             ["texto con hipertension"], "patrones.json", ["A01.0", "A01.9", "B02"], cache_path
         )
         assert np.allclose(resultado, [[0.8, 0.8, 0.0]], atol=1e-6)
-        assert cache_path.exists()  # se guarda para no repetir el diccionario
+        assert cache_path.exists()

@@ -1,10 +1,6 @@
 defmodule App.AIEngineSettingsTest do
   use ExUnit.Case, async: false
 
-  # The Agent is a named global process started by the application supervisor.
-  # Each test resets it to the default value so tests don't interfere with
-  # each other regardless of execution order.
-
   setup do
     App.AIEngineSettings.set_engine("bert")
     App.AIEngineSettings.set_explain_method("gradiente_filtrado")

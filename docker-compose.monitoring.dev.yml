@@ -1,4 +1,3 @@
-# Override para desarrollo local: expone puertos directamente sin Traefik
 services:
   prometheus:
     ports:

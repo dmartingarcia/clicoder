@@ -81,7 +81,6 @@ def clasificador(tmp_path, monkeypatch):
     modelo_temporal = clf_module._FlatClassifier("fake/modelo", num_codes=len(CODE_TO_IDX))
     with torch.no_grad():
         modelo_temporal.classifier.weight.zero_()
-        # I10=0.95, E11.9=0.88, E11=0.88 (por encima del umbral 0.5), J45=0.047 (por debajo)
         modelo_temporal.classifier.bias.copy_(torch.tensor([3.0, 2.0, 2.0, -3.0]))
     ckpt = {
         "code_to_idx": CODE_TO_IDX,
@@ -173,7 +172,7 @@ class TestInit:
 class TestPredict:
     def test_filtra_por_debajo_del_umbral(self, clasificador):
         codigos = [p["code"] for p in clasificador.predict("cualquier texto")]
-        assert "J45" not in codigos  # sigmoid(-3) = 0.047 < 0.5
+        assert "J45" not in codigos
 
     def test_el_hijo_desplaza_al_padre(self, clasificador):
         """E11.9 y E11 pasan el umbral a la vez: reportar el padre sería redundante
@@ -224,7 +223,7 @@ class TestPredict:
         assert j45["probability"] < 0.5  # sigue siendo la probabilidad del modelo, no la fusionada
 
     def test_en_fusion_descarta_lo_que_no_llega_al_umbral_de_puntuacion(self, clasificador):
-        bonus = np.zeros(len(CODE_TO_IDX), dtype=np.float32)  # sin bonificación para nadie
+        bonus = np.zeros(len(CODE_TO_IDX), dtype=np.float32)
         resultado = clasificador.predict("texto", logit_bonus=bonus, score_threshold=2.5)
         # Con las puntuaciones fijas [3.0, 2.0, 2.0, -3.0], solo I10 llega a 2.5.
         assert [p["code"] for p in resultado] == ["I10"]
@@ -257,7 +256,7 @@ class TestExplainEnvoltorio:
 
         monkeypatch.setitem(clf_module.METODOS_EXPLAIN, "exhaustivo", metodo_falso)
         clasificador.explain("hipertension arterial elevada", [0], method="exhaustivo")
-        assert llamadas  # el método se invocó con las candidatas del texto
+        assert llamadas
 
     def test_metodo_desconocido_cae_al_de_por_defecto(self, clasificador, monkeypatch):
         usados = []

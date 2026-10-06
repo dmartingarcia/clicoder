@@ -16,16 +16,11 @@ from main import _dict_bonus_vector, _triggers_fusion
 C2I = {"A15.0": 0, "A15.9": 1, "J18.9": 2, "E11.9": 3}
 
 
-# =============================================================================
-# Vector de bonificación
-# =============================================================================
-
-
 def test_bonifica_todos_los_codigos_del_bloque_detectado():
     bonus, n = _dict_bonus_vector([{"code": "A15", "confidence": 0.8}], C2I, 6.0)
     assert n == 1
-    assert bonus[0] == pytest.approx(4.8)  # A15.0
-    assert bonus[1] == pytest.approx(4.8)  # A15.9
+    assert bonus[0] == pytest.approx(4.8)
+    assert bonus[1] == pytest.approx(4.8)
     assert bonus[2] == 0.0  # J18.9 no pertenece al bloque
     assert bonus[3] == 0.0
 
@@ -59,7 +54,7 @@ def test_confianza_negativa_no_penaliza():
 
 def test_bloque_fuera_del_vocabulario_se_ignora():
     bonus, n = _dict_bonus_vector([{"code": "Z99", "confidence": 1.0}], C2I, 6.0)
-    assert n == 1  # se detectó
+    assert n == 1
     assert not bonus.any()  # pero ningún código del modelo pertenece a ese bloque
 
 
@@ -74,10 +69,6 @@ def test_el_vector_tiene_el_tamano_del_espacio_de_codigos():
     assert bonus.shape == (len(C2I),)
     assert bonus.dtype == np.float32
 
-
-# =============================================================================
-# Explicabilidad
-# =============================================================================
 
 EXPLICA = {0: [("tuberculosis", 0.6), ("pulmonar", 0.4)]}
 DICC = {"A15": ["mycobacterium tuberculosis", "baciloscopia positiva"]}

@@ -347,7 +347,6 @@ defmodule AppWeb.Admin.SettingsLiveTest do
 
       vista |> element("button[phx-value-name='otro']") |> render_click()
 
-      # Tras cargarlo, el catalogo se relee: el boton de ese modelo ya no debe ofrecerse
       assert render(vista) =~ "otro"
     end
   end

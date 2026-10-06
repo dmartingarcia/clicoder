@@ -133,7 +133,7 @@ def test_watch_download_no_bloquea_si_el_evento_ya_esta_marcado(monkeypatch):
     )
     evento = threading.Event()
     evento.set()
-    main_module._watch_download("org/modelo", evento)  # no debe lanzar ni tardar
+    main_module._watch_download("org/modelo", evento)
 
 
 def test_watch_download_reporta_progreso_con_el_total_conocido(monkeypatch, tmp_path):
@@ -143,11 +143,11 @@ def test_watch_download_reporta_progreso_con_el_total_conocido(monkeypatch, tmp_
     monkeypatch.setattr(hf_constants, "HF_HUB_CACHE", str(tmp_path))
     cache = tmp_path / "models--org--modelo"
     cache.mkdir()
-    (cache / "pesos.bin").write_bytes(b"0" * 1024 * 1024)  # 1 MB descargado
+    (cache / "pesos.bin").write_bytes(b"0" * 1024 * 1024)
 
     class InfoFalso:
         class safetensors:
-            total = 10 * 1024 * 1024  # 10 MB en total
+            total = 10 * 1024 * 1024
 
     monkeypatch.setattr(huggingface_hub, "model_info", lambda name: InfoFalso())
 

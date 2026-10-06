@@ -1,16 +1,11 @@
 defmodule AppWeb.TranslationControllerTest do
   use AppWeb.ConnCase, async: true
 
-  # ---------------------------------------------------------------------------
-  # GET /api/translations/:locale
-  # ---------------------------------------------------------------------------
-
   describe "show/2" do
     test "returns Spanish translations for locale 'es'", %{conn: conn} do
       conn = get(conn, "/api/translations/es")
       body = json_response(conn, 200)
 
-      # Top-level keys present in es.yml
       assert Map.has_key?(body, "auth")
       assert Map.has_key?(body, "app")
       assert Map.has_key?(body, "sidebar")
@@ -61,7 +56,6 @@ defmodule AppWeb.TranslationControllerTest do
       conn = get(conn, "/api/translations/zz")
       body = json_response(conn, 200)
 
-      # Falls back to 'es': verify the Spanish content is served
       assert Map.has_key?(body, "auth")
 
       conn_es = get(Phoenix.ConnTest.build_conn(), "/api/translations/es")

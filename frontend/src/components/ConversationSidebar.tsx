@@ -67,7 +67,6 @@ export function ConversationSidebar() {
 
   return (
     <div className="w-64 flex flex-col bg-gray-900 text-white h-screen">
-      {/* User info */}
       <div className="p-4 border-b border-gray-700">
         <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">{t('app.doctor')}</p>
         <p className="text-sm font-semibold truncate">
@@ -103,7 +102,6 @@ export function ConversationSidebar() {
         </div>
       </div>
 
-      {/* New analysis button */}
       <div className="p-3">
         <Button
           onClick={createConversation}
@@ -115,7 +113,6 @@ export function ConversationSidebar() {
         </Button>
       </div>
 
-      {/* Active conversations */}
       <ScrollArea className="flex-1 px-2">
         {conversations.length === 0 ? (
           <p className="text-xs text-gray-500 text-center mt-6 px-2">
@@ -166,7 +163,6 @@ export function ConversationSidebar() {
           </div>
         )}
 
-        {/* Trash section */}
         {trashedConversations.length > 0 && (
           <div className="border-t border-gray-700 pt-2 pb-4">
             <button
@@ -202,7 +198,6 @@ export function ConversationSidebar() {
         )}
       </ScrollArea>
 
-      {/* Footer actions */}
       <div className="border-t border-gray-700 p-2 flex flex-col gap-0.5">
         <button
           onClick={() => setShowPrivacyModal(true)}

@@ -20,9 +20,6 @@ from pathlib import Path
 
 logger = logging.getLogger("cie10_engine")
 
-# ─────────────────────────────────────────────
-# Catálogo de modelos soportados
-# ─────────────────────────────────────────────
 
 MODELS = {
     "gemma3": {
@@ -57,9 +54,6 @@ MODELS = {
     },
 }
 
-# ─────────────────────────────────────────────
-# Prompts por modo
-# ─────────────────────────────────────────────
 
 MODES = ("summary", "paraphrase")
 
@@ -89,8 +83,6 @@ class MedicalSummarizer:
         self._system_prompt = system_prompt
         self._user_prompt = user_prompt
 
-    # ── Propiedades públicas ───────────────────────────────────────────────
-
     @property
     def model_name(self) -> str:
         return self._cfg["display"]
@@ -102,8 +94,6 @@ class MedicalSummarizer:
     @property
     def is_loaded(self) -> bool:
         return self._llm is not None
-
-    # ── Carga / descarga ───────────────────────────────────────────────────
 
     def update_prompts(self, system_prompt: str, user_prompt: str) -> None:
         """Actualiza los prompts sin recargar el modelo."""
@@ -163,7 +153,6 @@ class MedicalSummarizer:
             size_gb,
         )
 
-        # Comprobamos si ya está en caché antes de lanzar el watcher
         safe_repo = repo.replace("/", "--")
         model_blob_dir = cache_root / f"models--{safe_repo}" / "blobs"
         already_cached = (
@@ -212,8 +201,6 @@ class MedicalSummarizer:
             cache_dir=str(cache_root),
         )
         return Path(local_path)
-
-    # ── Inferencia ─────────────────────────────────────────────────────────
 
     def summarize(self, text: str, max_tokens: int | None = None) -> str:
         """Genera un resumen o paráfrasis del texto. Llama a load() si no está cargado."""
@@ -298,11 +285,6 @@ class MedicalSummarizer:
                 yield token
 
 
-# ─────────────────────────────────────────────
-# Helpers internos
-# ─────────────────────────────────────────────
-
-
 def _watch_gguf_download(
     repo: str,
     filename: str,
@@ -371,11 +353,6 @@ def _fallback_summary(text: str) -> str:
     return f"Informe clínico de {word_count} palabras procesado."
 
 
-# ─────────────────────────────────────────────
-# Factory
-# ─────────────────────────────────────────────
-
-
 def create_summarizer() -> "MedicalSummarizer | None":
     """Lee SUMMARIZER_MODEL y SUMMARIZER_MODE y devuelve un MedicalSummarizer o None."""
     model_key = os.environ.get("SUMMARIZER_MODEL", "none").strip().lower()
@@ -400,7 +377,6 @@ def create_summarizer() -> "MedicalSummarizer | None":
     system_prompt = os.environ.get("SUMMARIZER_SYSTEM_PROMPT", "").strip()
     user_prompt = os.environ.get("SUMMARIZER_USER_PROMPT", "").strip()
 
-    # Defaults de arranque si no están configurados via env ni admin
     if not system_prompt:
         system_prompt = (
             "Eres un médico especialista en documentación clínica. "

@@ -24,13 +24,11 @@ export function PrivacyModal({ onClose, onExport, onDeleteAccount }: Props) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="px-5 pt-5 pb-3 border-b border-gray-700">
           <h2 className="text-white font-semibold text-base">{t('privacy.title')}</h2>
           <p className="text-gray-400 text-xs mt-1 leading-relaxed">{t('privacy.intro')}</p>
         </div>
 
-        {/* Rights list */}
         <div className="overflow-y-auto flex-1 px-5 py-3 space-y-2">
           {RIGHTS.map(({ key, inApp, icon }) => (
             <div key={key} className="flex items-start gap-2.5 py-2 border-b border-gray-700/50 last:border-0">
@@ -59,7 +57,6 @@ export function PrivacyModal({ onClose, onExport, onDeleteAccount }: Props) {
           ))}
         </div>
 
-        {/* Controller info */}
         <div className="px-5 py-3 border-t border-gray-700 bg-gray-900/50 rounded-b-lg space-y-1">
           <p className="text-gray-300 text-xs font-medium">{t('privacy.contact_title')}</p>
           <p className="text-gray-400 text-xs">{t('privacy.contact_name')}</p>
@@ -72,7 +69,6 @@ export function PrivacyModal({ onClose, onExport, onDeleteAccount }: Props) {
           <p className="text-gray-500 text-xs pt-1">{t('privacy.contact_basis')}</p>
         </div>
 
-        {/* Footer */}
         <div className="px-5 pb-4 pt-3">
           <button
             onClick={onClose}

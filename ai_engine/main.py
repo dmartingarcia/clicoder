@@ -37,8 +37,6 @@ from pydantic import BaseModel
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
-# ==================== STRUCTURED LOGGING ====================
-
 _shared_processors = [
     structlog.contextvars.merge_contextvars,
     structlog.processors.add_log_level,
@@ -56,7 +54,6 @@ structlog.configure(
     cache_logger_on_first_use=False,
 )
 
-# Route stdlib logging (uvicorn startup messages, etc.) through structlog JSON
 _stdlib_handler = logging.StreamHandler()
 _stdlib_handler.setFormatter(
     structlog.stdlib.ProcessorFormatter(
@@ -72,7 +69,6 @@ logging.root.setLevel(logging.INFO)
 
 logger = structlog.get_logger("cie10_engine")
 
-# ==================== MÉTRICAS PROMETHEUS ====================
 
 INFERENCE_LATENCY = Histogram(
     "cie10_inference_duration_seconds",
@@ -85,7 +81,6 @@ MODEL_INFO = Info("cie10_model", "Metadatos del modelo BERT cargado")
 DICT_LOADED = Gauge("cie10_dict_loaded", "1 si el clasificador de diccionario está cargado")
 SUMMARIZER_LOADED = Gauge("cie10_summarizer_loaded", "1 si el summarizer LLM está cargado")
 
-# ==================== SENTRY ====================
 
 if _sentry_dsn := os.environ.get("SENTRY_DSN_AI"):
     # El informe clinico es una categoria especial del articulo 9 del RGPD y este servicio lo
@@ -116,7 +111,6 @@ def _watch_download(model_name: str, stop_event: threading.Event) -> None:
     safe_name = model_name.replace("/", "--")
     model_cache = cache_root / f"models--{safe_name}"
 
-    # Intentamos obtener el tamaño total del modelo vía API (best-effort)
     total_mb: float = 0.0
     try:
         from huggingface_hub import model_info as hf_model_info
@@ -146,13 +140,11 @@ def _watch_download(model_name: str, stop_event: threading.Event) -> None:
         stop_event.wait(15)
 
 
-# Globals poblados en startup
 classifier = None  # CIE10Classifier (BERT)
 dict_classifier = None  # DictClassifier (diccionario)
 summarizer = None  # MedicalSummarizer (LLM local, opcional)
 code_descriptions: dict[str, str] = {}
 
-# ==================== JOB STORE ====================
 
 _JOB_TTL = 600  # segundos: los resultados se guardan 10 min tras completar
 _jobs: dict[str, dict[str, Any]] = {}
@@ -170,9 +162,6 @@ async def _cleanup_expired_jobs() -> None:
             logger.info("Jobs expirados eliminados: %d", len(expired))
 
 
-# ==================== LIFESPAN ====================
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global classifier, dict_classifier, summarizer, code_descriptions
@@ -187,13 +176,11 @@ async def lifespan(app: FastAPI):
             model_dir,
         )
     else:
-        # ── BERT classifier ──────────────────────────────────────────────────
         try:
             import json as _json
 
             from classifier import CIE10Classifier, load_code_descriptions
 
-            # Detectar model_name para el monitor de descarga
             _cfg_path = Path(model_dir) / "config.json"
             _model_name = "IIC/RigoBERTa-Clinical"
             if _cfg_path.exists():
@@ -234,7 +221,6 @@ async def lifespan(app: FastAPI):
             sentry_sdk.capture_exception(exc)
             classifier = None
 
-        # ── Diccionario classifier ────────────────────────────────────────────
         dict_path = os.path.join(model_dir, "baseline_dict.json")
         if os.path.isfile(dict_path):
             try:
@@ -261,13 +247,11 @@ async def lifespan(app: FastAPI):
                 dict_path,
             )
 
-    # ── Summarizer (LLM local, opcional) ─────────────────────────────────
     try:
         from summarizer import create_summarizer
 
         summarizer = create_summarizer()
         if summarizer is not None:
-            # Carga en hilo para no bloquear el arranque
             await asyncio.to_thread(summarizer.load)
             SUMMARIZER_LOADED.set(1)
     except Exception as exc:
@@ -280,8 +264,6 @@ async def lifespan(app: FastAPI):
     _cleanup_task.cancel()
 
 
-# ==================== APP ====================
-
 app = FastAPI(
     title="CIE-10 AI Engine",
     description="Clasificador RigoBERTa multi-label para codificación automática CIE-10.",
@@ -290,9 +272,6 @@ app = FastAPI(
 )
 
 Instrumentator().instrument(app).expose(app)
-
-
-# ==================== MIDDLEWARE ====================
 
 
 _TEXT_ENDPOINTS = {"/predict", "/summarize/stream", "/jobs/predict", "/jobs/summarize"}
@@ -306,7 +285,6 @@ async def log_requests(request: Request, call_next):
     start_time = time.perf_counter()
     query_params = dict(request.query_params) if request.query_params else None
 
-    # Para endpoints de predicción/resumen, loguear el texto (primeros 300 chars)
     # request.body() cachea el resultado en request._body, así el endpoint puede leerlo
     text_preview = None
     if request.method == "POST" and request.url.path in _TEXT_ENDPOINTS:
@@ -335,9 +313,6 @@ async def log_requests(request: Request, call_next):
     )
 
     return response
-
-
-# ==================== SCHEMAS ====================
 
 
 class AnalysisRequest(BaseModel):
@@ -434,9 +409,6 @@ class SummarizeRequest(BaseModel):
     text: str
     system_prompt: str | None = None
     user_prompt: str | None = None
-
-
-# ==================== ENDPOINTS ====================
 
 
 def _version_modelo() -> str:
@@ -599,7 +571,6 @@ async def admin_summarizer(req: SummarizerConfigRequest):
     if req.mode not in valid_modes:
         raise HTTPException(status_code=422, detail=f"ERR_INVALID_MODE:{req.mode}")
 
-    # Si el modelo y modo no cambian, solo actualizar prompts sin recargar
     model_unchanged = (
         summarizer is not None
         and summarizer.is_loaded
@@ -618,7 +589,6 @@ async def admin_summarizer(req: SummarizerConfigRequest):
         except Exception as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    # Modelo o modo cambiaron → cargar nuevo primero, luego descartar el viejo
     if req.model == "none":
         summarizer = None
         SUMMARIZER_LOADED.set(0)
@@ -628,7 +598,6 @@ async def admin_summarizer(req: SummarizerConfigRequest):
     try:
         new_summarizer = MedicalSummarizer(req.model, req.mode, req.system_prompt, req.user_prompt)
         await asyncio.to_thread(new_summarizer.load)
-        # Swap atómico: el viejo modelo sigue sirviendo hasta este punto
         summarizer = new_summarizer
         SUMMARIZER_LOADED.set(1)
         logger.info("Summarizer recargado: model=%s mode=%s", req.model, req.mode)
@@ -1169,9 +1138,6 @@ async def summarize_stream(request: SummarizeRequest):
         thread.join(timeout=5)
 
     return StreamingResponse(_stream(), media_type="application/x-ndjson")
-
-
-# ==================== ASYNC JOB ENDPOINTS ====================
 
 
 def _new_job() -> tuple[str, dict[str, Any]]:

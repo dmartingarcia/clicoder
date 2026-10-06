@@ -60,7 +60,6 @@ services:
       - loki
     networks: [monitoring]
 
-  # Métricas por contenedor: CPU, memoria, red, disco
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.55.1
     container_name: cie10_cadvisor
@@ -76,7 +75,6 @@ services:
       - /cgroup:/cgroup:ro
     networks: [monitoring]
 
-  # Sondas HTTP: health checks de backend, frontend y AI engine
   blackbox_exporter:
     image: prom/blackbox-exporter:latest
     container_name: cie10_blackbox
@@ -85,7 +83,6 @@ services:
       - ./docker/prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
     networks: [monitoring, clicoder]
 
-  # Métricas del host: CPU, RAM, disco, red, procesos
   node_exporter:
     image: prom/node-exporter:latest
     container_name: cie10_node_exporter

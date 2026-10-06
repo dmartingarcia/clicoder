@@ -95,8 +95,6 @@ defmodule App.SummarizerSettings do
     persist_async()
   end
 
-  # ── Privados ────────────────────────────────────────────────────────────────
-
   defp load_initial_state do
     now = System.monotonic_time(:second)
 

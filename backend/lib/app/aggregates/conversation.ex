@@ -32,7 +32,6 @@ defmodule App.Aggregates.Conversation do
     CodeRejected
   }
 
-  # Command Handlers
   def execute(%Conversation{conversation_id: nil}, %StartConversation{} = cmd) do
     %ConversationStarted{
       conversation_id: cmd.conversation_id,
@@ -111,7 +110,6 @@ defmodule App.Aggregates.Conversation do
     end
   end
 
-  # Event Handlers (State Evolution)
   def apply(%Conversation{} = conv, %ConversationStarted{} = evt) do
     %Conversation{
       conv

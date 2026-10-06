@@ -1,12 +1,10 @@
 services:
-  # Imagen base compartida para ML (CUDA + PyTorch + Transformers)
   ml-base:
     build:
       context: ./docker
       dockerfile: Dockerfile.ml-base
     image: cie10-ml-base:latest
 
-  # Email catcher: Mailpit (SMTP + Web UI)
   mailpit:
     image: axllent/mailpit:latest
     restart: always
@@ -17,7 +15,6 @@ services:
       MP_MAX_MESSAGES: 500
     networks: [clicoder]
 
-  # Base de Datos: PostgreSQL (Doble propósito: App y EventStore)
   db:
     image: postgres:18-alpine
     restart: always
@@ -36,7 +33,6 @@ services:
       retries: 5
     networks: [clicoder]
 
-  # Entrenamiento: Python + PyTorch + Jupyter
   training:
     build:
       context: .
@@ -61,7 +57,6 @@ services:
       - .env
     command: bash
 
-  # Microservicio de IA: FastAPI + Transformers
   ai_engine:
     build:
       context: .
@@ -95,7 +90,6 @@ services:
       retries: 24
       start_period: 5s
 
-  # Backend: Elixir Phoenix + Commanded
   backend:
     build:
       context: ./backend
@@ -151,7 +145,6 @@ services:
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.backend.loadbalancer.server.port=4000"
 
-  # Frontend: Next.js + Tailwind + shadcn
   frontend:
     build:
       context: ./frontend

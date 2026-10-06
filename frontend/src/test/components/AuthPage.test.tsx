@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '../helpers'; // apply i18n / socket / config mocks
+import '../helpers';
 
-// ── Auth context mock ─────────────────────────────────────────────────────────
 const mockLogin = vi.fn();
 const mockRegister = vi.fn();
 const mockClearPending = vi.fn();
@@ -81,7 +80,6 @@ describe('AuthPage', () => {
       await user.click(screen.getByRole('button', { name: /auth\.submit_login/i }));
       await waitFor(() => expect(screen.getByText('Invalid credentials')).toBeInTheDocument());
 
-      // Switch to register: error should clear
       await user.click(screen.getByText('auth.register'));
       expect(screen.queryByText('Invalid credentials')).not.toBeInTheDocument();
     });
@@ -126,9 +124,7 @@ describe('AuthPage', () => {
     it('shows confirmation UI when pendingEmail is set', () => {
       mockPendingEmail = 'doctor@hospital.com';
       render(<AuthPage />);
-      // The confirmation screen replaces the login form
       expect(screen.queryByPlaceholderText('doctor@hospital.com')).not.toBeInTheDocument();
-      // The key "auth.check_email_title" is returned by our mock t()
       expect(screen.getByText('auth.check_email_title')).toBeInTheDocument();
     });
 

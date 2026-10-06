@@ -16,7 +16,6 @@ import {
   AlertCircle, ClipboardList, Lightbulb, Activity, Tag, ExternalLink,
 } from 'lucide-react';
 
-// ─── Card: Resumen clínico ────────────────────────────────────────────────────
 function SummaryCard({ content, streaming = false }: { content: string; streaming?: boolean }) {
   const { t } = useI18n();
   return (
@@ -34,7 +33,6 @@ function SummaryCard({ content, streaming = false }: { content: string; streamin
   );
 }
 
-// ─── Card: Códigos CIE-10 ─────────────────────────────────────────────────────
 function CodesCard({
   codes,
   predictedCodes,
@@ -52,7 +50,6 @@ function CodesCard({
   const [rejectInputs, setRejectInputs] = useState<Record<string, string>>({});
   const [showReject, setShowReject] = useState<string | null>(null);
 
-  // Match each code to its DB record for status + code_id + verified_triggers
   const enriched = codes.map((c) => {
     const db = predictedCodes.find((p) => p.cie10_code === c.code);
     return { ...c, code_id: db?.code_id, status: db?.status ?? 'pending', verified_triggers: db?.verified_triggers ?? [] };
@@ -132,9 +129,7 @@ function CodesCard({
               <div className="flex flex-wrap items-center gap-1 mb-2">
                 {(c.triggers ?? []).map((term) => {
                   const isVerified = c.verified_triggers.includes(term);
-                  // De dónde salió el término decide el color y el tooltip: el diccionario
-                  // aporta coincidencias literales y el modelo, palabras influyentes. Son
-                  // evidencias de distinta naturaleza y el codificador necesita distinguirlas.
+                  // El color y el tooltip dependen del origen: diccionario (coincidencia literal) o modelo (palabra influyente).
                   const source = c.trigger_detail?.find((d) => d.term === term)?.source;
                   const origin =
                     source === 'dict' ? t('cards.trigger_from_dict')
@@ -239,7 +234,6 @@ function CodesCard({
   );
 }
 
-// ─── Card: Sugerencia de código ───────────────────────────────────────────────
 function SuggestionCard({ content }: { content: string }) {
   const { t } = useI18n();
   const { suggestCode } = useConversation();
@@ -406,7 +400,6 @@ function SuggestionCard({ content }: { content: string }) {
   );
 }
 
-// ─── Card: texto genérico ─────────────────────────────────────────────────────
 function TextCard({ content }: { content: string }) {
   return (
     <Card className="p-4 border-l-4 border-l-gray-300 bg-gray-50">
@@ -415,7 +408,6 @@ function TextCard({ content }: { content: string }) {
   );
 }
 
-// ─── Chat item renderer ───────────────────────────────────────────────────────
 function ChatItemView({
   item,
   predictedCodes,
@@ -445,7 +437,6 @@ function ChatItemView({
     );
   }
 
-  // Card item
   const card = item as AnalysisCard;
 
   const wrapper = (children: React.ReactNode) => (
@@ -484,7 +475,6 @@ function ChatItemView({
   }
 }
 
-// ─── Main interface ───────────────────────────────────────────────────────────
 function nombreMotor(engine: string, t: (k: never) => string): string {
   const clave = `chat.engine_${engine}` as never;
   const etiqueta = t(clave);
@@ -497,7 +487,6 @@ export function ChatInterface() {
   const MAX_TOKENS = 512;
   const [reportText, setReportText] = useState('');
   const [serverTokenEntry, setServerTokenEntry] = useState<{ text: string; count: number } | null>(null);
-  // approxTokenCount is computed synchronously; serverTokenEntry refines it after 300ms debounce.
   // Deriving null from text mismatch avoids a synchronous setState inside the effect.
   const serverTokenCount = serverTokenEntry?.text === reportText ? serverTokenEntry.count : null;
   const approxTokenCount = Math.ceil(reportText.length / 4);
@@ -555,7 +544,6 @@ export function ChatInterface() {
         </div>
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header */}
           <div className="bg-white border-b px-6 py-4 flex items-center gap-3">
             <Stethoscope className="h-5 w-5 text-blue-600" />
             <div>
@@ -567,7 +555,6 @@ export function ChatInterface() {
             </div>
           </div>
 
-          {/* Chat stream */}
           <div className="flex-1 overflow-y-auto px-6 py-4" ref={scrollRef}>
             <div className="space-y-4 max-w-3xl mx-auto">
               {chatItems.length === 0 && !isAnalyzing && (
@@ -622,7 +609,6 @@ export function ChatInterface() {
             </div>
           </div>
 
-          {/* Report input */}
           <div className="bg-white border-t px-6 py-4">
             <div className="max-w-3xl mx-auto">
               <label className="text-xs font-medium text-gray-500 uppercase tracking-wider block mb-2">

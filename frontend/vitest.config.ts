@@ -9,9 +9,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     coverage: {
-      // Fuera del árbol del proyecto: el directorio por defecto (./coverage) quedó en manos
-      // de root tras ejecutar el contenedor como superusuario, y vitest lo limpia al
-      // arrancar, de modo que la medición fallaba con EACCES antes de empezar.
+      // Fuera del árbol: ./coverage quedó propiedad de root al ejecutar el contenedor y vitest fallaba con EACCES al limpiarlo.
       reportsDirectory: '/tmp/vitest-coverage',
       provider: 'v8',
       reporter: ['text', 'html', 'json', 'json-summary'],
@@ -20,9 +18,9 @@ export default defineConfig({
         'src/test/**',
         'src/**/*.d.ts',
         'src/app/**',
-        'src/components/ui/**',   // shadcn-generated UI primitives
-        'src/lib/config.ts',      // env config, always mocked in tests
-        'src/lib/socket.ts',      // Phoenix socket singleton, always mocked
+        'src/components/ui/**',
+        'src/lib/config.ts',
+        'src/lib/socket.ts',
       ],
     },
   },

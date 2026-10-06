@@ -3,7 +3,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '../helpers';
 
-// ── ConversationContext mock ──────────────────────────────────────────────────
 const mockCreateConversation = vi.fn();
 const mockSwitchConversation = vi.fn();
 const mockDeleteConversation = vi.fn();
@@ -33,7 +32,6 @@ vi.mock('@/contexts/ConversationContext', () => ({
   }),
 }));
 
-// ── AuthContext mock ──────────────────────────────────────────────────────────
 const mockLogout = vi.fn();
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -328,7 +326,6 @@ describe('ConversationSidebar', () => {
       const boton = screen.getByText('privacy.art17_title').closest('div.flex.items-start')!.querySelector('button')!;
       await user.click(boton);
 
-      // el panel de privacidad se cierra y en su lugar aparece la confirmación de borrado
       expect(screen.queryByText('privacy.intro')).not.toBeInTheDocument();
       expect(screen.getByText('sidebar.delete_account_confirm')).toBeInTheDocument();
     });
@@ -342,7 +339,6 @@ describe('ConversationSidebar', () => {
       await user.click(screen.getByText('es'));
       await user.click(screen.getByText('en'));
 
-      // se cierra tras elegir
       expect(screen.queryByText('fr')).not.toBeInTheDocument();
     });
   });

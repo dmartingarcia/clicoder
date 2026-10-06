@@ -39,7 +39,6 @@ def main():
         a = time.perf_counter()
         exh = clf.explain(texto, idx, top_k=5, method="exhaustivo")
         t_exh.append(time.perf_counter() - a)
-        # ¿Aparece alguna palabra del modelo dentro de las frases del diccionario?
         sol = []
         for c in codigos:
             palabras = {w.lower() for w in exh.get(int(clf.code_to_idx[c]), [])}

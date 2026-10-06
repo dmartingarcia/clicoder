@@ -25,7 +25,7 @@ from classifier import (
 )
 
 MASK = 999
-IMPORTANTES = {2: 5.0, 7: 3.0}  # palabra → cuánto baja el logit al taparla
+IMPORTANTES = {2: 5.0, 7: 3.0}
 
 
 class EncoderFalso(torch.nn.Module):
@@ -70,11 +70,6 @@ def _mejores(importancia, n=2):
     return [w for w, _ in sorted(importancia.items(), key=lambda kv: -kv[1][0].item())[:n]]
 
 
-# =============================================================================
-# Contrato común
-# =============================================================================
-
-
 def test_el_registro_expone_las_tres_estrategias():
     assert set(METODOS_EXPLAIN) == {"exhaustivo", "divide_y_venceras", "gradiente_filtrado"}
     assert EXPLAIN_POR_DEFECTO in METODOS_EXPLAIN
@@ -91,7 +86,7 @@ def test_toda_estrategia_encuentra_las_palabras_importantes(nombre):
 def test_toda_estrategia_las_ordena_por_importancia(nombre):
     ctx = _contexto()
     imp = METODOS_EXPLAIN[nombre](ctx, list(range(12)))
-    assert _mejores(imp, 1) == [2]  # la palabra 2 pesa 5,0 y la 7 pesa 3,0
+    assert _mejores(imp, 1) == [2]
 
 
 @pytest.mark.parametrize("nombre", sorted(METODOS_EXPLAIN))
@@ -114,11 +109,6 @@ def test_toda_estrategia_soporta_una_sola_candidata(nombre):
 @pytest.mark.parametrize("nombre", sorted(METODOS_EXPLAIN))
 def test_toda_estrategia_soporta_lista_vacia(nombre):
     assert METODOS_EXPLAIN[nombre](_contexto(), []) == {}
-
-
-# =============================================================================
-# Fidelidad: las versiones rápidas se contrastan contra la referencia
-# =============================================================================
 
 
 def test_las_rapidas_coinciden_con_el_exhaustivo_en_el_termino_principal():
@@ -155,7 +145,7 @@ def test_la_poda_descarta_grupos_sin_efecto():
 
     ctx.caida_al_enmascarar = espia
     _explicar_divide_y_venceras(ctx, list(range(32)))
-    assert sum(llamadas) < 2 * 32 - 1  # menos que el árbol binario completo
+    assert sum(llamadas) < 2 * 32 - 1
 
 
 class ModeloSinBackward(torch.nn.Module):
@@ -203,7 +193,6 @@ def test_sin_gradiente_se_degrada_al_exhaustivo():
         base = modelo(ids, msk)[0, [0]]
     ctx = _CtxAtribucion(modelo, ids, msk, MASK, wpos, [0], base, n, 4)
     imp = _explicar_gradiente_filtrado(ctx, list(range(n)))
-    # El resultado debe ser el mismo que el exhaustivo: solo cambió cómo se llegó a él.
     assert set(_mejores(imp)) == set(IMPORTANTES)
 
 
@@ -221,10 +210,6 @@ def test_sin_gradiente_en_los_embeddings_tambien_se_degrada():
     assert all(v[0].item() == pytest.approx(0.0, abs=1e-6) for v in imp.values())
 
 
-# =============================================================================
-# Fidelidad sobre un caso exigente
-# =============================================================================
-#
 # Los casos de arriba usan 12 palabras y 2 importantes: cualquier estrategia los resuelve, de
 # modo que no protegen de una regresion real (bajar los candidatos del filtro, cambiar el
 # criterio de poda). Este escenario tiene 60 palabras y 8 con importancia repartida, que es la
@@ -291,11 +276,6 @@ def test_ninguna_rapida_reporta_una_palabra_irrelevante_en_el_top_5():
     for metodo in (_explicar_divide_y_venceras, _explicar_gradiente_filtrado):
         for palabra in _mejores(metodo(_contexto_amplio(), cand), 5):
             assert palabra in IMPORTANTES_AMPLIO
-
-
-# =============================================================================
-# Concurrencia: el hook del gradiente vive en el modelo compartido
-# =============================================================================
 
 
 def test_una_prediccion_concurrente_no_revienta_por_el_hook():

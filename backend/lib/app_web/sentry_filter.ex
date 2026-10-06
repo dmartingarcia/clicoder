@@ -10,16 +10,13 @@ if Code.ensure_loaded?(Sentry) do
       scrubbed =
         request
         |> Map.update(:body_params, %{}, fn b -> if is_map(b), do: scrub_map(b), else: %{} end)
-        # La cadena de consulta no la cubria nada, y por ahi viajan los tokens de confirmacion
-        # de correo (GET /auth/confirm/:token se comparte por enlace).
+        # La query string no estaba cubierta y lleva los tokens de confirmacion de correo.
         |> Map.put(:query_string, "[FILTERED]")
-        # REMOTE_ADDR es la IP del paciente o del codificador: dato personal del articulo 4
-        # del RGPD, y no hace falta para diagnosticar un error.
+        # REMOTE_ADDR es dato personal (art. 4 RGPD) y no hace falta para diagnosticar.
         |> Map.update(:env, %{}, fn env ->
           if is_map(env), do: Map.drop(env, ["REMOTE_ADDR", "REMOTE_PORT"]), else: %{}
         end)
-        # La clave puede existir con valor nil, y ahi Map.update no aplica el valor por defecto.
-        # Si el filtro revienta, el aviso de error no se envia y el fallo original se pierde.
+        # La clave puede existir con nil (Map.update no aplica el defecto); si el filtro revienta, se pierde el aviso.
         |> Map.update(:headers, [], &scrub_headers/1)
 
       %{event | request: scrubbed}
@@ -55,8 +52,7 @@ if Code.ensure_loaded?(Sentry) do
 
     defp scrub_headers(_), do: []
 
-    # Identificar a quien sufrio el error basta con el id interno: el correo y la IP no
-    # aportan nada para depurar y son datos personales en manos de un tercero.
+    # Basta el id interno: correo e IP son datos personales en manos de un tercero.
     defp scrub_user(%{user: user} = event) when is_map(user) do
       %{event | user: Map.take(user, [:id, "id"])}
     end

@@ -16,10 +16,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import main as main_module
 
-# =============================================================================
-# Helpers
-# =============================================================================
-
 
 def _no_model_client():
     """
@@ -38,11 +34,6 @@ def _no_model_client():
     else:
         os.environ["MODEL_DIR"] = old
     return client
-
-
-# =============================================================================
-# Fixtures
-# =============================================================================
 
 
 @pytest.fixture
@@ -143,11 +134,6 @@ def client_no_model():
         os.environ["MODEL_DIR"] = old
 
 
-# =============================================================================
-# GET / : health check
-# =============================================================================
-
-
 class TestHealthCheck:
     def test_returns_online_status(self, client_no_model):
         resp = client_no_model.get("/")
@@ -171,11 +157,6 @@ class TestHealthCheck:
         assert "status" in data
         assert "model_loaded" in data
         assert "dict_loaded" in data
-
-
-# =============================================================================
-# POST /predict : BERT engine
-# =============================================================================
 
 
 class TestPredictBert:
@@ -208,7 +189,6 @@ class TestPredictBert:
         text = "Paciente con hipertensión arterial y diabetes"
         resp = client_with_bert.post("/summarize/stream", json={"text": text})
         assert resp.status_code == 200
-        # Sin summarizer cargado devuelve una línea de fallback con el nº de palabras
         lines = [ln for ln in resp.text.strip().splitlines() if ln]
         import json as _json
 
@@ -233,11 +213,6 @@ class TestPredictBert:
     def test_top_k_is_10(self, client_with_bert):
         client_with_bert.post("/predict", json={"text": "Texto de prueba clínico"})
         assert main_module.classifier.predict.call_args[0][1] == 10
-
-
-# =============================================================================
-# POST /predict : dict engine
-# =============================================================================
 
 
 class TestPredictDict:
@@ -279,11 +254,6 @@ class TestPredictDict:
         codes_card = next(c for c in resp.json()["cards"] if c["type"] == "codes")
         for entry in codes_card["content"]:
             assert "Términos encontrados" in entry["reason"]
-
-
-# =============================================================================
-# POST /summarize/stream : prompt overrides (language interpolation)
-# =============================================================================
 
 
 class TestSummarizeStreamPromptOverride:

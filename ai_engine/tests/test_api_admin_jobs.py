@@ -167,13 +167,13 @@ class TestAdminSummarizer:
         assert r.status_code == 200
         assert r.json()["status"] == "prompts_updated"
         assert actual.prompts_actualizados == ("Nuevo sistema", "Nuevo {text}")
-        assert main_module.summarizer is actual  # no se recarga el modelo
+        assert main_module.summarizer is actual
 
     def test_prompts_invalidos_al_actualizar_dan_422(self, cliente):
         """update_prompts() es el de verdad: su ValueError debe traducirse a 422, no a 500."""
         client, _ = cliente
         actual = summarizer_module.MedicalSummarizer("gemma3", "summary", "s", "u {text}")
-        actual._llm = object()  # ya "cargado", sin tocar llama_cpp
+        actual._llm = object()
         main_module.summarizer = actual
         r = client.post(
             "/admin/summarizer",
@@ -229,7 +229,7 @@ class TestCountTokens:
     def test_cuenta_los_tokens_del_tokenizador(self, cliente):
         client, _ = cliente
         r = client.post("/count-tokens", json={"text": "una dos tres"})
-        assert r.json()["token_count"] == 5  # 3 palabras + CLS/SEP simulados
+        assert r.json()["token_count"] == 5
 
 
 def _esperar_job(client, job_id, intentos=20):

@@ -100,7 +100,6 @@ def main():
     for split, ruta in (("val", args.val_file), ("test", args.test_file)):
         print(f"[motores] {split}: inferencia…")
         textos, T, ntot, nreach, _, _ = _load(ruta, c2i, n_codes, full)
-        # Se trabaja en el espacio del logit, que es donde vive la fusión del motor.
         probs = _infer(clf, textos, max_len, args.batch_size)
         Z = np.log(np.clip(probs, 1e-7, 1 - 1e-7) / np.clip(1 - probs, 1e-7, 1))
         datos[split] = {"T": T, "Z": Z, "B": _bonus(dic, textos, c2i), "nt": ntot, "nr": nreach}
@@ -128,13 +127,10 @@ def main():
     fusion = medir(
         datos["val"]["Z"] + beta * datos["val"]["B"], datos["test"]["Z"] + beta * datos["test"]["B"]
     )
-    # El diccionario solo: su confianza es la puntuación, sin modelo detrás.
     dicc = medir(datos["val"]["B"], datos["test"]["B"])
 
-    # Modo "both": concatena lo que cada motor devuelve por su cuenta, con su propio umbral de
-    # producción (el del clasificador en config.json; el diccionario no aplica ninguno, cualquier
-    # bloque con un patrón que haga match entra). No admite MAP: dos listas concatenadas de motores
-    # con escalas distintas no definen una única ordenación.
+    # Modo "both": concatena lo que devuelve cada motor con su propio umbral de producción. No admite MAP:
+    # dos listas de motores con escalas distintas no definen una única ordenación.
     umbral_bert = float(clf.config.get("threshold", 0.5))
     logit_bert = float(np.log(umbral_bert / (1 - umbral_bert)))
     t = datos["test"]

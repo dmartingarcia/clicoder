@@ -6,8 +6,6 @@ defmodule AppWeb.Plugs.RequireAdminTest do
 
   alias AppWeb.Plugs.RequireAdmin
 
-  # Build a bare conn with an ETS-backed session (no secret_key_base needed).
-  # We start a fresh ETS table per test so sessions don't leak between tests.
   defp build_conn_with_session(session_values \\ %{}) do
     table = :ets.new(:test_session, [:set, :public])
 

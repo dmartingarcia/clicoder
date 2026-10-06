@@ -1,16 +1,5 @@
-# Evalúa el modelo de producción sobre test (y opcionalmente validación) en formato text,labels.
-#
-# - F1 (micro/macro) con barrido de umbral global: elige el mejor umbral SOBRE VALIDACIÓN y
-#   reporta ese mismo umbral en TEST (elegirlo sobre test sería tuning sobre el conjunto de
-#   evaluación). También reporta los umbrales por clase guardados (como ablación de sobreajuste).
-# - MAP por documento (estilo CodiEsp), independiente del umbral, en dos variantes:
-#     reachable: solo el gold que el modelo puede predecir (comparable al MAP de validación).
-#     strict   : el gold completo; los códigos fuera del vocabulario penalizan (comparable al benchmark).
-#
-# Uso (contenedor ai_engine):
-#   python eval_test.py                       # test + barrido con val por defecto
-#   python eval_test.py --device cpu
-#   python eval_test.py --no_sweep            # solo métricas al --threshold dado
+# Umbral global elegido sobre VALIDACIÓN y reutilizado en TEST: elegirlo sobre test sería tuning
+# sobre el conjunto de evaluación.
 
 import argparse
 import json
@@ -27,7 +16,7 @@ from sklearn.metrics import (
 )
 
 from classifier import CIE10Classifier, _extract_chapter
-from train import parse_labels  # misma normalización de códigos que en entrenamiento
+from train import parse_labels
 
 
 def _infer(clf, texts, max_length, batch_size):
@@ -138,7 +127,6 @@ def _block_level(gold_lists, probs, idx_to_code, thr):
         code = idx_to_code.get(str(i), "")
         if code:
             cols[b_to_j[code[:3]]].append(i)
-    # probabilidad del bloque = maxima de sus codigos hijo
     B = np.stack([probs[:, np.asarray(c)].max(axis=1) for c in cols], axis=1)
 
     G = np.zeros((len(gold_lists), len(blocks)), dtype=np.int8)
@@ -219,7 +207,6 @@ def main():
         f"full_codes={full_codes}  max_length={max_length}  device={device}"
     )
 
-    # --- TEST ---
     print("[eval] inferencia sobre TEST…")
     texts_te, T_te, ntot_te, nreach_te, unseen_te, gold_te = _load(
         args.test_file, code_to_idx, num_codes, full_codes
@@ -231,7 +218,6 @@ def main():
         f"({100 * reach / max(1, tot):.1f}%); códigos fuera de vocab={len(unseen_te)}"
     )
 
-    # --- VAL (para elegir umbral) ---
     have_val = (not args.no_sweep) and Path(args.val_file).exists()
     probs_va = T_va = None
     if have_val:
@@ -241,7 +227,6 @@ def main():
         )
         probs_va = _infer(clf, texts_va, max_length, args.batch_size)
 
-    # --- Barrido de umbral global ---
     grid = [round(x, 2) for x in np.arange(0.05, 0.61, 0.05)]
     sweep = []
     for t in grid:
@@ -256,10 +241,8 @@ def main():
     else:
         best_t = args.threshold
 
-    # --- MAP (independiente del umbral) ---
     map_reach, map_strict = _map(T_te, probs_te, ntot_te, nreach_te)
 
-    # --- Umbrales por clase guardados (ablación) ---
     per_class = None
     thr_file = clf.config.get("thresholds_file")
     if thr_file and (Path(args.model_dir) / thr_file).exists():
@@ -273,7 +256,6 @@ def main():
                 "f1_macro": float(f1_score(T_te, P_pc, average="macro", zero_division=0)),
             }
 
-    # --- Informe ---
     print("\n================ BARRIDO DE UMBRAL GLOBAL ================")
     hdr = "  umbral   F1-mi(val)  F1-ma(val)  F1-mi(test)  F1-ma(test)"
     print(hdr if have_val else "  umbral   F1-mi(test)  F1-ma(test)")
@@ -306,7 +288,6 @@ def main():
     print(f"  MAP por documento (estricto):  {map_strict:.4f}   <- comparable al benchmark CodiEsp")
     print("====================================================")
 
-    # --- Datos para figuras: longitud en tokens y F1 por capítulo (umbral global) ---
     def _toklens(_txts):
         return [len(clf.tokenizer(t, truncation=False)["input_ids"]) for t in _txts]
 
@@ -348,7 +329,6 @@ def main():
             "f1_micro": float(f1_score(Tc, Pc, average="micro", zero_division=0)),
             "support": int(Tc.sum()),
         }
-    # --- F1 por frecuencia del codigo en entrenamiento y metricas a nivel de bloque ---
     train_path = _sets["train"]
     freq = _train_freq(train_path, code_to_idx, full_codes)
     per_freq = _freq_buckets(T_te, probs_te, args.threshold, freq)

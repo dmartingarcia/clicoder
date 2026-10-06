@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
-import '../helpers'; // i18n / sonner / config mocks: also registers a static socket mock
+import '../helpers';
 
 import { getSocket } from '@/lib/socket';
 
@@ -478,9 +478,9 @@ describe('ConversationProvider', () => {
       await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
       (global.fetch as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ ok: true, json: async () => ({}) } as Response)  // PUT restore
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ conversations: [] }) } as Response)  // loadConversations
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ conversations: [] }) } as Response); // loadTrashed
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) } as Response)
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ conversations: [] }) } as Response)
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ conversations: [] }) } as Response);
 
       act(() => { void getCtx().restoreConversation('trash-1'); });
 
@@ -765,7 +765,6 @@ describe('ConversationProvider', () => {
       const getCtx = await conCodigoPredicho();
       act(() => { getCtx().verifyTrigger('c1', 'hipertensión', true); });
 
-      // Se pinta ya, sin esperar confirmación del servidor
       expect(getCtx().predictedCodes[0].verified_triggers).toEqual(['hipertensión']);
       expect(mockChannel.push).toHaveBeenCalledWith('verify_trigger', {
         code_id: 'c1', trigger: 'hipertensión', verified: true,

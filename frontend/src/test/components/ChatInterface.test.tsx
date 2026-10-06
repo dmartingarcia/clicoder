@@ -92,7 +92,6 @@ describe('ChatInterface', () => {
       render(<ChatInterface />);
       const textarea = screen.getByPlaceholderText('chat.report_placeholder');
       await user.type(textarea, 'short text');
-      // Our mock t() returns "chat.min_chars" with vars interpolated into key
       expect(screen.getByText(/chat\.min_chars/)).toBeInTheDocument();
     });
 
@@ -314,7 +313,6 @@ describe('ChatInterface', () => {
       const user = userEvent.setup();
       render(<ChatInterface />);
 
-      // se muestra con "✓ " delante por estar verificada
       await user.click(screen.getByText(/presión alta/));
       expect(mockVerifyTrigger).toHaveBeenCalledWith('code-uuid-1', 'presión alta', false);
 
@@ -349,7 +347,6 @@ describe('ChatInterface', () => {
     it('shows max_words_error when token count exceeds 512', () => {
       render(<ChatInterface />);
       const textarea = screen.getByPlaceholderText('chat.report_placeholder');
-      // 4097 chars → ceil(4097/4) = 1025 tokens
       const longText = 'a'.repeat(4097);
       fireEvent.change(textarea, { target: { value: longText } });
       expect(screen.getByText(/chat\.max_words_error/)).toBeInTheDocument();
@@ -367,7 +364,6 @@ describe('ChatInterface', () => {
     it('does NOT show max_words_error when token count is exactly 512', () => {
       render(<ChatInterface />);
       const textarea = screen.getByPlaceholderText('chat.report_placeholder');
-      // 2048 chars → ceil(2048/4) = 512 tokens, not exceeding
       const text = 'a'.repeat(2048);
       fireEvent.change(textarea, { target: { value: text } });
       expect(screen.queryByText(/chat\.max_words_error/)).not.toBeInTheDocument();
@@ -383,7 +379,6 @@ describe('ChatInterface', () => {
 
       render(<ChatInterface />);
       const textarea = screen.getByPlaceholderText('chat.report_placeholder');
-      // 25 caracteres → estimación rápida de 7 tokens, muy por debajo del límite de 512
       fireEvent.change(textarea, { target: { value: 'a'.repeat(25) } });
 
       await waitFor(() => expect(screen.getByText(/chat\.max_words_error/)).toBeInTheDocument(), { timeout: 1000 });
@@ -519,10 +514,9 @@ describe('ChatInterface', () => {
       vi.spyOn(window, 'getSelection').mockReturnValue(mockSel as unknown as Selection);
       fireEvent.mouseUp(textDiv);
 
-      // The cancel button is inside the form container: scope with within()
       const { within } = await import('@testing-library/react');
       const input = screen.getByPlaceholderText('cards.suggest_code_placeholder');
-      const formRow = input.parentElement!; // the flex gap-2 div
+      const formRow = input.parentElement!;
       const cancelBtn = within(formRow).getAllByRole('button').at(-1)!;
       await user.click(cancelBtn);
       expect(screen.queryByPlaceholderText('cards.suggest_code_placeholder')).not.toBeInTheDocument();

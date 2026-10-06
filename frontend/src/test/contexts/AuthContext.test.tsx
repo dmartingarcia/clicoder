@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import React from 'react';
-import '../helpers'; // applies i18n / sonner / socket / config mocks
+import '../helpers';
 
 vi.mock('@/lib/config', () => ({
   config: { apiUrl: 'http://localhost:4000/api' },
@@ -9,7 +9,6 @@ vi.mock('@/lib/config', () => ({
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
-// ── Probe component ───────────────────────────────────────────────────────────
 function Probe({ onRender }: { onRender: (ctx: ReturnType<typeof useAuth>) => void }) {
   const ctx = useAuth();
   onRender(ctx);
@@ -35,8 +34,6 @@ function mockFetch(body: unknown, status = 200) {
     json: async () => body,
   } as Response);
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('AuthProvider', () => {
   beforeEach(() => {
@@ -294,16 +291,11 @@ describe('AuthProvider', () => {
 
   describe('localStorage error handling', () => {
     it('handles corrupt localStorage JSON gracefully (loadFromStorage catch)', async () => {
-      // Store invalid JSON so JSON.parse throws
       localStorage.setItem('cie10_auth', 'NOT_VALID_JSON{{{');
       const getCtx = renderProvider();
-      // Should not throw: catch branch returns null, auth stays null
       await waitFor(() => expect(getCtx().mounted).toBe(true));
       expect(getCtx().user).toBeNull();
     });
   });
 
-  // El manejo de '?confirmed=1' se retiró cuando la confirmación de correo pasó a tener su
-  // propia página en el frontend, que llama a la API y hace el login por su cuenta. El test
-  // que lo cubría se conservó por error y llevaba fallando desde entonces.
 });

@@ -14,7 +14,6 @@ export interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
-  /** Non-null while waiting for the user to confirm their email */
   pendingEmail: string | null;
   /** False until localStorage has been read: avoids SSR/client mismatch */
   mounted: boolean;

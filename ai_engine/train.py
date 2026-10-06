@@ -54,11 +54,7 @@ os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "0")
 os.environ.setdefault("TQDM_DISABLE", "0")
 
 
-# ==================== CIE-10 METADATA ====================
-
-# Rangos de categoría (3 caracteres) → capítulo CIE-10. La letra inicial no basta: la D se
-# reparte entre neoplasias (C00-D49) y sangre (D50-D89), y la H entre ojo (H00-H59) y oído
-# (H60-H95). Debe mantenerse en sincronía con CHAPTER_RANGES de classifier.py.
+# Debe mantenerse en sincronía con CHAPTER_RANGES de classifier.py (la letra sola no basta para D y H).
 CHAPTER_RANGES: list[tuple[str, str, str]] = [
     ("I", "A00", "B99"),
     ("II", "C00", "D49"),
@@ -119,9 +115,6 @@ def extract_chapter(code: str):
         if lo <= category <= hi:
             return chapter
     return None
-
-
-# ==================== DATA ====================
 
 
 def truncate_code(code: str, full: bool) -> str:
@@ -193,9 +186,8 @@ class CIE10Dataset(Dataset):
         self.num_labels = len(code_to_idx)
         self.full_codes = full_codes
         self.chapters = chapters
-        self.sliding_window = sliding_window  # True → encode full text as overlapping chunks
-        self.chunk_overlap = chunk_overlap  # stride in tokens between consecutive chunks
-        # (n_docs, num_labels) con las probabilidades del profesor, o None si no hay destilación
+        self.sliding_window = sliding_window
+        self.chunk_overlap = chunk_overlap
         self.teacher_probs = teacher_probs
 
     def __len__(self):
@@ -203,8 +195,6 @@ class CIE10Dataset(Dataset):
 
     def __getitem__(self, idx):
         if self.sliding_window:
-            # Tokenize the full text as overlapping windows of max_length tokens.
-            # Returns (num_chunks, max_length) where num_chunks >= 1.
             enc = self.tokenizer(
                 self.texts[idx],
                 max_length=self.max_length,
@@ -214,8 +204,8 @@ class CIE10Dataset(Dataset):
                 return_overflowing_tokens=True,
                 return_tensors="pt",
             )
-            input_ids = enc["input_ids"]  # (num_chunks, max_length)
-            attention_mask = enc["attention_mask"]  # (num_chunks, max_length)
+            input_ids = enc["input_ids"]
+            attention_mask = enc["attention_mask"]
         else:
             enc = self.tokenizer(
                 self.texts[idx],
@@ -224,8 +214,8 @@ class CIE10Dataset(Dataset):
                 truncation=True,
                 return_tensors="pt",
             )
-            input_ids = enc["input_ids"].squeeze(0)  # (max_length,)
-            attention_mask = enc["attention_mask"].squeeze(0)  # (max_length,)
+            input_ids = enc["input_ids"].squeeze(0)
+            attention_mask = enc["attention_mask"].squeeze(0)
 
         vec = torch.zeros(self.num_labels, dtype=torch.float32)
         for code in parse_labels(
@@ -410,14 +400,11 @@ def sliding_window_collate(batch):
     counts = torch.tensor([item["input_ids"].shape[0] for item in batch])
     labels = torch.stack([item["labels"] for item in batch])
     return {
-        "input_ids": all_ids,  # (total_chunks, max_length)
-        "attention_mask": all_masks,  # (total_chunks, max_length)
-        "doc_chunk_counts": counts,  # (batch_size,)
-        "labels": labels,  # (batch_size, num_labels)
+        "input_ids": all_ids,
+        "attention_mask": all_masks,
+        "doc_chunk_counts": counts,
+        "labels": labels,
     }
-
-
-# ==================== MODEL ====================
 
 
 class FlatClassifier(nn.Module):
@@ -435,7 +422,7 @@ class FlatClassifier(nn.Module):
         # Longformer requiere global_attention_mask con atención global en el CLS (pos 0)
         self.is_longformer = hasattr(self.encoder.config, "attention_window")
         self._apply_freeze(freeze_layers)
-        self.current_freeze = freeze_layers  # rastreado para progressive unfreezing
+        self.current_freeze = freeze_layers
         if hasattr(self.encoder, "gradient_checkpointing_enable"):
             self.encoder.gradient_checkpointing_enable()
         self.dropout = nn.Dropout(dropout)
@@ -444,11 +431,8 @@ class FlatClassifier(nn.Module):
     def _apply_freeze(self, freeze_layers: int):
         if freeze_layers <= 0:
             return
-        # Congelar embeddings siempre que se congelen capas
         for param in self.encoder.embeddings.parameters():
             param.requires_grad = False
-        # Detectar lista de capas (encoder.layer para RoBERTa/BERT,
-        # encoder.layers para modelos DeBERTa)
         layers = None
         if hasattr(self.encoder, "encoder"):
             enc = self.encoder.encoder
@@ -512,22 +496,19 @@ class FlatClassifier(nn.Module):
     def forward(self, input_ids, attention_mask, doc_chunk_counts=None):
         kwargs = {}
         if self.is_longformer:
-            # CLS (posición 0) necesita atención global para ver todo el documento
             gam = torch.zeros_like(input_ids)
             gam[:, 0] = 1
             kwargs["global_attention_mask"] = gam
         out = self.encoder(input_ids=input_ids, attention_mask=attention_mask, **kwargs)
-        # CLS token ([0]): works for BERT, RoBERTa, DeBERTa-v2, Longformer
-        cls = out.last_hidden_state[:, 0, :]  # (total_chunks, hidden_size)
+        cls = out.last_hidden_state[:, 0, :]
 
         if doc_chunk_counts is not None:
-            # Sliding window: mean-pool chunk embeddings per document
             pooled = []
             start = 0
             for n in doc_chunk_counts.tolist():
                 pooled.append(cls[start : start + n].mean(dim=0))
                 start += n
-            cls = torch.stack(pooled)  # (batch_size, hidden_size)
+            cls = torch.stack(pooled)
 
         return self.classifier(self.dropout(cls))
 
@@ -542,11 +523,8 @@ def _load_encoder(model_name: str):
             kwargs["torch_dtype"] = torch.bfloat16
         try:
             encoder = AutoModel.from_pretrained(model_name, **kwargs)
-            # Cargar en bfloat16 satisface el check de transformers para flash_attention_2,
-            # pero los parámetros deben estar en float32 para que el optimizador (Adam)
-            # mantenga sus estados en float32. Flash attention sigue activo en runtime
-            # porque attn_implementation queda grabado en el config del modelo;
-            # autocast provee tensores bfloat16 durante el forward.
+            # Se carga en bfloat16 para pasar el check de flash_attention_2, pero los parámetros deben estar en
+            # float32 para que Adam mantenga sus estados en float32; el autocast da bfloat16 en el forward.
             if impl == "flash_attention_2":
                 encoder = encoder.to(torch.float32)
             label = impl or "eager"
@@ -555,9 +533,6 @@ def _load_encoder(model_name: str):
         except (ValueError, ImportError):
             continue
     raise RuntimeError(f"No se pudo cargar el encoder para {model_name}")
-
-
-# ==================== TRAINING ====================
 
 
 def _collect_probs(model, loader, device):
@@ -828,16 +803,14 @@ class AsymmetricLoss(nn.Module):
         xs_pos = torch.sigmoid(x)
         xs_neg = 1.0 - xs_pos
 
-        # Probability margin: desplaza negativos para ignorar los casi-positivos
         if self.clip > 0:
             xs_neg = (xs_neg + self.clip).clamp(max=1.0)
 
         lo_pos = y * torch.log(xs_pos.clamp(min=self.eps))
         lo_neg = (1 - y) * torch.log(xs_neg.clamp(min=self.eps))
 
-        # Focusing: (1-pt)^γ, cuando el modelo es confiado, el peso → 0
         if self.gamma_neg > 0 or self.gamma_pos > 0:
-            pt = xs_pos * y + xs_neg * (1 - y)  # p_t por clase y muestra
+            pt = xs_pos * y + xs_neg * (1 - y)
             gamma = self.gamma_pos * y + self.gamma_neg * (1 - y)
             w = torch.pow(1.0 - pt, gamma)
             lo_pos = lo_pos * w
@@ -862,9 +835,9 @@ def zlpr_loss(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     """
     z = logits.float()
     t = targets.float()
-    neg = z.masked_fill(t >= 0.5, -1e9)  # solo negativos
-    pos = (-z).masked_fill(t < 0.5, -1e9)  # solo positivos, con el signo cambiado
-    zero = torch.zeros_like(z[..., :1])  # el "1 +" del logaritmo
+    neg = z.masked_fill(t >= 0.5, -1e9)
+    pos = (-z).masked_fill(t < 0.5, -1e9)
+    zero = torch.zeros_like(z[..., :1])
     neg_term = torch.logsumexp(torch.cat([neg, zero], dim=-1), dim=-1)
     pos_term = torch.logsumexp(torch.cat([pos, zero], dim=-1), dim=-1)
     return (neg_term + pos_term).mean()
@@ -995,26 +968,20 @@ def train(
     rdrop_alpha=0.0,
     ema_decay=0.0,
 ):
-    # Solo parámetros con requires_grad=True: los congelados quedan fuera del optimizer
-    # para poder añadirlos como nuevo param group al descongelarlos (add_param_group)
-    # sin que PyTorch los detecte como duplicados.
+    # Solo parámetros con requires_grad=True: los congelados se añaden después con add_param_group
+    # al descongelarlos, y PyTorch los detectaría como duplicados si ya estuvieran.
     optimizer = torch.optim.AdamW(
         [p for p in model.parameters() if p.requires_grad],
         lr=lr,
         weight_decay=weight_decay,
     )
 
-    # Scheduler
     if lr_schedule == "plateau":
-        # ReduceLROnPlateau: baja el LR cuando la métrica de selección no mejora durante
-        # patience//2 épocas.
-        # Más adaptativo que cosine: no decae a 0 arbitrariamente sino solo cuando hay estancamiento.
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="max", factor=0.5, patience=max(1, patience // 2)
         )
         print(f"[scheduler] ReduceLROnPlateau  factor=0.5  patience={max(1, patience // 2)}")
     else:
-        # Cosine con warmup (default): warmup lineal + decaída coseno hasta 0
         total_opt_steps = (len(train_loader) // grad_accum) * epochs
         warmup_steps = max(1, int(warmup_ratio * total_opt_steps))
         scheduler = get_cosine_schedule_with_warmup(
@@ -1034,7 +1001,6 @@ def train(
         print(f"[loss] BCEWithLogitsLoss  pos_weight_cap={pos_weight_cap}")
     autocast = _autocast_ctx(device)
 
-    # Hierarchical consistency loss tensors → mover al device una sola vez
     if hier_pairs is not None and lambda_hier > 0.0:
         hier_child = hier_pairs[0].to(device)
         hier_parent = hier_pairs[1].to(device)
@@ -1053,8 +1019,8 @@ def train(
     best_score = -1.0
     best_state = None
     no_improve = 0
-    history = []  # [{epoch, train_loss, val_f1_micro, val_f1_macro}]
-    epoch_times = []  # segundos por época para ETA
+    history = []
+    epoch_times = []
 
     n_batches = len(train_loader)
     print(f"\n{'=' * 60}")
@@ -1081,10 +1047,8 @@ def train(
 
     train_start = time.time()
 
-    # El descongelado progresivo añade parámetros (y sus momentos de Adam) en mitad del
-    # entrenamiento, así que el pico de memoria no llega al principio sino a la época 30,
-    # 60, 90... Si la GPU se agota ahí, se conserva el mejor checkpoint alcanzado en vez de
-    # perder la ejecución entera: los artefactos se escriben igual con lo que haya.
+    # El descongelado progresivo añade parámetros en mitad del entrenamiento: el pico de memoria llega
+    # en la época 30, 60... Si la GPU se agota ahí, se conserva el mejor checkpoint en vez de perder el run.
     try:
         for epoch in range(1, epochs + 1):
             model.train()
@@ -1103,17 +1067,12 @@ def train(
                     )
                     labels = batch["labels"].to(device)
                     if label_smoothing > 0.0:
-                        # One-sided label smoothing: solo suaviza los positivos (1 → 1-ε).
-                        # Los negativos se mantienen en 0. Así no interactúa con pos_weight:
-                        # si se suavizara también el 0 → ε/2, pos_weight amplificaría ese
-                        # gradiente espúreo sobre 497 negativos por código, aplastando la señal
-                        # real y haciendo que el modelo prediga todo como positivo.
+                        # Label smoothing solo en positivos: suavizar también el 0 haría que pos_weight amplificara ese
+                        # gradiente espúreo sobre ~497 negativos por código y el modelo predeciría todo como positivo.
                         labels = labels * (1.0 - label_smoothing)
                     bce_loss = loss_fn(logits, labels)
                     extra = {}
                     if rdrop_alpha > 0.0:
-                        # Segunda pasada sobre el MISMO batch: mismo texto, otra máscara de
-                        # dropout. La diferencia entre ambas salidas es lo que se penaliza.
                         logits_b = model(
                             batch["input_ids"].to(device),
                             batch["attention_mask"].to(device),
@@ -1124,18 +1083,13 @@ def train(
                     if rank_loss_weight > 0.0:
                         extra["zlpr"] = rank_loss_weight * zlpr_loss(logits, labels)
                     if "teacher" in batch:
-                        # Destilación: además de las etiquetas binarias, imitar las
-                        # probabilidades del profesor. Sin pos_weight: los objetivos blandos
-                        # ya llevan la información de ordenación que interesa al MAP.
+                        # Destilación sin pos_weight: los objetivos blandos ya llevan la información de ordenación del MAP.
                         soft_loss = nn.functional.binary_cross_entropy_with_logits(
                             logits, batch["teacher"].to(device)
                         )
                         bce_loss = distill_alpha * bce_loss + (1.0 - distill_alpha) * soft_loss
                     total = bce_loss + sum(extra.values())
                     if hier_child is not None:
-                        # Penalizar cuando logit_hijo > logit_padre: relu(child - parent).
-                        # Asimétrico: no penaliza si padre > hijo (consistente). No modifica la
-                        # arquitectura: solo presiona al modelo a activar el padre cuando activa el hijo.
                         hier_loss = torch.relu(
                             logits[:, hier_child] - logits[:, hier_parent]
                         ).mean()
@@ -1217,9 +1171,7 @@ def train(
                     print("  Early stopping.")
                     break
 
-            # Progressive unfreezing: cada unfreeze_every épocas, activar el siguiente bloque
-            # de capas con LR reducido. Resetear no_improve para dar margen al modelo tras
-            # descongelar nuevos parámetros.
+            # Al descongelar se resetea no_improve: los nuevos parámetros necesitan margen para mejorar.
             if unfreeze_every > 0 and epoch % unfreeze_every == 0:
                 new_params = model.unfreeze_next_group(unfreeze_layers)
                 if new_params:
@@ -1246,9 +1198,6 @@ def train(
 
     print(f"\n  Best val {select_metric}: {best_score:.4f}")
     return best_state or model.state_dict(), history
-
-
-# ==================== MAIN ====================
 
 
 def main():
@@ -1504,7 +1453,6 @@ def main():
         torch.cuda.manual_seed_all(args.seed)
         print(f"[seed] {args.seed}")
 
-    # Device: prioridad: CUDA > MPS (Apple GPU) > CPU
     if args.device == "auto":
         if torch.cuda.is_available():
             device = torch.device("cuda")
@@ -1516,13 +1464,11 @@ def main():
         device = torch.device(args.device)
     print(f"\n[setup] device={device}  model={args.model_name}  max_length={args.max_length}")
 
-    # Data
     train_df, val_df = load_data(args.train_file, args.val_file)
     codes, code_to_idx, idx_to_code = build_encoders(
         train_df, full_codes=args.full_codes, chapters=args.chapters
     )
 
-    # CIE-10 catalog (descriptions)
     code_descriptions = {}
     if os.path.exists(args.cie10_file):
         cie_df = pd.read_csv(args.cie10_file)
@@ -1538,11 +1484,9 @@ def main():
     else:
         print(f"[warn] CIE-10 file not found: {args.cie10_file}")
 
-    # Tokenizer
     print("\n[model] Loading tokenizer …")
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
-    # Datasets
     if args.sliding_window:
         print(f"[data] sliding_window=True  chunk_overlap={args.chunk_overlap} tokens")
 
@@ -1587,7 +1531,6 @@ def main():
     train_loader = make_loader(train_df, shuffle=True, teacher_probs=teacher_probs)
     val_loader = make_loader(val_df, shuffle=False)
 
-    # Model
     print(f"[model] Initialising FlatClassifier ({len(codes)} codes) …")
     model = FlatClassifier(
         args.model_name,
@@ -1599,7 +1542,6 @@ def main():
     _dtype = getattr(ctx, "_dtype", "bfloat16")
     print(f"[model] mixed precision: {_dtype} autocast en {device.type}")
 
-    # Pre-training sobre descripciones CIE-10 + snippets task_X (opcional)
     if args.pretrain_epochs > 0:
         pretrain_loader = build_pretrain_loader(
             args.cie10_file,
@@ -1619,10 +1561,8 @@ def main():
             weight_decay=args.weight_decay,
         )
 
-    # Hierarchical pairs: solo con full_codes (códigos 4+ chars → padre 3 chars)
     hier_pairs = build_hier_pairs(code_to_idx) if args.lambda_hier > 0.0 else None
 
-    # Train
     best_state, history = train(
         model,
         train_loader,
@@ -1653,7 +1593,6 @@ def main():
         ema_decay=args.ema_decay,
     )
 
-    # Save
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     print(f"\n[save] Writing artifacts → {output_dir.resolve()}")
@@ -1666,14 +1605,11 @@ def main():
         json.dump(code_descriptions, f, ensure_ascii=False, indent=2)
     print("[save] code_descriptions.json")
 
-    # Final eval con el mejor modelo
     model.load_state_dict(best_state)
     model.to(device)
 
-    # Threshold sweep: global → por clase
     probs_val, targets_val = _collect_probs(model, val_loader, device)
 
-    # 1) Global: threshold único que maximiza F1-micro
     best_global_thr, best_global_f1 = 0.5, -1.0
     for thr in np.linspace(0.05, 0.95, 19):
         P = (probs_val >= thr).astype(int)
@@ -1686,7 +1622,6 @@ def main():
         f"(configurado={args.threshold})"
     )
 
-    # 2) Por clase: threshold individual para maximizar F1 binario de cada código
     per_class_thr = find_optimal_thresholds_per_class(
         probs_val, targets_val, global_thr=best_global_thr
     )
@@ -1702,20 +1637,17 @@ def main():
     map_macro = _map_codiesp(targets_val, probs_val)
     print(f"[threshold] MAP macro={map_macro:.4f}  (benchmark CodiEsp best≈0.48)")
 
-    # Usar global para eval final (el per-class se guarda como artefacto opcional)
     final_thr = best_global_thr
     fm = evaluate(model, val_loader, device, threshold=final_thr)
     print(f"\n[result] threshold={final_thr}")
     print(f"  micro: P={fm['p_micro']:.4f}  R={fm['r_micro']:.4f}  F1={fm['f1_micro']:.4f}")
     print(f"  macro: P={fm['p_macro']:.4f}  R={fm['r_macro']:.4f}  F1={fm['f1_macro']:.4f}")
 
-    # ---- CSV de run ----
     import csv
     from datetime import datetime
 
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
-    # Guardar modelo con timestamp, F1 y MAP para no machacar versiones anteriores
     model_filename = f"classifier_{timestamp}_f1={fm['f1_micro']:.4f}_map={map_macro:.4f}.pt"
     torch.save(
         {
@@ -1727,7 +1659,6 @@ def main():
     )
     print(f"[save] {model_filename}")
 
-    # Guardar thresholds por clase (para inferencia avanzada)
     thr_path = output_dir / f"thresholds_{timestamp}.json"
     with open(thr_path, "w") as f:
         json.dump(
@@ -1761,7 +1692,7 @@ def main():
         )
     print("[save] config.json")
     runs_csv = output_dir / "training_runs.csv"
-    prev_best = _previous_bests(runs_csv)  # antes de añadir la fila de este run
+    prev_best = _previous_bests(runs_csv)
     row = {
         "timestamp": timestamp,
         "model_name": args.model_name,
@@ -1816,10 +1747,8 @@ def main():
     if runs_csv.exists():
         with open(runs_csv, newline="") as f:
             existing_reader = csv.DictReader(f)
-            # Las cabeceras de ficheros antiguos pueden venir con padding de alineación
-            # (" model_name"). Sin normalizar, al reescribir con la cabecera nueva las
-            # claves no casan y DictWriter rellena TODAS las filas viejas con restval="",
-            # borrando el histórico.
+            # Las cabeceras antiguas pueden venir con padding (" model_name"); sin normalizarlas, DictWriter
+            # rellena con restval="" TODAS las filas viejas y borra el histórico.
             existing_fields = [(k or "").strip() for k in (existing_reader.fieldnames or [])]
             old_rows = [
                 {(k or "").strip(): (v.strip() if isinstance(v, str) else v) for k, v in r.items()}
@@ -1827,7 +1756,6 @@ def main():
             ]
         new_fields = [k for k in fieldnames if k not in existing_fields]
         if new_fields:
-            # Rewrite file with extended header; old rows get empty string for new cols
             with open(runs_csv, "w", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
                 writer.writeheader()
@@ -1843,7 +1771,6 @@ def main():
             writer.writerow(row)
     print("[save] training_runs.csv  (append)")
 
-    # ---- ¿Mejora el mejor run anterior? → candidato a publicar en Hugging Face ----
     better_f1 = prev_best["f1"] is None or fm["f1_micro"] > prev_best["f1"]
     better_map = prev_best["map"] is None or map_macro > prev_best["map"]
     print(
@@ -1867,7 +1794,6 @@ def main():
     else:
         print("[hub] no mejora ni F1 ni MAP → no se publica")
 
-    # ---- Historial de épocas (para gráfico comparativo multi-run) ----
     history_path = output_dir / f"training_history_{timestamp}.json"
     with open(history_path, "w") as f:
         json.dump(
@@ -1889,7 +1815,6 @@ def main():
         )
     print(f"[save] {history_path.name}")
 
-    # ---- Gráfica ----
     import matplotlib
 
     matplotlib.use("Agg")

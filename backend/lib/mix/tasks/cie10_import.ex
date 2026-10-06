@@ -37,8 +37,6 @@ defmodule Mix.Tasks.Cie10.Import do
     )
   end
 
-  # ── Diagnoses ──────────────────────────────────────────────────────────────
-
   defp import_diagnoses(path) do
     Logger.info("Importing diagnoses from #{path}")
 
@@ -72,8 +70,6 @@ defmodule Mix.Tasks.Cie10.Import do
 
     bulk_insert(rows)
   end
-
-  # ── Procedures ─────────────────────────────────────────────────────────────
 
   defp import_procedures(path) do
     Logger.info("Importing procedures from #{path}")
@@ -126,8 +122,6 @@ defmodule Mix.Tasks.Cie10.Import do
     bulk_insert(rows)
   end
 
-  # ── Chemicals ──────────────────────────────────────────────────────────────
-
   defp import_chemicals(path) do
     Logger.info("Importing chemicals from #{path}")
 
@@ -167,8 +161,6 @@ defmodule Mix.Tasks.Cie10.Import do
 
     bulk_insert(rows)
   end
-
-  # ── Helpers ────────────────────────────────────────────────────────────────
 
   defp bulk_insert(stream) do
     total =

@@ -15,10 +15,6 @@ defmodule App.Fixtures do
     AnalysisCardProjection
   }
 
-  # ---------------------------------------------------------------------------
-  # Users
-  # ---------------------------------------------------------------------------
-
   @doc """
   Inserts a confirmed user into the database and returns the struct.
 
@@ -76,10 +72,6 @@ defmodule App.Fixtures do
     user
   end
 
-  # ---------------------------------------------------------------------------
-  # JWT tokens
-  # ---------------------------------------------------------------------------
-
   @doc """
   Generates a valid Phoenix.Token for the given user (or user_id).
   This mirrors exactly what AuthController.login/2 produces and what
@@ -102,10 +94,6 @@ defmodule App.Fixtures do
   def auth_header(user_id) when is_binary(user_id) do
     {"authorization", "Bearer #{generate_token(user_id)}"}
   end
-
-  # ---------------------------------------------------------------------------
-  # Conversations
-  # ---------------------------------------------------------------------------
 
   @doc """
   Inserts an active ConversationProjection row directly via Repo.
@@ -137,10 +125,6 @@ defmodule App.Fixtures do
     conversation_fixture(user, Map.merge(%{deleted_at: now}, attrs))
   end
 
-  # ---------------------------------------------------------------------------
-  # Messages
-  # ---------------------------------------------------------------------------
-
   @doc """
   Inserts a MessageProjection row belonging to the given conversation struct.
   """
@@ -171,10 +155,6 @@ defmodule App.Fixtures do
     |> Repo.insert!()
   end
 
-  # ---------------------------------------------------------------------------
-  # Predicted codes
-  # ---------------------------------------------------------------------------
-
   @doc """
   Inserts a PredictedCodeProjection row belonging to the given conversation struct.
   """
@@ -204,10 +184,6 @@ defmodule App.Fixtures do
     ])
     |> Repo.insert!()
   end
-
-  # ---------------------------------------------------------------------------
-  # Analysis cards
-  # ---------------------------------------------------------------------------
 
   @doc """
   Inserts an AnalysisCardProjection row belonging to the given conversation struct.

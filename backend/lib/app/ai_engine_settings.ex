@@ -30,8 +30,7 @@ defmodule App.AIEngineSettings do
     )
   end
 
-  # Si la tabla no existe todavia (arranque antes de migrar) o la consulta falla, se arranca
-  # con el valor por defecto en vez de impedir que suba el nodo.
+  # Sin tabla (arranque antes de migrar) o con la consulta fallida, se usa el valor por defecto.
   defp explain_guardado do
     case App.Settings.load() do
       %{explain_method: metodo} when metodo in @valid_explain -> metodo
@@ -72,13 +71,11 @@ defmodule App.AIEngineSettings do
   end
 
   def set_explain_method(metodo), do: {:error, "Método inválido: #{metodo}"}
-  # Se guarda fuera de la llamada para que cambiar de metodo desde el panel responda al
-  # instante aunque la base de datos vaya lenta.
+  # Fuera de la llamada para que el panel responda al instante aunque la BD vaya lenta.
   defp persistir_explain(metodo) do
     Task.start(fn ->
-      # La fila de ajustes exige modelo y modo del resumidor, asi que en una instalacion
-      # nueva, sin fila todavia, guardar solo el metodo fallaria. Se acompana de los valores
-      # vigentes del resumidor, que en una actualizacion son los que ya estaban.
+      # La fila exige modelo y modo del resumidor: sin fila previa, guardar solo el metodo fallaria,
+      # asi que se acompana de los valores vigentes.
       try do
         summ = App.SummarizerSettings.get()
 

@@ -26,7 +26,6 @@ def welch(a: list[float], b: list[float]) -> tuple[float, float, float]:
     na, nb = len(a), len(b)
     se = math.sqrt(va / na + vb / nb)
     t = (st.mean(b) - st.mean(a)) / se
-    # Welch–Satterthwaite
     num = (va / na + vb / nb) ** 2
     den = (va / na) ** 2 / (na - 1) + (vb / nb) ** 2 / (nb - 1)
     return t, num / den, se

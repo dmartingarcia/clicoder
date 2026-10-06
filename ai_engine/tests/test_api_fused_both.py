@@ -74,7 +74,7 @@ class TestPredictFused:
     def test_pasa_el_umbral_y_beta_de_la_config_al_clasificador(self, cliente):
         cliente.post("/predict", json={"text": "texto", "engine": "fused"})
         args = main_module.classifier.predict.call_args[0]
-        assert args[-1] == pytest.approx(2.9)  # score_threshold de la config
+        assert args[-1] == pytest.approx(2.9)
 
     def test_con_include_triggers_pide_la_explicacion_al_modelo(self, cliente):
         cliente.post(

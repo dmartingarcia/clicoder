@@ -1,9 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import '../helpers'; // mocks @/lib/config with apiUrl: 'http://localhost:4000'
+import '../helpers';
 
 import { searchCie10, fetchCie10Code, fetchCie10Children, getAncestors } from '@/lib/cie10';
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function mockFetch(body: unknown, ok = true, status = 200) {
   global.fetch = vi.fn().mockResolvedValue({
@@ -20,8 +18,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-// ── searchCie10 ───────────────────────────────────────────────────────────────
 
 describe('searchCie10', () => {
   it('returns empty array when query is < 2 chars', async () => {
@@ -81,8 +77,6 @@ describe('searchCie10', () => {
   });
 });
 
-// ── fetchCie10Code ────────────────────────────────────────────────────────────
-
 describe('fetchCie10Code', () => {
   it('returns the result object on success', async () => {
     const result = { code: 'I10', description: 'Hypertension', type: 'diagnosis' as const, metadata: {} };
@@ -111,8 +105,6 @@ describe('fetchCie10Code', () => {
   });
 });
 
-// ── fetchCie10Children ────────────────────────────────────────────────────────
-
 describe('fetchCie10Children', () => {
   it('returns children and is_leaf on success', async () => {
     const body = { children: [{ code: 'I10.0', description: 'Essential', type: 'diagnosis', metadata: {}, is_virtual: false }], is_leaf: false };
@@ -136,8 +128,6 @@ describe('fetchCie10Children', () => {
   });
 });
 
-// ── getAncestors ──────────────────────────────────────────────────────────────
-
 describe('getAncestors', () => {
   it('returns empty array for single-char code', () => {
     expect(getAncestors('I')).toEqual([]);
@@ -148,23 +138,18 @@ describe('getAncestors', () => {
   });
 
   it('returns correct ancestors for 3-char code without dot', () => {
-    // "I10" → ancestors should include "I", "I1"
     expect(getAncestors('I10')).toEqual(['I', 'I1']);
   });
 
   it('returns correct ancestors for code with dot', () => {
-    // "I10.0" → ancestors: "I", "I10", then dotIdx+2..length-1 = none since length 5 and dotIdx=3, i=5 < 5 is false
-    // Actually: dotIdx=3, dotIdx > 1 so push "I10". Then i = dotIdx+2 = 5; i < 5 is false
     expect(getAncestors('I10.0')).toEqual(['I', 'I10']);
   });
 
   it('returns correct ancestors for deeper code with dot', () => {
-    // "J45.00" → "J", "J45", "J45.0"
     expect(getAncestors('J45.00')).toEqual(['J', 'J45', 'J45.0']);
   });
 
   it('filters out the code itself from ancestors', () => {
-    // "I1" → ["I"], no "I1" in ancestors
     const ancestors = getAncestors('I1');
     expect(ancestors).not.toContain('I1');
   });

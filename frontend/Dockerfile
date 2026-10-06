@@ -1,19 +1,15 @@
 FROM node:24-alpine AS base
 RUN apk upgrade --no-cache
 
-# Installar dependencias solo cuando sea necesario
 FROM base AS deps
 WORKDIR /app
 
-# Copiar archivos de configuración
 COPY package.json package-lock.json* ./
 RUN npm install
 
-# Desarrollo
 FROM base AS dev
 WORKDIR /app
 
-# Crear directorio para npm cache con permisos correctos
 RUN mkdir -p /app/.npm-cache && chmod 777 /app/.npm-cache
 ENV NPM_CONFIG_CACHE=/app/.npm-cache
 
@@ -26,7 +22,6 @@ ENV HOSTNAME="0.0.0.0"
 
 CMD ["npm", "run", "dev"]
 
-# Builder para producción
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -39,7 +34,6 @@ ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# Producción
 FROM base AS runner
 WORKDIR /app
 

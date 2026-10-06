@@ -4,9 +4,8 @@ defmodule AppWeb.Admin.SettingsLive do
   alias App.AIEngineSettings
   alias App.SummarizerSettings
 
-  # Las cifras son las medidas sobre el conjunto de prueba (ver AnexoF del TFG). Se muestran en
-  # el panel porque la diferencia entre opciones es grande y no es evidente: "Ambos" suena a
-  # mejor que cada uno por separado y en realidad rinde peor que cualquiera de los dos.
+  # Cifras medidas sobre el conjunto de prueba (AnexoF). Se muestran porque "Ambos" suena mejor
+  # que cada uno por separado y rinde peor que cualquiera.
   @engines [
     {"bert", "BERT (RigoBERTa)",
      "Clasificador neuronal multi-label. Requiere GPU/CPU con modelo entrenado. " <>
@@ -23,8 +22,8 @@ defmodule AppWeb.Admin.SettingsLive do
        "ranking. La mejor opción medida: MAP 0,554 · F1 0,610."}
   ]
 
-  # Las cuatro estrategias devuelven términos medidos de verdad; lo que cambia es a cuántas
-  # palabras se pregunta, y eso son dos órdenes de magnitud de diferencia en tiempo.
+  # Las cuatro devuelven terminos medidos de verdad; cambia a cuantas palabras se pregunta
+  # (dos ordenes de magnitud en tiempo).
   @explain_methods [
     {"diccionario", "Diccionario",
      "Instantáneo. Devuelve las frases clínicas que hicieron coincidencia, sin usar el modelo."},
@@ -161,8 +160,7 @@ defmodule AppWeb.Admin.SettingsLive do
         receive_timeout: 120_000
       ]
 
-      # Opciones de transporte inyectables, como en el resto del backend: permiten probar
-      # el camino completo del panel sin levantar el motor de IA.
+      # Opciones de transporte inyectables para probar el panel sin levantar el motor de IA.
       case Req.post(
              "#{ai_url}/admin/summarizer",
              peticion ++ Application.get_env(:app, :ai_req_opts, [])
@@ -499,14 +497,13 @@ defmodule AppWeb.Admin.SettingsLive do
     """
   end
 
-  # El catalogo lo sirve el propio motor, que es quien sabe que checkpoints hay en disco y
-  # cual esta cargado. Si no responde, el panel lo dice en vez de quedarse en blanco.
+  # El catalogo lo sirve el motor (sabe que checkpoints hay y cual esta cargado); si no
+  # responde, el panel lo dice en vez de quedarse en blanco.
   defp cargar_catalogo_modelos do
     ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
     opts = [receive_timeout: 10_000] ++ Application.get_env(:app, :ai_req_opts, [])
 
-    # El rescue no es defensivo de mas: sin el, un motor caido impide abrir el panel entero,
-    # y el panel es justo donde se cambia de motor cuando algo va mal.
+    # El rescue es necesario: sin el, un motor caido impide abrir el panel donde se cambia de motor.
     case Req.get("#{ai_url}/admin/models", opts) do
       {:ok, %{status: 200, body: %{"models" => modelos}}} -> {modelos, nil}
       {:ok, %{status: status}} -> {[], "El motor respondio #{status} al pedir el catalogo."}

@@ -50,7 +50,7 @@ def main():
             clf.model, ids, msk, clf.tokenizer.mask_token_id, wpos, codes, base, ml, 16
         )
         caidas = ctx.caida_al_enmascarar([[w] for w in cand])
-        por_palabra = caidas.max(dim=1).values.numpy()  # efecto sobre el código que más mueve
+        por_palabra = caidas.max(dim=1).values.numpy()
         ns.append(len(cand))
         for u in umbrales:
             frac[u].append(float((por_palabra > u).mean()))

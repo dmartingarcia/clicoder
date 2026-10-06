@@ -3,18 +3,10 @@ defmodule AppWeb.ConversationControllerTest do
 
   import App.Fixtures
 
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
-
   defp authed_conn(conn, user) do
     {header_name, header_value} = auth_header(user)
     put_req_header(conn, header_name, header_value)
   end
-
-  # ---------------------------------------------------------------------------
-  # GET /api/conversations?user_id=<id>
-  # ---------------------------------------------------------------------------
 
   describe "index/2: active conversations" do
     test "returns only active (non-deleted) conversations for the user", %{conn: conn} do
@@ -33,7 +25,6 @@ defmodule AppWeb.ConversationControllerTest do
 
       assert active1.conversation_id in ids
       assert active2.conversation_id in ids
-      # Trashed conversation must not appear
       refute Enum.any?(list, fn c -> c["deleted_at"] != nil end)
     end
 
@@ -64,7 +55,6 @@ defmodule AppWeb.ConversationControllerTest do
 
     test "returns 401 without authentication", %{conn: conn} do
       conn = get(conn, "/api/conversations", %{"user_id" => "some-id"})
-      # RequireAuth halts with 401
       assert conn.status == 401
     end
 
@@ -95,10 +85,6 @@ defmodule AppWeb.ConversationControllerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # GET /api/conversations/trash?user_id=<id>
-  # ---------------------------------------------------------------------------
-
   describe "trash/2: deleted conversations" do
     test "returns only soft-deleted conversations", %{conn: conn} do
       user = user_fixture()
@@ -114,7 +100,6 @@ defmodule AppWeb.ConversationControllerTest do
       ids = Enum.map(list, & &1["conversation_id"])
 
       assert trashed.conversation_id in ids
-      # Active conversations must not appear
       assert Enum.all?(list, fn c -> c["deleted_at"] != nil end)
     end
 
@@ -147,10 +132,6 @@ defmodule AppWeb.ConversationControllerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # DELETE /api/conversations/:conversation_id
-  # ---------------------------------------------------------------------------
-
   describe "delete/2: soft delete" do
     test "soft-deletes an active conversation owned by the user", %{conn: conn} do
       user = user_fixture()
@@ -163,7 +144,6 @@ defmodule AppWeb.ConversationControllerTest do
 
       assert %{"ok" => true} = json_response(conn, 200)
 
-      # Verify deleted_at is now set in the database
       updated =
         App.Repo.get_by!(App.Projections.ConversationProjection,
           conversation_id: conv.conversation_id
@@ -205,10 +185,6 @@ defmodule AppWeb.ConversationControllerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # PUT /api/conversations/:conversation_id/restore
-  # ---------------------------------------------------------------------------
-
   describe "restore/2: restore from trash" do
     test "restores a soft-deleted conversation", %{conn: conn} do
       user = user_fixture()
@@ -221,7 +197,6 @@ defmodule AppWeb.ConversationControllerTest do
 
       assert %{"ok" => true} = json_response(conn, 200)
 
-      # Verify deleted_at is now nil
       updated =
         App.Repo.get_by!(App.Projections.ConversationProjection,
           conversation_id: conv.conversation_id
@@ -239,7 +214,6 @@ defmodule AppWeb.ConversationControllerTest do
         |> authed_conn(user)
         |> put("/api/conversations/#{conv.conversation_id}/restore")
 
-      # The controller just sets deleted_at: nil regardless, should still succeed
       assert %{"ok" => true} = json_response(conn, 200)
     end
 

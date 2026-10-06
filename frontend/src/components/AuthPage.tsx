@@ -66,7 +66,6 @@ export function AuthPage() {
       {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
 
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="flex flex-col items-center mb-8 gap-3">
           <div className="h-14 w-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg">
             <Stethoscope className="h-8 w-8 text-white" />
@@ -77,7 +76,6 @@ export function AuthPage() {
           </div>
         </div>
 
-        {/* Tab switcher */}
         <div className="flex border-b border-gray-200 mb-4 bg-white rounded-t-xl overflow-hidden">
           {(['login', 'register'] as Mode[]).map((m) => (
             <button

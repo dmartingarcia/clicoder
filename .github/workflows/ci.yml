@@ -7,7 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  # ── Commit lint ─────────────────────────────────────────────────────────────
   commitlint:
     name: Commit lint
     runs-on: ubuntu-24.04
@@ -25,7 +24,6 @@ jobs:
       - run: npm ci
       - run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
-  # ── Frontend: lint & build ───────────────────────────────────────────────
   frontend-lint:
     name: Frontend, lint & build
     runs-on: ubuntu-24.04
@@ -54,7 +52,6 @@ jobs:
           NEXT_PUBLIC_API_URL: http://localhost:4000/api
           NEXT_PUBLIC_WS_URL: ws://localhost:4000/socket
 
-  # ── Frontend: test with coverage ─────────────────────────────────────────
   frontend-test:
     name: Frontend, test
     runs-on: ubuntu-24.04
@@ -112,7 +109,6 @@ jobs:
             " >> $GITHUB_STEP_SUMMARY || true
           fi
 
-  # ── Backend: format, compile & static analysis ───────────────────────────
   backend-lint:
     name: Backend, lint
     runs-on: ubuntu-24.04
@@ -170,7 +166,6 @@ jobs:
         env:
           MIX_ENV: dev
 
-  # ── Backend: test with coverage ──────────────────────────────────────────
   backend-test:
     name: Backend, test
     runs-on: ubuntu-24.04
@@ -273,7 +268,6 @@ jobs:
             " >> $GITHUB_STEP_SUMMARY || true
           fi
 
-  # ── AI Engine ────────────────────────────────────────────────────────────────
   ai-engine:
     name: AI Engine, lint
     runs-on: ubuntu-24.04
@@ -301,7 +295,6 @@ jobs:
       - name: Format check ai_engine_mock
         run: ruff format --check ai_engine_mock/
 
-  # ── AI Engine: test con cobertura ─────────────────────────────────────────
   ai-test:
     name: AI Engine, test
     runs-on: ubuntu-24.04
@@ -355,7 +348,6 @@ jobs:
           sed -n '/^Name /,/passed/p' /tmp/ai-coverage.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
-  # ── TFG: compila y publica ────────────────────────────────────────────────
   tfg:
     name: TFG, compila memoria
     runs-on: ubuntu-24.04
@@ -382,7 +374,6 @@ jobs:
           make_latest: false
           files: tfg/build/uclmTFGesi.pdf
 
-  # ── End to end ───────────────────────────────────────────────────────────────
   e2e:
     name: End to end, flujos basicos
     runs-on: ubuntu-24.04

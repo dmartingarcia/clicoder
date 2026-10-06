@@ -1,9 +1,6 @@
 defmodule App.SummarizerSettingsTest do
   use ExUnit.Case, async: false
 
-  # El Agent es un proceso global nombrado iniciado por el supervisor.
-  # Cada test resetea el estado para no interferir con los demás.
-
   setup do
     App.SummarizerSettings.set_model("none")
     App.SummarizerSettings.set_mode("summary")
@@ -90,10 +87,6 @@ defmodule App.SummarizerSettingsTest do
 
   describe "default prompts" do
     test "default system prompt for summary contains {language}" do
-      # Reset to real defaults by restarting state via set_prompts with the module defaults.
-      # Since we can't easily access module attributes, we verify the contract: {language}
-      # must appear in any prompt set by the admin (validated via the admin LiveView).
-      # Here we verify the setup prompts contain {language} as expected.
       assert String.contains?(App.SummarizerSettings.get().prompt_summary, "{language}")
     end
 
@@ -103,11 +96,8 @@ defmodule App.SummarizerSettingsTest do
   end
 
   describe "persistencia y recarga desde la base de datos" do
-    # La persistencia se hace en un Task aparte que no hereda la conexión del sandbox, y
-    # forzar el modo compartido compite con las escrituras que dispara el propio setup de
-    # este fichero. Probarla aquí produce un test intermitente, que es peor que no tenerlo:
-    # queda cubierta de hecho por los tests del panel de administración, que ejercitan el
-    # mismo camino a través del LiveView.
+    # La persistencia corre en un Task que no hereda la conexión del sandbox: probarla aquí es
+    # intermitente; la cubren los tests del panel de administración.
 
     test "leer dos veces seguidas no vuelve a consultar la base de datos" do
       # El estado se cachea unos segundos: sin ese caché, cada predicción abriría una

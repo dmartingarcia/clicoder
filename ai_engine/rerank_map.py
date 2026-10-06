@@ -41,9 +41,6 @@ from sklearn.metrics import average_precision_score, f1_score
 SPLITS = ("train", "val", "test")
 
 
-# --------------------------------------------------------------------------
-# Datos e inferencia (con caché en disco)
-# --------------------------------------------------------------------------
 # torch y train se importan dentro de las funciones que los necesitan: así las
 # transformaciones y las métricas (numpy puro) se pueden probar sin cargar el modelo.
 def load_split(path):
@@ -98,9 +95,6 @@ def build_gold(gold_lists, code_to_idx, num_codes):
     return T, n_total, n_reach
 
 
-# --------------------------------------------------------------------------
-# MAP
-# --------------------------------------------------------------------------
 def _ap(scores, target):
     """AP de un documento. Equivale a average_precision_score con etiquetas binarias."""
     order = np.argsort(-scores, kind="stable")
@@ -137,9 +131,6 @@ def map_strict_sklearn(T, S, n_total, n_reach):
     return float(np.mean(strict))
 
 
-# --------------------------------------------------------------------------
-# Transformaciones
-# --------------------------------------------------------------------------
 def to_logits(p, eps=1e-12):
     p = np.clip(p.astype(np.float64), eps, 1 - eps)
     return np.log(p / (1 - p))
@@ -178,7 +169,6 @@ def dict_bonus_matrix(texts, patterns_path, idx_to_code, cache_path):
     return B
 
 
-# --------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default="/app/model/classifier.pt")
@@ -199,9 +189,8 @@ def main():
         choices=["val", "train", "both"],
         help="Corpus sobre el que se calculan mu_c y sigma_c (sin usar sus etiquetas)",
     )
-    # La rejilla por defecto corta en 4, pero el optimo de la fusion que sirve el motor esta en
-    # beta=6 (model/fusion_sweep.json). Quien compare contra la cifra titular tiene que ampliarla,
-    # o medira una fusion peor que la desplegada y concluira lo contrario de lo que pasa.
+    # La rejilla por defecto corta en 4, pero el óptimo de la fusión desplegada está en beta=6
+    # (model/fusion_sweep.json): comparar contra la cifra titular exige ampliarla.
     ap.add_argument(
         "--betas",
         default="0,0.25,0.5,1,2,4",
@@ -239,7 +228,6 @@ def main():
         f"[calib] estadísticos por clase sobre '{args.stats_split}' ({len(ref)} docs)", flush=True
     )
 
-    # Referencia: ranking original
     base = {}
     for s in ("val", "test"):
         mr, ms = map_scores(T[s], Z[s], n_total[s], n_reach[s])
@@ -251,7 +239,6 @@ def main():
         flush=True,
     )
 
-    # Matrices del diccionario (opcional)
     B = None
     if args.dict_patterns:
         # El diccionario depende de spaCy (lematización). Si no está en la imagen, se
@@ -269,7 +256,6 @@ def main():
             print(f"[dict] fusión desactivada: {type(exc).__name__}: {exc}", flush=True)
             B = None
 
-    # Barrido conjunto sobre VALIDACIÓN
     lambdas = [0.0, 0.25, 0.5, 0.75, 1.0]
     gammas = [0.0, 0.25, 0.5, 0.75, 1.0]
     betas = [float(b) for b in args.betas.split(",")] if B is not None else [0.0]
@@ -291,7 +277,6 @@ def main():
             flush=True,
         )
 
-    # Aplicación a PRUEBA con los hiperparámetros elegidos en validación
     results = {
         "baseline": base,
         "best_val": best,
@@ -306,7 +291,6 @@ def main():
         mr, ms = map_scores(T[s], S, n_total[s], n_reach[s])
         results[f"rerank_{s}"] = {"map_reachable": mr, "map_strict": ms}
 
-    # Ablación: cada pieza por separado, con su propio mejor hiperparámetro en validación
     def best_of(keep):
         sub = [g for g in grid if keep(g)]
         return max(sub, key=lambda g: g["map_strict_val"])

@@ -22,7 +22,6 @@ defmodule AppWeb.Telemetry do
     db_buckets = [1, 5, 10, 25, 50, 100, 250, 500, 1000]
 
     [
-      # Phoenix Metrics
       distribution("phoenix.endpoint.stop.duration",
         unit: {:native, :millisecond},
         reporter_options: [buckets: http_buckets]
@@ -47,8 +46,6 @@ defmodule AppWeb.Telemetry do
         reporter_options: [buckets: http_buckets]
       ),
       sum("phoenix.socket_drain.count"),
-
-      # Database Metrics
       distribution("app.repo.query.total_time",
         unit: {:native, :millisecond},
         description: "The sum of the other measurements",
@@ -75,8 +72,6 @@ defmodule AppWeb.Telemetry do
           "The time the connection spent waiting before being checked out for the query",
         reporter_options: [buckets: db_buckets]
       ),
-
-      # VM Metrics
       last_value("vm.memory.total", unit: {:byte, :kilobyte}),
       last_value("vm.total_run_queue_lengths.total"),
       last_value("vm.total_run_queue_lengths.cpu"),

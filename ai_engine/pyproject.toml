@@ -10,6 +10,7 @@ select = [
     "I",   # isort
     "B",   # flake8-bugbear
     "UP",  # pyupgrade
+    "ERA",
 ]
 ignore = [
     "E501",  # line too long: enforced by formatter, not checker

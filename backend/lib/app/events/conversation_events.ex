@@ -5,10 +5,8 @@ end
 
 defmodule App.Events.MessageSent do
   @derive Jason.Encoder
-  # Sin :content a proposito. El informe clinico es una categoria especial del articulo 9 del
-  # RGPD y el registro de eventos es inmutable: lo que entra aqui no se puede borrar nunca. El
-  # evento deja constancia del hecho (quien, cuando, en que conversacion) y el texto vive solo
-  # en la proyeccion, que si se elimina al ejercer el derecho de supresion.
+  # Sin :content a proposito: el informe es dato del art. 9 RGPD y el registro de eventos es
+  # inmutable; el texto vive solo en la proyeccion, que si se puede suprimir.
   defstruct [:conversation_id, :message_id, :user_id, :timestamp]
 end
 
@@ -33,10 +31,8 @@ defmodule App.Events.AIPredictionReceived do
   ]
 end
 
-# These structs exist solely to register their field atoms at compile time.
-# EventStore replays events with Jason keys: :atoms! which requires all JSON
-# keys to already be known atoms: including nested keys inside :cards and
-# :predicted_codes lists.
+# Solo registran los atomos en compilacion: EventStore reproduce con Jason keys: :atoms!
+# y necesita conocer todas las claves, incluidas las anidadas en :cards y :predicted_codes.
 defmodule App.Events.CardData do
   @derive Jason.Encoder
   defstruct [:type, :content, :card_type, :card_id, :position]

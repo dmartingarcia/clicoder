@@ -14,10 +14,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from train import WeightEMA, rdrop_loss, zlpr_loss
 
-# =============================================================================
-# ZLPR: pérdida listwise dentro del documento
-# =============================================================================
-
 
 def test_zlpr_premia_el_orden_correcto():
     t = torch.tensor([[1.0, 0.0, 0.0, 0.0]])
@@ -34,8 +30,8 @@ def test_zlpr_es_casi_cero_con_separacion_perfecta():
 
 def test_zlpr_baja_al_subir_un_positivo_por_encima_de_un_negativo():
     t = torch.tensor([[1.0, 0.0]])
-    antes = zlpr_loss(torch.tensor([[0.0, 1.0]]), t)  # el negativo va delante
-    despues = zlpr_loss(torch.tensor([[1.0, 0.0]]), t)  # el positivo va delante
+    antes = zlpr_loss(torch.tensor([[0.0, 1.0]]), t)
+    despues = zlpr_loss(torch.tensor([[1.0, 0.0]]), t)
     assert despues < antes
 
 
@@ -71,11 +67,6 @@ def test_zlpr_estable_con_muchas_clases():
     assert torch.isfinite(v)
 
 
-# =============================================================================
-# R-Drop
-# =============================================================================
-
-
 def test_rdrop_es_cero_si_las_dos_pasadas_coinciden():
     z = torch.randn(3, 10)
     assert rdrop_loss(z, z).item() == pytest.approx(0.0, abs=1e-7)
@@ -91,11 +82,6 @@ def test_rdrop_crece_con_la_discrepancia():
 def test_rdrop_es_simetrico():
     a, b = torch.randn(2, 6), torch.randn(2, 6)
     assert rdrop_loss(a, b).item() == pytest.approx(rdrop_loss(b, a).item(), abs=1e-6)
-
-
-# =============================================================================
-# EMA de pesos
-# =============================================================================
 
 
 def _modelo():
@@ -118,7 +104,6 @@ def test_ema_sigue_a_los_pesos_con_el_decaimiento_indicado():
     with torch.no_grad():
         m.weight.fill_(2.0)
     ema.update(m)
-    # 0.9 * 1.0 + 0.1 * 2.0 = 1.1
     assert ema.shadow["weight"].mean().item() == pytest.approx(1.1, abs=1e-6)
 
 
@@ -134,7 +119,7 @@ def test_ema_incorpora_parametros_descongelados_despues():
     m = _modelo()
     m.bias.requires_grad = False
     ema = WeightEMA(m, 0.9)
-    m.bias.requires_grad = True  # descongelado progresivo
+    m.bias.requires_grad = True
     ema.update(m)
     assert "bias" in ema.shadow
 
@@ -143,7 +128,7 @@ def test_ema_applied_sustituye_y_restaura_los_pesos():
     m = _modelo()
     ema = WeightEMA(m, 0.9)
     with torch.no_grad():
-        m.weight.fill_(2.0)  # los pesos avanzan, la sombra sigue en 1.0
+        m.weight.fill_(2.0)
     with ema.applied(m):
         assert m.weight.mean().item() == pytest.approx(1.0)
     assert m.weight.mean().item() == pytest.approx(2.0)

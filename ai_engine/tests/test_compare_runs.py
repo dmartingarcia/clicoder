@@ -17,8 +17,8 @@ from compare_runs import cohen_d, describe, p_two_sided, t_critico, welch
 TABLA_T = [
     (2.0, 10, 0.0734),
     (1.0, 1, 0.5000),
-    (2.228, 10, 0.0500),  # valor crítico al 5 % con 10 gl
-    (3.182, 3, 0.0500),  # valor crítico al 5 % con 3 gl
+    (2.228, 10, 0.0500),
+    (3.182, 3, 0.0500),
     (1.6, 7, 0.1538),
     (0.0, 5, 1.0000),
 ]
@@ -57,10 +57,8 @@ def test_cohen_d_escala_con_la_separacion():
     assert 0 < poco < mucho
 
 
-# =============================================================================
 # Cuantil t: con pocos grados de libertad se separa mucho de la normal, y usar
 # 1,96 produce intervalos incompatibles con su propio p-valor.
-# =============================================================================
 
 
 @pytest.mark.parametrize(

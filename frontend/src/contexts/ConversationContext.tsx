@@ -30,16 +30,11 @@ export interface AnalysisCode {
   confidence: number;
   relative_confidence?: number;
   triggers?: string[];
-  /** Same terms as `triggers`, each labelled with where it came from.
-   *  The dictionary reports literal matches and the model reports the words whose removal
-   *  lowers the logit the most: they are different kinds of evidence, so the UI shows the
-   *  origin instead of merging them into a single ranking. */
+  /** Same terms as `triggers`, labelled by origin: dictionary (literal match) or model (influential word).
+   *  They are different kinds of evidence, so the UI does not merge them. */
   trigger_detail?: { term: string; source: 'dict' | 'bert'; weight: number | null }[];
-  /** False while the model terms are still being computed in a separate request.
-   *  The dictionary terms arrive with the prediction; the model ones cost an encoder pass
-   *  per word, so the card shows what it has and fills in the rest when it lands. */
+  /** False while the model terms (one encoder pass per word) are still computed in a separate request. */
   triggers_complete?: boolean;
-  // for validation (populated from predictedCodes)
   code_id?: string;
   status?: 'pending' | 'validated' | 'rejected';
 }
@@ -69,7 +64,6 @@ interface ConversationContextType {
   conversations: ConversationSummary[];
   trashedConversations: ConversationSummary[];
   activeConversationId: string | null;
-  /** True when the user clicked "Nuevo análisis" but hasn't submitted a report yet */
   pendingConversation: boolean;
   chatItems: ChatItem[];
   predictedCodes: PredictedCode[];
@@ -164,7 +158,6 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
           for (const card of resp.history.analysis_cards ?? []) {
             items.push({ ...card, kind: 'card' });
           }
-          // Re-inject suggestion card if analysis was done
           const hasAnalysis = (resp.history.analysis_cards ?? []).length > 0;
           const reportMsg = items.find((item) => item.kind === 'user');
           if (hasAnalysis && reportMsg && reportMsg.kind === 'user') {
@@ -179,7 +172,6 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
           setChatItems(items);
           setPredictedCodes(resp.history.predicted_codes ?? []);
         }
-        // Send pending report if this channel was created by analyzeReport
         if (pendingReportRef.current) {
           const text = pendingReportRef.current;
           pendingReportRef.current = null;
@@ -238,7 +230,6 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
             : item
         )
       );
-      // Inject suggestion card so user can annotate the report text
       setChatItems((prev) => {
         if (prev.some((item) => item.kind === 'card' && item.card_type === 'suggest')) return prev;
         const reportMsg = prev.find((item) => item.kind === 'user');
@@ -257,9 +248,7 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
     ch.on('analysis_failed', (payload: { error: string }) => {
       setIsAnalyzing(false);
       toast.error(t('errors.analysis_failed', { error: payload.error }));
-      // Si el resumen habia empezado a llegar, su tarjeta se queda con el indicador de
-      // "escribiendo" para siempre: el evento que lo retira es analysis_complete, que ya no
-      // va a llegar. Se cierra aqui con lo que hubiera alcanzado a escribir.
+      // Cierra el indicador de "escribiendo" del resumen parcial: analysis_complete, que lo retira, ya no va a llegar.
       setChatItems((prev) =>
         prev.map((item) =>
           item.kind === 'card' && item.card_id.startsWith('streaming-summary-')
@@ -281,7 +270,6 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
       );
     });
 
-    // Streaming del resumen: cada token actualiza la tarjeta en curso
     ch.on('summary_token', (payload: { message_id: string; token: string }) => {
       const streamingId = `streaming-summary-${payload.message_id}`;
       setChatItems((prev) => {
@@ -303,9 +291,8 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
       });
     });
 
-    // Los términos explicativos llegan en una segunda petición porque calcularlos cuesta
-    // dos órdenes de magnitud más que predecir los códigos. Hasta que llegan, la tarjeta
-    // muestra lo que ya tiene (los del diccionario, si el motor es fusionado) y un indicador.
+    // Los términos explicativos llegan en una segunda petición porque cuestan dos órdenes de magnitud más que predecir;
+    // mientras tanto la tarjeta muestra lo que ya tiene.
     ch.on('triggers_received', (payload: { message_id: string; method: string; triggers: Record<string, { term: string; source?: 'dict' | 'bert'; weight: number | null }[]> }) => {
       setChatItems((prev) =>
         prev.map((item) => {
@@ -367,7 +354,6 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
 
   const analyzeReport = useCallback((reportText: string) => {
     if (!activeConversationId) {
-      // First report in a new conversation: create the conversation now
       const newId = `conv-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       pendingReportRef.current = reportText;
       setPendingConversation(false);
@@ -399,7 +385,6 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
 
   const verifyTrigger = useCallback((codeId: string, trigger: string, verified: boolean) => {
     if (!channel) return;
-    // Optimistic update
     setPredictedCodes((prev) =>
       prev.map((c) => {
         if (c.code_id !== codeId) return c;

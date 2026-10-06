@@ -41,7 +41,7 @@ class TestValidacionInit:
         s = MedicalSummarizer("gemma3", "summary", SISTEMA, USUARIO)
         assert s.model_name == "Gemma 3 4B IT"
         assert s.mode == "summary"
-        assert s.is_loaded is False  # todavía no se ha llamado a load()
+        assert s.is_loaded is False
 
 
 class TestUpdatePrompts:
@@ -85,7 +85,7 @@ class TestLoad:
     def test_sin_llama_cpp_instalado_da_un_error_con_solucion(self, monkeypatch):
         s = MedicalSummarizer("gemma3", "summary", SISTEMA, USUARIO)
         monkeypatch.setattr(s, "_ensure_downloaded", lambda: Path("/tmp/falso.gguf"))
-        monkeypatch.setitem(sys.modules, "llama_cpp", None)  # fuerza ImportError
+        monkeypatch.setitem(sys.modules, "llama_cpp", None)
 
         with pytest.raises(RuntimeError, match="pip install llama-cpp-python"):
             s.load()
@@ -157,7 +157,7 @@ class TestEnsureDownloaded:
 class TestSummarize:
     def _cargado(self, mode="summary"):
         s = MedicalSummarizer("gemma3", mode, SISTEMA, USUARIO)
-        s._llm = lambda *a, **kw: None  # se sobreescribe por test; marca is_loaded=True
+        s._llm = lambda *a, **kw: None
         return s
 
     def test_llama_a_load_si_no_esta_cargado(self, monkeypatch):
@@ -181,7 +181,7 @@ class TestSummarize:
             return {"choices": [{"text": "ok"}]}
 
         s._llm = llm_falso
-        texto_largo = " ".join(f"palabra{i}" for i in range(700))  # > 600, límite de "summary"
+        texto_largo = " ".join(f"palabra{i}" for i in range(700))
         s.summarize(texto_largo)
         assert "palabra699" not in capturado["prompt"]
 
@@ -204,7 +204,7 @@ class TestSummarizeStream:
             return iter(
                 [
                     {"choices": [{"text": "Hola"}]},
-                    {"choices": [{"text": ""}]},  # fragmento vacío: no debe emitirse
+                    {"choices": [{"text": ""}]},
                     {"choices": [{"text": " mundo"}]},
                 ]
             )
@@ -230,7 +230,7 @@ class TestSummarizeStream:
             )
         )
         assert "Sistema override" in capturado["prompt"]
-        assert s._system_prompt == SISTEMA  # el prompt guardado no cambia
+        assert s._system_prompt == SISTEMA
 
     def test_llama_a_load_si_no_esta_cargado(self, monkeypatch):
         s = MedicalSummarizer("gemma3", "summary", SISTEMA, USUARIO)

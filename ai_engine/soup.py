@@ -130,7 +130,7 @@ def main():
     test_texts, test_gold = load_split(args.test_file)
     print(f"[data] val={len(val_texts)} test={len(test_texts)}", flush=True)
 
-    _, c2i = average_states(args.ckpts[:1])  # valida formato y recupera el vocabulario
+    _, c2i = average_states(args.ckpts[:1])
     Tv, nv_total, nv_reach = build_gold(val_gold, c2i, len(c2i))
     Tt, nt_total, nt_reach = build_gold(test_gold, c2i, len(c2i))
 
@@ -142,7 +142,6 @@ def main():
 
     results = {}
 
-    # 1) MAP individual de cada checkpoint en validación: ordena la sopa voraz
     singles = {}
     for path, lab in zip(args.ckpts, args.labels, strict=True):
         print(f"[val] {lab}", flush=True)
@@ -151,7 +150,6 @@ def main():
         print(f"      MAP strict val = {ms:.4f}", flush=True)
     results["individuales_val"] = {k: v["map_strict_val"] for k, v in singles.items()}
 
-    # 2) Sopa uniforme
     print("\n[soup] uniforme sobre todos los checkpoints", flush=True)
     state, _ = average_states(args.ckpts)
     uni_map, _ = val_map(state)
@@ -159,7 +157,6 @@ def main():
     results["uniforme_val"] = uni_map
     best_state, best_map, best_set = state, uni_map, list(args.labels)
 
-    # 3) Sopa voraz: se añade un candidato solo si el MAP de VALIDACIÓN mejora
     if args.greedy:
         order = sorted(args.labels, key=lambda lb: -singles[lb]["map_strict_val"])
         chosen = [order[0]]
@@ -184,7 +181,6 @@ def main():
                 chosen,
             )
 
-    # 4) Evaluación final de la mejor sopa en validación y prueba.
     #    El umbral de F1 se elige en validación y se REUTILIZA en prueba.
     print(f"\n[final] sopa = {best_set}  (MAP strict val {best_map:.4f})", flush=True)
     pv = infer_state(

@@ -36,8 +36,6 @@ defmodule AppWeb.Cie10ControllerTest do
     :ok
   end
 
-  # ── GET /api/cie10/search ─────────────────────────────────────────────────
-
   describe "search/2" do
     test "returns results matching code prefix", %{conn: conn} do
       conn = get(conn, "/api/cie10/search?q=A00")
@@ -130,8 +128,6 @@ defmodule AppWeb.Cie10ControllerTest do
     end
   end
 
-  # ── GET /api/cie10/codes/:code ────────────────────────────────────────────
-
   describe "show/2" do
     test "returns code details for existing code", %{conn: conn} do
       conn = get(conn, "/api/cie10/codes/A00")
@@ -170,8 +166,6 @@ defmodule AppWeb.Cie10ControllerTest do
       assert "T51.3X1" in result["metadata"]["all_codes"]
     end
   end
-
-  # ── GET /api/cie10/codes/:code/children ───────────────────────────────────
 
   describe "children/2" do
     test "returns children of a parent code", %{conn: conn} do
@@ -224,8 +218,6 @@ defmodule AppWeb.Cie10ControllerTest do
       assert a000["is_virtual"] == false
     end
   end
-
-  # ── Cie10Code.changeset/2 ─────────────────────────────────────────────────
 
   describe "Cie10Code.changeset/2" do
     test "rejects invalid type" do

@@ -41,39 +41,24 @@ from sklearn.metrics import average_precision_score, f1_score, precision_score, 
 from sklearn.preprocessing import MultiLabelBinarizer
 from tqdm import tqdm
 
-# ---------------------------------------------------------------------------
-# Versión de lematización: incrementar cuando cambie el comportamiento de
-# lemmatize() para invalidar automáticamente los caches en disco.
-# ---------------------------------------------------------------------------
+# Incrementar al cambiar lemmatize(): invalida los caches en disco.
 
-LEMMA_VERSION = 2  # v2: añadida expansión de abreviaturas clínicas
-SYNONYM_FILTER_VERSION = 3  # v3: patrones cacheados como (pattern, confianza)
-CORPUS_FILTER_VERSION = 3  # v3: patrones cacheados como (pattern, confianza)
+LEMMA_VERSION = 2
+SYNONYM_FILTER_VERSION = 3
+CORPUS_FILTER_VERSION = 3
 
-# ---------------------------------------------------------------------------
-# Confianza por fuente: cuánto se fía cada patrón según su procedencia.
-# diagnoses/procedures/chemicals son descripciones oficiales del catálogo;
-# clinical distingue el término real anotado (alta) de sus variantes por
-# sinónimo (más ruidosas); corpus usa directamente la precisión estadística
-# calculada para ese n-grama en vez de un valor fijo.
-# ---------------------------------------------------------------------------
+# Confianza por fuente: clinical distingue el término anotado (alta) de sus variantes por
+# sinónimo; corpus usa la precisión estadística del n-grama en vez de un valor fijo.
 CONF_DIAGNOSES = 1.0
 CONF_PROCEDURES = 0.9
 CONF_CHEMICALS = 0.85
 CONF_CLINICAL_ORIGINAL = 0.95
 CONF_CLINICAL_SYNONYM = 0.6
 
-# ---------------------------------------------------------------------------
-# Abreviaturas clínicas españolas
-#
-# Estrategia IAM (ganadores CodiEsp): antes de lematizar, expandir abreviaturas
-# a su forma completa para que encajen con los patrones del diccionario.
-# Solo se incluyen abreviaturas con semántica unívoca en contexto clínico;
-# las ambiguas (PCR, IC, MS, FA, EC, IRA…) se omiten para evitar falsos positivos.
-# ---------------------------------------------------------------------------
+# Solo abreviaturas unívocas en contexto clínico; las ambiguas (PCR, IC, MS, FA, EC, IRA…)
+# se omiten para evitar falsos positivos.
 
 MEDICAL_ABBREVIATIONS: dict[str, str] = {
-    # ( Cardiovascular )
     "HTA": "hipertensión arterial",
     "ICC": "insuficiencia cardíaca congestiva",
     "IAM": "infarto agudo de miocardio",
@@ -92,7 +77,6 @@ MEDICAL_ABBREVIATIONS: dict[str, str] = {
     "BRIHH": "bloqueo de rama izquierda del haz de His",
     "BRDHH": "bloqueo de rama derecha del haz de His",
     "CID": "coagulación intravascular diseminada",
-    # ( Metabólico / Endocrino )
     "DM": "diabetes mellitus",
     "DM1": "diabetes mellitus tipo 1",
     "DM2": "diabetes mellitus tipo 2",
@@ -100,22 +84,18 @@ MEDICAL_ABBREVIATIONS: dict[str, str] = {
     "DMNID": "diabetes mellitus no insulinodependiente",
     "DLP": "dislipidemia",
     "HbA1c": "hemoglobina glucosilada",
-    # ( Respiratorio )
     "EPOC": "enfermedad pulmonar obstructiva crónica",
     "NAC": "neumonía adquirida en la comunidad",
     "SDRA": "síndrome de dificultad respiratoria aguda",
     "SAHS": "síndrome de apnea hipopnea del sueño",
-    # ( Renal )
     "ERC": "enfermedad renal crónica",
     "IRC": "insuficiencia renal crónica",
     "ITU": "infección del tracto urinario",
     "IVU": "infección vías urinarias",
-    # ( Neurológico )
     "TCE": "traumatismo craneoencefálico",
     "HIC": "hipertensión intracraneal",
     "ELA": "esclerosis lateral amiotrófica",
     "SGB": "síndrome de Guillain-Barré",
-    # ( Digestivo / Hepático )
     "HDA": "hemorragia digestiva alta",
     "HDB": "hemorragia digestiva baja",
     "EII": "enfermedad inflamatoria intestinal",
@@ -123,28 +103,23 @@ MEDICAL_ABBREVIATIONS: dict[str, str] = {
     "HCC": "carcinoma hepatocelular",
     "PBE": "peritonitis bacteriana espontánea",
     "CPRE": "colangiopancreatografía retrógrada endoscópica",
-    # ( Reumatológico / Inmunológico )
     "AR": "artritis reumatoide",
     "LES": "lupus eritematoso sistémico",
     "SAF": "síndrome antifosfolípido",
-    # ( Infeccioso )
     "VIH": "virus de la inmunodeficiencia humana",
     "SIDA": "síndrome de inmunodeficiencia adquirida",
     "VHC": "virus de la hepatitis C",
     "VHB": "virus de la hepatitis B",
-    # ( Oncohematológico )
     "LH": "linfoma de Hodgkin",
     "LNH": "linfoma no Hodgkin",
     "LLA": "leucemia linfoblástica aguda",
     "LMA": "leucemia mieloide aguda",
     "LLC": "leucemia linfocítica crónica",
     "LMC": "leucemia mieloide crónica",
-    # ( Traumatológico )
     "LCA": "ligamento cruzado anterior",
     "LCP": "ligamento cruzado posterior",
     "PTR": "prótesis total de rodilla",
     "PTC": "prótesis total de cadera",
-    # ( Fármacos / Mecanismos )
     "IECA": "inhibidor de la enzima convertidora de angiotensina",
     "ARAII": "antagonista del receptor de angiotensina II",
 }
@@ -171,11 +146,6 @@ def expand_abbreviations(text: str) -> str:
     return _ABBREV_RE.sub(lambda m: MEDICAL_ABBREVIATIONS[m.group(1)], text)
 
 
-# ---------------------------------------------------------------------------
-# Normalización y lematización
-# ---------------------------------------------------------------------------
-
-
 def _strip_accents(text: str) -> str:
     text = unicodedata.normalize("NFD", text)
     return "".join(c for c in text if unicodedata.category(c) != "Mn")
@@ -186,8 +156,8 @@ def build_pattern(phrase: str) -> re.Pattern:
     return re.compile(r"\b" + re.escape(phrase) + r"\b")
 
 
-_nlp_trf = None  # es_dep_news_trf : lematización contextual (transformer)
-_nlp_lg = None  # es_core_news_lg : word vectors para synonym expansion
+_nlp_trf = None
+_nlp_lg = None
 
 
 def _get_nlp():
@@ -269,11 +239,6 @@ def lemmatize(text: str) -> str:
     return " ".join(tokens)
 
 
-# ---------------------------------------------------------------------------
-# Caché en disco
-# ---------------------------------------------------------------------------
-
-
 def _cache_key(*parts) -> str:
     raw = ":".join(str(p) for p in parts)
     return hashlib.md5(raw.encode()).hexdigest()
@@ -294,11 +259,6 @@ def _load_cache(path: str):
 def _save_cache(path: str, data):
     with open(path, "wb") as f:
         pickle.dump(data, f)
-
-
-# ---------------------------------------------------------------------------
-# Expansión de sinónimos con spaCy word vectors
-# ---------------------------------------------------------------------------
 
 
 def find_similar_words(word: str, min_sim: float = 0.80, max_n: int = 5) -> list[str]:
@@ -351,7 +311,6 @@ def build_synonym_map(
             print(f"  [cache] sinónimos cargados desde {cache_file}")
             return cached
 
-    # Para POS tagging de los términos usamos el modelo transformer (más preciso)
     nlp_trf = _get_nlp()
     content_pos = {"NOUN", "ADJ", "VERB", "PROPN"}
 
@@ -388,12 +347,7 @@ def expand_term(raw_term: str, syn_map: dict[str, list[str]]) -> list[str]:
         for syn in syn_map.get(tok, []):
             variant_tokens = tokens[:i] + [syn] + tokens[i + 1 :]
             variants.append(" ".join(variant_tokens))
-    return list(dict.fromkeys(variants))  # deduplicar preservando orden
-
-
-# ---------------------------------------------------------------------------
-# Carga de diccionarios
-# ---------------------------------------------------------------------------
+    return list(dict.fromkeys(variants))
 
 
 def parse_labels(label_str: str) -> list[str]:
@@ -419,24 +373,19 @@ def expand_description(raw: str) -> list[str]:
         if not part:
             continue
 
-        # Extraer todo el contenido entre paréntesis
         paren_contents = re.findall(r"\(([^)]+)\)", part)
-        # Versión sin paréntesis
         no_paren = re.sub(r"\s*\([^)]*\)", "", part).strip()
-        # Versión con contenido inlined (reemplaza "(X)" por "X")
         inlined = re.sub(r"\(([^)]+)\)", r"\1", part).strip()
         inlined = re.sub(r"\s+", " ", inlined)
 
         results.append(no_paren)
         if inlined != no_paren:
             results.append(inlined)
-        # Contenidos de paréntesis independientes (p. ej. el nombre completo de ANTU)
         for content in paren_contents:
             content = content.strip()
             if len(content.split()) >= 2:
                 results.append(content)
 
-    # Deduplicar preservando orden
     seen: set[str] = set()
     out: list[str] = []
     for r in results:
@@ -639,7 +588,6 @@ def load_corpus(
     df.columns = df.columns.str.strip()
     df.dropna(subset=["text", "labels"], inplace=True)
 
-    # Lematizar todas las notas (caché separada, independiente de los parámetros)
     lemma_note_cache_file = None
     if cache_dir:
         lkey = _cache_key(train_path, stat.st_size, stat.st_mtime, LEMMA_VERSION)
@@ -657,24 +605,20 @@ def load_corpus(
 
     labels_list = [parse_labels(lbl) for lbl in df["labels"]]
 
-    # Índice nota → conjunto de n-gramas únicos
     note_ngrams: list[set[str]] = [
         set(extract_ngrams(lt, min_n=ngram_min, max_n=ngram_max)) for lt in lemma_texts
     ]
 
-    # Recuento global: cuántas notas contienen cada n-grama
     ngram_total: dict[str, int] = {}
     for ngs in note_ngrams:
         for ng in ngs:
             ngram_total[ng] = ngram_total.get(ng, 0) + 1
 
-    # Índice bloque → lista de índices de nota que lo tienen
     block_to_idx: dict[str, list[int]] = {}
     for i, labels in enumerate(labels_list):
         for label in labels:
             block_to_idx.setdefault(label[:3], []).append(i)
 
-    # Recoger candidatos: {ng: {block: (freq, precision)}}
     ng_candidates: dict[str, dict[str, tuple[int, float]]] = {}
 
     for block, note_indices in block_to_idx.items():
@@ -691,15 +635,14 @@ def load_corpus(
                 continue
             ng_candidates.setdefault(ng, {})[block] = (freq, precision)
 
-    # Si exclusive: cada n-grama va solo al bloque con mayor precision*freq
     if exclusive:
-        exclusive_map: dict[str, str] = {}  # ng → best_block
+        exclusive_map: dict[str, str] = {}
         for ng, block_scores in ng_candidates.items():
             best = max(block_scores.items(), key=lambda x: x[1][1] * x[1][0])
             exclusive_map[ng] = best[0]
 
     block_patterns: dict[str, list[tuple[re.Pattern, float]]] = {}
-    block_phrases: dict[str, list[tuple[int, float, str]]] = {}  # block → [(freq, precision, ng)]
+    block_phrases: dict[str, list[tuple[int, float, str]]] = {}
 
     for ng, block_scores in ng_candidates.items():
         for block, (freq, precision) in block_scores.items():
@@ -712,8 +655,6 @@ def load_corpus(
         freq_phrases.sort(key=lambda x: (-x[0], -len(x[2])))
         if max_patterns > 0:
             freq_phrases = freq_phrases[:max_patterns]
-        # Confianza = precisión estadística del n-grama para este bloque (0.75–1.0
-        # con los defaults actuales), no un valor fijo por fuente.
         block_patterns[block] = [
             (build_pattern(ng), precision) for _, precision, ng in freq_phrases
         ]
@@ -741,7 +682,6 @@ def load_clinical(
     NOTA: si task_x_paths incluye el split de validación, la fuente 'clinical'
     usa información de las etiquetas de val → semi-supervisado.
     """
-    # Recoger pares (block, raw_term) de todos los task_x
     block_terms: dict[str, set[str]] = {}
     stats = []
     for path in task_x_paths:
@@ -764,7 +704,6 @@ def load_clinical(
     all_terms = {t for ts in block_terms.values() for t in ts}
     print(f"  {len(all_terms)} términos clínicos únicos, {len(block_terms)} bloques")
 
-    # Construir mapa de sinónimos (con caché)
     syn_cache_file = None
     if cache_dir:
         syn_key = _cache_key(*stats, syn_similarity, syn_max, LEMMA_VERSION, SYNONYM_FILTER_VERSION)
@@ -773,7 +712,6 @@ def load_clinical(
         all_terms, min_sim=syn_similarity, max_n=syn_max, cache_file=syn_cache_file
     )
 
-    # Lematizar términos + expandir con sinónimos (con caché)
     patterns_cache_file = None
     if cache_dir:
         pat_key = _cache_key(
@@ -807,11 +745,6 @@ def load_clinical(
     return block_patterns
 
 
-# ---------------------------------------------------------------------------
-# Predicción
-# ---------------------------------------------------------------------------
-
-
 def predict(
     texts: list[str],
     block_patterns: dict[str, list[tuple[re.Pattern, float]]],
@@ -837,11 +770,6 @@ def predict(
                     n_ignored += 1
         results.append(predicted)
     return results, n_ignored
-
-
-# ---------------------------------------------------------------------------
-# Métricas: formato idéntico a train.py
-# ---------------------------------------------------------------------------
 
 
 def compute_map(Y_true: np.ndarray, Y_pred: np.ndarray) -> float:
@@ -879,11 +807,6 @@ def print_metrics(Y_true, Y_pred, split: str, source: str, n_ignored: int = 0):
     if n_ignored:
         print(f"  ignorados (fuera CodiESP): {n_ignored}", end="")
     print()
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 
 def main():
@@ -1002,7 +925,6 @@ def main():
     )
     args = parser.parse_args()
 
-    # Expansión de abreviaturas: activa por defecto, desactivable con --no_expand_abbrevs
     if args.no_expand_abbrevs:
         global _ABBREV_RE
         _ABBREV_RE = re.compile(r"(?!)")  # regex que nunca hace match → no-op
@@ -1032,7 +954,6 @@ def main():
         splits[name] = df
         print(f"[data] {name}={len(df)}")
 
-    # MLBinarizer sobre la unión de bloques de todos los splits cargados
     all_labels = [parse_labels(lbl) for df in splits.values() for lbl in df["labels"]]
     all_blocks = sorted({b for lbls in all_labels for b in lbls})
     mlb_classes = set(all_blocks)
@@ -1084,14 +1005,11 @@ def main():
         ),
     }
 
-    # Acumular top patrones para el reporte final, y patrones por fuente para combined
     report_rows: list[dict] = []
-    all_loaded: dict[str, dict[str, list[tuple[re.Pattern, float]]]] = {}  # source → block_patterns
+    all_loaded: dict[str, dict[str, list[tuple[re.Pattern, float]]]] = {}
 
     all_individual = ["diagnoses", "procedures", "chemicals", "clinical", "corpus"]
     if args.only_combined:
-        # Respetar --sources para elegir qué cargar; si no se especifica ninguna
-        # fuente individual en --sources, cargar todas por defecto.
         requested = [s for s in args.sources if s != "combined"]
         individual_sources = requested if requested else all_individual
         run_combined = True
@@ -1128,7 +1046,6 @@ def main():
 
         all_loaded[source] = block_patterns
 
-        # Acumular para reporte
         for block, phrases in top_patterns.items():
             report_rows.append(
                 {
@@ -1149,13 +1066,9 @@ def main():
             Y_pred = mlb.transform(preds)
             print_metrics(Y_true, Y_pred, split=split_name, source=source, n_ignored=n_ignored)
 
-    # Fuente combinada: unión de todos los patrones cargados
     if run_combined and all_loaded:
-        # Corpus selectivo: si está activo, los patrones de corpus solo se añaden
-        # para bloques que NINGUNA otra fuente cubre (diagnoses/procedures/chemicals/
-        # clinical son más fiables ( catálogo oficial o anotación real ) así que
-        # corpus actúa solo de relleno del recall que ninguna de ellas alcanza,
-        # sin contaminar con ruido estadístico los bloques que ya están bien resueltos.
+        # Corpus selectivo: solo rellena bloques que ninguna otra fuente cubre, para no meter
+        # ruido estadístico en los ya resueltos.
         corpus_selective = args.corpus_selective and "corpus" in all_loaded and len(all_loaded) > 1
         covered_blocks = (
             {b for src, bp in all_loaded.items() if src != "corpus" for b in bp}
@@ -1186,13 +1099,12 @@ def main():
             Y_pred = mlb.transform(preds)
             print_metrics(Y_true, Y_pred, split=split_name, source="combined", n_ignored=n_ignored)
 
-    # Guardar patrones combined como JSON para uso en API
     if args.save_dict and run_combined and all_loaded:
         import json
 
         def _pat_to_phrase(pat: re.Pattern) -> str:
             """Invierte build_pattern: extrae la frase original de la regex."""
-            inner = pat.pattern[2:-2]  # quita \b de inicio y fin
+            inner = pat.pattern[2:-2]
             return re.sub(r"\\(.)", r"\1", inner)
 
         # Cada entrada es [frase, confianza]: ver DictClassifier para el formato de carga.
@@ -1206,7 +1118,6 @@ def main():
         n_phrases = sum(len(v) for v in phrases_map.values())
         print(f"\n[save_dict] {len(phrases_map)} bloques, {n_phrases} frases → {args.save_dict}")
 
-    # Escribir reporte CSV
     if report_rows and args.report_file:
         os.makedirs(os.path.dirname(args.report_file), exist_ok=True)
         report_df = pd.DataFrame(report_rows)
@@ -1233,7 +1144,6 @@ class DictClassifier:
 
         with open(patterns_path) as f:
             data: dict[str, list[list]] = json.load(f)
-        # data: {block: [[frase, confianza], ...]}
         self._phrases: dict[str, list[str]] = {
             block: [p for p, _ in entries] for block, entries in data.items()
         }

@@ -40,12 +40,7 @@ AZURE_LANG_CODES = {
 }
 
 AZURE_ENDPOINT = "https://api.cognitive.microsofttranslator.com/translate"
-AZURE_BATCH = 100  # max items per request
-
-
-# ---------------------------------------------------------------------------
-# Backends
-# ---------------------------------------------------------------------------
+AZURE_BATCH = 100
 
 
 class NLLBTranslator:
@@ -92,7 +87,7 @@ class NLLBTranslator:
 
 class AzureTranslator:
     def __init__(self, key: str, region: str):
-        import requests  # stdlib-like, always available
+        import requests
 
         if not key:
             raise ValueError(
@@ -148,11 +143,6 @@ class AzureTranslator:
         return results
 
 
-# ---------------------------------------------------------------------------
-# Back-translation
-# ---------------------------------------------------------------------------
-
-
 def _split_paragraphs(text: str, max_chars: int) -> list[str]:
     chunks, current = [], ""
     for para in (p for p in text.split("\n") if p.strip()):
@@ -184,11 +174,6 @@ def back_translate_azure(translator: AzureTranslator, text: str, pivot: str) -> 
     return bwd[0]
 
 
-# ---------------------------------------------------------------------------
-# CSV / checkpoint helpers
-# ---------------------------------------------------------------------------
-
-
 def _read_csv(path: str) -> tuple[list[str], list[dict]]:
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -213,11 +198,6 @@ def _count_rows(path: str) -> int:
     return len(rows)
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -226,14 +206,12 @@ def main() -> None:
         default="nllb",
         help="Backend de traducción (default: nllb)",
     )
-    # NLLB options
     parser.add_argument(
         "--nllb_model",
         default=NLLB_MODEL_DEFAULT,
         help=f"Modelo NLLB (default: {NLLB_MODEL_DEFAULT})",
     )
     parser.add_argument("--nllb_batch", type=int, default=8)
-    # Azure options
     parser.add_argument(
         "--azure_key",
         default=os.getenv("AZURE_TRANSLATOR_KEY", ""),
@@ -244,7 +222,6 @@ def main() -> None:
         default=os.getenv("AZURE_TRANSLATOR_REGION", "global"),
         help="Región del recurso Azure (default: global)",
     )
-    # Data options
     parser.add_argument("--input_file", default="/data/codiesp_csvs/codiesp_D_source_train.csv")
     parser.add_argument(
         "--output_file",
@@ -292,7 +269,6 @@ def main() -> None:
         print("[augment] --dry_run: sin traducción. Saliendo.")
         return
 
-    # Inicializar backend
     if args.backend == "nllb":
         translator = NLLBTranslator(args.nllb_model, batch_size=args.nllb_batch)
 
@@ -305,8 +281,8 @@ def main() -> None:
             return back_translate_azure(translator, text, pivot)
 
     base = Path(args.output_file)
-    stem = base.stem  # e.g. codiesp_D_source_train_augmented
-    suffix = base.suffix  # .csv
+    stem = base.stem
+    suffix = base.suffix
     parent = base.parent
 
     total = len(rows)

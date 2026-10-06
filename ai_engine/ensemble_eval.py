@@ -132,11 +132,9 @@ def main():
         for lab, p in series:
             mr, ms = maps(T, p, n_total, n_reach)
             if split == "val":
-                # en validación SÍ se barre el umbral y se guarda
                 _, thr = best_f1(T, p)
                 val_thr[lab] = thr
             else:
-                # en prueba se aplica el umbral fijado en validación
                 thr = val_thr[lab]
             pr, rc, f1, f1ma = metrics_at(T, p, thr)
             res[lab] = {

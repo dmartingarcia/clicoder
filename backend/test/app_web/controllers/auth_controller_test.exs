@@ -3,10 +3,6 @@ defmodule AppWeb.AuthControllerTest do
 
   import App.Fixtures
 
-  # ---------------------------------------------------------------------------
-  # POST /api/auth/register
-  # ---------------------------------------------------------------------------
-
   describe "register/2" do
     test "returns 201 and pending_confirmation status on success", %{conn: conn} do
       unique = System.unique_integer([:positive])
@@ -65,7 +61,6 @@ defmodule AppWeb.AuthControllerTest do
       conn = post(conn, "/api/auth/register", %{})
 
       assert %{"errors" => errors} = json_response(conn, 422)
-      # All required fields should appear as errors
       assert Map.has_key?(errors, "first_name") or Map.has_key?(errors, "email")
     end
 
@@ -103,10 +98,6 @@ defmodule AppWeb.AuthControllerTest do
       assert Map.has_key?(errors, "username")
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # POST /api/auth/login
-  # ---------------------------------------------------------------------------
 
   describe "login/2" do
     test "returns 200 with token and user info on success", %{conn: conn} do
@@ -172,10 +163,6 @@ defmodule AppWeb.AuthControllerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # GET /api/auth/confirm/:token
-  # ---------------------------------------------------------------------------
-
   describe "confirm/2" do
     test "valid token confirms the user and returns auth token", %{conn: conn} do
       user = unconfirmed_user_fixture()
@@ -198,18 +185,12 @@ defmodule AppWeb.AuthControllerTest do
       user = unconfirmed_user_fixture()
       token = user.confirmation_token
 
-      # Confirm once: this nils the token in the DB
       App.Accounts.confirm_user(token)
 
-      # Second attempt should fail
       conn = get(conn, "/api/auth/confirm/#{token}")
       assert %{"error" => _msg} = json_response(conn, 404)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # PUT /api/users/locale
-  # ---------------------------------------------------------------------------
 
   describe "update_locale/2" do
     test "updates locale and returns the new locale", %{conn: conn} do
@@ -229,10 +210,6 @@ defmodule AppWeb.AuthControllerTest do
       assert conn.status == 401
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Derechos RGPD: portabilidad (art. 20) y supresión (art. 17)
-  # ---------------------------------------------------------------------------
 
   describe "export/2" do
     test "devuelve los datos del usuario y sus conversaciones", %{conn: conn} do

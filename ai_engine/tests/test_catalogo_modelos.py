@@ -39,7 +39,7 @@ def catalogo(tmp_path, monkeypatch):
         },
     }
     (tmp_path / "models.json").write_text(json.dumps(datos), encoding="utf-8")
-    (tmp_path / "classifier.pt").write_bytes(b"x")  # solo 'produccion' está descargado
+    (tmp_path / "classifier.pt").write_bytes(b"x")
     monkeypatch.setenv("MODEL_DIR", str(tmp_path))
     return tmp_path
 

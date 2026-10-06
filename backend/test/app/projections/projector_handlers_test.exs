@@ -27,9 +27,8 @@ defmodule App.Projections.ProjectorHandlersTest do
 
   alias App.Repo
 
-  # El proyector lleva cuenta del último evento procesado y descarta los anteriores, que es
-  # su protección contra reprocesar el registro. Los números tienen que ir hacia adelante o
-  # el manejador devuelve :ok sin haber escrito nada.
+  # El proyector descarta eventos con número ya procesado: deben ir hacia adelante o el
+  # manejador devuelve :ok sin escribir nada.
   defp metadata,
     do: %{
       event_number: System.unique_integer([:positive, :monotonic]) + 1_000_000,
@@ -80,9 +79,8 @@ defmodule App.Projections.ProjectorHandlersTest do
 
       conv = Repo.get_by!(ConversationProjection, conversation_id: conversation_id)
       mensaje = Repo.get_by!(MessageProjection, conversation_id: conv.id)
-      # El proyector ya no materializa el texto: el evento no lo lleva, porque el registro de
-      # eventos es inmutable y el informe clinico no se podria borrar nunca. El contenido lo
-      # escribe el canal sobre esta misma fila, que si desaparece al purgar la conversacion.
+      # El proyector no materializa el texto (el registro de eventos es inmutable y el informe
+      # clinico no se podria borrar); lo escribe el canal sobre esta misma fila.
       assert mensaje.content == nil
       assert mensaje.message_type == "user_message"
     end
@@ -127,13 +125,8 @@ defmodule App.Projections.ProjectorHandlersTest do
       %{conv: conv, conversation_id: conversation_id, user_id: user_id}
     end
 
-    # Conducta deliberada pero con consecuencias: el proyector NO materializa ni las tarjetas ni
-    # los códigos predichos, aunque el evento los lleve. Los escribe el canal directamente para
-    # poder emitirlos en el acto sin esperar al procesado asíncrono del registro de eventos, y
-    # hacerlo también aquí los duplicaría. El evento cumple el otro cometido, que es dejar
-    # constancia auditable de con qué motor y con qué pesos se predijo.
-    # El efecto secundario es que esa parte de la tabla de lectura no se reconstruye
-    # reproduciendo el registro, que es justo la garantía por la que se eligió CQRS.
+    # Deliberado: el proyector NO materializa tarjetas ni codigos predichos (los escribe el canal
+    # para emitirlos en el acto); esa parte de la lectura no se reconstruye reproduciendo el registro.
     test "no materializa las tarjetas: las escribe el canal", %{conv: conv} do
       assert Repo.all(AnalysisCardProjection) |> Enum.filter(&(&1.conversation_id == conv.id)) ==
                []

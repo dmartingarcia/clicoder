@@ -36,9 +36,8 @@ defmodule App.Projections.ConversationProjector do
       timestamp = DateTime.truncate(timestamp, :second)
       conversation = repo.get_by!(ConversationProjection, conversation_id: evt.conversation_id)
 
-      # El evento ya no lleva el texto del informe, de modo que aqui solo se materializa el
-      # hecho. El contenido lo escribe el canal directamente sobre esta misma fila, porque es
-      # el unico sitio donde existe y porque asi desaparece al borrar la conversacion.
+      # El contenido del informe no va en el evento: lo escribe el canal en esta fila,
+      # asi desaparece al borrar la conversacion.
       message = %MessageProjection{
         message_id: evt.message_id,
         content: nil,
@@ -52,10 +51,8 @@ defmodule App.Projections.ConversationProjector do
     end)
   end)
 
-  # El canal escribe las tarjetas en cuanto llegan, porque la interfaz las va pintando segun
-  # se reciben y el proyector es asincrono. Aqui volver a insertarlas las duplicaria, asi que
-  # este evento cumple solo su otro cometido: dejar en el registro inmutable con que motor y
-  # con que pesos se predijo cada informe, que es lo que exige la trazabilidad.
+  # El canal ya inserta las tarjetas (la UI las pinta al recibirlas); reinsertarlas las duplicaria.
+  # Este evento solo deja constancia de motor y pesos.
   project(%AIPredictionReceived{}, _metadata, fn multi -> multi end)
 
   project(%CodeValidated{} = evt, _metadata, fn multi ->

@@ -6,11 +6,6 @@ defmodule AppWeb.ConversationChannelTest do
 
   @endpoint AppWeb.Endpoint
 
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
-
-  # Build an authenticated socket for the UserSocket using a valid Phoenix token.
   defp connect_socket(user) do
     token = generate_token(user)
 
@@ -19,10 +14,6 @@ defmodule AppWeb.ConversationChannelTest do
 
     socket
   end
-
-  # ---------------------------------------------------------------------------
-  # Socket authentication
-  # ---------------------------------------------------------------------------
 
   describe "UserSocket.connect/3" do
     test "accepts a valid token and assigns user_id" do
@@ -44,10 +35,6 @@ defmodule AppWeb.ConversationChannelTest do
                Phoenix.ChannelTest.connect(AppWeb.UserSocket, %{"token" => "not-a-real-token"})
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Joining an EXISTING conversation (no Commanded needed: DB read only)
-  # ---------------------------------------------------------------------------
 
   describe "join/3: existing conversation" do
     test "returns status 'joined' and conversation history", %{conn: _conn} do
@@ -182,10 +169,6 @@ defmodule AppWeb.ConversationChannelTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Joining a NEW conversation (requires Commanded + EventStore)
-  # ---------------------------------------------------------------------------
-
   describe "join/3: new conversation" do
     test "dispatches StartConversation and returns 'conversation_started'", %{conn: _conn} do
       user = user_fixture()
@@ -199,10 +182,6 @@ defmodule AppWeb.ConversationChannelTest do
       assert reply.status == "conversation_started"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # handle_in("suggest_code", ...)
-  # ---------------------------------------------------------------------------
 
   describe "handle_in suggest_code" do
     setup do
@@ -246,13 +225,9 @@ defmodule AppWeb.ConversationChannelTest do
       socket = connect_socket(user)
       phantom_id = UUID.uuid4()
 
-      # Join with a UUID that has no ConversationProjection row yet, so Commanded
-      # creates it. We then manually remove the projection row to simulate a
-      # missing conversation for the suggest_code handler.
       {:ok, _reply, joined_socket} =
         subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{phantom_id}")
 
-      # Delete the projection row so the handler cannot find it.
       import Ecto.Query, only: [from: 2]
 
       App.Repo.delete_all(
@@ -271,15 +246,9 @@ defmodule AppWeb.ConversationChannelTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # handle_in("send_message", ...)
-  # ---------------------------------------------------------------------------
-
   describe "handle_in send_message" do
     setup do
       user = user_fixture()
-      # Join with a fresh UUID so StartConversation is dispatched and the
-      # Commanded aggregate is initialised before we push commands to it.
       new_id = UUID.uuid4()
       socket = connect_socket(user)
 
@@ -296,10 +265,6 @@ defmodule AppWeb.ConversationChannelTest do
       assert is_binary(message_id)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # handle_in("analyze_report", ...)
-  # ---------------------------------------------------------------------------
 
   describe "handle_in analyze_report" do
     setup do
@@ -323,12 +288,6 @@ defmodule AppWeb.ConversationChannelTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # handle_in("validate_code", ...)
-  # ---------------------------------------------------------------------------
-
-  # Poll until the ConversationProjection row exists (the Commanded projector
-  # writes it asynchronously after join). Gives up after ~500 ms.
   defp await_conversation_projection(conversation_id, retries \\ 10) do
     case App.Repo.get_by(App.Projections.ConversationProjection, conversation_id: conversation_id) do
       nil when retries > 0 ->
@@ -343,25 +302,17 @@ defmodule AppWeb.ConversationChannelTest do
     end
   end
 
-  # Start a conversation via the channel (which initialises the Commanded
-  # aggregate), wait for the projection row to appear, insert a predicted code,
-  # then RE-join using the *existing* conversation path (no extra command
-  # dispatch). Returns {joined_socket, code}.
   defp setup_conversation_with_code(user, code_attrs \\ %{}) do
     new_id = UUID.uuid4()
     socket = connect_socket(user)
 
-    # First join: triggers StartConversation, initialises the aggregate.
     {:ok, _reply, _tmp_socket} =
       subscribe_and_join(socket, AppWeb.ConversationChannel, "conversation:#{new_id}")
 
-    # Wait for projector to write the ConversationProjection row.
     conv = await_conversation_projection(new_id)
 
-    # Insert predicted code directly so the projector can find it later.
     code = predicted_code_fixture(conv, Map.merge(%{status: "pending"}, code_attrs))
 
-    # Second join: existing conversation path, no extra command dispatched.
     socket2 = connect_socket(user)
 
     {:ok, _reply2, joined_socket} =
@@ -388,10 +339,6 @@ defmodule AppWeb.ConversationChannelTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # handle_in("reject_code", ...)
-  # ---------------------------------------------------------------------------
-
   describe "handle_in reject_code" do
     setup do
       user = user_fixture()
@@ -410,10 +357,6 @@ defmodule AppWeb.ConversationChannelTest do
       assert_reply ref, :ok, %{status: "rejected"}
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Verificación de términos explicativos
-  # ---------------------------------------------------------------------------
 
   describe "handle_in verify_trigger" do
     setup do
@@ -513,10 +456,6 @@ defmodule AppWeb.ConversationChannelTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Validación y rechazo de códigos
-  # ---------------------------------------------------------------------------
-
   describe "handle_in validate_code y reject_code" do
     setup do
       user = user_fixture()
@@ -533,10 +472,8 @@ defmodule AppWeb.ConversationChannelTest do
       %{socket: joined, conv: conv}
     end
 
-    # La proyección de una conversación puede existir sin que su agregado se haya iniciado
-    # (por ejemplo si se restauró la tabla de lectura sin el registro de eventos). El canal
-    # tiene que rechazar la operación en vez de escribir un estado que el agregado desconoce,
-    # porque eso dejaría la lectura y la fuente de verdad contando cosas distintas.
+    # La proyección puede existir sin que el agregado se haya iniciado (p. ej. tabla de lectura
+    # restaurada sin el registro de eventos): el canal debe rechazar en vez de escribir estado.
     test "validar sobre una conversación sin iniciar se rechaza", %{socket: socket} do
       ref =
         push(socket, "validate_code", %{
@@ -561,16 +498,11 @@ defmodule AppWeb.ConversationChannelTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Integración con el motor de IA (con el transporte simulado)
-  # ---------------------------------------------------------------------------
-
   describe "analyze_report contra el motor de IA" do
     setup do
       user = user_fixture()
-      # Unirse a un identificador nuevo despacha StartConversation: el agregado tiene que
-      # existir para que analyze_report no se rechace, y una proyección insertada a mano
-      # no lo crea.
+      # Unirse a un id nuevo despacha StartConversation: el agregado debe existir para que
+      # analyze_report no se rechace, y una proyección insertada a mano no lo crea.
       socket = connect_socket(user)
 
       {:ok, _reply, joined} =

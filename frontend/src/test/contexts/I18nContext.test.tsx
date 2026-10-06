@@ -2,14 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import React, { ReactNode } from 'react';
 
-// ── Mock @/lib/config ────────────────────────────────────────────────────────
 vi.mock('@/lib/config', () => ({
   config: { apiUrl: 'http://localhost:4000' },
 }));
 
 import { I18nProvider, useI18n } from '@/contexts/I18nContext';
-
-// ── Helper component ──────────────────────────────────────────────────────────
 
 function Probe({ onRender }: { onRender: (ctx: ReturnType<typeof useI18n>) => void }) {
   const ctx = useI18n();
@@ -31,8 +28,6 @@ function renderProvider(children?: ReactNode) {
 function mockFetch(body: unknown, ok = true) {
   global.fetch = vi.fn().mockResolvedValue({ ok, json: async () => body } as Response);
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('I18nProvider', () => {
   // jsdom defaults to 'en'; override to an unsupported language so the
@@ -56,9 +51,7 @@ describe('I18nProvider', () => {
   describe('initial state', () => {
     it('starts with ready=false then ready=true after fetch', async () => {
       const getCtx = renderProvider();
-      // Initially not ready
       expect(getCtx().ready).toBe(false);
-      // After fetch resolves, ready=true
       await waitFor(() => expect(getCtx().ready).toBe(true));
     });
 
@@ -115,14 +108,12 @@ describe('I18nProvider', () => {
 
     it('serves cache immediately when available, ready=true before fetch resolves', async () => {
       const cached = { auth: { login: 'Cached login' } };
-      // navigator.language is 'zh-CN' (unsupported) so locale will be 'es'
       localStorage.setItem('cie10_translations_es', JSON.stringify(cached));
 
       // Make fetch never resolve: cache should still set ready=true
       global.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
 
       const getCtx = renderProvider();
-      // Cache hit: setReady(true) is called synchronously before fetch resolves
       await waitFor(() => expect(getCtx().ready).toBe(true), { timeout: 500 });
     });
 

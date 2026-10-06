@@ -27,10 +27,6 @@ from baseline_dict import (
     parse_labels,
 )
 
-# =============================================================================
-# Normalización
-# =============================================================================
-
 
 def test_quita_las_tildes():
     assert _strip_accents("neumonía bilateral") == "neumonia bilateral"
@@ -60,11 +56,6 @@ def test_las_palabras_cortas_no_se_tocan():
     assert _normalize_gender("ala") == "ala"
 
 
-# =============================================================================
-# Abreviaturas clínicas
-# =============================================================================
-
-
 def test_expande_una_abreviatura_conocida():
     salida = expand_abbreviations("paciente con HTA")
     assert "hipertension" in salida.lower() or "HTA" not in salida
@@ -81,11 +72,6 @@ def test_no_expande_dentro_de_otra_palabra():
     assert "CHATA" in salida
 
 
-# =============================================================================
-# Patrones
-# =============================================================================
-
-
 def test_el_patron_casa_la_frase_completa():
     assert build_pattern("neumonia bilateral").search("hay neumonia bilateral aqui")
 
@@ -99,11 +85,6 @@ def test_los_caracteres_especiales_se_escapan():
     # el patrón se construye aunque el límite de palabra tras ')' no permita casarlo.
     patron = build_pattern("tumor (benigno)")
     assert patron.pattern.count("\\(") == 1
-
-
-# =============================================================================
-# Etiquetas y descripciones
-# =============================================================================
 
 
 def test_las_etiquetas_se_truncan_a_bloque_de_tres():
@@ -132,11 +113,6 @@ def test_el_parentesis_produce_variante_con_y_sin_su_contenido():
     assert "cerebral espinal" in textos
 
 
-# =============================================================================
-# N-gramas
-# =============================================================================
-
-
 def test_extrae_ngramas_del_tamano_pedido():
     ngramas = extract_ngrams("uno dos tres cuatro", min_n=2, max_n=2)
     assert "uno dos" in ngramas
@@ -152,11 +128,6 @@ def test_los_ngramas_cubren_todo_el_rango():
     ngramas = extract_ngrams("a b c d e", min_n=2, max_n=3)
     assert any(len(n.split()) == 2 for n in ngramas)
     assert any(len(n.split()) == 3 for n in ngramas)
-
-
-# =============================================================================
-# Caché y métrica
-# =============================================================================
 
 
 def test_la_clave_de_cache_cambia_con_las_entradas():

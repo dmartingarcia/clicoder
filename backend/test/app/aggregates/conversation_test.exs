@@ -40,10 +40,6 @@ defmodule App.Aggregates.ConversationTest do
     Conversation.apply(conv, event)
   end
 
-  # ---------------------------------------------------------------------------
-  # StartConversation
-  # ---------------------------------------------------------------------------
-
   describe "execute StartConversation" do
     test "emits ConversationStarted from a new aggregate" do
       cmd = %StartConversation{
@@ -76,10 +72,6 @@ defmodule App.Aggregates.ConversationTest do
       assert conv.started_at == @now
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # SendMessage
-  # ---------------------------------------------------------------------------
 
   describe "execute SendMessage" do
     test "emits MessageSent" do
@@ -134,10 +126,6 @@ defmodule App.Aggregates.ConversationTest do
       assert length(conv.messages) == 2
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # AnalyzeReport
-  # ---------------------------------------------------------------------------
 
   describe "execute AnalyzeReport" do
     test "emits AnalysisRequested when no analysis pending" do
@@ -204,10 +192,6 @@ defmodule App.Aggregates.ConversationTest do
       assert Conversation.apply(conv, event_pred).pending_analysis == false
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # ValidateCode
-  # ---------------------------------------------------------------------------
 
   describe "execute ValidateCode" do
     test "emits CodeValidated for a new code" do
@@ -289,10 +273,6 @@ defmodule App.Aggregates.ConversationTest do
       assert "J45.0" in updated.validated_codes
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # RejectCode
-  # ---------------------------------------------------------------------------
 
   describe "execute RejectCode" do
     test "emits CodeRejected for a new code" do
@@ -430,9 +410,8 @@ defmodule App.Aggregates.ConversationTest do
   end
 
   describe "ReceiveAIPrediction" do
-    # Sin la version del modelo no se puede reconstruir a posteriori por que el sistema propuso
-    # un codigo concreto: los pesos cambian con cada reentrenamiento y el fichero desplegado se
-    # llama siempre igual. Es el requisito de trazabilidad, de modo que se fija aqui.
+    # El modelo y su version deben quedar en el evento: los pesos cambian con cada reentrenamiento
+    # y el fichero desplegado se llama siempre igual (requisito de trazabilidad).
     test "el evento lleva la version del modelo y el informe analizado" do
       cmd = %ReceiveAIPrediction{
         conversation_id: @conversation_id,

@@ -33,7 +33,6 @@ defmodule AppWeb.ConversationController do
     ]
   )
 
-  # Active conversations (not deleted)
   def index(conn, %{"user_id" => user_id}) do
     conversations =
       ConversationProjection
@@ -74,7 +73,6 @@ defmodule AppWeb.ConversationController do
     ]
   )
 
-  # Trash: soft-deleted conversations
   def trash(conn, %{"user_id" => user_id}) do
     conversations =
       ConversationProjection
@@ -118,7 +116,6 @@ defmodule AppWeb.ConversationController do
     ]
   )
 
-  # Soft delete
   def delete(conn, %{"conversation_id" => conversation_id}) do
     user_id = conn.assigns.current_user_id
 
@@ -160,7 +157,6 @@ defmodule AppWeb.ConversationController do
     ]
   )
 
-  # Restore from trash
   def restore(conn, %{"conversation_id" => conversation_id}) do
     user_id = conn.assigns.current_user_id
 

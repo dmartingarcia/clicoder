@@ -1,7 +1,3 @@
-# docker-compose.mock.yml
-# Override para desarrollo sin GPU: sustituye ai_engine por un mock ligero.
-# Uso: docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d
-
 services:
   ml-base:
     profiles: ["gpu-only"]

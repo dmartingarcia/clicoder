@@ -214,7 +214,6 @@ export default function CodeDetailPage() {
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-4">
 
-        {/* Back + breadcrumb */}
         <nav className="flex items-center gap-1 text-sm text-gray-500 flex-wrap">
           <Link href="/" className="hover:text-gray-700 flex items-center gap-1">
             <ArrowLeft className="h-3 w-3" /> {t('cie10.back')}
@@ -233,7 +232,6 @@ export default function CodeDetailPage() {
           </span>
         </nav>
 
-        {/* Code card (if exact match exists) */}
         {entry ? (
           <Card className={`p-6 border-l-4 ${colorClass}`}>
             <div className="flex items-start gap-4">
@@ -250,7 +248,6 @@ export default function CodeDetailPage() {
             </div>
           </Card>
         ) : (
-          /* Virtual category header (no exact DB match, but has children) */
           <Card className="p-6 border-l-4 border-l-gray-300 bg-gray-50">
             <div className="flex items-start gap-4">
               <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0">
@@ -264,7 +261,6 @@ export default function CodeDetailPage() {
           </Card>
         )}
 
-        {/* Metadata */}
         {entry?.metadata && Object.keys(entry.metadata).length > 0 && (
           <Card className="p-4">
             {entry.type === 'diagnosis' && <DiagnosisDetail meta={entry.metadata} />}
@@ -273,7 +269,6 @@ export default function CodeDetailPage() {
           </Card>
         )}
 
-        {/* Children */}
         {children.length > 0 && (
           <ChildrenGrid items={children} />
         )}

@@ -10,15 +10,10 @@ from unittest.mock import patch
 
 import pytest
 
-# ── Add ai_engine root to import path ────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from baseline_dict import DictClassifier, _strip_accents, build_pattern
 from classifier import _extract_chapter, load_code_descriptions
-
-# =============================================================================
-# _extract_chapter
-# =============================================================================
 
 
 class TestExtractChapter:
@@ -71,11 +66,6 @@ class TestExtractChapter:
         assert _extract_chapter("") is None
 
 
-# =============================================================================
-# load_code_descriptions
-# =============================================================================
-
-
 class TestLoadCodeDescriptions:
     def test_loads_valid_json(self, tmp_path):
         data = {"I10": "Hipertensión esencial", "J45.0": "Asma alérgica"}
@@ -95,11 +85,6 @@ class TestLoadCodeDescriptions:
         assert result == {}
 
 
-# =============================================================================
-# _strip_accents
-# =============================================================================
-
-
 class TestStripAccents:
     def test_removes_tilde(self):
         assert _strip_accents("hipertensión") == "hipertension"
@@ -115,11 +100,6 @@ class TestStripAccents:
 
     def test_empty_string(self):
         assert _strip_accents("") == ""
-
-
-# =============================================================================
-# build_pattern
-# =============================================================================
 
 
 class TestBuildPattern:
@@ -143,11 +123,6 @@ class TestBuildPattern:
         pat = build_pattern("i10.0")
         # The dot is escaped so it doesn't match 'i10X0'
         assert not pat.search("i10X0")
-
-
-# =============================================================================
-# DictClassifier
-# =============================================================================
 
 
 class TestDictClassifier:

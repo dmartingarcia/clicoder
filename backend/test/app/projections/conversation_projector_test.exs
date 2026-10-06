@@ -19,10 +19,6 @@ defmodule App.Projections.ConversationProjectorTest do
     AnalysisCardProjection
   }
 
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
-
   defp insert_conversation(attrs \\ %{}) do
     defaults = %{
       conversation_id: UUID.uuid4(),
@@ -66,10 +62,6 @@ defmodule App.Projections.ConversationProjectorTest do
     ])
     |> Repo.insert!()
   end
-
-  # ---------------------------------------------------------------------------
-  # ConversationProjection schema
-  # ---------------------------------------------------------------------------
 
   describe "ConversationProjection schema" do
     test "inserts with required fields" do
@@ -120,10 +112,6 @@ defmodule App.Projections.ConversationProjectorTest do
       assert updated.deleted_at == now
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # MessageProjection schema
-  # ---------------------------------------------------------------------------
 
   describe "MessageProjection schema" do
     setup do
@@ -181,10 +169,6 @@ defmodule App.Projections.ConversationProjectorTest do
       assert count == 3
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # PredictedCodeProjection schema
-  # ---------------------------------------------------------------------------
 
   describe "PredictedCodeProjection schema" do
     setup do
@@ -246,10 +230,6 @@ defmodule App.Projections.ConversationProjectorTest do
       assert codes == ["E11", "I10", "J45.0"]
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # AnalysisCardProjection schema
-  # ---------------------------------------------------------------------------
 
   describe "AnalysisCardProjection schema" do
     setup do

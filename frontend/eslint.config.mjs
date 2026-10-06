@@ -5,18 +5,17 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // Override default ignores of eslint-config-next.
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Generated coverage report: not source code.
     "coverage/**",
   ]),
   {
     rules: {
+      "no-inline-comments": "error",
+      "no-warning-comments": ["error", { terms: ["todo", "fixme", "xxx", "hack"] }],
       "@typescript-eslint/no-unused-vars": [
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },

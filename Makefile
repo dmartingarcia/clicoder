@@ -3,10 +3,8 @@
 -include .env
 export
 
-# Autodetecta GPU; GPU=0 fuerza CPU.
 GPU ?= $(shell command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1 && echo 1)
 
-# Variables: compose stacks
 COMPOSE            = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
 COMPOSE_CPU        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
 COMPOSE_MOCK       = docker compose -f docker-compose.yml -f docker-compose.mock.yml
@@ -30,20 +28,17 @@ FRONTEND = $(COMPOSE) exec frontend
 AI = $(COMPOSE) exec ai_engine
 DB = $(COMPOSE) exec db
 
-# Variables: modelo Hugging Face
 HF_REPO      = dmartingarcia/cie10-rigoberta-classifier
 MODEL_DIR    = ai_engine/model
 BEST_PT      = classifier_20260530T030233Z_f1=0.4945.pt
 BEST_THR     = thresholds_20260530T030233Z.json
 AI_MODEL_DIR = /app/model
 
-# Variables: TFG
 TFG_DIR   = tfg
 TFG_MAIN  = principal
 TFG_OUT   = $(TFG_DIR)/build
 TFG_IMAGE = texlive/texlive:latest
 
-# Colores para output
 GREEN  = \033[0;32m
 YELLOW = \033[1;33m
 BLUE   = \033[0;34m
@@ -141,8 +136,7 @@ ai-test: ## Tests del AI engine (pytest). Uso: make ai-test [ARGS="-k chapter -v
 	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c "pip install -q -r requirements-dev.txt && python -m pytest tests/ -q -p no:cacheprovider $(ARGS)"
 
 ai-lint: ## Lint del AI engine y su mock, igual que la CI (ruff check + format check)
-# --isolated en ai_engine_mock: ruff resuelve config por CWD, no por la ruta objetivo, y sin
-# esto heredaba el line-length=100 de ai_engine/pyproject.toml.
+# --isolated: ruff resuelve la configuración por CWD y heredaba el line-length=100 de ai_engine/pyproject.toml
 	$(COMPOSE) run --rm -v $(PWD)/ai_engine_mock:/ai_engine_mock ai_engine sh -c "\
 		pip install -q ruff && \
 		python -m ruff check --cache-dir /tmp/ruff . && \
@@ -252,9 +246,8 @@ ai-train-gpu: ## Entrenar con GPU explícita (HF_TOKEN en .env)
 
 ai-bench-explain: ## Coste y fidelidad de los metodos de atribucion. Uso: make ai-bench-explain [DEVICE=cuda]
 	@echo "$(BLUE)Midiendo los metodos de explicabilidad ($(or $(DEVICE),cpu))...$(NC)"
-# La imagen del motor lleva torch de CPU, asi que para medir en GPU hay que usar la de
-# entrenamiento montando el codigo del motor y los CSV del corpus. La variante de diccionario
-# se omite ahi porque necesita spaCy, que esa imagen no trae, y ademas no usa el acelerador.
+# La imagen del motor lleva torch de CPU: para medir en GPU se usa la de entrenamiento.
+# La variante de diccionario se omite (necesita spaCy y no usa el acelerador).
 ifeq ($(DEVICE),cuda)
 	$(COMPOSE) run --rm --no-deps \
 		-v $(PWD)/ai_engine:/app -v $(PWD)/training/csv_import_scripts:/data \
@@ -281,9 +274,7 @@ ai-error-analysis: ## Clasificar los errores del modelo sobre test (especificida
 
 ai-eval-candidatos: ## Evaluar en test los candidatos a promocion y sacar la tabla comparativa
 	@echo "$(BLUE)Evaluando candidatos en test (GPU)...$(NC)"
-# Como ai-bench-explain: la imagen del motor lleva torch de CPU, asi que para GPU se usa la de
-# entrenamiento montando el codigo del motor y los CSV del corpus. Cada checkpoint se evalua con
-# sus propios umbrales y sin tocar config.json, que seguiria apuntando al modelo que sirve.
+# Como ai-bench-explain. Cada checkpoint se evalua con sus umbrales, sin tocar config.json.
 	@for c in $(CANDIDATOS); do \
 		nombre=$${c%%:*}; resto=$${c#*:}; pt=$${resto%%:*}; thr=$${resto##*:}; \
 		echo "$(BLUE)--- $$nombre ---$(NC)"; \
@@ -297,9 +288,8 @@ ai-eval-candidatos: ## Evaluar en test los candidatos a promocion y sacar la tab
 
 ai-eval-candidatos-fusion: ## MAP de los candidatos en modo fusionado con el diccionario
 	@echo "$(BLUE)Midiendo la fusion con diccionario de cada candidato (GPU)...$(NC)"
-# El titular del trabajo es el modo fusionado, y su beta se ajusta por modelo, de modo que la
-# comparativa sin diccionario no basta para decidir una promocion. La ablacion 'solo_diccionario'
-# de rerank_map es la que corresponde al motor 'fused' que sirve el sistema.
+# La beta del modo fusionado se ajusta por modelo: la comparativa sin diccionario no basta para promocionar.
+# La ablacion 'solo_diccionario' de rerank_map corresponde al motor 'fused'.
 	@for c in $(CANDIDATOS); do \
 		nombre=$${c%%:*}; resto=$${c#*:}; pt=$${resto%%:*}; \
 		echo "$(BLUE)--- $$nombre ---$(NC)"; \
@@ -315,8 +305,7 @@ ai-eval-candidatos-fusion: ## MAP de los candidatos en modo fusionado con el dic
 
 ai-motores: ## Comparativa de los cuatro motores y barrido de beta de la fusion (GPU)
 	@echo "$(BLUE)Comparando motores y barriendo beta...$(NC)"
-# De aqui salen las cifras titulares del modo fusionado. Necesita spaCy (diccionario) y CUDA,
-# que es lo que trae la imagen de entrenamiento.
+# Cifras titulares del modo fusionado: necesita spaCy y CUDA (imagen de entrenamiento).
 	$(COMPOSE) run --rm --no-deps \
 		-v $(PWD)/ai_engine:/app -v $(PWD)/training/csv_import_scripts:/data \
 		-w /app --entrypoint python3 training motores_eval.py --device $(or $(DEVICE),cuda)
@@ -345,8 +334,7 @@ audit-backend: ## Auditar dependencias Elixir retiradas/vulnerables (mix hex.aud
 
 audit-js: ## Auditar CVEs en dependencias JS/Node (npm audit)
 	@echo "$(BLUE)Auditando dependencias JS...$(NC)"
-# El stage por defecto es el de producción, que no instala devDependencies ni trae el lockfile
-# completo, así que "npm audit" falla con ENOLOCK. Necesita el stage de desarrollo.
+# El stage de produccion no trae el lockfile completo: npm audit falla con ENOLOCK.
 	$(COMPOSE_DEV) run --rm --no-deps frontend npm audit
 
 audit-python: ## Auditar CVEs en dependencias Python (pip-audit)
@@ -400,9 +388,7 @@ frontend-coverage: ## Cobertura de pruebas del frontend (vitest + v8)
 
 ai-coverage: ## Cobertura de pruebas del motor de IA (pytest-cov)
 	@echo "$(BLUE)Midiendo cobertura del motor de IA...$(NC)"
-# Se miden los módulos que se despliegan. Los guiones de entrenamiento, evaluación y figuras
-# se ejecutan a mano una vez y se verifican contra los artefactos que producen, así que
-# contarlos solo diluiría la cifra sin decir nada del servicio.
+# Solo los modulos que se despliegan: los guiones de un solo uso diluirian la cifra.
 	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c "pip install -q -r requirements-dev.txt pytest-cov && cd /app && python -m pytest tests/ -q -p no:cacheprovider --cov=main --cov=classifier --cov=baseline_dict --cov=summarizer --cov=rerank_map --cov=compare_runs --cov-report=term --cov-config=/dev/null"
 
 coverage: backend-coverage ai-coverage frontend-coverage ## Cobertura de los tres proyectos
@@ -475,8 +461,7 @@ cpu-up: frontend-install network-create ## Levantar servicios en modo CPU (sin G
 	@echo "  - Prometheus:    http://localhost:9090"
 	@echo "  - PostgreSQL:    localhost:5432"
 
-# Las dos bases de datos, no solo la de la aplicacion: el registro de eventos es el historial
-# inmutable de decisiones y es lo unico que no se puede reconstruir si se pierde.
+# Las dos bases: el registro de eventos es lo unico que no se puede reconstruir.
 db-backup: ## Backup de la aplicacion y del registro de eventos
 	@echo "$(GREEN)Creando backup...$(NC)"
 	$(COMPOSE) exec -T db pg_dump -U postgres cie10_app > backup_app_$(shell date +%Y%m%d_%H%M%S).sql
@@ -505,8 +490,7 @@ frontend-lint: ## Lint del frontend (usa volúmenes dev para leer ficheros local
 
 frontend-test: ## Ejecutar tests del frontend
 	@echo "$(GREEN)Ejecutando tests del frontend...$(NC)"
-# El stage por defecto es el de producción, que no instala devDependencies y por tanto no
-# tiene vitest. Los tests necesitan el stage de desarrollo, que sí las trae.
+# El stage de produccion no trae vitest: se necesita el de desarrollo.
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm --no-deps frontend npm test
 
 logs: ## Ver logs (pregunta por servicio o todos)
@@ -563,8 +547,7 @@ model-upload: ## Subir un modelo a HF con nombre propio. Uso: make model-upload 
 	@test -n "$(PT)"   || (echo "$(RED)Falta PT=<ruta del checkpoint>$(NC)"; exit 1)
 	@test -n "$(THR)"  || (echo "$(RED)Falta THR=<ruta de los umbrales>$(NC)"; exit 1)
 	@echo "$(BLUE)Subiendo '$(NAME)' a HF: $(HF_REPO)$(NC)"
-# Se sube con el nombre del catálogo, no sobre classifier.pt: así conviven varias versiones
-# en el mismo repositorio y subir una nueva no sustituye a la que está en producción.
+# Se sube con el nombre del catalogo, no sobre classifier.pt, para no sustituir el modelo en produccion.
 	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
 		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/$(PT)  $(NAME).pt && \
 		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf upload $(HF_REPO) $(AI_MODEL_DIR)/$(THR) $(NAME).thresholds.json'
@@ -581,7 +564,6 @@ model-upload-shared: ## Subir los artefactos comunes a todos los modelos (descri
 
 model-download: ## Descargar un modelo. Uso: make model-download [NAME=zlpr-map] (sin NAME baja el de producción)
 	@echo "$(BLUE)Descargando desde HF: $(HF_REPO)$(NC)"
-# Los artefactos compartidos se bajan siempre; el checkpoint, solo el pedido.
 	$(COMPOSE_CPU) run --rm --no-deps ai_engine sh -c '\
 		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) code_descriptions.json --local-dir $(AI_MODEL_DIR) && \
 		HF_HUB_DISABLE_XET=1 HF_TOKEN=$$HUGGING_FACE_HUB_TOKEN hf download $(HF_REPO) baseline_dict.json     --local-dir $(AI_MODEL_DIR) && \
@@ -598,8 +580,7 @@ model-download: ## Descargar un modelo. Uso: make model-download [NAME=zlpr-map]
 
 model-use: ## Activar un modelo ya descargado. Uso: make model-use NAME=zlpr-map
 	@test -n "$(NAME)" || (echo "$(RED)Falta NAME=<nombre del modelo>$(NC)"; exit 1)
-# Reescribe config.json para apuntar al checkpoint elegido y a sus umbrales, incluido el
-# umbral de la fusión, que es propio de cada modelo porque vive en el espacio de puntuación.
+# Reescribe config.json con el checkpoint, sus umbrales y el umbral de fusion (propio de cada modelo).
 	@python3 -c "import json,sys; \
 	cat=json.load(open('$(MODEL_DIR)/models.json')); \
 	m=cat['modelos'].get('$(NAME)') or sys.exit('modelo desconocido: $(NAME)'); \

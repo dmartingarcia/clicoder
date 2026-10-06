@@ -5,7 +5,6 @@ import '../helpers';
 
 import { PrivacyModal } from '@/components/PrivacyModal';
 
-// Cada derecho vive en su propia fila; la acción, si la hay, está dentro.
 function fila(clave: string) {
   const titulo = screen.getByText(`privacy.${clave}_title`);
   const contenedor = titulo.closest('div.flex.items-start');
@@ -68,11 +67,9 @@ describe('PrivacyModal', () => {
   it('los derechos que se ejercen por correo no ofrecen acción en la aplicación', () => {
     render(<PrivacyModal onClose={vi.fn()} onExport={vi.fn()} onDeleteAccount={vi.fn()} />);
 
-    // Rectificación, limitación y oposición van por correo
     for (const art of ['art16', 'art18', 'art21']) {
       expect(fila(art).querySelector('button')).toBeNull();
     }
-    // La portabilidad se marca ejercitable pero aún no tiene acción propia
     expect(fila('art20').querySelector('button')).toBeNull();
   });
 

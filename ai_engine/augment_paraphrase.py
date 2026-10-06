@@ -39,11 +39,6 @@ PARAPHRASE_PROMPT = (
 )
 
 
-# ---------------------------------------------------------------------------
-# Modelo
-# ---------------------------------------------------------------------------
-
-
 def load_model(model_id: str, device: str):
     print(f"[paraphrase] descargando/verificando {model_id}…")
     local_path = snapshot_download(
@@ -107,11 +102,6 @@ def paraphrase(
     return result or text
 
 
-# ---------------------------------------------------------------------------
-# CSV / checkpoint helpers
-# ---------------------------------------------------------------------------
-
-
 def _read_csv(path: str) -> tuple[list[str], list[dict]]:
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -136,11 +126,6 @@ def _count_augmented(path: str, n_originals: int) -> int:
     with open(path, newline="", encoding="utf-8") as f:
         total = sum(1 for _ in csv.DictReader(f))
     return max(0, total - n_originals)
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 
 def main() -> None:

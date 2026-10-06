@@ -3,10 +3,6 @@ defmodule App.JsonSerializerTest do
 
   alias App.JsonSerializer
 
-  # ---------------------------------------------------------------------------
-  # serialize/1
-  # ---------------------------------------------------------------------------
-
   describe "serialize/1" do
     test "encodes a plain map to JSON" do
       term = %{foo: "bar", count: 42}
@@ -47,10 +43,6 @@ defmodule App.JsonSerializerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # deserialize/2: with :type config
-  # ---------------------------------------------------------------------------
-
   describe "deserialize/2 with known event type" do
     test "deserializes JSON into the correct struct" do
       json =
@@ -87,17 +79,12 @@ defmodule App.JsonSerializerTest do
     test "deserializes a non-map value (list) without struct conversion" do
       json = Jason.encode!(["A", "B", "C"])
 
-      # Even with a type config, non-map values are returned as-is
       type = Atom.to_string(App.Events.ConversationStarted)
       result = JsonSerializer.deserialize(json, type: type)
 
       assert result == ["A", "B", "C"]
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # deserialize/2: without :type config (metadata path)
-  # ---------------------------------------------------------------------------
 
   describe "deserialize/2 without :type config (metadata deserialization)" do
     test "returns decoded map with atom keys when config is empty" do
@@ -128,10 +115,6 @@ defmodule App.JsonSerializerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Atom keys in nested maps
-  # ---------------------------------------------------------------------------
-
   describe "atom keys in nested structures" do
     test "nested map keys become atoms" do
       json =
@@ -145,7 +128,6 @@ defmodule App.JsonSerializerTest do
 
       assert is_list(result.cards)
       [card | _] = result.cards
-      # With keys: :atoms, nested keys are also atoms
       assert card.type == "summary"
       assert card.content == "text"
       assert card.confidence == 0.9
@@ -168,10 +150,6 @@ defmodule App.JsonSerializerTest do
       assert result.outer.inner.description == "some description"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Round-trip (serialize then deserialize)
-  # ---------------------------------------------------------------------------
 
   describe "round-trip" do
     test "a map survives serialize → deserialize (metadata path)" do

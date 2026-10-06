@@ -27,9 +27,8 @@ defmodule AppWeb.ConversationChannel do
 
   require Logger
 
-  # Un error sin contexto no se puede investigar, pero el contexto no puede ser el informe.
-  # Se envian solo identificadores de la base de datos: con ellos se localiza la conversacion
-  # y al usuario en local, y el tercero que recibe el aviso no ve ni el texto ni quien es.
+  # El contexto del error no puede ser el informe: solo ids de BD, con los que se localiza
+  # la conversacion y al usuario en local.
   defp contexto_de_errores(user_id, conversation_id) do
     if Code.ensure_loaded?(Sentry) do
       Sentry.Context.set_user_context(%{id: user_id})
@@ -92,7 +91,6 @@ defmodule AppWeb.ConversationChannel do
           timestamp: DateTime.utc_now()
         })
 
-        # Llamar al AI Engine para analizar el texto
         Task.start(fn ->
           call_ai_engine(conversation_id, message_id, content, socket)
         end)
@@ -111,7 +109,6 @@ defmodule AppWeb.ConversationChannel do
     message_id = UUID.uuid4()
     timestamp = DateTime.utc_now()
 
-    # Save the report as a message so it persists across reloads
     msg_cmd = %SendMessage{
       conversation_id: conversation_id,
       message_id: message_id,
@@ -330,10 +327,8 @@ defmodule AppWeb.ConversationChannel do
     }
   end
 
-  # El texto del informe no viaja en los eventos (categoria especial del articulo 9 del RGPD, y
-  # el registro de eventos no se puede borrar). Se escribe aqui, sobre la proyeccion, que es lo
-  # que elimina el purgado. El upsert cubre las dos carreras posibles con el proyector: si llega
-  # antes, actualiza la fila que este creo; si llega despues, no pisa nada.
+  # El texto no viaja en los eventos (art. 9 RGPD, registro inmutable): se escribe en la proyeccion,
+  # que es lo que purga el borrado. El upsert cubre ambas carreras con el proyector.
   defp persist_report_text(conversation_id, message_id, user_id, texto, timestamp) do
     case Repo.get_by(ConversationProjection, conversation_id: conversation_id) do
       nil ->
@@ -357,7 +352,6 @@ defmodule AppWeb.ConversationChannel do
     end
   end
 
-  # Inserts analysis cards directly (fallback when CQRS projection is delayed/fails).
   defp persist_cards_direct(conversation_id, message_id, cards) do
     conversation = Repo.get_by(ConversationProjection, conversation_id: conversation_id)
 
@@ -382,12 +376,8 @@ defmodule AppWeb.ConversationChannel do
     end
   end
 
-  # La atribución de términos cuesta dos órdenes de magnitud más que predecir (medido: 0,35 s
-  # la predicción frente a 13 s la explicación con la estrategia adoptada), así que no puede
-  # bloquear la respuesta. Se pide en una segunda llamada y se emite cuando llega: el cliente
-  # pinta los códigos de inmediato y completa los términos después, mostrando un indicador
-  # mientras tanto. Con el motor fusionado, los términos del diccionario ya viajan con la
-  # predicción porque su coincidencia se calculó para ordenar los códigos.
+  # La atribucion de terminos cuesta ~40x mas que predecir (13 s vs 0,35 s), asi que no bloquea:
+  # se pide en segunda llamada y se emite al llegar. Con el motor fusionado ya viajan con la prediccion.
   defp request_triggers_async(ai_url, report_text, message_id, conversation_id, cards, socket) do
     codes =
       cards
@@ -425,16 +415,13 @@ defmodule AppWeb.ConversationChannel do
             })
 
           otro ->
-            # Que falle la explicación no invalida la predicción: el usuario conserva sus
-            # códigos y la tarjeta se queda sin términos en lugar de romperse.
+            # Que falle la explicacion no invalida la prediccion: la tarjeta queda sin terminos.
             Logger.warning("No se pudieron obtener los términos explicativos: #{inspect(otro)}")
         end
       end)
     end
   end
 
-  # Completa la tarjeta ya guardada con los términos que llegaron después, para que al
-  # recargar la conversación sigan estando.
   defp persist_triggers(conversation_id, message_id, triggers) do
     conversation = Repo.get_by(ConversationProjection, conversation_id: conversation_id)
 
@@ -464,11 +451,8 @@ defmodule AppWeb.ConversationChannel do
     end
   end
 
-  # Always inserts predicted codes directly with pre-generated UUIDs so we can
-  # broadcast them immediately in analysis_complete (avoids async CQRS timing issues).
-  # Auditoria: deja en el registro inmutable que informe se analizo, con que motor y con que
-  # pesos. Sin la version del modelo no se puede reconstruir a posteriori por que el sistema
-  # propuso un codigo concreto, que es justo lo que exige la trazabilidad clinica.
+  # Auditoria: deja en el registro inmutable informe, motor y pesos; sin la version del modelo
+  # no se puede reconstruir por que se propuso un codigo (trazabilidad clinica).
   defp registrar_prediccion(conversation_id, message_id, cards, engine, model_version) do
     codigos =
       cards
@@ -558,7 +542,6 @@ defmodule AppWeb.ConversationChannel do
         Task.async(fn -> do_stream_summary(ai_url, report_text, language, message_id, socket) end)
       end
 
-    # ── Fase 1: códigos (rápidos, llegan antes del resumen) ──────────────────
     predicted_codes =
       case Task.await(predict_task, 60_000) do
         {:ok, %{status: 200, body: body}} ->
@@ -618,7 +601,6 @@ defmodule AppWeb.ConversationChannel do
           []
       end
 
-    # ── Fase 2: resumen (los tokens ya llegaron en streaming) ────────────────
     if with_summary do
       full_summary = Task.await(summary_task, 120_000)
 
@@ -713,8 +695,7 @@ defmodule AppWeb.ConversationChannel do
     Map.get(@locale_to_language, locale, "español")
   end
 
-  # Opciones de transporte inyectables: vacías en producción, con el plug de Req.Test en
-  # pruebas. Sin esto la integración con el motor de IA no se puede ejercitar sin una red.
+  # Opciones de transporte inyectables: vacias en produccion, plug de Req.Test en pruebas.
   defp req_opts, do: Application.get_env(:app, :ai_req_opts, [])
 
   defp predict_with_retry(ai_url, body, retries) do
