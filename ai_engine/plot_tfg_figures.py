@@ -5,6 +5,7 @@
 import csv
 import json
 import os
+import re
 from collections import Counter
 
 import matplotlib
@@ -12,6 +13,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
+from matplotlib.ticker import FuncFormatter, ScalarFormatter  # noqa: E402
+
+plt.rcParams.update({"font.size": 10})
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.environ.get("OUT_DIR", os.path.join(HERE, "model"))
@@ -19,6 +23,18 @@ TRAIN = os.environ.get("TRAIN_FILE", "/data/codiesp_csvs/codiesp_D_source_train.
 EVAL = os.path.join(HERE, "model", "eval_test.json")
 
 TEAL, ORANGE, GREY = "#2a7f9e", "#c46210", "#8aa0ab"
+
+
+def finalize(fig, path):
+    comma = FuncFormatter(lambda v, _: f"{v:g}".replace(".", ","))
+    for ax in fig.axes:
+        for axis in (ax.xaxis, ax.yaxis):
+            if isinstance(axis.get_major_formatter(), ScalarFormatter):
+                axis.set_major_formatter(comma)
+        for t in ax.texts:
+            if re.fullmatch(r"\d+\.\d+", t.get_text()):
+                t.set_text(t.get_text().replace(".", ","))
+    fig.savefig(path, dpi=200, bbox_inches="tight")
 
 
 def parse_labels(s):
@@ -43,7 +59,7 @@ ax.set_title(
 )
 ax.grid(True, which="both", ls=":", alpha=0.4)
 fig.tight_layout()
-fig.savefig(f"{OUT}/tfg_longtail.png", dpi=150)
+finalize(fig, f"{OUT}/tfg_longtail.png")
 plt.close(fig)
 
 # --- 2. Barrido de umbral global (val + test) ---
@@ -73,14 +89,14 @@ ax.plot(
     alpha=0.6,
     label="F1-macro (test)",
 )
-ax.axvline(best, color="gray", ls=":", label=f"óptimo en val = {best}")
+ax.axvline(best, color="gray", ls=":", label=f"óptimo en val = {best}".replace(".", ","))
 ax.set_xlabel("Umbral global de decisión")
 ax.set_ylabel("F1")
 ax.set_title("Barrido del umbral de decisión")
-ax.legend(fontsize=8)
+ax.legend(fontsize=9)
 ax.grid(True, ls=":", alpha=0.4)
 fig.tight_layout()
-fig.savefig(f"{OUT}/tfg_threshold.png", dpi=150)
+finalize(fig, f"{OUT}/tfg_threshold.png")
 plt.close(fig)
 
 # --- 3. Benchmark CodiEsp-D 2020: MAP por sistema (test) ---
@@ -105,16 +121,16 @@ fig, ax = plt.subplots(figsize=(7, 4))
 y = np.arange(len(names))
 ax.barh(y, maps, color=colors)
 ax.set_yticks(y)
-ax.set_yticklabels(names, fontsize=8)
+ax.set_yticklabels(names, fontsize=9)
 ax.invert_yaxis()
 ax.set_xlabel("MAP por documento (conjunto de prueba)")
 ax.set_title("CodiEsp-D 2020: MAP por sistema")
 for i, v in enumerate(maps):
-    ax.text(v + 0.006, i, f"{v:.3f}", va="center", fontsize=7)
+    ax.text(v + 0.006, i, f"{v:.3f}", va="center", fontsize=9)
 ax.set_xlim(0, 0.65)
 ax.grid(True, axis="x", ls=":", alpha=0.4)
 fig.tight_layout()
-fig.savefig(f"{OUT}/tfg_benchmark.png", dpi=150)
+finalize(fig, f"{OUT}/tfg_benchmark.png")
 plt.close(fig)
 
 # --- 4. Contribución acumulada de cada técnica (F1-micro val, umbral 0,3) ---
@@ -133,15 +149,15 @@ x = np.arange(len(vals))
 ax.plot(x, vals, marker="o", color=TEAL)
 ax.fill_between(x, 0.30, vals, alpha=0.12, color=TEAL)
 for i, v in enumerate(vals):
-    ax.text(i, v + 0.004, f"{v:.3f}", ha="center", fontsize=7)
+    ax.text(i, v + 0.004, f"{v:.3f}", ha="center", fontsize=9)
 ax.set_xticks(x)
-ax.set_xticklabels(labels, fontsize=7)
+ax.set_xticklabels(labels, fontsize=9)
 ax.set_ylim(0.30, 0.51)
 ax.set_ylabel("F1-micro (validación, umbral 0,3)")
 ax.set_title("Contribución acumulada de cada técnica")
 ax.grid(True, axis="y", ls=":", alpha=0.4)
 fig.tight_layout()
-fig.savefig(f"{OUT}/tfg_waterfall.png", dpi=150)
+finalize(fig, f"{OUT}/tfg_waterfall.png")
 plt.close(fig)
 
 # --- 5. Longitud en tokens por conjunto (train/val/test) ---
@@ -159,10 +175,10 @@ if isinstance(tl, dict) and tl:
     ax.axhline(512, color=ORANGE, ls="--", lw=2, label="512 tokens (ventana del modelo)")
     ax.set_ylabel("Longitud del informe (tokens)")
     ax.set_title("Longitud en tokens por conjunto (train / val / test)")
-    ax.legend(fontsize=8)
+    ax.legend(fontsize=9)
     ax.grid(True, axis="y", ls=":", alpha=0.4)
     fig.tight_layout()
-    fig.savefig(f"{OUT}/tfg_tokens.png", dpi=150)
+    finalize(fig, f"{OUT}/tfg_tokens.png")
     plt.close(fig)
 
 # --- 6. F1-micro por capítulo CIE-10 (con soporte, sin capítulos de soporte marginal) ---
@@ -178,12 +194,12 @@ if pc:
     yy = np.arange(len(chs))
     ax.barh(yy, f1s, color=TEAL)
     ax.set_yticks(yy)
-    ax.set_yticklabels(chs, fontsize=8)
+    ax.set_yticklabels(chs, fontsize=9)
     ax.invert_yaxis()
     ax.set_xlabel(f"F1-micro (test, umbral {ev['best_threshold_val']:.1f})".replace(".", ","))
     ax.set_title("F1-micro por capítulo CIE-10 (soporte entre paréntesis)")
     for i, v in enumerate(f1s):
-        ax.text(v + 0.005, i, f"{v:.2f}", va="center", fontsize=7)
+        ax.text(v + 0.005, i, f"{v:.2f}", va="center", fontsize=9)
     if dropped:
         ax.text(
             0.98,
@@ -192,12 +208,12 @@ if pc:
             transform=ax.transAxes,
             ha="right",
             va="bottom",
-            fontsize=6.5,
+            fontsize=9,
             color=GREY,
         )
     ax.grid(True, axis="x", ls=":", alpha=0.4)
     fig.tight_layout()
-    fig.savefig(f"{OUT}/tfg_chapters.png", dpi=150)
+    finalize(fig, f"{OUT}/tfg_chapters.png")
     plt.close(fig)
 
 # --- 7. Curva precisión-recall a partir del barrido de umbral ---
@@ -227,16 +243,16 @@ if sweep:
                 (r, pr),
                 textcoords="offset points",
                 xytext=(12, 10),
-                fontsize=7.5,
+                fontsize=9,
                 color=ORANGE,
             )
     ax.set_xlabel("Recall micro")
     ax.set_ylabel("Precisión micro")
     ax.set_title("Curva precisión-recall (barrido del umbral global)")
-    ax.legend(fontsize=8)
+    ax.legend(fontsize=9)
     ax.grid(True, ls=":", alpha=0.4)
     fig.tight_layout()
-    fig.savefig(f"{OUT}/tfg_pr_curve.png", dpi=150)
+    finalize(fig, f"{OUT}/tfg_pr_curve.png")
     plt.close(fig)
 
 # --- 8. F1 sobre test según la frecuencia del código en entrenamiento ---
@@ -251,20 +267,20 @@ if pf:
     ax.bar(x - w / 2, f1mi, w, color=TEAL, label="F1-micro")
     ax.bar(x + w / 2, rmi, w, color=ORANGE, alpha=0.85, label="Recall micro")
     for i, (a, b) in enumerate(zip(f1mi, rmi, strict=False)):
-        ax.text(i - w / 2, a + 0.008, f"{a:.2f}", ha="center", fontsize=7)
-        ax.text(i + w / 2, b + 0.008, f"{b:.2f}", ha="center", fontsize=7)
+        ax.text(i - w / 2, a + 0.008, f"{a:.2f}", ha="center", fontsize=9)
+        ax.text(i + w / 2, b + 0.008, f"{b:.2f}", ha="center", fontsize=9)
     ax.set_xticks(x)
     ax.set_xticklabels(
         [f"{k}\n{pf[k]['n_codigos']} códigos\n{pf[k]['support']} pares" for k in order],
-        fontsize=7.5,
+        fontsize=9,
     )
     ax.set_xlabel("Apariciones del código en el corpus de entrenamiento")
     ax.set_ylabel("Métrica sobre el conjunto de prueba")
     ax.set_title("Rendimiento según la frecuencia de entrenamiento del código")
-    ax.legend(fontsize=8)
+    ax.legend(fontsize=9)
     ax.grid(True, axis="y", ls=":", alpha=0.4)
     fig.tight_layout()
-    fig.savefig(f"{OUT}/tfg_freq.png", dpi=150)
+    finalize(fig, f"{OUT}/tfg_freq.png")
     plt.close(fig)
 
 print("OK: figuras generadas en", OUT)

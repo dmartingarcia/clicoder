@@ -322,8 +322,9 @@ ai-eval-test: ## Evaluar sobre el test de CodiEsp. Uso: make ai-eval-test [GPU=1
 ai-tfg-figures: ## Generar las figuras de datos del TFG (lee model/eval_test.json). Uso: make ai-tfg-figures [GPU=1]
 	@echo "$(BLUE)Generando figuras del TFG...$(NC)"
 	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python plot_tfg_figures.py
+	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) run --rm ai_engine python plot_runs.py
 	@echo "$(BLUE)Copiando a tfg/figs/...$(NC)"
-	cp ai_engine/model/tfg_*.png tfg/figs/
+	cp ai_engine/model/tfg_*.png ai_engine/model/all_*_graph.png tfg/figs/
 	@echo "$(GREEN)Figuras actualizadas en tfg/figs/$(NC)"
 
 audit: audit-python audit-js audit-backend ## Auditar CVEs en todas las dependencias
