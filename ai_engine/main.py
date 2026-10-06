@@ -333,7 +333,7 @@ class AnalysisRequest(BaseModel):
     include_triggers: bool = False
     """Calcular los términos explicativos en la misma petición.
 
-    Desactivado por defecto porque la atribución cuesta del orden de cien veces más que
+    Desactivado por defecto porque la atribución cuesta entre 30 y 50 veces más que
     la predicción: enmascara palabra por palabra y necesita una pasada del encoder por
     cada una. Con el valor por defecto, ``/predict`` devuelve los códigos en cuanto están
     y el cliente pide las explicaciones aparte con ``/explain``, mostrando un indicador de
@@ -975,7 +975,7 @@ async def _predict_both(text: str):
 async def explain_codes(request: ExplainRequest):
     """Calcula la atribución por separado de la predicción.
 
-    La atribución cuesta del orden de cien veces más que predecir, porque mide el efecto
+    La atribución cuesta entre 30 y 50 veces más que predecir, porque mide el efecto
     real de quitar cada palabra del informe y eso exige una pasada del encoder por palabra.
     Atarla a ``/predict`` obligaba al usuario a esperar por algo que aún no está mirando:
     primero lee los códigos y solo después despliega uno para saber por qué se ha propuesto.
