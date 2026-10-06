@@ -436,7 +436,7 @@ jobs:
       - name: Levantar base de datos y correo
         run: |
           make network-create
-          docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --wait db mailpit
+          docker compose -f docker-compose.yml -f docker-compose.mock.yml -f docker-compose.mailpit.yml up -d --wait db mailpit
 
       - name: Preparar la base de datos
         run: |
@@ -445,7 +445,7 @@ jobs:
 
       - name: Levantar la aplicacion con el motor simulado
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.mock.yml -f docker-compose.prod.yml -f docker-compose.ci.yml up -d --wait ai_engine backend frontend
+          docker compose -f docker-compose.yml -f docker-compose.mock.yml -f docker-compose.mailpit.yml -f docker-compose.prod.yml -f docker-compose.ci.yml up -d --wait ai_engine backend frontend
 
       - name: Tests de extremo a extremo
         run: make e2e-tests
@@ -461,4 +461,4 @@ jobs:
 
       - name: Logs de los servicios si algo falla
         if: failure()
-        run: docker compose -f docker-compose.yml -f docker-compose.mock.yml logs --tail 200
+        run: docker compose -f docker-compose.yml -f docker-compose.mock.yml -f docker-compose.mailpit.yml logs --tail 200

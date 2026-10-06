@@ -5,16 +5,6 @@ services:
       dockerfile: Dockerfile.ml-base
     image: cie10-ml-base:latest
 
-  mailpit:
-    image: axllent/mailpit:latest
-    restart: always
-    ports:
-      - "8025:8025"   # Web UI
-      - "1025:1025"   # SMTP
-    environment:
-      MP_MAX_MESSAGES: 500
-    networks: [clicoder]
-
   db:
     image: postgres:18-alpine
     restart: always
@@ -100,8 +90,6 @@ services:
         condition: service_healthy
       ai_engine:
         condition: service_healthy
-      mailpit:
-        condition: service_started
     ports:
       - "${BACKEND_PORT}:4000"
     environment:
@@ -120,11 +108,6 @@ services:
       - SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL:?SEED_ADMIN_EMAIL no definido en .env}
       - SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD:?SEED_ADMIN_PASSWORD no definido en .env}
       - SENTRY_DSN=${SENTRY_DSN:-}
-      # En desarrollo el correo va a Mailpit. Sin esto, Swoosh cae al 'localhost' por
-      # defecto de dev.exs, que dentro del contenedor no escucha, y los correos de
-      # confirmacion no se entregan nunca.
-      - SMTP_HOST=${SMTP_HOST:-mailpit}
-      - SMTP_PORT=${SMTP_PORT:-1025}
     volumes:
       - ./backend:/app
       - ./training/csv_import_scripts/cie10-csvs:/data/cie10-csvs:ro

@@ -7,7 +7,7 @@ GPU ?= $(shell command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null
 
 COMPOSE            = docker compose -f docker-compose.yml -f docker-compose.gpu.yml
 COMPOSE_CPU        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml
-COMPOSE_MOCK       = docker compose -f docker-compose.yml -f docker-compose.mock.yml
+COMPOSE_MOCK       = docker compose -f docker-compose.yml -f docker-compose.mock.yml -f docker-compose.mailpit.yml
 
 # Candidatos a promocion, en formato nombre:checkpoint:umbrales (ver ai-eval-candidatos)
 CANDIDATOS = \
@@ -18,8 +18,8 @@ COMPOSE_MONITORING     = docker compose -f docker-compose.monitoring.yml
 COMPOSE_MONITORING_DEV = docker compose -f docker-compose.monitoring.yml -f docker-compose.monitoring.dev.yml
 COMPOSE_PROXY      = docker compose -f docker-compose-proxy.yml
 COMPOSE_TUNNEL     = docker compose -f docker-compose-proxy.yml --profile tunnel
-COMPOSE_DEV        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.dev.yml
-COMPOSE_DEV_GPU    = docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.dev.yml
+COMPOSE_DEV        = docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.mailpit.yml -f docker-compose.dev.yml
+COMPOSE_DEV_GPU    = docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.mailpit.yml -f docker-compose.dev.yml
 COMPOSE_PROD       = docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.prod.yml
 COMPOSE_PROD_GPU   = docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml
 NETWORK            = clicoder
@@ -444,7 +444,7 @@ cpu-build: ## Construir AI engine en modo CPU (sin CUDA)
 
 cpu-down: ## Detener servicios del modo CPU
 	@echo "$(YELLOW)Deteniendo servicios CPU...$(NC)"
-	$(COMPOSE_CPU) down
+	$(COMPOSE_DEV) down
 
 cpu-up: frontend-install network-create ## Levantar servicios en modo CPU (sin GPU)
 	@echo "$(GREEN)Levantando servicios en modo CPU...$(NC)"
@@ -475,7 +475,7 @@ db-reset: ## Reset completo: drop + backend-seed
 
 down: ## Detener todos los servicios. GPU=1 para modo GPU
 	@echo "$(YELLOW)Deteniendo servicios...$(NC)"
-	$(if $(filter 1,$(GPU)),$(COMPOSE),$(COMPOSE_CPU)) down
+	$(if $(filter 1,$(GPU)),$(COMPOSE_DEV_GPU),$(COMPOSE_DEV)) down
 	$(COMPOSE_MONITORING) down
 	$(COMPOSE_PROXY) down
 
@@ -503,12 +503,12 @@ logs: ## Ver logs (pregunta por servicio o todos)
 	@echo "  6) mailpit"
 	@read -p "Servicio [1]: " c; \
 	case $${c:-1} in \
-		1|todos)    $(COMPOSE_CPU) logs -f ;; \
-		2|backend)  $(COMPOSE_CPU) logs -f backend ;; \
-		3|frontend) $(COMPOSE_CPU) logs -f frontend ;; \
-		4|ai_engine) $(COMPOSE_CPU) logs -f ai_engine ;; \
-		5|db)       $(COMPOSE_CPU) logs -f db ;; \
-		6|mailpit)  $(COMPOSE_CPU) logs -f mailpit ;; \
+		1|todos)    $(COMPOSE_DEV) logs -f ;; \
+		2|backend)  $(COMPOSE_DEV) logs -f backend ;; \
+		3|frontend) $(COMPOSE_DEV) logs -f frontend ;; \
+		4|ai_engine) $(COMPOSE_DEV) logs -f ai_engine ;; \
+		5|db)       $(COMPOSE_DEV) logs -f db ;; \
+		6|mailpit)  $(COMPOSE_DEV) logs -f mailpit ;; \
 		*) echo "Opción no válida" ;; \
 	esac
 

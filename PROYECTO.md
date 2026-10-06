@@ -53,7 +53,7 @@ Asistente de codificación médica que analiza informes clínicos en texto libre
 - `AppWeb.Plugs.RequireAuth`: verifica Bearer token (Phoenix.Token) en rutas protegidas.
 - `AppWeb.UserSocket`: ahora verifica el token JWT en lugar de aceptar cualquier `user_id`.
 - `App.Accounts.Emails`: email HTML de confirmación enviado mediante Swoosh.
-- **Mailpit** añadido a docker-compose como SMTP catcher (UI en `:8025`, SMTP en `:1025`).
+- **Mailpit** añadido (docker-compose.mailpit.yml, solo desarrollo y CI) como SMTP catcher (UI en `:8025`, SMTP en `:1025`).
 
 **Frontend:**
 - `AuthContext`: gestiona `user`, `token`, `pendingEmail`; persiste sesión en `localStorage`; maneja el redirect de confirmación (`?confirmed=1`).
@@ -125,7 +125,7 @@ Asistente de codificación médica que analiza informes clínicos en texto libre
 - `socket.ts`: usa `config.wsUrl` en lugar de hardcode.
 - `page.tsx`: `userId` eliminado; se usa el `id` del usuario autenticado.
 - `Makefile`: añadidos `logs-mail` y `make mailpit` (abre Mailpit en el navegador); URLs de todos los servicios actualizadas incluyendo Mailpit (`:8025`).
-- `docker-compose.yml`: servicio Mailpit, variables SMTP, dependencia del backend en Mailpit.
+- `docker-compose.mailpit.yml`: servicio Mailpit (solo dev y CI; producción usa Mailjet), variables SMTP, dependencia del backend en Mailpit.
 - `.env.example`: variables SMTP y APP_HOST documentadas.
 
 ---
