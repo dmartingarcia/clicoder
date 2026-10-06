@@ -13,10 +13,6 @@ services:
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--log.level=INFO"
       - "--accesslog=true"
       - "--accesslog.filepath=/var/log/traefik/access.log"
@@ -28,7 +24,6 @@ services:
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./docker/letsencrypt:/letsencrypt
       - /var/log/traefik:/var/log/traefik
     networks: [proxy, clicoder]
     labels:
@@ -37,7 +32,6 @@ services:
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
-      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.middlewares=dashboard-auth,dashboard-ratelimit"
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
       - "traefik.http.middlewares.dashboard-ratelimit.ratelimit.average=60"
@@ -57,7 +51,6 @@ services:
       - "traefik.http.routers.maintenance.rule=Host(`${DOMAIN:-localhost}`)"
       - "traefik.http.routers.maintenance.entrypoints=websecure"
       - "traefik.http.routers.maintenance.tls=true"
-      - "traefik.http.routers.maintenance.tls.certresolver=letsencrypt"
       - "traefik.http.routers.maintenance.priority=1"
       - "traefik.http.services.maintenance.loadbalancer.server.port=80"
 
