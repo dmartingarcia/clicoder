@@ -5,6 +5,8 @@ Se consideraron diez modelos preentrenados como posible \emph{encoder} de texto 
 
 \section{Modelos evaluados}
 
+En este anexo el tamaño de cada modelo se da en millones de parámetros (M), y el símbolo $\sim$ indica un valor aproximado.
+
 \subsection{\texttt{PlanTL-GOB-ES/roberta-base-biomedical-clinical-es}}
 
 Modelo RoBERTa~\cite{liu2019roberta} de 125M parámetros entrenado por el Barcelona Supercomputing Center sobre corpus clínico en español: historias clínicas, informes radiológicos y notas médicas. Ventana de contexto de 512 tokens. Es el candidato más ligero entre los especializados en dominio clínico, lo que favorece la inferencia en CPU. Obtuvo un F1 de 0{,}780 en las pruebas de nivel~1 (clasificación de capítulos), promediando dos ejecuciones.
@@ -27,7 +29,7 @@ Variante clínica de RigoBERTa-2.0 desarrollada por el Instituto de Ingeniería 
 
 \subsection{\texttt{jhu-clsp/mmBERT-base}}
 
-Encoder multilingüe moderno (\emph{Modern Multilingual BERT}) desarrollado por el Centro de Procesamiento del Lenguaje y del Habla de la Universidad Johns Hopkins~\cite{marone2025mmbert}, basado en la arquitectura ModernBERT. Ventana de contexto de 8.192 tokens; entrenado sobre más de 1800 lenguas. Obtuvo un F1-micro de 0{,}707 en las pruebas de nivel~1, por debajo de los dos candidatos en español pese a ser multilingüe, por ausencia de especialización en español clínico.
+Encoder multilingüe moderno (\emph{Modern Multilingual BERT}) desarrollado por el Centro de Procesamiento del Lenguaje y del Habla de la Universidad Johns Hopkins~\cite{marone2025mmbert}, basado en la arquitectura ModernBERT. Ventana de contexto de 8.192 tokens; entrenado sobre más de 1.800 lenguas. Obtuvo un F1-micro de 0{,}707 en las pruebas de nivel~1, por debajo de los dos candidatos en español pese a ser multilingüe, por ausencia de especialización en español clínico.
 
 \subsection{\texttt{answerdotai/ModernBERT-base}}
 
@@ -52,11 +54,11 @@ La comparativa de parámetros, ventana de contexto y F1 de los diez candidatos e
 
 \begin{table}[h]
 \centering
-\caption{Comparativa de los modelos candidatos evaluados. Elaborada a mano (sin objetivo de \texttt{make}): el F1 de nivel~1 procede de la reejecución de los cuadernos de \texttt{training/\allowbreak bert-classifier/} y el del Longformer-BSC, de la fila 20 de \texttt{ai\_engine/\allowbreak model/\allowbreak training\_runs.csv}.}
+\caption{Comparativa de los modelos candidatos evaluados (M = millones de parámetros). Elaborada a mano (sin objetivo de \texttt{make}): el F1 de nivel~1 procede de la reejecución de los cuadernos de \texttt{training/\allowbreak bert-classifier/} y el del Longformer-BSC, de la fila 20 de \texttt{ai\_engine/\allowbreak model/\allowbreak training\_runs.csv}.}
 \label{tab:modelos}
 \begin{tabular}{lrccl}
 \hline
-\textbf{Modelo} & \textbf{Params} & \textbf{Ventana} & \textbf{F1 (tarea)} & \textbf{Dominio} \\
+\textbf{Modelo} & \textbf{Params (M)} & \textbf{Ventana} & \textbf{F1 (tarea)} & \textbf{Dominio} \\
 \hline
 RoBERTa-BSC (base) & 125M & 512 & \textbf{0{,}780}$^{a}$ & Clínico ES \\
 RoBERTa-BSC (large) & 355M & 512 &  sin entrenar & Español \\

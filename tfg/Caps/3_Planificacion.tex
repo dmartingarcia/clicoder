@@ -32,8 +32,8 @@ El proyecto se realiza íntegramente por un único desarrollador, con la direcci
 \subsection{Recursos hardware}
 
 \begin{itemize}
- \item \textbf{Equipo de desarrollo}: la máquina de desarrollo (Ryzen 9 7900X, RTX 4080) con Debian 13 (Trixie) y un portátil MacBook Pro M4, ambos utilizados para el desarrollo de los componentes del sistema (backend, frontend, scripts de datos, etc.) y para la ejecución de los distintos contenedores Docker.
- \item \textbf{GPU para entrenamiento}: El modelo BERT requiere para su entrenamiento el acceso a una GPU con soporte CUDA. Se utiliza la máquina de desarrollo mencionada. El entrenamiento se ejecuta en un entorno dockerizado sobre GPU local; la ejecución en la nube sería una alternativa que no se ha probado. En CPU, el entrenamiento puede tardar entre 12 y 24 horas según el número de épocas; en GPU (en este caso RTX 4080 o equivalente), entre 30 minutos y 2 horas por ejecución.
+ \item \textbf{Equipos informáticos}: la máquina de desarrollo (Ryzen 9 7900X, RTX 4080) con Ubuntu 26.04 LTS y un portátil MacBook Pro M4, ambos utilizados para el desarrollo de los componentes del sistema (backend, frontend, scripts de datos, etc.) y para la ejecución de los distintos contenedores Docker.
+ \item \textbf{GPU para entrenamiento}: El modelo BERT requiere para su entrenamiento el acceso a una GPU con soporte CUDA. Se utiliza la máquina de desarrollo mencionada. El entrenamiento se ejecuta en un entorno dockerizado sobre GPU local; la ejecución en la nube sería una alternativa que no se ha probado. En CPU, el entrenamiento tardaría entre 12 y 24 horas según el número de épocas (estimación, no medida); en GPU (RTX 4080), entre 1,7 y 134 minutos por ejecución (mediana de 24 minutos, sin contar el preentrenamiento), según \texttt{training\_runs.csv}.
  \item \textbf{Espacio en disco}: El corpus de CodiEsp y los artefactos del modelo entrenado requieren aproximadamente 5\,GB de almacenamiento; se dispondrá de al menos 200\,GB para garantizar espacio suficiente para logs, checkpoints y otros archivos temporales.
 \end{itemize}
 
@@ -44,7 +44,7 @@ Las herramientas y tecnologías empleadas en el proyecto se agrupan en las sigui
 \textbf{Entorno de desarrollo:}
 \begin{itemize}[noitemsep]
  \item Visual Studio Code y Spacemacs como editores principales.
- \item Docker para la ejecución de los contenedores en Debian y macOS.
+ \item Docker para la ejecución de los contenedores en Ubuntu y macOS.
  \item Jupyter Notebook para el desarrollo interactivo de los experimentos de entrenamiento y análisis de datos.
  \item Make para la automatización de tareas comunes (entrenamiento, pruebas, generación de documentación).
  \item Chromium y Postman para la prueba manual de la API REST.
@@ -81,8 +81,8 @@ Las herramientas y tecnologías empleadas en el proyecto se agrupan en las sigui
 \textbf{Infraestructura:}
 \begin{itemize}[noitemsep]
  \item Docker Compose para la orquestación de los contenedores en desarrollo.
- \item Mailpit como servidor SMTP de captura de email en el entorno local.
- \item GitHub Packages para el alojamiento de la imagen Docker del motor de inferencia.
+ \item Mailpit como servidor SMTP de captura de correo electrónico en el entorno local.
+ \item GitHub Container Registry como caché de construcción de las imágenes en el CI.
  \item Docker Compose y Traefik (proxy inverso para la gestión de rutas) para el entorno de despliegue, publicado con un túnel de Cloudflare desde la propia estación de trabajo.
  \item Prometheus y Grafana para la monitorización del rendimiento y la salud del sistema desplegado.
  \item Sentry, un servicio externo (SaaS), para la gestión de errores y excepciones del sistema desplegado.
@@ -96,7 +96,7 @@ El repositorio Git del proyecto~\cite{cie10repo2026} sigue el esquema de ramas h
 
 Al tratarse de un proyecto unipersonal, la integración de las ramas de trabajo se realiza mediante \textbf{fast-forward merge}, sin \emph{pull requests} ni \emph{merge commits}. Este flujo simplificado es apropiado para un único desarrollador por varias razones: el historial resultante es lineal y fácil de leer (\texttt{git log} muestra los cambios en orden cronológico sin bifurcaciones artificiales), se evita el ruido de los commits de fusión automáticos (\texttt{Merge branch 'feature/X' into main}) que no aportan información, y la revisión de código, necesaria en equipos para coordinar el trabajo, se realiza directamente durante el desarrollo. El uso de \emph{pull requests} en un proyecto unipersonal añadiría fricción sin beneficio real, ya que su función principal es facilitar la revisión entre pares, el control de acceso a la rama principal y la discusión asíncrona en equipos distribuidos.
 
-Los mensajes de commit siguen el estándar \emph{Conventional Commits}~\cite{conventionalcommits2024}, validado automáticamente mediante el \emph{hook} de pre-commit de Husky y commitlint. Este estándar impone un formato estructurado (\texttt{tipo(ámbito): descripción}) que facilita la lectura del historial y la generación automática de notas de versión.
+Los mensajes de commit siguen el estándar \emph{Conventional Commits}~\cite{conventionalcommits2024}, validado automáticamente mediante el \emph{hook} \texttt{commit-msg} de Husky y commitlint. Este estándar impone un formato estructurado (\texttt{tipo(ámbito): descripción}) que facilita la lectura del historial y la generación automática de notas de versión.
 
 \subsection{Integración continua}
 
@@ -110,7 +110,7 @@ La calidad del código se procura mediante varios mecanismos complementarios:
  \item \textbf{Pruebas automáticas}: La creación de la suite ExUnit para el backend (con informe de cobertura generado por excoveralls) y Vitest para el frontend.
  \item \textbf{Linting}: El uso y configuración de linters específicos para cada lenguaje (ESLint para TypeScript, Ruff para Python, Credo para Elixir) con reglas adaptadas al estilo del proyecto.
  \item \textbf{Revisión de código}: Al tratarse de un proyecto unipersonal, el código se revisa mediante la lectura sistemática antes de cada \emph{commit} significativo y mediante las comprobaciones automáticas del CI. La memoria, en cambio, se revisa además con una herramienta de apoyo basada en un asistente de IA (capítulo~\ref{cap:Conclusiones}).
- \item \textbf{Separación de entornos}: El uso de stubs y mocks para el motor de inferencia (\texttt{ai\_engine\_mock}) permite desarrollar y evaluar el estado, tanto del backend como del frontend, sin necesidad del modelo BERT entrenado, evitando dependencias que dificulten las pruebas de integración.
+ \item \textbf{Separación de entornos}: El uso de stubs y \emph{mocks} (objetos simulados) para el motor de inferencia (\texttt{ai\_engine\_mock}) permite desarrollar y evaluar el estado, tanto del backend como del frontend, sin necesidad del modelo BERT entrenado, evitando dependencias que dificulten las pruebas de integración.
  \item \textbf{Métricas de entrenamiento}: El proceso de entrenamiento registra las métricas de validación en cada época y genera curvas de aprendizaje, lo que permite detectar sobreajuste o problemas de convergencia de forma inmediata para actuar en consecuencia (ajuste de hiperparámetros, cambio de modelo base, etc.).
 \end{itemize}
 
@@ -124,7 +124,7 @@ Tareas completadas:
 \begin{itemize}[noitemsep]
  \item Descarga del corpus CodiEsp (diagnósticos, procedimientos y variante extendida).
  \item Desarrollo del script de \emph{scraping} sobre el portal eCIE-maps para obtener el catálogo CIE-10-ES.
- \item Análisis estadístico del corpus: Distribución de longitudes, frecuencia de códigos, desequilibrio de clases, \emph{stop-words} y lematización.
+ \item Análisis estadístico del corpus: Distribución de longitudes, frecuencia de códigos, desequilibrio de clases, palabras vacías y lematización.
  \item Análisis estadístico del catálogo CIE-10-ES: Cobertura, distribución por capítulos y uso de vocabulario médico específico.
  \item Generación de los ficheros CSV de entrenamiento, validación y prueba.
  \item Aumentación del corpus CodiEsp mediante retrotraducción con tres pivotes (EN, DE, FR) usando Azure Translator: cada pivote genera 500 paráfrasis adicionales que, sumadas a los 500 documentos originales, cuadruplican el corpus hasta 2.000 documentos (500 originales + 500 EN + 500 DE + 500 FR). La aumentación se evaluó y se descartó porque empeoró el resultado (Anexo~\ref{cap:AnexoL}).
@@ -138,7 +138,7 @@ Tareas completadas:
  \item Implementación del clasificador plano multilabel basado en un modelo clínico preentrenado BERT.
  \item Configuración del pipeline de entrenamiento (función de pérdida, optimizador, \emph{scheduler}).
  \item Implementación del clasificador de diccionario como \emph{baseline}.
- \item Entrenamiento y selección del mejor \emph{checkpoint} por F1-micro en validación.
+ \item Entrenamiento y selección del mejor \emph{checkpoint} por F1-micro en validación (por MAP en el modelo servido).
  \item Evaluación sobre el conjunto de prueba con métricas de precisión, recall y F1.
 \end{itemize}
 
@@ -147,8 +147,8 @@ Tareas completadas:
 Tareas completadas:
 \begin{itemize}[noitemsep]
  \item Implementación del servicio FastAPI y su entorno.
- \item Endpoints \texttt{POST /predict} y \texttt{GET /}.
- \item Desarrollo de un servicio mock para la ejecución de pruebas en entornos CI y el desarrollo de los otros componentes, sin necesidad de GPU.
+ \item Endpoints básicos \texttt{POST /predict} y \texttt{GET /}; los definitivos figuran en el Anexo~\ref{cap:AnexoM}.
+ \item Desarrollo de un servicio \emph{mock} para la ejecución de pruebas en entornos CI y el desarrollo de los otros componentes, sin necesidad de GPU.
  \item Dockerización del servicio con imagen base optimizada para PyTorch.
 \end{itemize}
 
@@ -157,7 +157,7 @@ Tareas completadas:
 Tareas completadas:
 \begin{itemize}[noitemsep]
  \item Preparación del entorno y las diferentes herramientas (\emph{linting}, análisis estático)
- \item Sistema de autenticación con registro, confirmación por email e inicio de sesión con un token Bearer.
+ \item Sistema de autenticación con registro, confirmación por correo electrónico e inicio de sesión con un token Bearer.
  \item Arquitectura CQRS/Event Sourcing con Commanded y PostgreSQL como \emph{event store}.
  \item Canal WebSocket para comunicación en tiempo real con el frontend.
  \item Pipeline de análisis para la recepción del informe médico, la llamada al AI Engine y el almacenamiento de los resultados.
@@ -281,7 +281,7 @@ La tabla~\ref{tab:riesgos} recoge los principales riesgos identificados, su prob
 \hline
 Rendimiento insuficiente del modelo sobre CodiEsp & Media & Alto & Evaluación temprana sobre el conjunto de validación; posibilidad de cambiar el modelo base o ajustar hiperparámetros. \\
 \hline
-Conjuntos de datos con muy pocos ejemplos para ciertos códigos (desequilibrio de clases) & Alta & Medio & Análisis previo de la distribución; ponderación de clases en la función de pérdida y técnicas de muestreo. \\
+Conjuntos de datos con muy pocos ejemplos para ciertos códigos (desequilibrio de clases) & Alta & Medio & Análisis previo de la distribución; ponderación de clases en la función de pérdida. \\
 Coste computacional excesivo de entrenamiento sin GPU & Alta & Medio & Configuración Docker con soporte GPU; los entornos en la nube serían una alternativa que no se ha probado. \\
 \hline
 Cambios en la API del portal eCIE-maps que rompan el \emph{scraping} & Baja & Medio & Los CSV ya generados se almacenan en el repositorio; el \emph{scraping} es una fase de adquisición puntual, no continua. \\
@@ -293,4 +293,4 @@ Indisponibilidad del corpus CodiEsp & Baja & Alto & Copia local de los datos inc
 \label{tab:riesgos}
 \end{table}
 
-De los riesgos identificados, los dos que mayor atención requieren durante el desarrollo son el rendimiento del modelo y el desequilibrio de clases. El primero porque condiciona directamente la utilidad del sistema: un modelo que no supere los \emph{baselines} descritos en la literatura no aporta valor frente a las soluciones existentes. El segundo porque es una característica inherente a cualquier corpus de diagnósticos clínicos reales, donde la distribución de frecuencias sigue una ley de potencia: un pequeño conjunto de códigos de enfermedades comunes acapara la mayoría de los ejemplos de entrenamiento, mientras que los códigos de enfermedades raras o procedimientos poco frecuentes cuentan con muy pocos ejemplos. Este desequilibrio puede llevar a que el modelo aprenda a predecir siempre los códigos más frecuentes y a ignorar sistemáticamente los menos comunes, lo que penaliza las métricas macro y degrada la utilidad clínica del sistema para los casos atípicos. La ponderación de clases en la función de pérdida y el análisis previo de la distribución del corpus son las medidas de mitigación más directas para este riesgo.
+De los riesgos identificados, los dos que mayor atención requieren durante el desarrollo son el rendimiento del modelo y el desequilibrio de clases. El primero porque condiciona directamente la utilidad del sistema. El criterio de éxito no era superar a los mejores sistemas publicados, sino situarse dentro del rango de resultados de la comparativa CodiEsp-D (Tabla~\ref{tab:codiesp-comparativa}) y declarar con honestidad en qué puesto queda. El segundo porque es una característica inherente a cualquier corpus de diagnósticos clínicos reales, donde la distribución de frecuencias sigue una ley de potencia: un pequeño conjunto de códigos de enfermedades comunes acapara la mayoría de los ejemplos de entrenamiento, mientras que los códigos de enfermedades raras o procedimientos poco frecuentes cuentan con muy pocos ejemplos. Este desequilibrio puede llevar a que el modelo aprenda a predecir siempre los códigos más frecuentes y a ignorar sistemáticamente los menos comunes, lo que penaliza las métricas macro y degrada la utilidad clínica del sistema para los casos atípicos. La ponderación de clases en la función de pérdida y el análisis previo de la distribución del corpus son las medidas de mitigación más directas para este riesgo.

@@ -29,7 +29,7 @@ La especificación completa de la API está disponible a través de la interfaz 
 
 \subsection{Autenticación}
 
-Los endpoints de registro, inicio de sesión, confirmación de email, cambio de idioma y derechos del usuario sobre sus datos (exportación y borrado de la cuenta, RGPD) se listan en la Tabla~\ref{tab:api-auth}. Las tablas de este anexo cubren todas las rutas bajo \texttt{/api} definidas en \texttt{router.ex}, salvo la especificación OpenAPI (\texttt{GET /api/openapi}) y el backoffice de administración (rutas \texttt{/admin}, interfaz LiveView), que no forman parte del contrato con el frontend. Los endpoints de registro y de inicio de sesión (y la confirmación) pasan por un limitador de peticiones propio (10 por IP cada 60 segundos).
+Los endpoints de registro, inicio de sesión, confirmación del correo electrónico, cambio de idioma y derechos del usuario sobre sus datos (exportación y borrado de la cuenta, RGPD) se listan en la Tabla~\ref{tab:api-auth}. Las tablas de este anexo cubren todas las rutas bajo \texttt{/api} definidas en \texttt{router.ex}, salvo la especificación OpenAPI (\texttt{GET /api/openapi}) y el backoffice de administración (rutas \texttt{/admin}, interfaz LiveView), que no forman parte del contrato con el frontend. Los endpoints de registro y de inicio de sesión (y la confirmación) pasan por un limitador de peticiones propio (10 por IP cada 60 segundos).
 
 \begin{table}[H]
 \centering
@@ -39,9 +39,9 @@ Los endpoints de registro, inicio de sesión, confirmación de email, cambio de 
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
-POST & \texttt{/auth/register} & Registra un nuevo usuario. Envía email de confirmación. \\
+POST & \texttt{/auth/register} & Registra un nuevo usuario. Envía un correo de confirmación. \\
 POST & \texttt{/auth/login} & Autentica al usuario; devuelve \texttt{\{user, token\}}. \\
-GET & \texttt{/auth/confirm/:token} & Confirma el email del usuario a partir del enlace recibido. \\
+GET & \texttt{/auth/confirm/:token} & Confirma el correo electrónico del usuario a partir del enlace recibido. \\
 PUT & \texttt{/users/locale} & Actualiza el idioma preferido del usuario. \emph{Protegido.} \\
 GET & \texttt{/users/export} & Descarga en JSON los datos del usuario y sus conversaciones (RGPD, art.~20). \emph{Protegido.} \\
 DELETE & \texttt{/users/account} & Elimina la cuenta y todos sus datos (RGPD, art.~17). \emph{Protegido.} \\
@@ -63,8 +63,8 @@ El detalle de los endpoints para listar, archivar, restaurar y purgar conversaci
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
-GET & \texttt{/conversations?\allowbreak{}user\_id=<uuid>} & Lista conversaciones activas del usuario. \emph{Protegido.} \\
-GET & \texttt{/conversations/trash?\allowbreak{}user\_id=<uuid>} & Lista conversaciones en papelera. \emph{Protegido.} \\
+GET & \texttt{/conversations?\allowbreak{}user\_id=<uuid>} & Lista las conversaciones activas del usuario autenticado; si se indica \texttt{user\_id} y no es el suyo, responde 403. \emph{Protegido.} \\
+GET & \texttt{/conversations/trash?\allowbreak{}user\_id=<uuid>} & Lista las conversaciones en papelera del usuario autenticado, con la misma comprobación. \emph{Protegido.} \\
 DELETE & \texttt{/conversations/:id} & Borrado lógico (soft delete). \emph{Protegido.} \\
 PUT & \texttt{/conversations/\allowbreak{}:id/restore} & Restaura conversación de la papelera. \emph{Protegido.} \\
 DELETE & \texttt{/conversations/\allowbreak{}:id/purge} & Borrado permanente e irreversible (sección~\ref{sec:rgpd}). \emph{Protegido.} \\
@@ -117,7 +117,7 @@ El único endpoint de internacionalización aparece en la Tabla~\ref{tab:api-i18
 \centering
 \caption{Endpoints de internacionalización (públicos).}
 \label{tab:api-i18n}
-\begin{tabular}{llP{7cm}}
+\begin{tabular}{l@{\hspace{1.5em}}l@{\hspace{1.5em}}P{6cm}}
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
@@ -144,7 +144,7 @@ El frontend envía siete tipos de mensajes al canal (Tabla~\ref{tab:ws-in}). El 
 \hline
 \textbf{Evento} & \textbf{Datos} & \textbf{Efecto} \\
 \hline
-\texttt{join} &  n/d & Une al cliente al canal; devuelve el historial de la conversación. \\
+\texttt{join} & ninguno & Une al cliente al canal; devuelve el historial de la conversación. \\
 \texttt{send\_message} & \texttt{\{content: string\}} & Guarda el mensaje y lo difunde al canal. \\
 \texttt{analyze\_report}& \texttt{\{report\_text: string\}} & Persiste el informe y lanza la tarea asíncrona de análisis IA. \\
 \texttt{validate\_code} & \texttt{\{code\_id, cie10\_code\}} & Emite el comando \texttt{ValidateCode} al agregado. \\
@@ -159,11 +159,12 @@ El frontend envía siete tipos de mensajes al canal (Tabla~\ref{tab:ws-in}). El 
 
 Los mensajes que el backend emite hacia el cliente se listan en la Tabla~\ref{tab:ws-out}.
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Mensajes emitidos por el backend hacia el cliente WebSocket.}
 \label{tab:ws-out}
-\begin{tabular}{lP{4.2cm}P{4.7cm}}
+\small
+\begin{tabular}{lP{4.6cm}P{4.6cm}}
 \hline
 \textbf{Evento} & \textbf{Datos principales} & \textbf{Cuándo se emite} \\
 \hline
@@ -205,7 +206,7 @@ La especificación de los \emph{endpoints} del motor de IA está disponible a tr
 }
 \end{verbatim}
 
-Ambos campos son opcionales: por defecto \texttt{engine} vale \texttt{\textquotedbl{}bert\textquotedbl{}} e \texttt{include\_triggers} vale \texttt{false}.
+Ambos campos son opcionales: por defecto \texttt{engine} vale \texttt{\textquotedbl{}fused\textquotedbl{}} (\texttt{\textquotedbl{}bert\textquotedbl{}} si el diccionario no está cargado) e \texttt{include\_triggers} vale \texttt{false}.
 
 \begin{description}
  \item[Respuesta] Objeto JSON con el campo \texttt{cards}, que contiene una única tarjeta de tipo \texttt{codes} con la lista de códigos predichos (cada uno con su descripción, confianza y términos que lo motivan). El resumen del informe se genera de forma independiente mediante \texttt{POST /summarize/stream}. El esquema completo de la petición y la respuesta se detalla en el Anexo~\ref{cap:AnexoM}.
@@ -236,4 +237,4 @@ Permite al backend verificar que el motor de IA está disponible y que el modelo
 
 \section{Mecanismo de resiliencia}
 
-Si la llamada al motor de IA tiene éxito pero el despacho del comando \texttt{ReceiveAIPrediction} mediante Commanded falla, el backend dispone de un mecanismo de escritura directa en base de datos (\texttt{persist\_cards\_direct/3} y \texttt{persist\_predicted\_codes\_direct/2}) que persiste igualmente las tarjetas y los códigos predichos. Esto permite que el usuario reciba una respuesta aunque el \emph{event store} experimente un problema transitorio.
+El canal escribe las tarjetas y los códigos predichos directamente en las tablas de lectura (\texttt{persist\_cards\_direct/3} y \texttt{persist\_predicted\_codes\_direct/2}) para poder emitirlos al cliente en el acto, y despacha además el comando \texttt{ReceiveAIPrediction}, cuyo evento registra el informe, el motor y la versión del modelo. El proyector de ese evento no materializa nada: es solo el registro auditable. Si el despacho falla, el usuario recibe igualmente la respuesta, pero la predicción no queda en el registro de eventos.

@@ -40,8 +40,10 @@
 \AtBeginDocument{\renewcommand{\_}{\textunderscore\allowbreak{}}}
 \emergencystretch=3em
 \usepackage{needspace}
+\usepackage{calc}
+\hyphenation{instancias jerárquico referencia}
 \SetKwInOut{KwIn}{Entrada}
-\SetKwInOut{KwOut}{Salida}
+\SetKwInOut{KwOut}{\makebox[\widthof{Entrada}][l]{Salida}}
 \SetKw{Return}{devolver}
 \SetKwFor{ForEach}{para cada}{hacer}{fin}
 \SetKwIF{If}{ElseIf}{Else}{si}{entonces}{si no, si}{si no}{fin}

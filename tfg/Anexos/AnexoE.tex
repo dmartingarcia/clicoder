@@ -27,7 +27,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 
 \section{ADR-02: Patrón CQRS y Event Sourcing}
 
-\textbf{Contexto.} El sistema gestiona un flujo de trabajo clínico sensible: cada predicción de código, validación o rechazo tiene implicaciones en la facturación hospitalaria. Se requiere trazabilidad completa de quién hizo qué y cuándo.
+\textbf{Contexto.} El sistema gestiona un flujo de trabajo clínico sensible: cada predicción de código, validación o rechazo tiene implicaciones en la facturación hospitalaria. Se requiere trazabilidad de las acciones (quién hizo qué y cuándo); el contenido de los informes, datos sensibles bajo el RGPD, no se registra en los eventos.
 
 \textbf{Decisión.} Se implementa CQRS (\emph{Command Query Responsibility Segregation}) con Event Sourcing mediante la biblioteca Commanded~\cite{commanded2024}.
 
@@ -35,7 +35,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 \begin{itemize}
     \item El \emph{event store} actúa como registro de auditoría inmutable: cada acción del sistema queda registrada como un evento con su marca temporal, lo que satisface los requisitos de trazabilidad clínica.
     \item La separación entre modelo de escritura (comandos + eventos) y modelo de lectura (proyecciones) permite optimizar cada lado de forma independiente. Las proyecciones PostgreSQL están desnormalizadas para lecturas rápidas.
-    \item El \emph{replay} de eventos permite reconstruir el estado del sistema en cualquier punto temporal, lo que facilita la depuración y la auditoría.
+    \item El \emph{replay} de eventos permite reconstruir la secuencia de acciones del sistema en cualquier punto temporal, lo que facilita la depuración y la auditoría; no reconstruye el texto de los informes, que por el derecho de supresión no se almacena en los eventos (sección~\ref{sec:rgpd}).
     \item Commanded integra el ciclo de vida completo: despachador de comandos, agregados, manejadores de eventos y proyectores, con soporte para sagas (\emph{process managers}).
 \end{itemize}
 
@@ -66,7 +66,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
     \item Reducción de la complejidad operacional: un único sistema de base de datos para administrar, monitorizar y respaldar.
     \item Commanded para Elixir tiene soporte nativo y maduro para PostgreSQL como \emph{event store}.
     \item PostgreSQL admite tipos JSON, útiles para el contenido de eventos y tarjetas. En la implementación actual, el contenido de las tarjetas (\texttt{analysis\_cards.content}) se guarda como texto con JSON serializado, sin esquema fijo en la base de datos, lo que facilita la evolución del formato de respuesta del motor de IA sin migraciones.
-    \item Las transacciones ACID de PostgreSQL ofrecen la coherencia entre la escritura del evento y la actualización de la proyección en operaciones que requieren atomicidad.
+    \item Las transacciones ACID de PostgreSQL ofrecen coherencia dentro de cada una de las dos bases de datos; la escritura del evento y la de la proyección ocurren en bases distintas y no comparten transacción.
 \end{itemize}
 
 \section{ADR-05: Clasificador plano (\emph{flat}) frente a clasificador jerárquico}

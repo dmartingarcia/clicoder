@@ -53,12 +53,12 @@ La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de las 62
 8 & mmBERT & 809 & 20 & 0{,}150 & Mejor mmBERT \\
 9 & RigoBERTa-Clinical & 809 & 20 & 0{,}320 & Cambio de modelo (+113\% sobre mmBERT) \\
 18 & RigoBERTa-Clinical & 809 & 133 & 0{,}430 & Mejor con 809 códigos \\
-21 & RigoBERTa-Clinical & 1767 & 79 & 0{,}327 & Expansión a espacio completo \\
-27 & RigoBERTa-Clinical & 1767 & 60 & 0{,}470 & Introducción descongelación prog. \\
-39 & RigoBERTa-Clinical & 1767 & 96 & 0{,}481 & Ajuste umbral y \emph{pos\_weight} \\
-44 & RigoBERTa-Clinical & 1767 & 150 & 0{,}489 & Configuración 32b de referencia \\
-55 & RigoBERTa-Clinical & 1767 & 150 & 0{,}4945 & Referencia de evaluación: \texttt{20260530T030233Z} (paso 36) \\
-67 & RigoBERTa-Clinical & 1767 & 112 & 0{,}5028 & Mejor ejecución registrada hasta la fecha \\
+21 & RigoBERTa-Clinical & 1.767 & 79 & 0{,}327 & Expansión a espacio completo \\
+27 & RigoBERTa-Clinical & 1.767 & 60 & 0{,}470 & Introducción descongelación prog. \\
+39 & RigoBERTa-Clinical & 1.767 & 96 & 0{,}481 & Ajuste umbral y \emph{pos\_weight} \\
+44 & RigoBERTa-Clinical & 1.767 & 150 & 0{,}489 & Configuración 32b de referencia \\
+55 & RigoBERTa-Clinical & 1.767 & 150 & 0{,}4945 & Referencia de evaluación: \texttt{20260530T030233Z} (paso 36) \\
+67 & RigoBERTa-Clinical & 1.767 & 112 & 0{,}5028 & Mejor ejecución registrada hasta la fecha \\
 \hline
 \end{tabular}
 \end{table}
@@ -164,7 +164,7 @@ La lección no es que la destilación no funcione, sino que no funciona \emph{en
 \subsection{Alinear la pérdida con la métrica}
 \label{sec:anexoF-alineacion}
 
-Los experimentos anteriores comparten un supuesto que conviene revisar: todos ajustan el proceso de entrenamiento (qué \emph{checkpoint} se elige, cómo se pondera cada clase, con qué semilla se arranca) manteniendo intacta la función de pérdida. Y esa función es una entropía cruzada binaria que trata cada uno de los 1767 códigos como un problema independiente: optimiza que la probabilidad de cada código esté bien calibrada por separado. El MAP mide algo distinto, que los códigos correctos de un informe queden por encima de los incorrectos \emph{de ese mismo informe}. Un ajuste de hiperparámetros difícilmente puede corregir esa desalineación, porque el objetivo que se minimiza sigue siendo otro. A esto se suma el diagnóstico acumulado en las secciones anteriores: el ruido entre semillas idénticas (en torno a 1~pp sobre el conjunto de prueba, según la estimación con réplicas de la subsección~\ref{sec:anexoF-distribuciones}) es del orden del efecto de cualquier cambio de hiperparámetro ensayado, y lo que más ha movido el MAP hasta ahora (promediar varias ejecuciones, $+4{,}36$~pp sobre el paso~36 con cinco ejecuciones) es inviable en producción por coste de inferencia.
+Los experimentos anteriores comparten un supuesto que conviene revisar: todos ajustan el proceso de entrenamiento (qué \emph{checkpoint} se elige, cómo se pondera cada clase, con qué semilla se arranca) manteniendo intacta la función de pérdida. Y esa función es una entropía cruzada binaria que trata cada uno de los 1.767 códigos como un problema independiente: optimiza que la probabilidad de cada código esté bien calibrada por separado. El MAP mide algo distinto, que los códigos correctos de un informe queden por encima de los incorrectos \emph{de ese mismo informe}. Un ajuste de hiperparámetros difícilmente puede corregir esa desalineación, porque el objetivo que se minimiza sigue siendo otro. A esto se suma el diagnóstico acumulado en las secciones anteriores: el ruido entre semillas idénticas (en torno a 1~pp sobre el conjunto de prueba, según la estimación con réplicas de la subsección~\ref{sec:anexoF-distribuciones}) es del orden del efecto de cualquier cambio de hiperparámetro ensayado, y lo que más ha movido el MAP hasta ahora (promediar varias ejecuciones, $+4{,}36$~pp sobre el paso~36 con cinco ejecuciones) es inviable en producción por coste de inferencia.
 
 De ahí salen tres ejecuciones, cada una atacando uno de esos tres diagnósticos. Todas parten de la configuración de producción y modifican un solo elemento, de forma que sus efectos sean atribuibles por separado, y ninguna altera el coste de inferencia: los tres cambios viven exclusivamente en el entrenamiento.
 
@@ -194,7 +194,7 @@ mínimo cuando todos los códigos correctos de un documento superan a todos los 
 
 \subsubsection*{Ejecución 40c: R-Drop}
 
-\textbf{Diagnóstico que ataca.} La escasez de datos: 500 documentos para 1767 códigos, la mayoría de ellos con menos de tres ejemplos positivos.
+\textbf{Diagnóstico que ataca.} La escasez de datos: 500 documentos para 1.767 códigos, la mayoría de ellos con menos de tres ejemplos positivos.
 
 \textbf{Mecanismo.} Cada informe se procesa dos veces con máscaras de \emph{dropout} distintas y se penaliza la divergencia entre ambas salidas~\cite{wu2021rdrop}. Es regularización que no consume etiquetas: aprovecha los documentos disponibles sin depender de cuántos positivos tenga cada código. La divergencia se promedia sobre las clases en lugar de sumarse, lo que la deja tres órdenes de magnitud por debajo de la convención habitual; $\alpha=5$ se fijó con la misma ejecución de prueba, para que la regularización pese en torno a una cuarta parte de la entropía cruzada.
 
@@ -247,7 +247,7 @@ Las dos primeras ejecuciones de continuación (41a y 41b) separan la variabilida
 
 \begin{table}[h]
 \centering
-\caption{Ejecuciones de continuación de 40a: MAP por documento sobre el gold completo. El rango de control es el mismo de la Tabla~\ref{tab:map-paso40}. Todas las cifras de 41a y 41b proceden de \texttt{model/\allowbreak eval\_paso41.json}; la misma ejecución 41b da 0,4535 en \texttt{model/\allowbreak eval\_paso41a.json}, la pasada que usan las Tablas~\ref{tab:map-distribuciones} y~\ref{tab:map-fusion}. Generada con \texttt{python3 ensemble\_eval.py} (sin objetivo de \texttt{make}).}
+\caption{Ejecuciones de continuación de 40a: MAP por documento sobre el gold completo. El rango de control es el mismo de la Tabla~\ref{tab:map-paso40}. Todas las cifras de 41a y 41b proceden de \texttt{model/\allowbreak eval\_paso41.json}; la misma ejecución 41b da 0,4535 en \texttt{model/\allowbreak eval\_paso41b.json}, la pasada que usan las Tablas~\ref{tab:map-distribuciones} y~\ref{tab:map-fusion}. Generada con \texttt{python3 ensemble\_eval.py} (sin objetivo de \texttt{make}).}
 \label{tab:map-paso41}
 \begin{tabular}{P{5.2cm}ccc}
 \hline
@@ -278,7 +278,7 @@ Al construir el grupo de control apareció un error que arrastraban las seccione
 
 \begin{table}[h]
 \centering
-\caption{MAP por documento sobre el conjunto de prueba (gold completo): réplicas de la configuración de producción frente a ZLPR con selección por MAP. Control: 37ctrl, 38b y 38c de \texttt{model/\allowbreak ensemble\_eval5.json} y las réplicas 303 y 404 de \texttt{model/\allowbreak eval\_ctrl.json}. ZLPR con selección por MAP: 41b de \texttt{model/\allowbreak eval\_paso41a.json}, 41c de \texttt{model/\allowbreak eval\_paso41c.json} y las semillas 101 y 202 de \texttt{model/\allowbreak eval\_paso42.json}. Estadísticos calculados con \texttt{python3 compare\_runs.py} (sin objetivo de \texttt{make}).}
+\caption{MAP por documento sobre el conjunto de prueba (gold completo): réplicas de la configuración de producción frente a ZLPR con selección por MAP. Control: 37ctrl, 38b y 38c de \texttt{model/\allowbreak ensemble\_eval5.json} y las réplicas 303 y 404 de \texttt{model/\allowbreak eval\_ctrl.json}. ZLPR con selección por MAP: 41b de \texttt{model/\allowbreak eval\_paso41b.json}, 41c de \texttt{model/\allowbreak eval\_paso41c.json} y las semillas 101 y 202 de \texttt{model/\allowbreak eval\_paso42.json}. Estadísticos calculados con \texttt{python3 compare\_runs.py} (sin objetivo de \texttt{make}).}
 \label{tab:map-distribuciones}
 \begin{tabular}{lcccc}
 \hline
@@ -310,7 +310,7 @@ con $\beta$ ajustado exclusivamente sobre validación. El barrido se extendió h
 \begin{table}[h]
 \centering
 \small
-\caption[Todas las configuraciones de los dos motores, medidas sobre el conjunto de prueba y en el mismo espacio de 1.767 códigos completos]{Todas las configuraciones de los dos motores, medidas sobre el conjunto de prueba y en el mismo espacio de 1.767 códigos completos. El umbral de decisión de cada configuración de diccionario/fusión se ajusta sobre validación y se aplica sin retocar a prueba; las filas \texttt{both} no lo optimizan, porque concatenan lo que cada motor ya decide con su propio umbral de producción (nota al pie). Las filas del modelo desplegado y del diccionario proceden de \texttt{model/\allowbreak comparativa\_motores.json}, generado con \texttt{make ai-motores} (\texttt{ai\_engine/\allowbreak motores\_eval.py}, precisión completa); el barrido de $\beta$, de \texttt{model/\allowbreak fusion\_sweep.json} (misma orden). El modelo del paso~36 viene de otra pasada, en precisión reducida (nota al pie).}
+\caption[Todas las configuraciones de los dos motores, medidas sobre el conjunto de prueba y en el mismo espacio de 1.767 códigos completos]{Todas las configuraciones de los dos motores, medidas sobre el conjunto de prueba y en el mismo espacio de 1.767 códigos completos. El umbral de decisión de cada configuración de diccionario/fusión se ajusta sobre validación y se aplica sin retocar a prueba; las filas \texttt{both} no lo optimizan, porque concatenan lo que cada motor ya decide con su propio umbral de producción (nota al pie). Las filas del modelo desplegado y del diccionario proceden de \texttt{model/\allowbreak comparativa\_motores.json}, generado con \texttt{make ai-comparativa-motores} (\texttt{ai\_engine/\allowbreak motores\_eval.py}, precisión completa); el barrido de $\beta$, de \texttt{model/\allowbreak fusion\_sweep.json} (misma orden). Las filas del modelo del paso~36 proceden de \texttt{model/\allowbreak comparativa\_motores\_paso36.json}, generado con el mismo guion y el mismo \emph{checkpoint} (nota al pie).}
 \label{tab:map-fusion}
 \begin{tabular}{P{6.4cm}rrrr}
 \hline
@@ -318,9 +318,9 @@ con $\beta$ ajustado exclusivamente sobre validación. El barrido se extendió h
 \hline
 Diccionario solo & 0{,}1452 & 0{,}188 & 0{,}791 & 0{,}304 \\
 \hline
-Modelo del paso~36 solo & 0{,}4342 & 0{,}522 & 0{,}457 & 0{,}487 \\
-\quad + diccionario concatenado (\texttt{both}) & no aplica & 0{,}184 & 0{,}841 & 0{,}302 \\
-\quad + diccionario fusionado & \textbf{0{,}5446} & 0{,}640 & 0{,}560 & \textbf{0{,}597} \\
+Modelo del paso~36 solo & 0{,}4372 & 0{,}517 & 0{,}461 & 0{,}487 \\
+\quad + diccionario concatenado (\texttt{both}) & no aplica & 0{,}167 & 0{,}859 & 0{,}280 \\
+\quad + diccionario fusionado & \textbf{0{,}5468} & 0{,}633 & 0{,}571 & \textbf{0{,}600} \\
 \hline
 Modelo desplegado (\texttt{zlpr-map}) solo & 0{,}4539 & 0{,}552 & 0{,}452 & 0{,}497 \\
 \quad + diccionario concatenado (\texttt{both})$^{\dagger}$ & no aplica & 0{,}171 & 0{,}851 & 0{,}285 \\
@@ -329,7 +329,7 @@ Modelo desplegado (\texttt{zlpr-map}) solo & 0{,}4539 & 0{,}552 & 0{,}452 & 0{,}
 \end{tabular}
 
 \vspace{2mm}
-{\footnotesize $^{\dagger}$ Fila del modelo desplegado, generada con \texttt{make ai-motores} (\texttt{ai\_engine/motores\_eval.py}), que concatena las predicciones de cada motor con su propio umbral de producción (clasificador: 0,2; diccionario: cualquier bloque con un patrón que haga match) y queda en \texttt{model/comparativa\_motores.json} (\texttt{ambos\_concatenado}). Las filas del modelo del paso~36 son una medición anterior a este guion: solo su MAP (0,4342 y 0,5446) y la fila \emph{solo} (de \texttt{eval\_paso40.json}) constan en ficheros del repositorio, de modo que sus filas \texttt{both} y fusionada, salvo el MAP, no se han podido reproducir con la misma herramienta.}
+{\footnotesize $^{\dagger}$ Fila del modelo desplegado, generada con \texttt{make ai-comparativa-motores} (\texttt{ai\_engine/motores\_eval.py}), que concatena las predicciones de cada motor con su propio umbral de producción (clasificador: 0,2; diccionario: cualquier bloque con un patrón que haga match) y queda en \texttt{model/comparativa\_motores.json} (\texttt{ambos\_concatenado}). Las filas del modelo del paso~36 salen de la misma herramienta con ese \emph{checkpoint}, con \texttt{make ai-comparativa-motores MODEL\_FILE=classifier.pt THRESHOLDS\_FILE=thresholds.json SUFIJO=\_paso36}, y quedan en \texttt{model/\allowbreak comparativa\_motores\_paso36.json}; la fusión usa el umbral elegido en validación (2,753), por lo que su MAP (0,5468) difiere ligeramente del 0,5449 de \texttt{models.json}, que emplea el umbral de configuración (2,9).}
 \end{table}
 
 La tabla contiene tres lecturas que conviene separar.
@@ -338,7 +338,7 @@ La tabla contiene tres lecturas que conviene separar.
 
 \textbf{La concatenación de ambos motores, que es lo que el sistema ofrecía como modo \texttt{both}, empeora a los dos.} Con el modelo desplegado su F1 de 0{,}285 queda por debajo del modelo solo (0{,}497) y del diccionario solo en el espacio de esta tabla (0{,}304), y con el del paso~36 es de 0{,}302 frente a 0{,}487. Unir los conjuntos predichos hereda los falsos positivos de ambos sin ningún criterio para arbitrar entre ellos: con el modelo desplegado el \emph{recall} sube a 0{,}851 y la precisión se desploma a 0{,}171. Tampoco admite MAP, porque dos listas concatenadas no definen una ordenación única. El modo existía para que el cliente viera el origen de cada predicción, no como sistema de combinación, y esta medición desaconseja usarlo como tal.
 
-\textbf{La fusión de puntuaciones sí combina.} Con el modelo del paso~36 sube el MAP en 11{,}0~pp (de 0{,}4342 a 0{,}5446) y el F1 en 11{,}0~pp (de 0{,}487 a 0{,}597); con el modelo desplegado, en 9{,}97~pp de MAP (de 0{,}4539 a 0{,}5536, los «casi diez puntos» que cita el capítulo de desarrollo) y en 11{,}3~pp de F1 (de 0{,}497 a 0{,}610). En ambos casos mejora \emph{a la vez} precisión y \emph{recall}, que es la señal de que está arbitrando entre las dos fuentes en lugar de acumularlas. La diferencia con la concatenación no está en la información disponible, que es idéntica, sino en combinarla antes de decidir y no después.
+\textbf{La fusión de puntuaciones sí combina.} Con el modelo del paso~36 sube el MAP en 11{,}0~pp (de 0{,}4372 a 0{,}5468) y el F1 en 11{,}3~pp (de 0{,}487 a 0{,}600); con el modelo desplegado, en 9{,}97~pp de MAP (de 0{,}4539 a 0{,}5536, los «casi diez puntos» que cita el capítulo de desarrollo) y en 11{,}3~pp de F1 (de 0{,}497 a 0{,}610). En ambos casos mejora \emph{a la vez} precisión y \emph{recall}, que es la señal de que está arbitrando entre las dos fuentes en lugar de acumularlas. La diferencia con la concatenación no está en la información disponible, que es idéntica, sino en combinarla antes de decidir y no después.
 
 El barrido de $\beta$ del modelo desplegado queda en \texttt{model/\allowbreak fusion\_sweep.json} y las cifras de sus filas en \texttt{model/\allowbreak comparativa\_motores.json}, de modo que son reproducibles sin repetir la inferencia. Proceden del guion en precisión completa, igual que las cifras titulares del capítulo de desarrollo; las filas del paso~36 proceden de la pasada en precisión reducida, y su MAP (0{,}4342) difiere en 0{,}31~pp del titular de aquel paso (0{,}4373, \texttt{eval\_test.py}). Esa diferencia es pequeña frente a los 10 pp de la fusión, pero no frente a las de aproximadamente 1~pp de la serie anterior, y por eso las comparaciones de esas diferencias se hacen siempre dentro de una misma pasada.
 
@@ -378,10 +378,10 @@ La corrección del calendario no fue suficiente: el modelo sigue por debajo de l
 
 \paragraph{Pasos 34a y 34b: batch efectivo 64, preentrenamiento reducido y mayor margen de entrenamiento.}
 \begin{sloppypar}
-Descartada la aumentación como vía principal, se diseñó un experimento que acumulaba todos los ajustes identificados a lo largo del proceso pero que aún no habían aparecido juntos: reducción del pre-entrenamiento a 3 épocas (lo suficiente para saturar la pérdida sin memorizar), mayor batch efectivo (\texttt{GRAD\_ACCUM=8}, batch~64 frente al batch~32 de 32b), más margen de entrenamiento (\texttt{EPOCHS=200}, \texttt{PATIENCE=25}) y una tasa de aprendizaje ligeramente más alta para las capas descongeladas (\texttt{UNFREEZE\_LR\_RATIO=0.2}, es decir $2\times10^{-5}$ frente a $10^{-5}$). Las dos ejecuciones se lanzaron en paralelo sobre la misma GPU: el paso~34a sobre los 500 documentos originales (sin aumentación) y el paso~34b sobre el corpus aumentado de 2000, cada uno con \texttt{UNFREEZE\_EVERY} ajustado a su tamaño de corpus (30 y 8 respectivamente).
+Descartada la aumentación como vía principal, se diseñó un experimento que acumulaba todos los ajustes identificados a lo largo del proceso pero que aún no habían aparecido juntos: reducción del pre-entrenamiento a 3 épocas (lo suficiente para saturar la pérdida sin memorizar), mayor batch efectivo (\texttt{GRAD\_ACCUM=8}, batch~64 frente al batch~32 de 32b), más margen de entrenamiento (\texttt{EPOCHS=200}, \texttt{PATIENCE=25}) y una tasa de aprendizaje ligeramente más alta para las capas descongeladas (\texttt{UNFREEZE\_LR\_RATIO=0.2}, es decir $2\times10^{-5}$ frente a $10^{-5}$). Las dos ejecuciones se lanzaron en paralelo sobre la misma GPU: el paso~34a sobre los 500 documentos originales (sin aumentación) y el paso~34b sobre el corpus aumentado de 2.000, cada uno con \texttt{UNFREEZE\_EVERY} ajustado a su tamaño de corpus (30 y 8 respectivamente).
 \end{sloppypar}
 
-Los resultados fueron F1-micro~\textbf{0,4568} para 34a y \textbf{0,4518} para 34b, ambos por debajo de 32b. La causa de la regresión en 34a es \texttt{GRAD\_ACCUM=8}: con \texttt{BATCH\_SIZE=8} y 500 documentos hay 63~mini-batches por época, de modo que la acumulación doble deja solo $\lfloor 63/8 \rfloor = 7$ actualizaciones del optimizador por época. Con esa cadencia tan baja el planificador de la tasa de aprendizaje de tipo \emph{plateau} apenas recibe señal de mejora, el calentamiento consume proporcionalmente más del presupuesto de entrenamiento y el descongelado progresivo opera con gradientes menos informativos. El paso~32b, con \texttt{GRAD\_ACCUM=4}, mantenía $\lfloor 63/4 \rfloor = 15$ actualizaciones del optimizador por época, el doble de granularidad que 34a, y ese ajuste resultó ser más crítico de lo esperado. El paso~34b arrastra además el problema de distribución ya identificado en los pasos 33 y 33b.
+Los resultados fueron F1-micro~\textbf{0,4568} para 34a y \textbf{0,4518} para 34b, ambos por debajo de 32b. La causa de la regresión en 34a es \texttt{GRAD\_ACCUM=8}: con \texttt{BATCH\_SIZE=8} y 500 documentos hay 63~mini-lotes por época, de modo que la acumulación doble deja solo $\lfloor 63/8 \rfloor = 7$ actualizaciones del optimizador por época. Con esa cadencia tan baja el planificador de la tasa de aprendizaje de tipo \emph{plateau} apenas recibe señal de mejora, el calentamiento consume proporcionalmente más del presupuesto de entrenamiento y el descongelado progresivo opera con gradientes menos informativos. El paso~32b, con \texttt{GRAD\_ACCUM=4}, mantenía $\lfloor 63/4 \rfloor = 15$ actualizaciones del optimizador por época, el doble de granularidad que 34a, y ese ajuste resultó ser más crítico de lo esperado. El paso~34b arrastra además el problema de distribución ya identificado en los pasos 33 y 33b.
 
 \begin{sloppypar}
 La lección transversal de los pasos 33--34 es que los hiperparámetros de calendario (\texttt{GRAD\_ACCUM}, \texttt{UNFREEZE\_EVERY}, \texttt{PATIENCE}) no son independientes del tamaño del corpus: todos ellos fijan una cadencia de señal por época y deben calibrarse conjuntamente cada vez que cambia el número de muestras.

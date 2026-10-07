@@ -11,16 +11,18 @@ Se emplea \texttt{IIC/RigoBERTa-Clinical}~\cite{garciasubies2026rigobertaclinica
 
 La Tabla~\ref{tab:hyperparams} recoge la configuración del modelo desplegado (\texttt{20260921T091919Z}, \texttt{zlpr-map}), que reproduce la del paso~36 (\texttt{20260530T030233Z}) salvo en la pérdida de ordenación, el criterio de selección del \emph{checkpoint}, el umbral y el número de épocas ejecutadas.
 
-\begin{table}[!t]
-\centering
-\caption{Hiperparámetros del modelo desplegado (\texttt{zlpr-map}). Transcritos de la fila de \texttt{20260921T091919Z} de \texttt{ai\_engine/\allowbreak model/\allowbreak training\_runs.csv}, que escribe \texttt{ai\_engine/\allowbreak train.py} al terminar cada entrenamiento (sin objetivo de \texttt{make} propio; se lanza con \texttt{make ai-train-gpu}). Los valores coinciden con los de la fila.}
-\label{tab:hyperparams}
-\begin{tabular}{llP{6.6cm}}
+\begin{longtable}{llP{6.6cm}}
+\caption{Hiperparámetros del modelo desplegado (\texttt{zlpr-map}). Transcritos de la fila de \texttt{20260921T091919Z} de \texttt{ai\_engine/\allowbreak model/\allowbreak training\_runs.csv}, que escribe \texttt{ai\_engine/\allowbreak train.py} al terminar cada entrenamiento (sin objetivo de \texttt{make} propio; se lanza con \texttt{make ai-train-gpu}). Los valores coinciden con los de la fila.}\label{tab:hyperparams}\\
 \hline
 \textbf{Parámetro} & \textbf{Valor} & \textbf{Descripción} \\
 \hline
+\endfirsthead
+\hline
+\textbf{Parámetro} & \textbf{Valor} & \textbf{Descripción} \\
+\hline
+\endhead
 \multicolumn{3}{l}{\textit{Datos}} \\
-\texttt{num\_codes}      & 1767          & Clases (códigos CIE-10 completos presentes en CodiEsp) \\
+\texttt{num\_codes}      & 1.767          & Clases (códigos CIE-10 completos presentes en CodiEsp) \\
 \texttt{max\_length}     & 512           & Longitud máxima de secuencia en \emph{tokens} \\
 \texttt{full\_codes}     & \texttt{True} & Granularidad completa (p.\,ej.\ \texttt{E11.9}), sin truncar a 3~caracteres \\
 \hline
@@ -48,7 +50,7 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración del modelo desplegado (\
 \texttt{select\_metric}  & \texttt{map\_macro} & Criterio de selección del \emph{checkpoint} (el paso~36 usaba el F1 de validación) \\
 \texttt{pos\_weight\_cap} & 10{,}0      & Peso máximo de la clase positiva (desequilibrio) \\
 \hline
-\multicolumn{3}{l}{\textit{Batch}} \\
+\multicolumn{3}{l}{\textit{Lote}} \\
 \texttt{batch\_size}     & 8             & Tamaño de mini-lote en GPU \\
 \texttt{grad\_accum}     & 4             & Pasos de acumulación de gradiente \\
 \texttt{effective\_batch}& 32            & Tamaño de lote efectivo resultante \\
@@ -56,8 +58,7 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración del modelo desplegado (\
 \multicolumn{3}{l}{\textit{Inferencia}} \\
 \texttt{threshold}       & 0{,}2         & Umbral de probabilidad para activar una etiqueta (el de la fila, no el configurado en el entrenamiento, 0,3) \\
 \hline
-\end{tabular}
-\end{table}
+\end{longtable}
 
 \section{Resultados de evaluación}
 
@@ -107,10 +108,10 @@ Paso 36 & Modelo desplegado hasta esta selección & 0{,}437 & 0{,}545 & 0{,}488$
 \end{tabular}
 
 \vspace{2mm}
-{\footnotesize El modelo desplegado gana en las tres métricas, que es la condición que se impuso para promocionarlo: una mejora de MAP a costa del F1 habría mejorado un titular y empeorado otro. $^{*}$~0,4882 en \texttt{eval\_cand\_produccion.json}; el capítulo de desarrollo cita 0,489, de una evaluación anterior (0,4887) del mismo modelo.}
+{\footnotesize El modelo desplegado gana en las tres métricas, que es la condición que se impuso para promocionarlo: una mejora de MAP a costa del F1 habría mejorado un titular y empeorado otro. $^{*}$~0,4882 en \texttt{eval\_cand\_paso36.json}; el capítulo de desarrollo cita 0,489, de una evaluación anterior (0,4887) del mismo modelo.}
 \end{table}
 
-\paragraph{Procedencia de las cifras.} Las métricas de esta tabla proceden de \texttt{eval\_test.py} en precisión completa. Otras tablas de la memoria (Anexo~\ref{cap:AnexoF} y \texttt{models.json}) usan \texttt{ensemble\_eval.py} en precisión reducida, que permite comparar muchas ejecuciones en una pasada: el MAP de prueba de \texttt{zlpr-map} es 0,4539 en la primera y 0,4535 en la segunda, y el del paso~36, 0,4373 frente a 0,4342. La diferencia está en la tercera cifra decimal y no altera ninguna conclusión, pero conviene declararla para que no se interprete como una inconsistencia.
+\paragraph{Procedencia de las cifras.} Las métricas de esta tabla proceden de \texttt{eval\_test.py} en precisión completa. Otras tablas de la memoria (Anexo~\ref{cap:AnexoF} y, para \texttt{zlpr-map}, \texttt{eval\_paso41b.json}) usan \texttt{ensemble\_eval.py} en precisión reducida, que permite comparar muchas ejecuciones en una pasada: el MAP de prueba de \texttt{zlpr-map} es 0,4539 en la primera y 0,4535 en la segunda, y el del paso~36, 0,4373 frente a 0,4342. La diferencia está en la tercera cifra decimal y no altera ninguna conclusión, pero conviene declararla para que no se interprete como una inconsistencia.
 
 La diferencia entre F1-micro y F1-macro refleja el fuerte desequilibrio de clases del corpus: el modelo rinde bien sobre los códigos frecuentes, pero tiene dificultades con los poco representados. Este es un límite inherente al corpus de entrenamiento de 500 documentos, donde la mayoría de los 1.767 códigos aparecen menos de cinco veces.
 
@@ -130,8 +131,8 @@ La Figura~\ref{fig:epochs-graph} muestra la evolución del F1-micro de validaci�
 Los artefactos de los modelos se encuentran en \texttt{ai\_engine/model/}:
 
 \begin{description}
-    \item[\texttt{classifier.pt}] Pesos del modelo PyTorch del paso~36 (ejecución del paso~36, conservado como modelo \texttt{produccion} en \texttt{models.json}; el desplegado es \texttt{zlpr-map.pt}).
-    \item[\texttt{zlpr-map.pt}, \texttt{zlpr-map.thresholds.json}] Pesos y umbrales por clase del modelo desplegado (los umbrales por clase no se usan en inferencia, que emplea el umbral global).
+    \item[\texttt{classifier.pt}] Pesos del modelo PyTorch del paso~36 (ejecución del paso~36, conservado como modelo \texttt{paso36} en \texttt{models.json}; el desplegado es \texttt{zlpr-map.pt}).
+    \item[\texttt{zlpr-map.pt}, \texttt{zlpr-map.thresholds.json}] Pesos y umbrales por clase del modelo desplegado (los umbrales por clase solo se aplican si \texttt{config.json} activa \texttt{use\_\allowbreak{}per\_\allowbreak{}class\_\allowbreak{}thresholds}; por defecto la inferencia emplea el umbral global).
     \item[\texttt{thresholds.json}] Umbrales por clase del paso~36.
     \item[\texttt{config.json}] Metadatos del modelo activo: nombre, fichero de pesos, fichero de umbrales y parámetros de inferencia.
 \end{description}

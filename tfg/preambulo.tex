@@ -58,23 +58,23 @@ Este documento se distribuye con licencia CC BY-NC-SA 4.0. El texto completo de 
 % -------------------------
 % EDITAR: Resumen en idioma pral. default=spanish (máx. 1 pág.)
 \begin{resumenPral}[spanish]{\titulo} % Se pasa el idioma (opcional) y título
-La codificación manual de diagnósticos clínicos en CIE-10 es lenta (14 minutos por caso) y compleja (68.069 códigos)~\cite{sanidad2016cie10,gogorcena2017cie10es}, con el agravante de requerir personal especializado para evitar errores de clasificación. Este trabajo propone un sistema automático de codificación mediante modelos BERT multilabel para narrativas clínicas en español.
+La codificación manual de diagnósticos clínicos en CIE-10 es lenta (14 minutos por caso) y compleja (69.823 códigos)~\cite{sanidad2016cie10,gogorcena2017cie10es}, con el agravante de requerir personal especializado para evitar errores de clasificación. Este trabajo propone un sistema automático de codificación mediante modelos BERT multilabel para narrativas clínicas en español.
 
 El sistema debe resolver tres problemas concretos:
 
 \begin{itemize}
  \item Procesamiento de lenguaje clínico no estructurado.
  \item Asignación simultánea de códigos jerárquicamente relacionados.
- \item Generación de una puntuación de confianza que permita auditar cada predicción, en línea con los requisitos de trazabilidad del Reglamento UE 2017/745~\cite{eu2017745} aplicable al software de apoyo a la decisión clínica.
+ \item Generación de una puntuación de confianza que permita auditar cada predicción, en la línea de la trazabilidad que el Reglamento (UE) 2017/745~\cite{eu2017745} exige a los productos sanitarios.
 \end{itemize}
 
 La metodología combina preentrenamiento débil sobre las descripciones del catálogo CIE-10-ES con ajuste fino (\emph{fine-tuning}) de RigoBERTa-Clinical~\cite{garciasubies2026rigobertaclinical} mediante \emph{Binary Cross-Entropy} ponderada con un término de ordenación (ZLPR), y calibración del umbral de decisión sobre validación en el corpus CodiEsp~\cite{miranda2020}.
 
-Sobre el conjunto de prueba, el clasificador solo (la configuración servida por defecto) obtiene un F1-micro de 0,495 y un F1-macro de 0,108, medidos sobre los pares anotados cuyo código está en el vocabulario de 1.767 códigos del modelo (0,444 de F1-micro sobre todos los pares anotados), y un MAP por documento de 0,454 sobre el conjunto completo de referencia (0,555 restringido a ese vocabulario, no comparable con el \emph{benchmark}).
+Sobre el conjunto de prueba, el sistema sirve por defecto el \textbf{modo fusionado}, que combina el clasificador con un diccionario de patrones clínicos en un único \emph{ranking} y alcanza un MAP por documento de \textbf{0,554}, segundo puesto del \emph{benchmark} CodiEsp, solo por detrás de IXA-AAA, con un F1-micro de 0,610 sobre los pares anotados cuyo código está en el vocabulario de 1.767 códigos del modelo (unos 0,55 sobre todos los pares anotados). El clasificador solo obtiene un F1-micro de 0,495 y un F1-macro de 0,108 en ese vocabulario (0,444 sobre todos los pares anotados) y un MAP de 0,454, penúltimo de diez (0,555 restringido a ese vocabulario, no comparable con el \emph{benchmark}).
 
-En \textbf{modo fusionado}, implementado pero no servido por defecto, la combinación con un diccionario de patrones clínicos eleva el MAP a \textbf{0,554}, segundo puesto del \emph{benchmark} CodiEsp. El modelo propone los códigos de un informe en 0,331~s de mediana en CPU, como apoyo y no como sustituto del codificador clínico: con ese F1-micro la propuesta exige revisión humana completa, que la confianza (relativa, no calibrada) y la ordenación pueden orientar; el ahorro de tiempo no se ha medido.
+El clasificador propone los códigos de un informe en 0,331~s de mediana en CPU (el diccionario que añade el modo fusionado no se ha medido por separado), como apoyo y no como sustituto del codificador clínico: con estos valores de F1 la propuesta exige revisión humana completa, que la confianza (relativa, no calibrada) y la ordenación pueden orientar; el ahorro de tiempo no se ha medido.
 
-El trabajo muestra la viabilidad técnica de un asistente de codificación basado en \emph{transformers} mediante un \emph{pipeline} reproducible (clasificador, API REST e interfaz web de demostración), sin evaluación en un entorno clínico real. Sus limitaciones (el clasificador solo cubre 1.767 de los 68.069 códigos, con poca cobertura de los poco frecuentes, y no hay datos de hospitales reales) marcan el trabajo futuro.
+El trabajo muestra la viabilidad técnica de un asistente de codificación basado en \emph{transformers} mediante un \emph{pipeline} reproducible (clasificador, API REST e interfaz web de demostración), sin evaluación en un entorno clínico real. Sus limitaciones (el clasificador solo cubre 1.767 de los 69.823 códigos, con poca cobertura de los poco frecuentes, y no hay datos de hospitales reales) marcan el trabajo futuro.
 \end{resumenPral}
 
 
@@ -83,23 +83,23 @@ El trabajo muestra la viabilidad técnica de un asistente de codificación basad
 \begin{resumenAlt}[english]{\tituloCortoAlt}
 % Se pasa el idioma (opcional) y título
 \renewcommand{\keywordslist}{ICD-10, BERT, multilabel classification, clinical coding, natural language processing}
-Manual coding of clinical diagnoses in ICD-10 is slow (14 minutes per case) and complex (68,069 codes)~\cite{sanidad2016cie10,gogorcena2017cie10es}, compounded by the need for specialist staff to avoid classification errors. This work proposes an automatic coding system based on multilabel BERT models for clinical narratives in Spanish.
+Manual coding of clinical diagnoses in ICD-10 is slow (14 minutes per case) and complex (69,823 codes)~\cite{sanidad2016cie10,gogorcena2017cie10es}, compounded by the need for specialist staff to avoid classification errors. This work proposes an automatic coding system based on multilabel BERT models for clinical narratives in Spanish.
 
 The system must solve three concrete problems:
 
 \begin{itemize}
  \item Processing of unstructured clinical language.
  \item Simultaneous assignment of hierarchically related codes.
- \item Generation of a confidence score that allows each prediction to be audited, in line with the traceability requirements of EU Regulation 2017/745~\cite{eu2017745} applicable to clinical decision-support software.
+ \item Generation of a confidence score that allows each prediction to be audited, along the lines of the traceability that Regulation (EU) 2017/745~\cite{eu2017745} requires of medical devices.
 \end{itemize}
 
 The methodology combines weakly supervised pre-training on the official ICD-10-ES catalogue descriptions with fine-tuning of RigoBERTa-Clinical~\cite{garciasubies2026rigobertaclinical} using weighted Binary Cross-Entropy loss with a ranking term (ZLPR) to address class imbalance, and calibration of the decision threshold on the CodiEsp validation set~\cite{miranda2020}.
 
-On the test set, the classifier alone, which is the configuration the system serves by default, achieves an F1-micro of 0.495 and an F1-macro of 0.108, measured over the annotated pairs whose code belongs to the 1,767-code vocabulary the model can predict (over all annotated pairs the F1-micro is 0.444, since the model cannot hit codes it did not see in training), and a per-document MAP of 0.454 over the full reference set (0.555 when restricted to that vocabulary, a figure not comparable with the benchmark).
+On the test set, the system serves \textbf{fused mode} by default, which combines the classifier with a dictionary of clinical patterns into a single ranking and reaches a per-document MAP of \textbf{0.554}, second in the CodiEsp benchmark, behind only IXA-AAA, with an F1-micro of 0.610 over the annotated pairs whose code belongs to the 1,767-code vocabulary the model can predict (about 0.55 over all annotated pairs). The classifier alone achieves an F1-micro of 0.495 and an F1-macro of 0.108 on that vocabulary (0.444 over all annotated pairs) and a MAP of 0.454, ninth of ten (0.555 restricted to that vocabulary, a figure not comparable with the benchmark).
 
-In \textbf{fused mode}, which is implemented but not served by default, combining the classifier with a dictionary of clinical patterns into a single ranking, the MAP rises to \textbf{0.554}, ranking second in the CodiEsp benchmark, behind only IXA-AAA. The model proposes the codes for a report in a median of 0.331~s on CPU, as decision support for the clinical coder rather than a replacement: at that F1-micro, the output requires full human review. The per-code confidence score (relative, not calibrated) and the ranking of the list can steer that review towards the most likely proposals; the time saving this would bring has not been measured.
+The classifier proposes the codes for a report in a median of 0.331~s on CPU (the dictionary that fused mode adds has not been timed separately), as decision support for the clinical coder rather than a replacement: at these F1 values, the output requires full human review. The per-code confidence score (relative, not calibrated) and the ranking of the list can steer that review towards the most likely proposals; the time saving this would bring has not been measured.
 
-The work shows the technical feasibility of a transformer-based clinical coding assistant through a reproducible pipeline (classifier, REST API and demonstration web interface); it has not been evaluated in a real clinical setting, nor its effect on coding time. The identified limitations (reduced coverage of rare codes and absence of real hospital data) define the priority lines of future work.
+The work shows the technical feasibility of a transformer-based clinical coding assistant through a reproducible pipeline (classifier, REST API and demonstration web interface); it has not been evaluated in a real clinical setting, nor its effect on coding time. The identified limitations (the classifier covers only 1,767 of the 69,823 codes, with reduced coverage of the rare ones, and there is no real hospital data) define the priority lines of future work.
 \end{resumenAlt}
 
 % Ajuste al idioma pral.

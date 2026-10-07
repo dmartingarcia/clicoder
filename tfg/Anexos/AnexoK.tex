@@ -24,7 +24,7 @@ Los valores por defecto son válidos para un entorno local de desarrollo. El cat
 
 \section{Primera puesta en marcha}
 
-La primera vez es necesario ejecutar dos comandos en orden. El primero prepara el entorno: detiene los servicios previos y elimina sus volúmenes (incluida la base de datos), construye las imágenes Docker, crea y migra las bases de datos y carga los datos iniciales:
+La primera vez es necesario ejecutar dos comandos en orden. El primero prepara el entorno: detiene los servicios previos y elimina sus volúmenes (incluida la base de datos), construye las imágenes Docker, descarga el modelo desde Hugging Face (\texttt{make model-download}, que usa \texttt{HUGGING\_FACE\_HUB\_TOKEN} del \texttt{.env}), crea y migra las bases de datos y carga los datos iniciales y el catálogo CIE-10:
 
 \begin{lstlisting}[language=bash]
 make setup
@@ -38,7 +38,7 @@ make up
 
 \section{Arranque y parada habituales}
 
-A partir de la segunda vez, el ciclo de trabajo diario se reduce a dos comandos:
+A partir de la segunda vez, el ciclo de trabajo diario se reduce a dos comandos (\texttt{make up} detecta la GPU con \texttt{nvidia-smi} y, si no hay, arranca el motor de IA en CPU):
 
 \begin{lstlisting}[language=bash]
 make up # Levanta todos los servicios en segundo plano
@@ -81,20 +81,20 @@ El sistema admite tres modos de ejecución en función de la disponibilidad de h
 \hline
 \textbf{Modo} & \textbf{Comando} & \textbf{Requisito} \\
 \hline
-GPU & \texttt{make up} & GPU NVIDIA + modelo entrenado (preferente, entrenamiento/desarrollo/producción) \\
+GPU & \texttt{make up} (GPU detectada) & GPU NVIDIA + modelo entrenado (preferente, entrenamiento/desarrollo/producción) \\
 CPU & \texttt{make cpu-up} & Modelo entrenado (soporte, cuando no hay GPU disponible) \\
 Mock & \texttt{make mock-up} & Ninguno (respuestas simuladas) \\
 \hline
 \end{tabular}
 \\[4pt]
-{\footnotesize Fuente: objetivos \texttt{up}, \texttt{cpu-up} y \texttt{mock-up} del \texttt{Makefile}.}
+{\footnotesize Fuente: objetivos \texttt{up} (con la GPU detectada), \texttt{cpu-up} y \texttt{mock-up} del \texttt{Makefile}.}
 \end{table}
 
 Cada modo se describe a continuación:
 
 \begin{sloppypar}
 \begin{itemize}
- \item \textbf{GPU} (\texttt{make up}): requiere una GPU NVIDIA con \texttt{nvidia-container-toolkit} y un modelo previamente entrenado montado en \texttt{ai\_engine/model/}. Es el modo preferente siempre que hay GPU disponible, tanto en desarrollo como en producción (\texttt{make deploy GPU=1}, Anexo~\ref{cap:AnexoI}) y durante el entrenamiento, porque ofrece la máxima velocidad de inferencia.
+ \item \textbf{GPU} (\texttt{make up}, con GPU detectada): requiere una GPU NVIDIA con \texttt{nvidia-container-toolkit} y un modelo previamente entrenado montado en \texttt{ai\_engine/model/}. Es el modo preferente siempre que hay GPU disponible, tanto en desarrollo como en producción (\texttt{make deploy GPU=1}, Anexo~\ref{cap:AnexoI}) y durante el entrenamiento, porque ofrece la máxima velocidad de inferencia.
  \item \textbf{CPU} (\texttt{make cpu-up}): carga el modelo real pero realiza la inferencia en CPU. Es el modo de soporte para cuando no hay GPU disponible, sea en desarrollo o en un despliegue sin acelerador (Anexo~\ref{cap:AnexoI}): proponer los códigos cuesta 0{,}331\,s por informe, aunque justificarlos sube a 16{,}2\,s, y de ahí que la atribución se sirva en una petición aparte.
  \item \textbf{Mock} (\texttt{make mock-up}): el motor de IA devuelve respuestas fijas sin cargar ningún modelo. Recomendado para desarrollo del frontend y pruebas funcionales del backend cuando no se dispone de modelo entrenado.
 \end{itemize}
@@ -173,7 +173,7 @@ make ai-train-gpu MAX_LENGTH=512 BATCH_SIZE=8 GRAD_ACCUM=4 \
   RANK_LOSS_WEIGHT=0.1 2>&1 | tee /tmp/train.log
 \end{lstlisting}
 
-El resto de parámetros (\texttt{POS\_WEIGHT\_CAP=10}, \texttt{CHUNK\_OVERLAP=64}, \texttt{ASL\_CLIP=0.05}) coinciden con los valores por defecto del \texttt{Makefile} y de \texttt{train.py} (\texttt{ASL\_CLIP} solo está definido en este último); la ejecución original no fijó semilla, por lo que una repetición no reproduce las métricas al decimal. Este mismo comando, con las variables adicionales que se indiquen (por ejemplo \texttt{TRAIN\_FILE}), es el que se toma como base en el Anexo~\ref{cap:AnexoL}.
+El preentrenamiento con los CSV de la tarea X de CodiEsp es opcional y se activa con \texttt{PRETRAIN\_TASKX=<ruta>}; el comando anterior no lo usa. El resto de parámetros (\texttt{POS\_WEIGHT\_CAP=10}, \texttt{CHUNK\_OVERLAP=64}, \texttt{ASL\_CLIP=0.05}) coinciden con los valores por defecto del \texttt{Makefile} y de \texttt{train.py} (\texttt{ASL\_CLIP} solo está definido en este último); la ejecución original no fijó semilla, por lo que una repetición no reproduce las métricas al decimal. Este mismo comando, con las variables adicionales que se indiquen (por ejemplo \texttt{TRAIN\_FILE}), es el que se toma como base en el Anexo~\ref{cap:AnexoL}.
 
 Cada ejecución guarda un \emph{checkpoint} con el mejor valor de validación de la métrica de selección (\texttt{SELECT\_METRIC}; el comando anterior usa \texttt{map\_macro}), los umbrales por clase optimizados y un registro de métricas por época en \texttt{model/training\_runs.csv}. La ejecución del modelo servido duró 1.409~s (unos 23,5~minutos) en la RTX 4080, y la más larga de las 58 ejecuciones registradas sobre 1.767 códigos, 1,7~horas (columna \texttt{total\_seconds} de \texttt{training\_runs.csv}).
 

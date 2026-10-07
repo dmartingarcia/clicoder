@@ -38,7 +38,7 @@ T-14 & AI Engine & Desarrollo del servicio \emph{mock} para entornos CI y desarr
 T-15 & AI Engine & Dockerización con imagen base optimizada para PyTorch & Media \\
 \hline
 T-16 & Backend & Configuración del entorno y herramientas de calidad (linting, análisis estático) & Alta \\
-T-17 & Backend & Sistema de autenticación: registro, confirmación por email e inicio de sesión & Alta \\
+T-17 & Backend & Sistema de autenticación: registro, confirmación por correo electrónico e inicio de sesión & Alta \\
 T-18 & Backend & Arquitectura CQRS/Event Sourcing con Commanded y PostgreSQL como \emph{event store} & Alta \\
 T-19 & Backend & Canal WebSocket para comunicación en tiempo real con el frontend & Alta \\
 T-20 & Backend & Pipeline de análisis: recepción del informe, llamada al AI Engine y almacenamiento & Alta \\
@@ -57,12 +57,12 @@ T-30 & Frontend & Dockerización del entorno de desarrollo, pruebas y producció
 T-31 & Infraestructura & Configuración de Docker Compose para todos los servicios & Alta \\
 T-32 & Infraestructura & Makefile con objetivos para el ciclo de vida completo del proyecto & Media \\
 T-33 & Infraestructura & Configuración de commitlint y Husky para validación de mensajes de commit & Baja \\
-T-34 & Infraestructura & Workflow de GitHub Actions para integración continua & Media \\
+T-34 & Infraestructura & Flujo de trabajo de GitHub Actions para integración continua & Media \\
 T-35 & Infraestructura & Dockerización del entorno de entrenamiento con soporte CPU y GPU & Alta \\
 T-36 & Infraestructura & Despliegue con Docker Compose y Traefik como proxy inverso, publicado mediante un túnel de Cloudflare & Media \\
 T-37 & Infraestructura & Monitorización con Prometheus y Grafana: el backend expone métricas de latencia HTTP, consultas Ecto y VM BEAM en \texttt{:9568/metrics} mediante \texttt{telemetry\_metrics\_prometheus}; Prometheus recoge las métricas de todos los servicios y Grafana las visualiza con la fuente de datos provisionada automáticamente & Baja \\
 T-38 & Infraestructura & Gestión de errores y excepciones con Sentry: captura del contexto de las peticiones HTTP mediante \texttt{Sentry.PlugContext} en el \emph{endpoint} Phoenix, captura de crashes OTP (GenServer, comandos Commanded) mediante \texttt{Sentry.LoggerHandler}, con traza de pila completa y etiqueta de entorno configurada vía \texttt{SENTRY\_DSN} & Baja \\
-T-47 & Infraestructura & Configuración del servidor de email en producción con registros SPF, DKIM y política DMARC para favorecer la entregabilidad y la autenticidad de los emails transaccionales & Media \\
+T-47 & Infraestructura & Configuración del servidor de correo en producción con registros SPF, DKIM y política DMARC para favorecer la entregabilidad y la autenticidad de los correos transaccionales & Media \\
 \hline
 T-39 & Modelo & Bucle de aprendizaje activo: reentrenamiento incremental con códigos validados por el codificador & Descartada \\
 T-40 & Modelo & Soporte de codificación de procedimientos CIE-10-ES (ICD-10-PCS) además de diagnósticos & Descartada \\

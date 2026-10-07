@@ -16,8 +16,8 @@ El backend Phoenix expone análogamente su documentación interactiva en \texttt
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.9\textwidth, trim=0 330 0 0, clip]{figs/swagger-ui}
-\caption{Swagger UI generada automáticamente por FastAPI (\texttt{/docs}). Captura del motor simulado (\emph{mock}) de las pruebas: muestra cuatro endpoints; la lista completa del motor de IA está en la Tabla~\ref{tab:openapi-endpoints}.}
+\includegraphics[width=0.85\textwidth, trim=20 770 820 40, clip]{figs/swagger-ui}
+\caption{Swagger UI generada automáticamente por FastAPI (\texttt{/docs}). Captura del motor simulado (\emph{mock}) de las pruebas: muestra los cuatro endpoints; la lista completa del motor de IA está en la Tabla~\ref{tab:openapi-endpoints}.}
 \label{fig:swagger}
 \end{figure}
 
@@ -48,8 +48,9 @@ El backend Phoenix expone análogamente su documentación interactiva en \texttt
   "required": ["text"],
   "properties": {
     "text": { "type": "string", "title": "Text" },
-    "engine": { "type": "string", "title": "Engine", "default": "bert",
-      "enum": ["bert", "dict", "both", "fused"] },
+    "engine": { "title": "Engine", "anyOf": [
+      { "type": "string", "enum": ["bert", "dict", "both", "fused"] },
+      { "type": "null" }] },
     "include_triggers": { "type": "boolean", "title": "Include Triggers",
       "default": false }
   }
@@ -109,10 +110,12 @@ Petición:
 \begin{verbatim}
 {
   "text": "<informe clínico en español>",
-  "engine": "bert" // opcional: "bert" (def.), "dict", "both" o "fused"
+  "engine": "bert" // opcional; por defecto "fused"
 }
 \end{verbatim}
 }
+
+El campo \texttt{engine} es opcional: por defecto se usa \texttt{fused} (\texttt{bert} si el diccionario no está cargado), y admite también \texttt{bert}, \texttt{dict} y \texttt{both}.
 
 Respuesta: un objeto con los campos \texttt{cards}, \texttt{timing} (tiempos de la llamada) y \texttt{model\_version}; \texttt{cards} contiene una única tarjeta de tipo \texttt{codes} (el resumen se solicita por separado con \texttt{/summarize/stream}):
 
@@ -124,22 +127,25 @@ Respuesta: un objeto con los campos \texttt{cards}, \texttt{timing} (tiempos de 
       "type": "codes",
       "content": [
         {
-          "code": "E11.9",
-          "description": "Diabetes mellitus tipo 2 sin complicaciones",
-          "reason": "Capítulo IV: confianza 91.0%",
+          "code": "I10",
+          "description": "Hipertensión esencial (primaria)",
+          "reason": "Enfermedades del sistema circulatorio: confianza 91.0%",
           "confidence": 0.91,
-          "relative_confidence": 0.86,
-          "triggers": ["diabetes", "glucosa"],
+          "relative_confidence": 1.0,
+          "triggers": [],
+          "triggers_complete": false,
           "engine": "bert"
         }
       ]
     }
-  ]
+  ],
+  "timing": {"classifier_ms": 331.0, "summarizer_ms": 0, "total_ms": 331.4},
+  "model_version": "IIC/RigoBERTa-Clinical@<huella del fichero de pesos>"
 }
 \end{verbatim}
 }
 
-El campo \texttt{confidence} es la probabilidad bruta de la sigmoide; \texttt{relative\_confidence} es su normalización \emph{min-max} dentro del conjunto devuelto (véase la sección~\ref{sec:confianza-predicciones}); \texttt{triggers} son los términos del informe que motivan la predicción (véase la sección~\ref{sec:explicabilidad}); y \texttt{engine} identifica el motor de origen.
+El campo \texttt{confidence} es la probabilidad bruta de la sigmoide; \texttt{relative\_confidence} es su normalización \emph{min-max} dentro del conjunto devuelto (véase la sección~\ref{sec:confianza-predicciones}); \texttt{triggers} son los términos del informe que motivan la predicción, vacíos salvo que se pida \texttt{include\_triggers} (se obtienen aparte con \texttt{/explain}; véase la sección~\ref{sec:explicabilidad}); con un único código, \texttt{relative\_confidence} vale 1,0; y \texttt{engine} identifica el motor de origen.
 
 \subsection{POST /explain}
 

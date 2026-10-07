@@ -10,7 +10,7 @@ Este trabajo se centra en la codificación automática mediante modelos BERT mul
 La motivación de este trabajo surge de varios problemas concretos:
 \begin{itemize}
 \item La correcta clasificación requiere conocimiento médico especializado, lo que limita la escalabilidad del proceso manual.
-\item La normativa CIE-10 contiene 68.069 códigos posibles, lo que dificulta la tarea de clasificación y eleva el número de errores en el proceso manual.
+\item La normativa CIE-10-ES contiene 69.823 códigos de diagnóstico~\cite{gogorcena2017cie10es}, lo que dificulta la tarea de clasificación y eleva el número de errores en el proceso manual.
 \item Desde el 1 de enero de 2016 la CIE-10-ES es la clasificación de referencia para la codificación clínica en España, como indica el Real Decreto 69/2015~\cite{rd692015}, aunque su adopción obligatoria se ha extendido de forma gradual.
 \item El tiempo medio de codificación de un alta hospitalaria es de 14 minutos, diez más que con la CIE-9, tal y como se indica en el informe de implantación de la CIE-10~\cite{sanidad2016cie10}.
 \end{itemize}
@@ -37,16 +37,16 @@ Los modelos BERT adaptados al dominio clínico, como ClinicalBERT~\cite{alsentze
 
 Este trabajo extiende estos enfoques mediante:
 \begin{enumerate}
-\item Adaptación multilingüe para textos clínicos en español mediante RigoBERTa-Clinical.
-\item Clasificador multilabel plano sobre el espacio completo de códigos CIE-10.
-\item Función de pérdida BCE ponderada por frecuencia inversa de clase, con límite de peso por clase para mitigar el desequilibrio extremo.
+\item Adaptación al dominio clínico en español mediante el ajuste fino de RigoBERTa-Clinical.
+\item Clasificador multilabel plano sobre los 1.767 códigos vistos en el entrenamiento.
+\item Función de pérdida BCE ponderada por frecuencia inversa de clase, con límite de peso por clase para mitigar el desequilibrio extremo, y un término de ordenación (ZLPR).
 \item Preentrenamiento débil sobre las descripciones oficiales del catálogo CIE-10-ES.
 \end{enumerate}
 
 \subsection{Retos pendientes}
 La literatura identifica cuatro desafíos no resueltos:
 \begin{itemize}
-\item \textbf{Clasificación multietiqueta a gran escala}: la CIE-10-ES contiene 68.069 códigos y cada caso recibe varios simultáneamente: en el corpus CodiEsp~\cite{miranda2020}, una media de 11,3 códigos de diagnóstico por informe. Con corpus de unos cientos de informes, la mayoría de los códigos tiene pocos ejemplos o ninguno.
+\item \textbf{Clasificación multietiqueta a gran escala}: la CIE-10-ES contiene 69.823 códigos de diagnóstico~\cite{gogorcena2017cie10es} y cada caso recibe varios simultáneamente: en el corpus CodiEsp~\cite{miranda2020}, una media de 11,3 códigos de diagnóstico por informe. Con corpus de unos cientos de informes, la mayoría de los códigos tiene pocos ejemplos o ninguno.
 \item \textbf{Distribución de los códigos en la codificación}: La distribución de los códigos es muy asimétrica: hay familias de códigos muy frecuentes y otras con presencia casi nula, como las enfermedades raras.
 \item \textbf{Evaluación clínica}: Las métricas tradicionales (F1, precisión) no capturan las consecuencias clínicas de los errores ni el grado de relación entre el código predicho y el correcto. Por ello este trabajo evalúa también la calidad del \emph{ranking} mediante el MAP, sin que ninguna de las dos lecturas refleje el impacto clínico real de un error.
 \item \textbf{Explicabilidad}: Un sistema de apoyo a la codificación como este podría considerarse producto sanitario según el Reglamento UE 2017/745~\cite[Anexo~VIII, regla~11]{eu2017745}, cuya Regla~11 (Anexo~VIII) asigna la clase IIa o superior al software que aporta información para decisiones diagnósticas; no se ha realizado ningún análisis regulatorio que lo confirme. Con esa premisa, el sistema registra de forma inmutable el modelo y la versión empleados en cada predicción y acompaña cada código de una puntuación de confianza relativa, no calibrada, que indica su fortaleza frente a los demás códigos de la misma consulta pero no una probabilidad de acierto.

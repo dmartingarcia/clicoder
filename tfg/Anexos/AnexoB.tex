@@ -37,7 +37,7 @@ El \emph{Compose} base define cinco servicios Docker~\cite{merkel2014docker} y c
 \end{tabular}
 \end{table}
 
-\begin{table}[h]
+\begin{table}[!ht]
 \centering
 \caption{Servicios de apoyo (proxy y monitorización). Fuente: \texttt{docker-compose-proxy.yml} y \texttt{docker-compose.monitoring.yml}.}
 \label{tab:servicios-apoyo}
@@ -67,7 +67,7 @@ El orden de arranque impuesto por las dependencias de Docker Compose es el sigui
 \begin{enumerate}
  \item \textbf{PostgreSQL} (\texttt{db}) arranca primero; expone el puerto 5432 internamente.
  \item \textbf{AI Engine} arranca cuando la base de datos está lista (\texttt{service\_healthy}); carga el modelo en memoria durante el arranque (\textasciitilde{}13\,GB de RAM del sistema en modo CPU).
- \item \textbf{Backend} espera a que \texttt{db} y \texttt{ai\_engine} estén disponibles; ejecuta las migraciones Ecto al arrancar y crea las tablas del \emph{event store} si no existen.
+ \item \textbf{Backend} espera a que \texttt{db} y \texttt{ai\_engine} estén disponibles; arranca el servidor Phoenix; las migraciones Ecto y la creación del \emph{event store} se ejecutan aparte (\texttt{make backend-migrate}, que \texttt{make deploy} invoca, o \texttt{make backend-seed} la primera vez).
  \item \textbf{Frontend} arranca una vez el backend está activo.
  \item \textbf{Mailpit} arranca en paralelo; solo se usa en entornos de desarrollo.
 \end{enumerate}
@@ -77,9 +77,9 @@ El orden de arranque impuesto por las dependencias de Docker Compose es el sigui
 El repositorio incluye tres ficheros de configuración adicional de Docker Compose que adaptan el despliegue al entorno de ejecución:
 
 \begin{description}
- \item[\texttt{docker-compose.gpu.yml}] Configuración por defecto para máquinas con GPU NVIDIA. El servicio \texttt{ai\_engine} arranca con \texttt{DEVICE=cuda} y acceso al \emph{runtime} NVIDIA. Requiere el controlador NVIDIA y el toolkit de contenedores de NVIDIA instalados en el anfitrión. El modelo se carga en VRAM (verificado con una RTX~4080 de 16\,GB), lo que libera la mayor parte de los \textasciitilde{}13\,GB de RAM del sistema que ocuparía en modo CPU. La construcción de la imagen GPU incluye la compilación de flash attention, lo que requiere al menos 32\,GB de RAM durante el proceso de compilación. Tiempo de inferencia: menos de 1 segundo por informe.
+ \item[\texttt{docker-compose.gpu.yml}] Configuración para máquinas con GPU NVIDIA (\texttt{make up} la detecta con \texttt{nvidia-smi} y la usa; \texttt{GPU=0} fuerza la CPU). El servicio \texttt{ai\_engine} arranca con \texttt{DEVICE=cuda} y acceso al \emph{runtime} NVIDIA. Requiere el controlador NVIDIA y el toolkit de contenedores de NVIDIA instalados en el anfitrión. El modelo se carga en VRAM (verificado con una RTX~4080 de 16\,GB), lo que libera la mayor parte de los \textasciitilde{}13\,GB de RAM del sistema que ocuparía en modo CPU. La construcción de la imagen GPU incluye la compilación de flash attention, lo que requiere al menos 32\,GB de RAM durante el proceso de compilación. Tiempo de predicción: 0{,}017\,s por informe de mediana en la RTX~4080 (Tabla~\ref{tab:latencia}).
 
- \item[\texttt{docker-compose.cpu.yml}] Configuración para máquinas sin GPU. Sobreescribe \texttt{DEVICE=cpu} en \texttt{ai\_engine}. El backend de atención cambia automáticamente a SDPA (\emph{Scaled Dot-Product Attention}). Requiere al menos 16\,GB de RAM del sistema; el entorno completo con todos los modelos cargados ocupa aproximadamente 13\,GB. Tiempo de inferencia: menos de 1 segundo por informe en hardware moderno (verificado en Ryzen 7900X y Apple M4).
+ \item[\texttt{docker-compose.cpu.yml}] Configuración para máquinas sin GPU. Sobreescribe \texttt{DEVICE=cpu} en \texttt{ai\_engine}. El backend de atención cambia automáticamente a SDPA (\emph{Scaled Dot-Product Attention}). Requiere al menos 16\,GB de RAM del sistema; el entorno completo con todos los modelos cargados ocupa aproximadamente 13\,GB. Tiempo de predicción: 0{,}331\,s por informe de mediana en un Ryzen 9 7900X (Tabla~\ref{tab:latencia}).
 
  \item[\texttt{docker-compose.mock.yml}] Sustituye el servicio \texttt{ai\_engine} por \texttt{ai\_engine\_mock}, una implementación ligera en FastAPI que devuelve predicciones ficticias sin cargar ningún modelo. Recomendado para el desarrollo del frontend y del backend cuando no se necesita inferencia real.
 \end{description}
@@ -117,7 +117,9 @@ La Tabla~\ref{tab:envvars} recoge las variables de entorno más relevantes del s
 \texttt{AI\_ENGINE\_PORT} & \texttt{8000} & ai\_engine \\
 \texttt{AI\_ENGINE\_URL} & \texttt{http://\allowbreak{}ai\_engine:8000} & backend \\
 \texttt{SUMMARIZER\_MODEL} & \texttt{none} & ai\_engine \\
-\texttt{SUMMARIZER\_MODE} & \texttt{paraphrase} & ai\_engine \\
+\texttt{SUMMARIZER\_MODE} & \texttt{summary} (el Compose no transmite la variable) & ai\_engine \\
+\texttt{AI\_ADMIN\_TOKEN} & (secreto compartido) & backend, ai\_engine \\
+\texttt{TRUST\_PROXY\_HEADERS} & \texttt{true} en producción & backend \\
 \texttt{HF\_TOKEN} & (token HuggingFace) & ai\_engine, training \\
 \hline
 \multicolumn{3}{l}{\textit{Producción y red}} \\
@@ -134,7 +136,7 @@ La Tabla~\ref{tab:envvars} recoge las variables de entorno más relevantes del s
 \texttt{SEED\_ADMIN\_EMAIL} & \texttt{myadminuser@clicoder.app} & backend \\
 \texttt{SEED\_ADMIN\_PASSWORD} & \texttt{password123!} & backend \\
 \hline
-\multicolumn{3}{l}{\textit{Email}} \\
+\multicolumn{3}{l}{\textit{Correo electrónico}} \\
 \texttt{SMTP\_HOST} & \texttt{mailpit} (desarrollo; en despliegue, el servidor SMTP de Mailjet) & backend \\
 \texttt{SMTP\_PORT} & \texttt{1025} (desarrollo) & backend \\
 \texttt{APP\_HOST} & \texttt{localhost} & backend \\
@@ -152,5 +154,5 @@ La Tabla~\ref{tab:envvars} recoge las variables de entorno más relevantes del s
  \item[\texttt{training/}] Entorno de entrenamiento aislado. \texttt{csv\_import\_scripts/} para descarga de datos; \texttt{data\_analysis/} para análisis exploratorio; \texttt{bert-classifier/} para notebooks de entrenamiento.
  \item[\texttt{docker/grafana/}] Configuración de aprovisionamiento de Grafana: paneles de monitorización del sistema (métricas de contenedores, backend y motor de IA) listos para importar automáticamente al arrancar el stack de monitorización.
  \item[\texttt{docker/prometheus/}] Configuración de Prometheus (\texttt{prometheus.yml}): definición de los \emph{targets} de scraping para el backend, el motor de IA, cAdvisor y Node Exporter.
- \item[\texttt{tfg/}] Contiene los archivos del trabajo de fin de grado, incluyendo capítulos, anexos y figuras.
+ \item[\texttt{tfg/}] Capítulos, anexos y figuras de la memoria.
 \end{description}

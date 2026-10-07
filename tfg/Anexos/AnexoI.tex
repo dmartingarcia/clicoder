@@ -5,7 +5,7 @@ Este anexo describe la arquitectura de despliegue del sistema: una estación de 
 
 \section{Motivación y elección de infraestructura}
 
-La elección de una máquina propia frente a proveedores cloud gestionados responde al coste. El motor de IA se beneficia de una GPU, y un nodo con acelerador en Azure o Google Cloud Platform supera los 1.000\,€/mes, cifra que ningún prototipo sin usuarios justifica. La estación de trabajo ya existía como equipo de desarrollo, de modo que alojar en ella el sistema no añade coste: es el mismo AMD Ryzen 9 7900X con una NVIDIA RTX 4080 sobre el que se han hecho todas las mediciones de este trabajo.
+La elección de una máquina propia frente a proveedores de nube gestionados responde al coste. El motor de IA se beneficia de una GPU, y un nodo con acelerador en Azure o Google Cloud Platform supera los 1.000\,€/mes, cifra que ningún prototipo sin usuarios justifica. La estación de trabajo ya existía como equipo de desarrollo, de modo que alojar en ella el sistema no añade coste: es el mismo AMD Ryzen 9 7900X con una NVIDIA RTX 4080 sobre el que se han hecho todas las mediciones de este trabajo.
 
 Que la máquina que sirve sea la misma que mide no basta para que el servicio use el acelerador, y conviene declararlo porque durante buena parte del desarrollo no lo usó. El fichero de superposición compilaba la imagen con CUDA y reservaba la tarjeta, pero no cambiaba la variable \texttt{DEVICE}, que el \texttt{Dockerfile} deja en \texttt{cpu}. El síntoma no era un error sino una lentitud aceptada: el sistema funcionaba y respondía, solo que el ciclo completo costaba unos 16,5\,s en lugar de medio segundo. Al corregirlo aparecieron dos fallos más que solo se manifiestan con la tarjeta visible, ambos descritos en el capítulo de desarrollo.
 
@@ -13,9 +13,9 @@ Usando la GPU, que es como se sirve hoy el motor de IA en esta máquina, el cicl
 
 La simplicidad operativa es el segundo factor. No hay clúster que gestionar, ni \emph{control plane}, ni herramientas adicionales: \texttt{make setup} + \texttt{make deploy} y el sistema está en funcionamiento. El número de piezas que pueden fallar es mínimo.
 
-Publicar una máquina local en Internet exigiría abrir puertos en el router, disponer de dirección estable y exponer la superficie de ataque del propio equipo. Un túnel de Cloudflare evita las tres cosas: el contenedor \texttt{cloudflared} abre una conexión saliente hacia la red de Cloudflare y el tráfico entra por ahí, sin que ningún puerto del equipo quede accesible desde fuera.
+Publicar una máquina local en Internet exigiría abrir puertos en el router, disponer de dirección estable y exponer la superficie de ataque del propio equipo. Un túnel de Cloudflare evita las tres cosas: el contenedor \texttt{cloudflared} abre una conexión saliente hacia la red de Cloudflare y el tráfico entra por ahí, sin necesidad de abrir puertos en el router.
 
-La portabilidad futura no se compromete: todos los servicios están dockerizados y las únicas piezas específicas del entorno son los ficheros de superposición de Docker Compose (\texttt{docker-compose.prod.yml}, \texttt{docker-compose.gpu.yml} y \texttt{docker-compose-proxy.yml}). Si el volumen de usuarios llegara a justificar el coste, la migración a un servidor alojado o a un clúster cloud no requiere cambios en ningún componente de la aplicación. Hoy ese coste no está justificado: el sistema es un prototipo de demostración sin usuarios reales, y pagar por una infraestructura dimensionada para una carga que no existe sería gasto sin contrapartida.
+La portabilidad futura no se compromete: todos los servicios están dockerizados y las únicas piezas específicas del entorno son los ficheros de superposición de Docker Compose (\texttt{docker-compose.prod.yml}, \texttt{docker-compose.gpu.yml} y \texttt{docker-compose-proxy.yml}). Si el volumen de usuarios llegara a justificar el coste, la migración a un servidor alojado o a un clúster en la nube no requiere cambios en ningún componente de la aplicación. Hoy ese coste no está justificado: el sistema es un prototipo de demostración sin usuarios reales, y pagar por una infraestructura dimensionada para una carga que no existe sería gasto sin contrapartida.
 
 \section{Infraestructura}
 
@@ -25,8 +25,8 @@ El servidor es la estación de trabajo de desarrollo (AMD Ryzen 9 7900X, NVIDIA 
     \item \textbf{Sistema operativo}: Ubuntu LTS.
     \item \textbf{Docker Engine}: gestor de contenedores y red.
     \item \textbf{Docker Compose}: orquestación de los servicios de la aplicación.
-    \item \textbf{Traefik v3}: proxy inverso, terminación TLS y enrutamiento por dominio.
-    \item \textbf{cloudflared}: túnel saliente que publica los servicios sin abrir puertos entrantes.
+    \item \textbf{Traefik v3}: proxy inverso y enrutamiento por dominio, con TLS~1.3 en el tramo interno que recibe del túnel, con el certificado autofirmado que Traefik genera por defecto (comprobado con \texttt{openssl s\_client}, y por eso el túnel se configura sin verificar ese certificado); el puerto 80 redirige con un 301 al 443.
+    \item \textbf{cloudflared}: túnel saliente que publica los servicios sin abrir puertos entrantes; en el despliegue de producción ningún servicio de la aplicación publica puerto en el equipo (\texttt{docker compose config} del solapamiento de producción no muestra ninguno), y el motor de IA solo es alcanzable desde la red interna de los contenedores. Además, sus rutas de administración (\texttt{/admin/*}) exigen la cabecera \texttt{X-Admin-Token}, con el valor de \texttt{AI\_ADMIN\_TOKEN}, que el \emph{backoffice} envía y que, si no está definido, hace rechazar toda petición; \texttt{make prod-ports-check} comprueba que la configuración de producción no publica ningún puerto y se ejecuta antes de cada \texttt{make deploy}.
 \end{itemize}
 
 La Figura~\ref{fig:infra-prod} resume la topología resultante, desde la entrada del tráfico por Cloudflare hasta los contenedores de la aplicación.
@@ -44,8 +44,8 @@ Partiendo de un clon del repositorio en la estación de trabajo, el despliegue s
 
 \begin{enumerate}
     \item \textbf{Configuración}: copiar \texttt{.env.example} a \texttt{.env} y editar las credenciales reales (base de datos, SMTP, claves de aplicación, token de HuggingFace, token del túnel).
-    \item \textbf{Setup inicial} (construcción de imágenes, migraciones y seed): \texttt{make setup} (solo la primera vez: detiene los servicios y elimina sus volúmenes, incluida la base de datos)
-    \item \textbf{Despliegue}: \texttt{make deploy}
+    \item \textbf{Preparación inicial} (construcción de imágenes, migraciones y seed): \texttt{make setup} (solo la primera vez: detiene los servicios y elimina sus volúmenes, incluida la base de datos)
+    \item \textbf{Despliegue}: \texttt{make deploy} (el motor de IA se sirve en GPU si se detecta, y con \texttt{TUNNEL=1} se arranca además el túnel de Cloudflare)
 \end{enumerate}
 
 \texttt{make deploy} arranca en orden: la red Docker compartida, Traefik (proxy), el \emph{stack} de monitorización (Prometheus, Grafana y Loki) y los servicios de la aplicación (base de datos, backend, frontend, motor de IA). En entorno de desarrollo el flujo es equivalente pero sin Traefik ni monitorización: \texttt{make setup up}.
@@ -55,6 +55,7 @@ Partiendo de un clon del repositorio en la estación de trabajo, el despliegue s
 
 Traefik se despliega como un servicio Docker independiente definido en \texttt{docker-compose-proxy.yml}. Su configuración es declarativa: cada servicio de la aplicación expone sus rutas mediante etiquetas Docker (\emph{labels}), y Traefik las descubre automáticamente sin necesidad de recargar configuración.
 
+\Needspace{8\baselineskip}
 \begin{lstlisting}[language=bash, caption={Fragmento de configuración de Traefik.}, label=lst:traefik-config]
 # Entrypoints: HTTP (:80) redirige permanentemente a HTTPS (:443)
 # Red Docker: escucha en la red `clicoder` y descubre servicios por labels
@@ -80,7 +81,7 @@ Esta capa de protección es complementaria a Traefik: Cloudflare actúa en el bo
 
 Como alternativa al proxy DNS, el despliegue admite un \textbf{túnel de Cloudflare} (\texttt{cloudflared}), que se activa con \texttt{make start-tunnel} y requiere un \texttt{CLOUDFLARE\_TUNNEL\_TOKEN} en el fichero \texttt{.env}. El contenedor establece una conexión \emph{saliente} y persistente hacia la red de Cloudflare, de modo que el tráfico entrante se entrega a través de ese túnel.
 
-La diferencia operativa es relevante: con el túnel el servidor \textbf{no necesita exponer los puertos 80 y 443}, por lo que la ocultación de la dirección IP deja de depender de la configuración del DNS y pasa a ser una propiedad estructural del despliegue. Reduce así la superficie de ataque directa sobre el servicio. El mismo fichero \texttt{docker-compose-proxy.yml} define además un servicio de \emph{página de mantenimiento} (nginx) que permite servir un aviso estático mientras la aplicación está detenida.
+La diferencia operativa es relevante: con el túnel no hace falta reenviar los puertos 80 y 443 desde el router (Traefik los publica en el equipo, pero el tráfico llega por el túnel), por lo que la ocultación de la dirección IP deja de depender de la configuración del DNS y pasa a ser una propiedad estructural del despliegue. Reduce así la superficie de ataque directa sobre el servicio. El mismo fichero \texttt{docker-compose-proxy.yml} define además un servicio de \emph{página de mantenimiento} (nginx) que permite servir un aviso estático mientras la aplicación está detenida.
 
 \section{Copias de seguridad}
 
@@ -97,25 +98,25 @@ Conviene declarar la limitación: al tratarse de una máquina única, la copia r
 
 \section{Comparativa de costes}
 
-La Tabla~\ref{tab:local-vs-cloud} muestra la diferencia de coste entre el despliegue actual y dos alternativas cloud gestionadas: una con instancia GPU dedicada y otra íntegramente en CPU.
+La Tabla~\ref{tab:local-vs-cloud} muestra la diferencia de coste entre el despliegue actual y dos alternativas gestionadas en la nube: una con instancia GPU dedicada y otra íntegramente en CPU.
 
 \begin{table}[h]
 \centering
-\caption{Comparativa de costes: local frente a cloud gestionado (GCP, región europea, on-demand, junio 2026).}
+\caption{Comparativa de costes: local frente a la nube gestionada (GCP, región europea, on-demand, junio 2026).}
 \label{tab:local-vs-cloud}
 \begin{tabular}{lP{7.4cm}r}
 \hline
-\textbf{Setup} & \textbf{Descripción} & \textbf{Coste aprox.} \\
+\textbf{Escenario} & \textbf{Descripción} & \textbf{Coste aprox.} \\
 \hline
 Local (actual)        & Docker Compose y túnel de Cloudflare sobre equipo propio & $\sim$330\,€/año\footnotemark[5] \\
 \hline
-Cloud con GPU\footnotemark[1]
+Nube con GPU\footnotemark[1]
                       & Nodos CPU (frontend + backend)                & $\sim$140\,€/mes \\
                       & Nodo GPU (motor de IA, 1$\times$ V100)\footnotemark[2] & $\sim$1.950\,€/mes \\
                       & Base de datos gestionada (PostgreSQL)\footnotemark[3] & $\sim$230\,€/mes \\
                       & \textbf{Total estimado}                       & \textbf{$\sim$2.320\,€/mes} \\
 \hline
-Cloud solo CPU        & Nodos CPU (frontend + backend)                & $\sim$140\,€/mes \\
+Nube solo CPU        & Nodos CPU (frontend + backend)                & $\sim$140\,€/mes \\
                       & Nodo CPU para motor de IA (8\,vCPU, 30\,GB)\footnotemark[4] & $\sim$230\,€/mes \\
                       & Base de datos gestionada (PostgreSQL)\footnotemark[3] & $\sim$230\,€/mes \\
                       & \textbf{Total estimado}                       & \textbf{$\sim$600\,€/mes} \\
@@ -128,4 +129,4 @@ Cloud solo CPU        & Nodos CPU (frontend + backend)                & $\sim$14
 \footnotetext[4]{Instancia n1-standard-8 (8\,vCPU, 30\,GB RAM) para alojar el modelo RigoBERTa-Clinical en CPU ($\sim$13\,GB de RAM en inferencia).}
 \footnotetext[5]{Solo consumo eléctrico: el equipo ya existía como estación de desarrollo, de modo que su compra no es un coste imputable al despliegue. Estimado a partir de 250\,W medios continuos y un precio de 0{,}15\,€/kWh. El túnel de Cloudflare se usa en su plan gratuito.}
 
-La GPU no es estrictamente necesaria para proponer códigos: el motor opera igualmente en CPU y la predicción se resuelve por debajo del segundo. Sí lo es para justificarlos sin espera, y de ahí que el diseño desacople la atribución en una petición aparte. Aun renunciando al acelerador, la opción cloud solo en CPU cuesta más de veinte veces al año lo que el despliegue actual, porque las instancias de aplicación son pequeñas pero el modelo exige un nodo con suficiente RAM ($\sim$13\,GB) para cargarse íntegramente. En ambos escenarios cloud el coste está dominado por componentes que en un único equipo se comparten sin sobrecoste. La conclusión no es que el cloud sea mala opción, sino que su coste se justifica con una carga de usuarios que este prototipo todavía no tiene.
+La GPU no es estrictamente necesaria para proponer códigos: el motor opera igualmente en CPU y la predicción se resuelve por debajo del segundo. Sí lo es para justificarlos sin espera, y de ahí que el diseño desacople la atribución en una petición aparte. Aun renunciando al acelerador, la opción en la nube solo con CPU cuesta más de veinte veces al año lo que el despliegue actual, porque las instancias de aplicación son pequeñas pero el modelo exige un nodo con suficiente RAM ($\sim$13\,GB) para cargarse íntegramente. En ambos escenarios en la nube el coste está dominado por componentes que en un único equipo se comparten sin sobrecoste. La conclusión no es que la nube sea mala opción, sino que su coste se justifica con una carga de usuarios que este prototipo todavía no tiene.

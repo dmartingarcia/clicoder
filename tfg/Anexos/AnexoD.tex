@@ -20,7 +20,7 @@ La Figura~\ref{fig:erd-bd} muestra el diagrama entidad-relación de la base de d
 
 Almacena los usuarios registrados en el sistema (Tabla~\ref{tab:users}).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Columnas de la tabla \texttt{users}.}
 \label{tab:users}
@@ -48,7 +48,7 @@ Almacena los usuarios registrados en el sistema (Tabla~\ref{tab:users}).
 
 Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario (Tabla~\ref{tab:conversations}).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Columnas de la tabla \texttt{conversations}.}
 \label{tab:conversations}
@@ -74,7 +74,7 @@ Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario (
 
 Proyección CQRS de los mensajes intercambiados dentro de cada conversación (Tabla~\ref{tab:messages}).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Columnas de la tabla \texttt{messages}.}
 \label{tab:messages}
@@ -101,7 +101,7 @@ Proyección CQRS de los mensajes intercambiados dentro de cada conversación (Ta
 
 Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para cada mensaje de análisis (Tabla~\ref{tab:cards}).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Columnas de la tabla \texttt{analysis\_cards}.}
 \label{tab:cards}
@@ -129,7 +129,7 @@ Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para 
 
 Proyección CQRS de los códigos CIE-10-ES predichos por el motor de IA, con su ciclo de vida de validación (Tabla~\ref{tab:predicted-codes}).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Columnas de la tabla \texttt{predicted\_codes}.}
 \label{tab:predicted-codes}
@@ -160,7 +160,7 @@ Proyección CQRS de los códigos CIE-10-ES predichos por el motor de IA, con su 
 
 Catálogo de referencia de los códigos CIE-10-ES cargados desde los ficheros CSV obtenidos del portal eCIE-maps (Tabla~\ref{tab:cie10codes}).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Columnas de la tabla \texttt{cie10\_codes}.}
 \label{tab:cie10codes}
@@ -179,13 +179,13 @@ Catálogo de referencia de los códigos CIE-10-ES cargados desde los ficheros CS
 \end{tabular}
 \end{table}
 
-El catálogo contiene aproximadamente 101.246 diagnósticos, 78.496 procedimientos y 5.050 sustancias químicas.
+El catálogo contiene 101.246 entradas de diagnóstico, 78.496 de procedimientos y 5.050 de sustancias químicas; al obtenerse por \emph{scraping} incluye los nodos intermedios del árbol, que no son códigos asignables (sección~\ref{sec:analisis_datos}).
 
 \subsection{Tabla \texttt{code\_suggestions}}
 
 Sugerencias manuales de código realizadas por el usuario al seleccionar un fragmento de texto del informe (Tabla~\ref{tab:suggestions}).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Columnas de la tabla \texttt{code\_suggestions}.}
 \label{tab:suggestions}
@@ -213,7 +213,7 @@ Configuración del backoffice de administración: modelo y modo del generador de
 
 Registro de control interno de Commanded para garantizar la coherencia de las proyecciones al reproducir el registro de eventos (Tabla~\ref{tab:proj-versions}).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Columnas de la tabla \texttt{projection\_versions}.}
 \label{tab:proj-versions}
@@ -229,13 +229,12 @@ Registro de control interno de Commanded para garantizar la coherencia de las pr
 \end{tabular}
 \end{table}
 
-\Needspace{0.75\textheight}
 \section{Base de datos de eventos (\texttt{cie10\_eventstore})}
 
-La base de datos \texttt{cie10\_eventstore} es gestionada íntegramente por la biblioteca \texttt{EventStore} (dependencia de Commanded). Su esquema incluye las tablas \texttt{streams}, \texttt{events} y \texttt{subscriptions}, que almacenan el log de eventos inmutable. No se modifica directamente; toda la interacción se realiza a través del módulo \texttt{App.CommandedApplication}.
+La base de datos \texttt{cie10\_eventstore} es gestionada íntegramente por la biblioteca \texttt{EventStore} (dependencia de Commanded). Su esquema incluye las tablas \texttt{streams}, \texttt{events} y \texttt{subscriptions}, que almacenan el registro de eventos inmutable. No se modifica directamente; toda la interacción se realiza a través del módulo \texttt{App.CommandedApplication}.
 
 \begin{sloppypar}
-Los eventos registrados son: \texttt{ConversationStarted}, \texttt{MessageSent}, \texttt{AnalysisRequested}, \texttt{AIPredictionReceived}, \texttt{CodeValidated} y \texttt{CodeRejected}. Cada evento incluye los campos de la acción más metadatos de Commanded (\texttt{causation\_id}, \texttt{correlation\_id}, \texttt{created\_at}).
+Los eventos registrados son: \texttt{ConversationStarted}, \texttt{MessageSent}, \mbox{\texttt{AnalysisRequested}}, \texttt{AIPredictionReceived}, \texttt{CodeValidated} y \texttt{CodeRejected}. Cada evento incluye los campos de la acción más metadatos de Commanded (\texttt{causation\_id}, \texttt{correlation\_id}, \texttt{created\_at}).
 \end{sloppypar}
 
 \section{Relaciones entre entidades}
