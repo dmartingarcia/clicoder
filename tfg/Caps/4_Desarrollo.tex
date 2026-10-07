@@ -196,6 +196,27 @@ El análisis lingüístico realizado con SpaCy (modelo \texttt{es\_core\_news\_l
 
 Esta brecha tiene una causa directa en la práctica clínica: el catálogo CIE-10 emplea denominaciones largas y normalizadas («infarto agudo de miocardio de cara anterior de transmisión transmural»), mientras que el médico redacta con abreviaturas frecuentes (\texttt{IAM}, \texttt{EPOC}, \texttt{HTA}, \texttt{DM2}), epónimos y expresiones propias del entorno hospitalario. El análisis identificó además un 44,4\,\% de lemas con especificidad máxima, asociados a un único código CIE-10, frente a términos de alta dispersión como «contacto», «fractura» o «especificado», que aparecen en miles de códigos diferentes. Esta estructura léxica justifica dos decisiones de diseño que se desarrollan en las secciones siguientes: (1) la elección de un \emph{encoder} preentrenado en texto clínico en español (RigoBERTa-Clinical), que ha aprendido a relacionar las expresiones del lenguaje médico real con las denominaciones de los diagnósticos sin depender de coincidencia léxica exacta; y (2) la expansión de abreviaturas clínicas implementada en el clasificador de diccionario, que normaliza expresiones habituales antes de la búsqueda en el catálogo. El análisis detallado del vocabulario se recoge en el Anexo~\ref{cap:AnexoG}.
 
+\subsubsection{Métricas de evaluación}
+\label{sec:metricas}
+
+Las métricas se definen sobre el vocabulario $C$ del modelo (1.767 códigos) y un conjunto de documentos $D$. Para cada documento $d$ y código $c$, $y_{dc}\in\{0,1\}$ indica si $c$ figura en la anotación de referencia (\emph{gold}) y $\hat{y}_{dc}\in\{0,1\}$ si el sistema lo propone, es decir, si su probabilidad alcanza el umbral $\tau$. Por código, $TP_c=\sum_d y_{dc}\hat{y}_{dc}$, $FP_c=\sum_d (1-y_{dc})\hat{y}_{dc}$ y $FN_c=\sum_d y_{dc}(1-\hat{y}_{dc})$.
+
+\paragraph{F1-micro y F1-macro.} El F1-micro agrupa todos los pares (documento, código), de modo que cada código pesa según su frecuencia:
+\begin{equation}
+P_{\mu}=\frac{\sum_c TP_c}{\sum_c (TP_c+FP_c)},\qquad R_{\mu}=\frac{\sum_c TP_c}{\sum_c (TP_c+FN_c)},\qquad F1_{\mu}=\frac{2\,P_{\mu}R_{\mu}}{P_{\mu}+R_{\mu}}.
+\end{equation}
+El F1-macro calcula el F1 de cada código y promedia sin ponderar:
+\begin{equation}
+F1_c=\frac{2\,TP_c}{2\,TP_c+FP_c+FN_c},\qquad F1_{M}=\frac{1}{|C|}\sum_{c\in C}F1_c,
+\end{equation}
+con $F1_c=0$ cuando el código no aparece ni en la referencia ni en las predicciones. Como el promedio recorre los 1.767 códigos, los poco frecuentes pesan tanto como los comunes y los que no tienen ejemplos en prueba cuentan como cero, lo que explica en parte la brecha entre F1-micro y F1-macro.
+
+\paragraph{MAP por documento.} Para un documento $d$ se ordenan los códigos de $C$ por probabilidad decreciente (por puntuación fusionada en el modo fusionado) y se promedia la precisión en las posiciones donde aparece un código de la referencia:
+\begin{equation}
+AP_d=\frac{1}{n_d}\sum_{k=1}^{|C|}P_d@k\cdot rel_d(k),\qquad MAP=\frac{1}{|D'|}\sum_{d\in D'}AP_d,
+\end{equation}
+donde $P_d@k$ es la precisión de las $k$ primeras posiciones, $rel_d(k)=1$ si el código en la posición $k$ pertenece a la referencia y $n_d$ es el número de códigos de la referencia de $d$. A diferencia del F1, no depende del umbral: mide el orden, no la decisión. Con el mismo cálculo hay dos variantes, según el denominador. En el \emph{MAP estricto}, $n_d$ cuenta todos los códigos de la referencia, también los que están fuera del vocabulario del modelo, que nunca se pueden proponer y penalizan el resultado, y $D'$ son los documentos con al menos un código de referencia; es el comparable con el \emph{benchmark}. En el \emph{MAP alcanzable}, $n_d$ cuenta solo los códigos de la referencia que pertenecen al vocabulario y $D'$ los documentos con al menos uno; es una cota superior y no es comparable con otros sistemas. Las tres métricas se calculan en \texttt{ai\_engine/\allowbreak{}eval\_test.py} (\texttt{make ai-eval-test}).
+
 \subsubsection{Selección del modelo base}
 
 Se evaluaron diez modelos candidatos para la codificación del texto clínico. La comparativa, recogida en el Anexo~\ref{cap:AnexoA}, consideró rendimiento en CodiEsp, especialización en español médico, velocidad de inferencia y coste computacional de entrenamiento. Los modelos evaluados fueron:
@@ -253,6 +274,27 @@ El clasificador opera mediante coincidencia de patrones lematizados sobre cinco 
 
 Antes de cualquier comparación, el texto del informe se lematiza con \texttt{es\_dep\_news\_trf} (transformer contextual) y se expanden las abreviaturas clínicas más frecuentes (\texttt{HTA} → \emph{hipertensión arterial}, \texttt{IAM} → \emph{infarto agudo de miocardio}, \texttt{EPOC} → \emph{enfermedad pulmonar obstructiva crónica}, etc.) para ampliar la cobertura léxica con un riesgo bajo de introducir falsos positivos. Las cinco fuentes se pueden evaluar por separado para medir su aportación individual, pero \textbf{en producción el diccionario combina solo \emph{clinical} y \emph{corpus}}: un experimento controlado que añadió también \emph{diagnoses}, \emph{procedures} y \emph{chemicals} a la combinación resultó contraproducente pese a proceder de catálogos oficiales. La razón es la misma dispersión léxica descrita en el análisis de vocabulario (Anexo~\ref{cap:AnexoG}): muchos códigos solo tienen descripciones genéricas («contacto», «fractura», «especificado») que aparecen en miles de códigos distintos, y su inclusión inunda el diccionario de falsos positivos (de 12.723 a 546.304 patrones, con el F1-micro de prueba cayendo de 0,672 a 0,519 y el MAP de 0,461 a 0,308), así que se descartó para la combinación final.
 
+El Algoritmo~\ref{alg:diccionario} resume cómo se predice con los patrones resultantes: un bloque se propone cuando al menos uno de sus patrones aparece en el texto lematizado, con la confianza del patrón más fiable que coincide, y se conservan hasta tres términos para poder explicar la predicción.
+
+\begin{algorithm}[ht]
+\DontPrintSemicolon
+\caption{Clasificación por diccionario de bloques.}
+\label{alg:diccionario}
+\KwIn{informe $t$; para cada bloque $b$, patrones $\{(\pi_{b,i},\kappa_{b,i})\}$, con $\pi_{b,i}$ una frase lematizada y $\kappa_{b,i}$ su confianza según su procedencia}
+\KwOut{lista de ternas (bloque, confianza, términos) ordenada por bloque}
+$t' \leftarrow$ normalizar(lematizar(expandir\_abreviaturas($t$)))\;
+$R \leftarrow \emptyset$\;
+\ForEach{bloque $b$}{
+  $H \leftarrow \{\, i : \pi_{b,i}$ aparece en $t'$ como secuencia de palabras completas$\,\}$\;
+  \If{$H \neq \emptyset$}{
+    ordenar $H$ por $\kappa_{b,i}$ decreciente\;
+    $\kappa_b \leftarrow \kappa_{b,H_1}$\;
+    añadir a $R$ la terna $(b,\ \kappa_b,\ \{\pi_{b,i} : i \in H_{1..3}\})$\;
+  }
+}
+\Return{$R$ ordenado por bloque}\;
+\end{algorithm}
+
 Una primera versión de \emph{clinical}+\emph{corpus} sufría además de baja precisión por dos fuentes de ruido concretas: la expansión de sinónimos por word vectors capturaba variantes morfológicas sin relación semántica real (p.\,ej. «cloruro» → «tricloruro», «dolor» → «dolorcillo»), y los n-gramas del corpus, con un umbral de precisión laxo sobre solo 500 notas de entrenamiento, fijaban frases genéricas como patrón de un código («tumor de», «1,2 cm»). Se corrigió endureciendo ambos filtros (umbral de similitud de sinónimos de 0,65 a 0,80 con rechazo de subcadenas, y los parámetros de n-gramas del corpus recogidos en la enumeración anterior), lo que redujo el diccionario de 44.606 a 12.723 patrones ($-$71\,\%) eliminando las familias de ruido identificadas. Cada patrón guardado lleva además una \textbf{confianza según su procedencia} en vez del valor fijo 1,0 original: 0,95 para el término real anotado por CodiEsp, 0,6 para sus variantes por sinónimo, y la propia precisión estadística (0,75--1,0) para los n-gramas de \emph{corpus}; el código predicho hereda la confianza de su patrón más fuerte, y sus términos disparadores se listan de mayor a menor confianza, lo que permite comparar de forma más informativa con las probabilidades de RigoBERTa-Clinical en el modo \texttt{engine=\textquotedbl{}both\textquotedbl{}}. Un segundo experimento intentó corregir un caso marginal de la expansión de sinónimos: una discordancia de género gramatical dejaba sin generar un puñado de patrones («izquierda» y «izquierdo» no compartían entrada en el mapa de sinónimos). El arreglo, en teoría correcto, desbloqueó muchas más expansiones por sinónimo que resultaron ser ruido en la práctica y empeoró el resultado (F1-micro de prueba 0,672→0,637, MAP 0,461→0,419), por lo que también se revirtió. Ambos experimentos confirman la misma lección: con solo 500 notas de entrenamiento, ampliar la cobertura léxica sin más casi siempre pierde frente a la precisión, y ningún cambio se da por bueno sin medirlo contra el conjunto de prueba.
 
 Evaluado sobre el conjunto de prueba de CodiEsp a nivel de bloque de 3 caracteres (la granularidad de este componente), el diccionario combinado \emph{clinical}+\emph{corpus} alcanza F1-micro~0,672 (precisión 0,638, \emph{recall} 0,709) y un MAP por documento de 0,461; el F1-macro (0,289) queda muy por debajo por los códigos de cola larga sin ningún patrón que los cubra, limitación estructural de construir el diccionario a partir de solo 500 notas. A diferencia de un diccionario construido a mano como el del equipo IAM-Burdeos, donde la alta precisión se debe a que cada término fue seleccionado manualmente por ser inequívoco, este sigue dependiendo de heurísticas automáticas de generación.
@@ -276,6 +318,25 @@ RigoBERTa-Clinical, modelo servido (\texttt{zlpr-map}) & 0{,}611 & 0{,}462 & 0{,
 \end{table}
 
 El resultado reproduce, dentro de este trabajo, el mismo patrón que separa a los dos primeros sistemas del \emph{benchmark} CodiEsp descrito en la introducción: el diccionario obtiene un F1 muy superior (+14{,}6\,pp) porque la coincidencia léxica exacta produce predicciones de alta precisión, mientras que el modelo neuronal ordena mejor (+10{,}6\,pp de MAP), que es la métrica oficial de la tarea. El equipo IAM lideró el F1 de 2020 con 0,687 y quedó en MAP por detrás de IXA-AAA; aquí ocurre lo mismo entre los dos motores del propio sistema. La lectura es que cada uno aporta algo distinto: el diccionario acierta con seguridad lo que reconoce y no propone nada fuera de su léxico, y el modelo neuronal cubre formulaciones no indexadas y sitúa mejor los códigos correctos en las primeras posiciones de la lista, que es lo que necesita un codificador clínico que revisa una propuesta ordenada. Por este motivo el clasificador de diccionario es un complemento, no un sustituto del modelo neuronal, y el \emph{endpoint} los expone de forma independiente mediante \texttt{engine=\textquotedbl{}both\textquotedbl{}}.
+
+Un tercer motor, el \emph{modo fusionado} (\texttt{engine=\textquotedbl{}fused\textquotedbl{}}), combina ambos antes de ordenar (Algoritmo~\ref{alg:fusion}): suma al \emph{logit} de cada código una bonificación $\beta\,\kappa_b$, con $\kappa_b$ la confianza con que el diccionario ha detectado el bloque del código, y ordena y filtra con esa puntuación. La probabilidad que se muestra al usuario sigue siendo la del modelo. Los valores empleados son $\beta=6$ y un umbral de puntuación $\theta=2{,}1$, que el servicio lee de \texttt{config.json}.
+
+\begin{algorithm}[ht]
+\DontPrintSemicolon
+\caption{Ordenación en el modo fusionado.}
+\label{alg:fusion}
+\KwIn{informe $x$; parámetros $\beta$ y $\theta$}
+\KwOut{lista de códigos ordenada por puntuación}
+$z \leftarrow$ logits del modelo sobre $x$\;
+$\kappa \leftarrow$ confianza de cada bloque detectado por el diccionario (Algoritmo~\ref{alg:diccionario})\;
+\ForEach{código $c$}{
+  $s_c \leftarrow z_c + \beta\,\kappa_{\mathrm{bloque}(c)}$, con $\kappa_b = 0$ si el bloque no se detecta\;
+}
+$R \leftarrow \{\, c : s_c \geq \theta \,\}$\;
+eliminar de $R$ los códigos que son prefijo de otro código de $R$\;
+ordenar $R$ por $s_c$ decreciente\;
+\Return{los diez primeros de $R$}\;
+\end{algorithm}
 
 \subsubsection{Proceso de entrenamiento experimental}
 \label{sec:entrenamiento}
@@ -1045,7 +1106,26 @@ La ganancia es pequeña pero gratuita (Tabla~\ref{tab:explain-diccionario}): mis
 \paragraph{Una vía que tampoco salió: filtrar las palabras vacías.}
 El conjunto de candidatas se construye descartando las palabras de menos de cuatro caracteres, de modo que preposiciones y pronombres largos («durante», «mediante», «cuando») siguen entrando y consumen presupuesto de verificación. Parecía una mejora evidente, y se midió antes de darla por buena. No lo fue: añadir una lista de palabras vacías reduce el coste del método exhaustivo un 5\,\% y el del método por defecto apenas un 2\,\%, sin cambio apreciable en la fidelidad. La comprobación que cerró la cuestión fue otra: sobre doce informes y ciento setenta y cinco términos, \textbf{ninguna palabra vacía llegaba nunca a los cinco primeros}, ni siquiera sin el filtro. El modelo no se apoyaba en ellas, así que no había tampoco una mejora de calidad que las métricas de coste no estuvieran capturando. La mejora era residual y el cambio se revirtió: una lista de palabras codificada a mano tiene un coste de mantenimiento y un riesgo de descartar algún término que en un informe concreto sí importe, y ninguno de los dos se paga con un 2\,\%.
 
-El \textbf{filtrado por gradiente} sí funciona. Una única pasada hacia atrás ordena las palabras candidatas y solo se enmascaran de verdad las más prometedoras, lo que reduce el coste a una cuarta parte. La objeción que llevó a descartar Gradient~$\times$~Input como método de atribución no se aplica aquí, porque el gradiente no responde sino que solo decide a quién se pregunta: cualquier error de orden que cometa lo corrige después la medición por enmascarado.
+El \textbf{filtrado por gradiente} sí funciona. Una única pasada hacia atrás ordena las palabras candidatas y solo se enmascaran de verdad las más prometedoras, lo que reduce el coste a una cuarta parte. La objeción que llevó a descartar Gradient~$\times$~Input como método de atribución no se aplica aquí, porque el gradiente no responde sino que solo decide a quién se pregunta: cualquier error de orden que cometa lo corrige después la medición por enmascarado. El Algoritmo~\ref{alg:atribucion} detalla el procedimiento.
+
+\begin{algorithm}[ht]
+\DontPrintSemicolon
+\caption{Atribución por enmascarado con filtro de gradiente.}
+\label{alg:atribucion}
+\KwIn{informe $x$; códigos predichos $K$; presupuesto $m=32$; palabras prioritarias $W_\pi$ (las que el diccionario ya ha detectado)}
+\KwOut{importancia $s_{w,k}$ de cada palabra verificada $w$ para cada código $k \in K$}
+$W \leftarrow$ palabras de $x$ con al menos cuatro caracteres\;
+$\ell^{0} \leftarrow$ logits del modelo sobre $x$\;
+$g \leftarrow$ gradiente de $\sum_{k \in K}\ell_k$ respecto de los \emph{embeddings} de entrada (una pasada hacia atrás)\;
+\ForEach{palabra $w \in W$}{
+  $\sigma_w \leftarrow \sum_{t \in w}\lvert\langle g_t, e_t\rangle\rvert$, con $e_t$ el \emph{embedding} del \emph{token} $t$\;
+}
+$V \leftarrow$ las palabras de $W \cap W_\pi$ seguidas del resto de $W$ ordenado por $\sigma_w$ decreciente, recortada a $m$ palabras\;
+\ForEach{palabra $w \in V$}{
+  $s_{w,k} \leftarrow \max\!\left(0,\ \ell^{0}_k - \ell_k(x_{w \to \text{[MASK]}})\right)$ para todo $k \in K$\;
+}
+\Return{$s$}\;
+\end{algorithm}
 
 Conviene ser preciso sobre qué error puede cometer esta estrategia, porque no todos cuestan lo mismo ante un profesional. \emph{No puede inventar}: todo término que reporta tiene una caída de \emph{logit} medida, luego influye de verdad en la predicción. Lo que sí puede es dejarse fuera la palabra más importante, porque nunca llega a preguntarle, en cuyo caso se muestra un término real pero no el más fuerte. El error es unidireccional, y está cuantificado: el término principal coincide con el del método exhaustivo en el 97~\% de los casos. La distinción importa porque un término falso destruiría la confianza del codificador clínico en la herramienta, mientras que un término real pero subóptimo es una explicación peor, no una explicación engañosa.
 
