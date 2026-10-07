@@ -24,7 +24,7 @@ Los valores por defecto son válidos para un entorno local de desarrollo. El cat
 
 \section{Primera puesta en marcha}
 
-La primera vez es necesario ejecutar dos comandos en orden. El primero prepara el entorno: detiene servicios previos, construye las imágenes Docker, crea y migra las bases de datos y carga los datos iniciales:
+La primera vez es necesario ejecutar dos comandos en orden. El primero prepara el entorno: detiene los servicios previos y elimina sus volúmenes (incluida la base de datos), construye las imágenes Docker, crea y migra las bases de datos y carga los datos iniciales:
 
 \begin{lstlisting}[language=bash]
 make setup
@@ -173,9 +173,9 @@ make ai-train-gpu MAX_LENGTH=512 BATCH_SIZE=8 GRAD_ACCUM=4 \
   RANK_LOSS_WEIGHT=0.1 2>&1 | tee /tmp/train.log
 \end{lstlisting}
 
-El resto de parámetros (\texttt{POS\_WEIGHT\_CAP=10}, \texttt{CHUNK\_OVERLAP=64}, \texttt{ASL\_CLIP=0.05}) coinciden con los valores por defecto de \texttt{Makefile} y \texttt{train.py}; la ejecución original no fijó semilla, por lo que una repetición no reproduce las métricas al decimal. Este mismo comando, con las variables adicionales que se indiquen (por ejemplo \texttt{TRAIN\_FILE}), es el que se toma como base en el Anexo~\ref{cap:AnexoL}.
+El resto de parámetros (\texttt{POS\_WEIGHT\_CAP=10}, \texttt{CHUNK\_OVERLAP=64}, \texttt{ASL\_CLIP=0.05}) coinciden con los valores por defecto del \texttt{Makefile} y de \texttt{train.py} (\texttt{ASL\_CLIP} solo está definido en este último); la ejecución original no fijó semilla, por lo que una repetición no reproduce las métricas al decimal. Este mismo comando, con las variables adicionales que se indiquen (por ejemplo \texttt{TRAIN\_FILE}), es el que se toma como base en el Anexo~\ref{cap:AnexoL}.
 
-Cada ejecución guarda un \emph{checkpoint} con el mejor F1-micro de validación, los umbrales por clase optimizados y un registro de métricas por época en \texttt{model/training\_runs.csv}. El proceso completo dura entre 2 y 4~horas en una GPU de gama alta, dependiendo del número de épocas configurado.
+Cada ejecución guarda un \emph{checkpoint} con el mejor valor de validación de la métrica de selección (\texttt{SELECT\_METRIC}; el comando anterior usa \texttt{map\_macro}), los umbrales por clase optimizados y un registro de métricas por época en \texttt{model/training\_runs.csv}. La ejecución del modelo servido duró 1.409~s (unos 23,5~minutos) en la RTX 4080, y la más larga de las 58 ejecuciones registradas sobre 1.767 códigos, 1,7~horas (columna \texttt{total\_seconds} de \texttt{training\_runs.csv}).
 
 \section{Monitorización con Prometheus y Grafana}
 

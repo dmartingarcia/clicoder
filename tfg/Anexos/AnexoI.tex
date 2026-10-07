@@ -44,7 +44,7 @@ Partiendo de un clon del repositorio en la estación de trabajo, el despliegue s
 
 \begin{enumerate}
     \item \textbf{Configuración}: copiar \texttt{.env.example} a \texttt{.env} y editar las credenciales reales (base de datos, SMTP, claves de aplicación, token de HuggingFace, token del túnel).
-    \item \textbf{Setup inicial} (construcción de imágenes, migraciones y seed): \texttt{make setup}
+    \item \textbf{Setup inicial} (construcción de imágenes, migraciones y seed): \texttt{make setup} (solo la primera vez: detiene los servicios y elimina sus volúmenes, incluida la base de datos)
     \item \textbf{Despliegue}: \texttt{make deploy}
 \end{enumerate}
 

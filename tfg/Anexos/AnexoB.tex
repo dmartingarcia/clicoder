@@ -16,7 +16,7 @@ La Figura~\ref{fig:c4-contenedores} muestra la vista de contenedores C4 del sist
 
 \section{Topología de contenedores}
 
-El \emph{Compose} base define siete servicios Docker~\cite{merkel2014docker}. La Tabla~\ref{tab:servicios} resume su función, tecnología, puerto expuesto y dependencias. Los ficheros de proxy y de monitorización añaden otros diez servicios de apoyo (Tabla~\ref{tab:servicios-apoyo}), que no forman parte del sistema de codificación y por eso no aparecen en la Figura~\ref{fig:c4-contenedores}; su papel en el despliegue se describe en el Anexo~\ref{cap:AnexoI} y la monitorización, en el Anexo~\ref{cap:AnexoK}.
+El \emph{Compose} base define cinco servicios Docker~\cite{merkel2014docker} y construye la imagen base de ML (\texttt{ml-base}), que solo se construye y no se ejecuta. La Tabla~\ref{tab:servicios} los resume, junto con \texttt{mailpit} (definido en \texttt{docker-compose.mailpit.yml} y solo de desarrollo), con su función, tecnología, puerto expuesto y dependencias. Los ficheros de proxy y de monitorización añaden otros diez servicios de apoyo (Tabla~\ref{tab:servicios-apoyo}), que no forman parte del sistema de codificación y por eso no aparecen en la Figura~\ref{fig:c4-contenedores}; su papel en el despliegue se describe en el Anexo~\ref{cap:AnexoI} y la monitorización, en el Anexo~\ref{cap:AnexoK}.
 
 \begin{table}[h]
 \centering
@@ -28,11 +28,11 @@ El \emph{Compose} base define siete servicios Docker~\cite{merkel2014docker}. La
 \hline
 \texttt{frontend} & Next.js 16, React 19, TypeScript & 3000 & backend & Interfaz web \\
 \texttt{backend} & Elixir 1.19, Phoenix 1.8 & 4000 & db, ai\_engine & Orquestador \\
-\texttt{ai\_engine} & Python 3.11, FastAPI & 8000 &  ninguna & Inferencia IA \\
+\texttt{ai\_engine} & Python 3.11, FastAPI & 8000 & db & Inferencia IA \\
 \texttt{db} & PostgreSQL 18 & 5432 &  ninguna & Persistencia \\
 \texttt{mailpit} & Mailpit & 8025/1025 &  ninguna & Correo de captura (solo desarrollo) \\
-\texttt{cie10\_ml\_base} & CUDA + PyTorch + Transformers & ninguno &  ninguna & Imagen base de ML \\
-\texttt{training} & Python, Jupyter Lab & 8888 & cie10\_ml\_base & Entrenamiento \\
+\texttt{ml-base} & CUDA + PyTorch + Transformers & ninguno &  ninguna & Imagen base de ML (solo se construye) \\
+\texttt{training} & Python, Jupyter Lab & 8888 & ml-base & Entrenamiento \\
 \hline
 \end{tabular}
 \end{table}
@@ -65,7 +65,7 @@ El orden de arranque impuesto por las dependencias de Docker Compose es el sigui
 
 \begin{enumerate}
  \item \textbf{PostgreSQL} (\texttt{db}) arranca primero; expone el puerto 5432 internamente.
- \item \textbf{AI Engine} arranca en paralelo con la base de datos; carga el modelo en memoria durante el arranque (\textasciitilde{}13\,GB de RAM del sistema en modo CPU).
+ \item \textbf{AI Engine} arranca cuando la base de datos está lista (\texttt{service\_healthy}); carga el modelo en memoria durante el arranque (\textasciitilde{}13\,GB de RAM del sistema en modo CPU).
  \item \textbf{Backend} espera a que \texttt{db} y \texttt{ai\_engine} estén disponibles; ejecuta las migraciones Ecto al arrancar y crea las tablas del \emph{event store} si no existen.
  \item \textbf{Frontend} arranca una vez el backend está activo.
  \item \textbf{Mailpit} arranca en paralelo; solo se usa en entornos de desarrollo.
@@ -115,13 +115,13 @@ La Tabla~\ref{tab:envvars} recoge las variables de entorno más relevantes del s
 \texttt{AI\_ENGINE\_PORT} & \texttt{8000} & ai\_engine \\
 \texttt{AI\_ENGINE\_URL} & \texttt{http://\allowbreak{}ai\_engine:8000} & backend \\
 \texttt{SUMMARIZER\_MODEL} & \texttt{none} & ai\_engine \\
-\texttt{SUMMARIZER\_MODE} & \texttt{summary} & ai\_engine \\
+\texttt{SUMMARIZER\_MODE} & \texttt{paraphrase} & ai\_engine \\
 \texttt{HF\_TOKEN} & (token HuggingFace) & ai\_engine, training \\
 \hline
 \multicolumn{3}{l}{\textit{Producción y red}} \\
 \texttt{DOMAIN} & \texttt{clicoder.app} & traefik \\
 \texttt{CLOUDFLARE\_TUNNEL\_TOKEN} & (token del túnel) & cloudflared \\
-\texttt{CORS\_ORIGINS} & \texttt{http://\allowbreak{}localhost:3000} & backend \\
+\texttt{CORS\_ORIGINS} & \texttt{http://\allowbreak{}localhost:3000,\allowbreak{}http://\allowbreak{}localhost:5173} & backend \\
 \hline
 \multicolumn{3}{l}{\textit{Observabilidad}} \\
 \texttt{GRAFANA\_PASSWORD} & \texttt{changeme} & grafana \\

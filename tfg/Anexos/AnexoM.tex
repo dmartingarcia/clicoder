@@ -160,7 +160,7 @@ La petición indica el texto, los códigos que se quieren justificar y, opcional
 \hline
 \texttt{diccionario} & No emplea el \emph{encoder}: devuelve las frases clínicas que hicieron coincidencia por expresión regular. Responde en centésimas de segundo. En el motor fusionado estos términos ya viajan con la predicción sin coste adicional, de modo que esta vía sirve al motor neuronal, que no ejecuta el diccionario. \\
 \texttt{gradiente\_\allowbreak{}filtrado} & Una pasada hacia atrás ordena las palabras candidatas y solo se enmascaran las más prometedoras. \\
-\texttt{exhaustivo} & Pregunta por todas las palabras. Es la referencia fiel, la más costosa y el método por defecto. \\
+\texttt{exhaustivo} & Pregunta por todas las palabras. Es la referencia fiel y la más costosa; es el método de reserva cuando \texttt{config.json} no indica ninguno (el servido es \texttt{gradiente\_filtrado}). \\
 \texttt{divide\_y\_\allowbreak{}venceras} & Enmascara grupos y descarta el que no altera ningún \emph{logit}. Documentado como resultado negativo: en este corpus resulta más lento que el exhaustivo. \\
 \hline
 \end{tabular}
