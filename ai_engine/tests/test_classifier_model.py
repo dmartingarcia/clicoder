@@ -152,6 +152,7 @@ class TestInit:
             "model_name": "fake/modelo",
             "max_length": 16,
             "thresholds_file": "thresholds.json",
+            "use_per_class_thresholds": True,
         }
         (tmp_path / "config.json").write_text(json.dumps(config), encoding="utf-8")
         (tmp_path / "thresholds.json").write_text(
@@ -167,6 +168,11 @@ class TestInit:
 
         clf = clf_module.CIE10Classifier(str(tmp_path), device="cpu")
         assert clf.per_class_thresholds == [0.3]
+
+        config.pop("use_per_class_thresholds")
+        (tmp_path / "config.json").write_text(json.dumps(config), encoding="utf-8")
+        clf = clf_module.CIE10Classifier(str(tmp_path), device="cpu")
+        assert clf.per_class_thresholds is None
 
 
 class TestPredict:

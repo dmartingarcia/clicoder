@@ -23,7 +23,7 @@ import main as main_module
 def cliente_sin_modelo(tmp_path):
     anterior = os.environ.get("MODEL_DIR")
     os.environ["MODEL_DIR"] = str(tmp_path / "no-existe")
-    with TestClient(main_module.app) as cliente:
+    with TestClient(main_module.app, headers={"x-admin-token": "token-de-prueba"}) as cliente:
         main_module.classifier = None
         main_module.dict_classifier = None
         yield cliente
@@ -44,7 +44,7 @@ def cliente_completo(tmp_path):
                 "repo": "ejemplo/repo",
                 "nota_medicion": "prueba",
                 "modelos": {
-                    "produccion": {
+                    "paso36": {
                         "checkpoint": "classifier.pt",
                         "thresholds": "thresholds.json",
                         "descripcion": "el de siempre",
@@ -75,7 +75,7 @@ def cliente_completo(tmp_path):
         {"code": "I10", "confidence": 0.95, "matched_terms": ["hipertension arterial"]}
     ]
 
-    with TestClient(main_module.app) as cliente:
+    with TestClient(main_module.app, headers={"x-admin-token": "token-de-prueba"}) as cliente:
         main_module.classifier = clf
         main_module.dict_classifier = dic
         main_module.code_descriptions = {"I10": "Hipertensión esencial"}
@@ -146,7 +146,7 @@ class TestCatalogoModelos:
     def test_lista_los_modelos_del_catalogo(self, cliente_completo):
         r = cliente_completo.get("/admin/models")
         assert r.status_code == 200
-        assert [m["name"] for m in r.json()["models"]] == ["produccion"]
+        assert [m["name"] for m in r.json()["models"]] == ["paso36"]
 
     def test_indica_si_estan_descargados(self, cliente_completo):
         assert cliente_completo.get("/admin/models").json()["models"][0]["downloaded"] is True
@@ -161,7 +161,7 @@ class TestCatalogoModelos:
     def test_un_modelo_desconocido_devuelve_los_disponibles(self, cliente_completo):
         r = cliente_completo.post("/admin/models", json={"name": "inventado"})
         assert r.status_code == 422
-        assert "produccion" in r.json()["detail"]["disponibles"]
+        assert "paso36" in r.json()["detail"]["disponibles"]
 
     def test_sin_catalogo_la_lista_va_vacia(self, cliente_sin_modelo):
         assert cliente_sin_modelo.get("/admin/models").json()["models"] == []
@@ -170,13 +170,16 @@ class TestCatalogoModelos:
 class TestPrediccionDiferida:
     def test_por_defecto_no_calcula_los_terminos(self, cliente_completo):
         """La atribución cuesta dos órdenes de magnitud más: se pide aparte."""
-        r = cliente_completo.post("/predict", json={"text": "paciente hipertenso"})
+        r = cliente_completo.post(
+            "/predict", json={"text": "paciente hipertenso", "engine": "bert"}
+        )
         assert r.status_code == 200
         codigo = r.json()["cards"][0]["content"][0]
         assert codigo["triggers_complete"] is False
 
     def test_se_pueden_pedir_en_la_misma_llamada(self, cliente_completo):
         r = cliente_completo.post(
-            "/predict", json={"text": "paciente hipertenso", "include_triggers": True}
+            "/predict",
+            json={"text": "paciente hipertenso", "engine": "bert", "include_triggers": True},
         )
         assert r.json()["cards"][0]["content"][0]["triggers_complete"] is True

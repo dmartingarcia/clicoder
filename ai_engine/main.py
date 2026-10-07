@@ -15,6 +15,7 @@ SUMMARIZER_CTX     Contexto en tokens para llama-cpp. Default: 4096
 
 import asyncio
 import glob
+import hmac
 import json
 import logging
 import os
@@ -29,7 +30,7 @@ import numpy as np
 import sentry_sdk
 import structlog
 import torch
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from prometheus_client import Gauge, Histogram, Info
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -320,16 +321,17 @@ class AnalysisRequest(BaseModel):
 
     - ``text``: texto del informe (obligatorio, no vacío).
     - ``engine``:
-        - ``"bert"`` : clasificador RigoBERTa multi-label (default).
+        - ``"bert"`` : clasificador RigoBERTa multi-label solo.
         - ``"dict"`` : reglas por diccionario (determinista, sin GPU).
         - ``"both"`` : ambos motores en paralelo; los resultados se devuelven
           juntos con el campo ``engine`` identificando el origen de cada código.
         - ``"fused"``: un único ranking; la confianza del diccionario suma al
-          logit del modelo antes de ordenar.
+          logit del modelo antes de ordenar. Es el motor por defecto (el de mejor MAP);
+          si se omite ``engine`` y el diccionario no está cargado, se usa ``"bert"``.
     """
 
     text: str
-    engine: Literal["bert", "dict", "both", "fused"] = "bert"
+    engine: Literal["bert", "dict", "both", "fused"] | None = None
     include_triggers: bool = False
     """Calcular los términos explicativos en la misma petición.
 
@@ -456,7 +458,18 @@ def _catalogo_modelos() -> dict:
         return {}
 
 
-@app.get("/admin/models", summary="Modelos disponibles y cuál está cargado")
+def _exigir_admin(request: Request) -> None:
+    esperado = os.environ.get("AI_ADMIN_TOKEN", "")
+    recibido = request.headers.get("x-admin-token", "")
+    if not esperado or not hmac.compare_digest(recibido, esperado):
+        raise HTTPException(status_code=403, detail="Acceso de administración denegado")
+
+
+@app.get(
+    "/admin/models",
+    summary="Modelos disponibles y cuál está cargado",
+    dependencies=[Depends(_exigir_admin)],
+)
 async def admin_list_models():
     """Lista el catálogo indicando cuáles están descargados y cuál sirve ahora mismo.
 
@@ -486,7 +499,11 @@ async def admin_list_models():
     }
 
 
-@app.post("/admin/models", summary="Cargar otro modelo en caliente")
+@app.post(
+    "/admin/models",
+    summary="Cargar otro modelo en caliente",
+    dependencies=[Depends(_exigir_admin)],
+)
 async def admin_load_model(req: ModelLoadRequest):
     """Sustituye el modelo activo sin reiniciar el servicio.
 
@@ -558,7 +575,11 @@ async def admin_load_model(req: ModelLoadRequest):
     }
 
 
-@app.post("/admin/summarizer", summary="Hot-reload del summarizer LLM")
+@app.post(
+    "/admin/summarizer",
+    summary="Hot-reload del summarizer LLM",
+    dependencies=[Depends(_exigir_admin)],
+)
 async def admin_summarizer(req: SummarizerConfigRequest):
     global summarizer
     from summarizer import MODELS, MedicalSummarizer
@@ -620,14 +641,21 @@ async def count_tokens(request: TokenCountRequest):
     return {"token_count": len(enc["input_ids"])}
 
 
+def _motor_efectivo(request: "AnalysisRequest") -> str:
+    """Motor pedido o, si se omite, el de mejor MAP que esté disponible."""
+    if request.engine:
+        return request.engine
+    return "fused" if classifier is not None and dict_classifier is not None else "bert"
+
+
 @app.post(
     "/predict",
     summary="Predecir códigos CIE-10",
     description=(
         "Analiza el texto de un informe clínico y devuelve códigos CIE-10 candidatos. "
-        "El parámetro ``engine`` selecciona el motor de predicción: ``bert`` (default), "
-        "``dict`` (diccionario determinista), ``both`` (ambos en paralelo) o ``fused`` "
-        "(un único ranking). Los términos que justifican cada código se piden aparte "
+        "El parámetro ``engine`` selecciona el motor de predicción: ``fused`` (default, "
+        "un único ranking con el diccionario; ``bert`` si el diccionario no está cargado), "
+        "``bert``, ``dict`` (diccionario determinista) o ``both`` (ambos en paralelo). Los términos que justifican cada código se piden aparte "
         "con ``/explain``, o se fuerzan aquí con ``include_triggers``."
     ),
 )
@@ -636,11 +664,12 @@ async def predict_codes(request: AnalysisRequest):
     if not text:
         raise HTTPException(status_code=422, detail="El texto no puede estar vacío.")
 
-    if request.engine == "dict":
+    engine = _motor_efectivo(request)
+    if engine == "dict":
         resultado = await _predict_dict(text)
-    elif request.engine == "both":
+    elif engine == "both":
         resultado = await _predict_both(text)
-    elif request.engine == "fused":
+    elif engine == "fused":
         resultado = await _predict_fused(text, request.include_triggers)
     else:
         resultado = await _predict_bert(text, request.include_triggers)
@@ -1169,10 +1198,13 @@ async def submit_predict_job(request: AnalysisRequest):
 
     async def _run():
         try:
-            if request.engine == "dict":
+            motor = _motor_efectivo(request)
+            if motor == "dict":
                 job["result"] = await _predict_dict(text)
-            elif request.engine == "both":
+            elif motor == "both":
                 job["result"] = await _predict_both(text)
+            elif motor == "fused":
+                job["result"] = await _predict_fused(text)
             else:
                 job["result"] = await _predict_bert(text)
             job["status"] = "done"

@@ -4,8 +4,8 @@ defmodule App.AIEngineSettings do
 
   Mantiene los ajustes en memoria mediante un `Agent`. Los dos se tratan distinto a propósito:
 
-  - El **motor** es volátil. Vuelve a `"bert"` en cada arranque porque sirve para comparar
-    motores durante la evaluación, no como configuración permanente.
+  - El **motor** es volátil. Vuelve a `"fused"` en cada arranque: es el que mejor MAP da y el que
+    se sirve por defecto; el resto sirven para comparar motores durante la evaluación.
   - El **método de explicabilidad** se persiste en la tabla `settings`. No es un experimento
     sino una elección de calidad y coste, y si no se guardara el sistema cambiaría de
     comportamiento tras un reinicio sin que nadie lo hubiera tocado.
@@ -19,7 +19,7 @@ defmodule App.AIEngineSettings do
   use Agent
 
   @valid_engines ~w(bert dict both fused)
-  @default_engine "bert"
+  @default_engine "fused"
 
   @valid_explain ~w(diccionario gradiente_filtrado exhaustivo divide_y_venceras)
   @default_explain "gradiente_filtrado"
@@ -39,6 +39,10 @@ defmodule App.AIEngineSettings do
   rescue
     _ -> @default_explain
   end
+
+  @doc "Motor con el que arranca el sistema."
+  @spec default_engine() :: String.t()
+  def default_engine, do: @default_engine
 
   @doc "Devuelve el motor activo (\"bert\" | \"dict\" | \"both\" | \"fused\")."
   @spec get_engine() :: String.t()

@@ -7,8 +7,14 @@ defmodule App.AIEngineSettingsTest do
     :ok
   end
 
+  describe "default_engine/0" do
+    test "arranca en 'fused', el motor con mejor MAP" do
+      assert App.AIEngineSettings.default_engine() == "fused"
+    end
+  end
+
   describe "get_engine/0" do
-    test "returns 'bert' by default" do
+    test "refleja el motor fijado" do
       assert App.AIEngineSettings.get_engine() == "bert"
     end
   end

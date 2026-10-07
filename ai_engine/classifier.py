@@ -354,7 +354,7 @@ class CIE10Classifier:
 
         self.per_class_thresholds: list[float] | None = None
         thresholds_file = self.config.get("thresholds_file")
-        if thresholds_file:
+        if thresholds_file and self.config.get("use_per_class_thresholds", False):
             thr_path = model_path / thresholds_file
             if thr_path.exists():
                 with open(thr_path, encoding="utf-8") as f:

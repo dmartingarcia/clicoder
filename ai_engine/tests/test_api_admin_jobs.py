@@ -23,7 +23,7 @@ def cliente(tmp_path, monkeypatch):
         json.dumps(
             {
                 "modelos": {
-                    "produccion": {
+                    "paso36": {
                         "checkpoint": "classifier.pt",
                         "thresholds": "thresholds.json",
                         "descripcion": "el de siempre",
@@ -55,7 +55,7 @@ def cliente(tmp_path, monkeypatch):
 
     dic = MagicMock()
 
-    with TestClient(main_module.app) as client:
+    with TestClient(main_module.app, headers={"x-admin-token": "token-de-prueba"}) as client:
         main_module.classifier = clf
         main_module.dict_classifier = dic
         main_module.summarizer = None
@@ -81,7 +81,7 @@ class TestAdminLoadModel:
         monkeypatch.setattr(
             "classifier.CIE10Classifier", lambda model_dir, device, overrides: nuevo
         )
-        r = client.post("/admin/models", json={"name": "produccion"})
+        r = client.post("/admin/models", json={"name": "paso36"})
         assert r.status_code == 200
         assert r.json()["status"] == "loaded"
         assert main_module.classifier is nuevo
@@ -95,7 +95,7 @@ class TestAdminLoadModel:
             raise RuntimeError("checkpoint incompatible")
 
         monkeypatch.setattr("classifier.CIE10Classifier", revienta)
-        r = client.post("/admin/models", json={"name": "produccion"})
+        r = client.post("/admin/models", json={"name": "paso36"})
         assert r.status_code == 500
         assert main_module.classifier is anterior
 
@@ -104,7 +104,7 @@ class TestAdminLoadModel:
         monkeypatch.setattr(
             "classifier.CIE10Classifier", lambda model_dir, device, overrides: MagicMock()
         )
-        r = client.post("/admin/models", json={"name": "produccion"})
+        r = client.post("/admin/models", json={"name": "paso36"})
         assert r.json()["timing"]["load_ms"] >= 0
 
 
@@ -221,7 +221,7 @@ class TestAdminSummarizer:
 class TestCountTokens:
     def test_sin_modelo_es_un_503(self, monkeypatch, tmp_path):
         monkeypatch.setenv("MODEL_DIR", str(tmp_path / "no-existe"))
-        with TestClient(main_module.app) as client:
+        with TestClient(main_module.app, headers={"x-admin-token": "token-de-prueba"}) as client:
             main_module.classifier = None
             r = client.post("/count-tokens", json={"text": "hola"})
         assert r.status_code == 503
@@ -262,9 +262,9 @@ class TestJobsPredict:
         main_module.classifier.predict.return_value = [
             {"code": "I10", "probability": 0.9, "chapter": "IX", "chapter_name": "Circulatorio"}
         ]
-        job_id = client.post("/jobs/predict", json={"text": "paciente con hipertensión"}).json()[
-            "job_id"
-        ]
+        job_id = client.post(
+            "/jobs/predict", json={"text": "paciente con hipertensión", "engine": "bert"}
+        ).json()["job_id"]
         r = _esperar_job(client, job_id)
         assert r.json()["status"] == "done"
         assert r.json()["result"]["cards"][0]["content"][0]["code"] == "I10"

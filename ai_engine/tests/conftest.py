@@ -35,3 +35,8 @@ def summarizer_desactivado_por_defecto(monkeypatch):
     de verdad. Un test que quiera probar un modelo concreto lo pisa con su propio
     monkeypatch.setenv, que gana por ejecutarse después."""
     monkeypatch.setenv("SUMMARIZER_MODEL", "none")
+
+
+@pytest.fixture(autouse=True)
+def token_de_administracion(monkeypatch):
+    monkeypatch.setenv("AI_ADMIN_TOKEN", "token-de-prueba")

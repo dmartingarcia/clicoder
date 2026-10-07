@@ -182,3 +182,23 @@ def test_un_cuerpo_no_json_en_predict_no_rompe_el_logging(cliente):
         "/predict", content=b"esto no es json", headers={"content-type": "application/json"}
     )
     assert r.status_code == 422  # FastAPI rechaza el body, pero el middleware no revienta antes
+
+
+class TestMotorPorDefecto:
+    """Sin ``engine`` se usa el motor de mejor MAP disponible."""
+
+    def test_es_fused_si_estan_el_modelo_y_el_diccionario(self, monkeypatch):
+        monkeypatch.setattr(main_module, "classifier", object())
+        monkeypatch.setattr(main_module, "dict_classifier", object())
+        assert main_module._motor_efectivo(main_module.AnalysisRequest(text="x")) == "fused"
+
+    def test_cae_a_bert_si_falta_el_diccionario(self, monkeypatch):
+        monkeypatch.setattr(main_module, "classifier", object())
+        monkeypatch.setattr(main_module, "dict_classifier", None)
+        assert main_module._motor_efectivo(main_module.AnalysisRequest(text="x")) == "bert"
+
+    def test_respeta_el_motor_pedido(self, monkeypatch):
+        monkeypatch.setattr(main_module, "classifier", object())
+        monkeypatch.setattr(main_module, "dict_classifier", object())
+        peticion = main_module.AnalysisRequest(text="x", engine="dict")
+        assert main_module._motor_efectivo(peticion) == "dict"
