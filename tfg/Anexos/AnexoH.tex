@@ -84,6 +84,7 @@ Test       & por clase  & 0{,}485  & 0{,}112 & no aplica \\
 
 La ejecución desplegada es \texttt{20260921T091919Z}, la de pérdida de ordenación descrita en la subsección~\ref{sec:anexoF-alineacion}, publicada en Hugging Face como \texttt{zlpr-map}. Con umbral global de 0,2 alcanza F1-micro = 0{,}4861 en validación (\texttt{eval\_test.py}; 0,4848 en el registro del entrenamiento) y 0{,}4946 en prueba, ambos sobre los pares alcanzables. El MAP no se da para los umbrales por clase porque no depende del umbral: es una métrica de ordenación y sería el mismo valor repetido. Los umbrales por clase, ajustados sobre validación, no compensan: se quedan en 0,485 en prueba frente a los 0,495 del umbral global, de modo que se emplea este último. El MAP por documento sobre el conjunto de prueba (métrica oficial del \emph{benchmark} CodiEsp) es \textbf{0{,}454} sobre el gold completo (0{,}555 restringido al vocabulario del modelo), situándose dentro del rango del \emph{benchmark}~\cite{miranda2020}, por detrás de los \emph{ensembles} y diccionarios de las primeras posiciones. Precisión, \emph{recall} y F1 se miden sobre los pares alcanzables: el \emph{recall} de 0,459 equivale a 0,379 y el F1-micro de 0,4946 a 0,444 sobre los 2.842 pares del \emph{gold} completo, porque 497 de ellos (el 17,5\,\%) son códigos que no aparecen en entrenamiento y fijan un techo de \emph{recall} de 0,825.
 
+\Needspace{0.9\textheight}
 \section{Selección del modelo desplegado}
 \label{sec:anexoH-candidatos}
 

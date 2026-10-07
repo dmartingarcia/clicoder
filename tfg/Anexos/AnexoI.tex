@@ -50,6 +50,7 @@ Partiendo de un clon del repositorio en la estación de trabajo, el despliegue s
 
 \texttt{make deploy} arranca en orden: la red Docker compartida, Traefik (proxy), el \emph{stack} de monitorización (Prometheus, Grafana y Loki) y los servicios de la aplicación (base de datos, backend, frontend, motor de IA). En entorno de desarrollo el flujo es equivalente pero sin Traefik ni monitorización: \texttt{make setup up}.
 
+\Needspace{0.95\textheight}
 \section{Proxy inverso con Traefik}
 
 Traefik se despliega como un servicio Docker independiente definido en \texttt{docker-compose-proxy.yml}. Su configuración es declarativa: cada servicio de la aplicación expone sus rutas mediante etiquetas Docker (\emph{labels}), y Traefik las descubre automáticamente sin necesidad de recargar configuración.
@@ -62,6 +63,7 @@ Traefik se despliega como un servicio Docker independiente definido en \texttt{d
 
 El sistema no gestiona certificados públicos ni emplea Let's Encrypt: el certificado que ve el usuario lo genera y presenta Cloudflare en su borde, que es quien termina el TLS público. El túnel entrega el tráfico a Traefik por HTTPS dentro de la red de Docker, sin verificar su certificado (\texttt{noTLSVerify}), y Traefik solo enruta. El dominio \texttt{clicoder.app} está registrado en Cloudflare.
 
+\Needspace{0.7\textheight}
 \section{Protección con Cloudflare}
 
 El dominio \texttt{clicoder.app} está configurado con el proxy de Cloudflare activado. El tráfico de los usuarios pasa primero por la red de Cloudflare antes de llegar al servicio, lo que aporta tres capas de protección sin coste adicional:
@@ -90,6 +92,7 @@ El comando es \texttt{make db-backup}, y se programa con una entrada de \emph{cr
 0 4 * * * cd /ruta/al/proyecto && make db-backup >> /var/log/cie10-backup.log 2>&1
 \end{lstlisting}
 
+\enlargethispage{2\baselineskip}
 Conviene declarar la limitación: al tratarse de una máquina única, la copia reside en el mismo equipo que los datos. Eso protege frente a un error de la aplicación o un borrado accidental, pero no frente a la pérdida del equipo. Replicarla a un almacenamiento externo queda como trabajo futuro, y es la primera pieza que habría que añadir antes de tratar datos clínicos reales.
 
 \section{Comparativa de costes}
