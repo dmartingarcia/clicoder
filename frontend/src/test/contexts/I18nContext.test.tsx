@@ -18,7 +18,11 @@ function renderProvider(children?: ReactNode) {
   let capturedCtx!: ReturnType<typeof useI18n>;
   render(
     <I18nProvider>
-      <Probe onRender={(ctx) => { capturedCtx = ctx; }} />
+      <Probe
+        onRender={(ctx) => {
+          capturedCtx = ctx;
+        }}
+      />
       {children}
     </I18nProvider>
   );
@@ -39,13 +43,21 @@ describe('I18nProvider', () => {
     vi.clearAllMocks();
     localStorage.clear();
     originalLanguage = navigator.language;
-    Object.defineProperty(navigator, 'language', { value: 'zh-CN', configurable: true, writable: true });
+    Object.defineProperty(navigator, 'language', {
+      value: 'zh-CN',
+      configurable: true,
+      writable: true,
+    });
     mockFetch({ auth: { login: 'Iniciar sesión' }, chat: { welcome_title: 'Bienvenido' } });
   });
 
   afterEach(() => {
     localStorage.clear();
-    Object.defineProperty(navigator, 'language', { value: originalLanguage, configurable: true, writable: true });
+    Object.defineProperty(navigator, 'language', {
+      value: originalLanguage,
+      configurable: true,
+      writable: true,
+    });
   });
 
   describe('initial state', () => {
@@ -163,7 +175,7 @@ describe('I18nProvider', () => {
     });
 
     it('handles keys with multiple dots correctly', async () => {
-      mockFetch({ cards: { 'summary_title': 'Resumen' } });
+      mockFetch({ cards: { summary_title: 'Resumen' } });
       const getCtx = renderProvider();
       await waitFor(() => expect(getCtx().ready).toBe(true));
       expect(getCtx().t('cards.summary_title')).toBe('Resumen');
@@ -175,7 +187,9 @@ describe('I18nProvider', () => {
       const getCtx = renderProvider();
       await waitFor(() => expect(getCtx().ready).toBe(true));
 
-      act(() => { getCtx().setLocale('en'); });
+      act(() => {
+        getCtx().setLocale('en');
+      });
       await waitFor(() => expect(getCtx().locale).toBe('en'));
     });
 
@@ -183,7 +197,9 @@ describe('I18nProvider', () => {
       const getCtx = renderProvider();
       await waitFor(() => expect(getCtx().ready).toBe(true));
 
-      act(() => { getCtx().setLocale('fr'); });
+      act(() => {
+        getCtx().setLocale('fr');
+      });
       expect(localStorage.getItem('cie10_locale')).toBe('fr');
     });
 
@@ -191,7 +207,9 @@ describe('I18nProvider', () => {
       const getCtx = renderProvider();
       await waitFor(() => expect(getCtx().ready).toBe(true));
 
-      act(() => { getCtx().setLocale('zz'); });
+      act(() => {
+        getCtx().setLocale('zz');
+      });
       expect(getCtx().locale).toBe('es');
       expect(localStorage.getItem('cie10_locale')).toBeNull();
     });
@@ -203,7 +221,9 @@ describe('I18nProvider', () => {
       vi.clearAllMocks();
       mockFetch({});
 
-      act(() => { getCtx().setLocale('en', 'my-token'); });
+      act(() => {
+        getCtx().setLocale('en', 'my-token');
+      });
       await waitFor(() => {
         const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
         return expect(calls.length).toBeGreaterThan(0);
@@ -227,7 +247,9 @@ describe('I18nProvider', () => {
       vi.clearAllMocks();
       mockFetch({});
 
-      act(() => { getCtx().setLocale('en'); });
+      act(() => {
+        getCtx().setLocale('en');
+      });
       await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
       const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;

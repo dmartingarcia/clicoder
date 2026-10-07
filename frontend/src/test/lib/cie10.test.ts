@@ -79,7 +79,12 @@ describe('searchCie10', () => {
 
 describe('fetchCie10Code', () => {
   it('returns the result object on success', async () => {
-    const result = { code: 'I10', description: 'Hypertension', type: 'diagnosis' as const, metadata: {} };
+    const result = {
+      code: 'I10',
+      description: 'Hypertension',
+      type: 'diagnosis' as const,
+      metadata: {},
+    };
     mockFetch({ result });
     const data = await fetchCie10Code('I10');
     expect(data).toEqual(result);
@@ -107,7 +112,18 @@ describe('fetchCie10Code', () => {
 
 describe('fetchCie10Children', () => {
   it('returns children and is_leaf on success', async () => {
-    const body = { children: [{ code: 'I10.0', description: 'Essential', type: 'diagnosis', metadata: {}, is_virtual: false }], is_leaf: false };
+    const body = {
+      children: [
+        {
+          code: 'I10.0',
+          description: 'Essential',
+          type: 'diagnosis',
+          metadata: {},
+          is_virtual: false,
+        },
+      ],
+      is_leaf: false,
+    };
     mockFetch(body);
     const data = await fetchCie10Children('I10');
     expect(data.children).toHaveLength(1);

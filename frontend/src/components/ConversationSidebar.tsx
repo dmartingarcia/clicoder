@@ -9,10 +9,29 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { config } from '@/lib/config';
 import { PrivacyModal } from '@/components/PrivacyModal';
 import { toast } from 'sonner';
-import { PlusCircle, MessageSquare, LogOut, Trash2, RotateCcw, ChevronDown, ChevronRight, Download, UserX, ShieldCheck } from 'lucide-react';
+import {
+  PlusCircle,
+  MessageSquare,
+  LogOut,
+  Trash2,
+  RotateCcw,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  UserX,
+  ShieldCheck,
+} from 'lucide-react';
 
 export function ConversationSidebar() {
-  const { conversations, trashedConversations, activeConversationId, createConversation, switchConversation, deleteConversation, restoreConversation } = useConversation();
+  const {
+    conversations,
+    trashedConversations,
+    activeConversationId,
+    createConversation,
+    switchConversation,
+    deleteConversation,
+    restoreConversation,
+  } = useConversation();
   const { user, token, logout } = useAuth();
   const { locale, setLocale, t } = useI18n();
   const [trashOpen, setTrashOpen] = useState(false);
@@ -26,7 +45,11 @@ export function ConversationSidebar() {
     const res = await fetch(`${config.apiUrl}/users/export`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (res.status === 401) { toast.error(t('errors.session_expired')); logout(); return; }
+    if (res.status === 401) {
+      toast.error(t('errors.session_expired'));
+      logout();
+      return;
+    }
     if (!res.ok) return;
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -44,7 +67,11 @@ export function ConversationSidebar() {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status === 401) { toast.error(t('errors.session_expired')); logout(); return; }
+      if (res.status === 401) {
+        toast.error(t('errors.session_expired'));
+        logout();
+        return;
+      }
       if (res.ok) {
         logout();
       }
@@ -87,9 +114,14 @@ export function ConversationSidebar() {
                 {LOCALES.map(({ code, flag }) => (
                   <button
                     key={code}
-                    onClick={() => { setLocale(code, token ?? undefined); setLocaleOpen(false); }}
+                    onClick={() => {
+                      setLocale(code, token ?? undefined);
+                      setLocaleOpen(false);
+                    }}
                     className={`w-full text-left px-3 py-1.5 text-xs font-medium uppercase transition-colors flex items-center gap-2 ${
-                      code === locale ? 'text-white bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                      code === locale
+                        ? 'text-white bg-gray-700'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-700'
                     }`}
                   >
                     <span>{flag}</span>
@@ -115,15 +147,14 @@ export function ConversationSidebar() {
 
       <ScrollArea className="flex-1 px-2">
         {conversations.length === 0 ? (
-          <p className="text-xs text-gray-500 text-center mt-6 px-2">
-            {t('sidebar.no_previous')}
-          </p>
+          <p className="text-xs text-gray-500 text-center mt-6 px-2">{t('sidebar.no_previous')}</p>
         ) : (
           <div className="space-y-1 pb-2">
             {conversations.map((conv) => {
               const isActive = conv.conversation_id === activeConversationId;
               const preview = conv.last_message?.content?.slice(0, 60) ?? '…';
-              const msgLabel = conv.message_count === 1 ? t('sidebar.messages_one') : t('sidebar.messages_other');
+              const msgLabel =
+                conv.message_count === 1 ? t('sidebar.messages_one') : t('sidebar.messages_other');
 
               return (
                 <div
@@ -141,16 +172,23 @@ export function ConversationSidebar() {
                     <div className="flex items-start gap-2">
                       <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 opacity-70" />
                       <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{formatDate(conv.started_at)}</p>
+                        <p className="text-xs font-medium truncate">
+                          {formatDate(conv.started_at)}
+                        </p>
                         <p className="text-xs opacity-70 truncate">{preview}</p>
-                        <p className="text-xs opacity-50 mt-0.5">{conv.message_count} {msgLabel}</p>
+                        <p className="text-xs opacity-50 mt-0.5">
+                          {conv.message_count} {msgLabel}
+                        </p>
                       </div>
                     </div>
                   </button>
 
                   {hoveredId === conv.conversation_id && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); deleteConversation(conv.conversation_id); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteConversation(conv.conversation_id);
+                      }}
                       title={t('sidebar.delete')}
                       className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-red-400 hover:bg-gray-600 transition-colors"
                     >
@@ -169,7 +207,11 @@ export function ConversationSidebar() {
               onClick={() => setTrashOpen((o) => !o)}
               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors"
             >
-              {trashOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              {trashOpen ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
               <Trash2 className="h-3 w-3" />
               {t('sidebar.trash')} ({trashedConversations.length})
             </button>
@@ -180,7 +222,8 @@ export function ConversationSidebar() {
                   <div key={conv.conversation_id} className="flex items-center gap-1 px-2">
                     <div className="flex-1 min-w-0 px-2 py-1 rounded text-gray-500">
                       <p className="text-xs truncate opacity-60">
-                        {formatDate(conv.started_at)} · {conv.last_message?.content?.slice(0, 40) ?? '…'}
+                        {formatDate(conv.started_at)} ·{' '}
+                        {conv.last_message?.content?.slice(0, 40) ?? '…'}
                       </p>
                     </div>
                     <button
@@ -232,16 +275,26 @@ export function ConversationSidebar() {
       {showPrivacyModal && (
         <PrivacyModal
           onClose={() => setShowPrivacyModal(false)}
-          onExport={() => { handleExportData(); setShowPrivacyModal(false); }}
-          onDeleteAccount={() => { setShowPrivacyModal(false); setShowDeleteModal(true); }}
+          onExport={() => {
+            handleExportData();
+            setShowPrivacyModal(false);
+          }}
+          onDeleteAccount={() => {
+            setShowPrivacyModal(false);
+            setShowDeleteModal(true);
+          }}
         />
       )}
 
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-xl max-w-sm w-full p-6 space-y-4">
-            <h3 className="text-white font-semibold text-base">{t('sidebar.delete_account_title')}</h3>
-            <p className="text-gray-300 text-sm leading-relaxed">{t('sidebar.delete_account_body')}</p>
+            <h3 className="text-white font-semibold text-base">
+              {t('sidebar.delete_account_title')}
+            </h3>
+            <p className="text-gray-300 text-sm leading-relaxed">
+              {t('sidebar.delete_account_body')}
+            </p>
             <div className="flex gap-3 pt-1">
               <button
                 onClick={() => setShowDeleteModal(false)}

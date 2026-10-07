@@ -3,11 +3,26 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { fetchCie10Code, fetchCie10Children, getAncestors, Cie10Result, Cie10Child } from '@/lib/cie10';
+import {
+  fetchCie10Code,
+  fetchCie10Children,
+  getAncestors,
+  Cie10Result,
+  Cie10Child,
+} from '@/lib/cie10';
 import { useI18n } from '@/contexts/I18nContext';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Loader2, ArrowLeft, Stethoscope, Activity, FlaskConical, AlertCircle, ChevronRight, FolderOpen } from 'lucide-react';
+import {
+  Loader2,
+  ArrowLeft,
+  Stethoscope,
+  Activity,
+  FlaskConical,
+  AlertCircle,
+  ChevronRight,
+  FolderOpen,
+} from 'lucide-react';
 
 const TYPE_COLORS = {
   diagnosis: 'border-l-blue-400 bg-blue-50',
@@ -27,7 +42,13 @@ const CHILD_ACCENT = {
   chemical: 'text-amber-700 hover:bg-amber-50 border-amber-100',
 } as const;
 
-function MetaRow({ label, value }: { label: string; value: string | number | boolean | null | undefined }) {
+function MetaRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | boolean | null | undefined;
+}) {
   if (value === null || value === undefined || value === '' || value === false) return null;
   return (
     <div className="flex gap-2 py-1 border-b border-gray-100 last:border-0 text-sm">
@@ -39,10 +60,12 @@ function MetaRow({ label, value }: { label: string; value: string | number | boo
 
 function DiagnosisDetail({ meta }: { meta: Record<string, unknown> }) {
   const { t } = useI18n();
-  const flag = (v: unknown) => v === true ? '✓' : null;
+  const flag = (v: unknown) => (v === true ? '✓' : null);
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{t('cie10.age_groups')}</h3>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+        {t('cie10.age_groups')}
+      </h3>
       <div className="bg-white rounded-lg p-3 space-y-0">
         <MetaRow label={t('cie10.perinatal')} value={flag(meta.perinatal)} />
         <MetaRow label={t('cie10.pediatric')} value={flag(meta.pediatric)} />
@@ -60,7 +83,9 @@ function ProcedureDetail({ meta }: { meta: Record<string, unknown> }) {
   const { t } = useI18n();
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{t('cie10.procedure_details')}</h3>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+        {t('cie10.procedure_details')}
+      </h3>
       <div className="bg-white rounded-lg p-3 space-y-0">
         <MetaRow label={t('cie10.class')} value={meta.class_name as string} />
         <MetaRow label={t('cie10.subclass')} value={meta.subclass_name as string} />
@@ -84,7 +109,7 @@ function ProcedureDetail({ meta }: { meta: Record<string, unknown> }) {
 
 function ChemicalDetail({ meta }: { meta: Record<string, unknown> }) {
   const { t } = useI18n();
-  const allCodes = Array.isArray(meta.all_codes) ? meta.all_codes as string[] : [];
+  const allCodes = Array.isArray(meta.all_codes) ? (meta.all_codes as string[]) : [];
   const intents = [
     t('cie10.chem_accidental'),
     t('cie10.chem_self_harm'),
@@ -95,11 +120,16 @@ function ChemicalDetail({ meta }: { meta: Record<string, unknown> }) {
   ];
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{t('cie10.variant_codes')}</h3>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+        {t('cie10.variant_codes')}
+      </h3>
       <div className="bg-white rounded-lg p-3 space-y-2">
         {allCodes.map((code, i) => (
           <div key={code} className="flex items-center gap-3">
-            <Link href={`/codes/${code}`} className="font-mono font-bold text-amber-700 hover:underline text-sm">
+            <Link
+              href={`/codes/${code}`}
+              className="font-mono font-bold text-amber-700 hover:underline text-sm"
+            >
               {code}
             </Link>
             <span className="text-xs text-gray-500">{intents[i] ?? ''}</span>
@@ -118,7 +148,7 @@ function ChemicalDetail({ meta }: { meta: Record<string, unknown> }) {
 
 function ChildrenGrid({ items }: { items: Cie10Child[] }) {
   const { t } = useI18n();
-  const inferredType = items.find(c => c.type)?.type ?? 'diagnosis';
+  const inferredType = items.find((c) => c.type)?.type ?? 'diagnosis';
   const accent = CHILD_ACCENT[inferredType] ?? CHILD_ACCENT.diagnosis;
 
   return (
@@ -136,7 +166,9 @@ function ChildrenGrid({ items }: { items: Cie10Child[] }) {
           >
             <span className="font-mono font-bold text-sm shrink-0 w-20">{child.code}</span>
             <span className="text-xs text-gray-600 leading-snug line-clamp-2">
-              {child.description ?? <span className="italic text-gray-400">{t('cie10.category')}</span>}
+              {child.description ?? (
+                <span className="italic text-gray-400">{t('cie10.category')}</span>
+              )}
             </span>
             <ChevronRight className="h-3.5 w-3.5 shrink-0 ml-auto mt-0.5 text-gray-400" />
           </Link>
@@ -165,18 +197,17 @@ export default function CodeDetailPage() {
     setChildren([]);
     setNotFound(false);
 
-    Promise.all([
-      fetchCie10Code(code),
-      fetchCie10Children(code),
-    ]).then(([result, childrenResult]) => {
-      if (result) {
-        setEntry(result);
-      } else if (childrenResult.children.length === 0) {
-        setNotFound(true);
+    Promise.all([fetchCie10Code(code), fetchCie10Children(code)]).then(
+      ([result, childrenResult]) => {
+        if (result) {
+          setEntry(result);
+        } else if (childrenResult.children.length === 0) {
+          setNotFound(true);
+        }
+        setChildren(childrenResult.children);
+        setLoading(false);
       }
-      setChildren(childrenResult.children);
-      setLoading(false);
-    });
+    );
   }, [code]);
 
   if (loading) {
@@ -199,21 +230,22 @@ export default function CodeDetailPage() {
     );
   }
 
-  const colorClass = entry ? (TYPE_COLORS[entry.type] ?? 'border-l-gray-300 bg-gray-50') : 'border-l-gray-300 bg-gray-50';
+  const colorClass = entry
+    ? (TYPE_COLORS[entry.type] ?? 'border-l-gray-300 bg-gray-50')
+    : 'border-l-gray-300 bg-gray-50';
   const Icon = entry ? (TYPE_ICONS[entry.type] ?? Stethoscope) : FolderOpen;
 
   const typeLabel = entry
-    ? (entry.type === 'diagnosis'
-        ? t('cie10.type_diagnosis')
-        : entry.type === 'procedure'
-          ? t('cie10.type_procedure')
-          : t('cie10.type_chemical'))
+    ? entry.type === 'diagnosis'
+      ? t('cie10.type_diagnosis')
+      : entry.type === 'procedure'
+        ? t('cie10.type_procedure')
+        : t('cie10.type_chemical')
     : null;
 
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-4">
-
         <nav className="flex items-center gap-1 text-sm text-gray-500 flex-wrap">
           <Link href="/" className="hover:text-gray-700 flex items-center gap-1">
             <ArrowLeft className="h-3 w-3" /> {t('cie10.back')}
@@ -221,7 +253,10 @@ export default function CodeDetailPage() {
           {ancestors.map((ancestor) => (
             <span key={ancestor} className="flex items-center gap-1">
               <ChevronRight className="h-3 w-3" />
-              <Link href={`/codes/${ancestor}`} className="font-mono hover:text-gray-800 hover:underline">
+              <Link
+                href={`/codes/${ancestor}`}
+                className="font-mono hover:text-gray-800 hover:underline"
+              >
                 {ancestor}
               </Link>
             </span>
@@ -241,7 +276,11 @@ export default function CodeDetailPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <span className="font-mono font-bold text-xl text-gray-800">{entry.code}</span>
-                  {typeLabel && <Badge variant="outline" className="text-xs">{typeLabel}</Badge>}
+                  {typeLabel && (
+                    <Badge variant="outline" className="text-xs">
+                      {typeLabel}
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-gray-700 text-base leading-relaxed">{entry.description}</p>
               </div>
@@ -269,9 +308,7 @@ export default function CodeDetailPage() {
           </Card>
         )}
 
-        {children.length > 0 && (
-          <ChildrenGrid items={children} />
-        )}
+        {children.length > 0 && <ChildrenGrid items={children} />}
       </div>
     </div>
   );

@@ -51,9 +51,16 @@ export function AuthPage() {
             </p>
             <p className="text-xs text-gray-400">
               {t('auth.check_spam')}{' '}
-              <button onClick={() => { clearPending(); setMode('login'); }} className="text-blue-600 hover:underline">
+              <button
+                onClick={() => {
+                  clearPending();
+                  setMode('login');
+                }}
+                className="text-blue-600 hover:underline"
+              >
                 {t('auth.back_to_login')}
-              </button>.
+              </button>
+              .
             </p>
           </CardContent>
         </Card>
@@ -80,7 +87,10 @@ export function AuthPage() {
           {(['login', 'register'] as Mode[]).map((m) => (
             <button
               key={m}
-              onClick={() => { setMode(m); setError(''); }}
+              onClick={() => {
+                setMode(m);
+                setError('');
+              }}
               className={`flex-1 py-3 text-sm font-medium transition-all border-b-2 -mb-px ${
                 mode === m
                   ? 'border-blue-600 text-blue-600 bg-white'
@@ -108,31 +118,67 @@ export function AuthPage() {
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">{t('auth.first_name')}</label>
-                      <Input type="text" placeholder="Juan" value={firstName} onChange={(e) => setFirstName(e.target.value)} required disabled={loading} />
+                      <label className="text-sm font-medium text-gray-700">
+                        {t('auth.first_name')}
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder="Juan"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">{t('auth.last_name')}</label>
-                      <Input type="text" placeholder="García López" value={lastName} onChange={(e) => setLastName(e.target.value)} required disabled={loading} />
+                      <label className="text-sm font-medium text-gray-700">
+                        {t('auth.last_name')}
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder="García López"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">{t('auth.username')}</label>
-                    <Input type="text" placeholder="dr_garcia" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={loading} />
+                    <label className="text-sm font-medium text-gray-700">
+                      {t('auth.username')}
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="dr_garcia"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
                   </div>
                 </>
               )}
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">{t('auth.email')}</label>
-                <Input type="email" placeholder="doctor@hospital.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
+                <Input
+                  type="email"
+                  placeholder="doctor@hospital.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">{t('auth.password')}</label>
                 <Input
                   type="password"
-                  placeholder={mode === 'register' ? t('auth.password_placeholder_register') : '••••••••'}
+                  placeholder={
+                    mode === 'register' ? t('auth.password_placeholder_register') : '••••••••'
+                  }
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -160,7 +206,11 @@ export function AuthPage() {
                 </p>
               )}
 
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                disabled={loading}
+              >
                 {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {t(mode === 'login' ? 'auth.submit_login' : 'auth.submit_register')}
               </Button>
@@ -169,7 +219,10 @@ export function AuthPage() {
             <p className="text-center text-sm text-gray-500 mt-4">
               {t(mode === 'login' ? 'auth.no_account' : 'auth.have_account')}{' '}
               <button
-                onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+                onClick={() => {
+                  setMode(mode === 'login' ? 'register' : 'login');
+                  setError('');
+                }}
                 className="text-blue-600 hover:underline font-medium"
               >
                 {t(mode === 'login' ? 'auth.sign_up' : 'auth.sign_in')}

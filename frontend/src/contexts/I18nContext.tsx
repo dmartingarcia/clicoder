@@ -70,42 +70,49 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     const browser = navigator.language.split('-')[0];
-    const loc = (stored && SUPPORTED_LOCALES.includes(stored))
-      ? stored
-      : (SUPPORTED_LOCALES.includes(browser) ? browser : DEFAULT_LOCALE);
+    const loc =
+      stored && SUPPORTED_LOCALES.includes(stored)
+        ? stored
+        : SUPPORTED_LOCALES.includes(browser)
+          ? browser
+          : DEFAULT_LOCALE;
 
     setLocaleState(loc);
     applyTranslations(loc);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setLocale = useCallback((loc: string, token?: string) => {
-    if (!SUPPORTED_LOCALES.includes(loc)) return;
-    localStorage.setItem(STORAGE_KEY, loc);
-    setLocaleState(loc);
-    applyTranslations(loc);
+  const setLocale = useCallback(
+    (loc: string, token?: string) => {
+      if (!SUPPORTED_LOCALES.includes(loc)) return;
+      localStorage.setItem(STORAGE_KEY, loc);
+      setLocaleState(loc);
+      applyTranslations(loc);
 
-    if (token) {
-      fetch(`${config.apiUrl}/users/locale`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ locale: loc }),
-      }).catch(() => {});
-    }
-  }, [applyTranslations]);
+      if (token) {
+        fetch(`${config.apiUrl}/users/locale`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ locale: loc }),
+        }).catch(() => {});
+      }
+    },
+    [applyTranslations]
+  );
 
-  const t = useCallback((key: string, vars?: Record<string, string | number>): string => {
-    const [namespace, ...rest] = key.split('.');
-    const k = rest.join('.');
-    const value = translations[namespace]?.[k];
-    if (value == null) return key;
-    return interpolate(value, vars);
-  }, [translations]);
+  const t = useCallback(
+    (key: string, vars?: Record<string, string | number>): string => {
+      const [namespace, ...rest] = key.split('.');
+      const k = rest.join('.');
+      const value = translations[namespace]?.[k];
+      if (value == null) return key;
+      return interpolate(value, vars);
+    },
+    [translations]
+  );
 
   return (
-    <I18nContext.Provider value={{ locale, setLocale, t, ready }}>
-      {children}
-    </I18nContext.Provider>
+    <I18nContext.Provider value={{ locale, setLocale, t, ready }}>{children}</I18nContext.Provider>
   );
 }
 

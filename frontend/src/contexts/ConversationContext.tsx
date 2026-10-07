@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+  useRef,
+} from 'react';
 import { Channel } from 'phoenix';
 import { toast } from 'sonner';
 import { getSocket } from '@/lib/socket';
@@ -82,7 +90,17 @@ interface ConversationContextType {
 
 const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
 
-export function ConversationProvider({ children, userId, token, onUnauthorized }: { children: ReactNode; userId: string; token: string; onUnauthorized?: () => void }) {
+export function ConversationProvider({
+  children,
+  userId,
+  token,
+  onUnauthorized,
+}: {
+  children: ReactNode;
+  userId: string;
+  token: string;
+  onUnauthorized?: () => void;
+}) {
   const { t } = useI18n();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -96,18 +114,23 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
   const channelRef = useRef<Channel | null>(null);
   const pendingReportRef = useRef<string | null>(null);
 
-  const authFetch = useCallback(async (url: string, opts?: Omit<RequestInit, 'headers'>): Promise<Response> => {
-    const res = await fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}` } });
-    if (res.status === 401) {
-      toast.error(t('errors.session_expired'));
-      onUnauthorized?.();
-    }
-    return res;
-  }, [token, t, onUnauthorized]);
+  const authFetch = useCallback(
+    async (url: string, opts?: Omit<RequestInit, 'headers'>): Promise<Response> => {
+      const res = await fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}` } });
+      if (res.status === 401) {
+        toast.error(t('errors.session_expired'));
+        onUnauthorized?.();
+      }
+      return res;
+    },
+    [token, t, onUnauthorized]
+  );
 
   const loadTrashed = useCallback(async () => {
     try {
-      const res = await authFetch(`${config.apiUrl}/conversations/trash?user_id=${encodeURIComponent(userId)}`);
+      const res = await authFetch(
+        `${config.apiUrl}/conversations/trash?user_id=${encodeURIComponent(userId)}`
+      );
       if (!res.ok) return;
       const data = await res.json();
       setTrashedConversations(data.conversations ?? []);
@@ -118,7 +141,9 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
 
   const loadConversations = useCallback(async () => {
     try {
-      const res = await authFetch(`${config.apiUrl}/conversations?user_id=${encodeURIComponent(userId)}`);
+      const res = await authFetch(
+        `${config.apiUrl}/conversations?user_id=${encodeURIComponent(userId)}`
+      );
       if (!res.ok) return;
       const data = await res.json();
       setConversations(data.conversations ?? []);
@@ -149,101 +174,143 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
     const ch = socket.channel(`conversation:${activeConversationId}`, {});
 
     ch.join()
-      .receive('ok', (resp: { status: string; history?: { messages: { message_id: string; content: string; user_id: string; timestamp: string }[]; predicted_codes: PredictedCode[]; analysis_cards: AnalysisCard[] } }) => {
-        if (resp.history) {
-          const items: ChatItem[] = [];
-          for (const msg of resp.history.messages ?? []) {
-            items.push({ kind: 'user', message_id: msg.message_id, content: msg.content, timestamp: msg.timestamp });
+      .receive(
+        'ok',
+        (resp: {
+          status: string;
+          history?: {
+            messages: { message_id: string; content: string; user_id: string; timestamp: string }[];
+            predicted_codes: PredictedCode[];
+            analysis_cards: AnalysisCard[];
+          };
+        }) => {
+          if (resp.history) {
+            const items: ChatItem[] = [];
+            for (const msg of resp.history.messages ?? []) {
+              items.push({
+                kind: 'user',
+                message_id: msg.message_id,
+                content: msg.content,
+                timestamp: msg.timestamp,
+              });
+            }
+            for (const card of resp.history.analysis_cards ?? []) {
+              items.push({ ...card, kind: 'card' });
+            }
+            const hasAnalysis = (resp.history.analysis_cards ?? []).length > 0;
+            const reportMsg = items.find((item) => item.kind === 'user');
+            if (hasAnalysis && reportMsg && reportMsg.kind === 'user') {
+              items.push({
+                kind: 'card' as const,
+                card_id: `suggest-history-${reportMsg.message_id}`,
+                message_id: reportMsg.message_id,
+                card_type: 'suggest' as const,
+                content: reportMsg.content,
+              });
+            }
+            setChatItems(items);
+            setPredictedCodes(resp.history.predicted_codes ?? []);
           }
-          for (const card of resp.history.analysis_cards ?? []) {
-            items.push({ ...card, kind: 'card' });
+          if (pendingReportRef.current) {
+            const text = pendingReportRef.current;
+            pendingReportRef.current = null;
+            ch.push('analyze_report', { report_text: text }).receive('error', () =>
+              toast.error(t('errors.analyze_failed'))
+            );
           }
-          const hasAnalysis = (resp.history.analysis_cards ?? []).length > 0;
-          const reportMsg = items.find((item) => item.kind === 'user');
-          if (hasAnalysis && reportMsg && reportMsg.kind === 'user') {
-            items.push({
-              kind: 'card' as const,
-              card_id: `suggest-history-${reportMsg.message_id}`,
-              message_id: reportMsg.message_id,
-              card_type: 'suggest' as const,
-              content: reportMsg.content,
-            });
-          }
-          setChatItems(items);
-          setPredictedCodes(resp.history.predicted_codes ?? []);
+          loadConversations();
         }
-        if (pendingReportRef.current) {
-          const text = pendingReportRef.current;
-          pendingReportRef.current = null;
-          ch.push('analyze_report', { report_text: text })
-            .receive('error', () => toast.error(t('errors.analyze_failed')));
-        }
-        loadConversations();
-      })
+      )
       .receive('error', () => toast.error(t('errors.join_failed')));
 
-    ch.on('new_message', (payload: { message_id: string; content: string; user_id: string; timestamp: string }) => {
-      setChatItems((prev) => [...prev, {
-        kind: 'user',
-        message_id: payload.message_id,
-        content: payload.content,
-        timestamp: payload.timestamp,
-      }]);
-      loadConversations();
-    });
+    ch.on(
+      'new_message',
+      (payload: { message_id: string; content: string; user_id: string; timestamp: string }) => {
+        setChatItems((prev) => [
+          ...prev,
+          {
+            kind: 'user',
+            message_id: payload.message_id,
+            content: payload.content,
+            timestamp: payload.timestamp,
+          },
+        ]);
+        loadConversations();
+      }
+    );
 
     ch.on('analysis_started', () => setIsAnalyzing(true));
 
-    ch.on('analysis_card_received', (payload: { message_id: string; card_id: string; card_type: AnalysisCard['card_type']; content: string | AnalysisCode[] }) => {
-      setChatItems((prev) => {
-        if (prev.some((item) => item.kind === 'card' && item.card_id === payload.card_id)) return prev;
-        // Si llega la tarjeta definitiva de summary, sustituye el buffer de streaming
-        const streamingId = `streaming-summary-${payload.message_id}`;
-        const hasStreaming = payload.card_type === 'summary' &&
-          prev.some((item) => item.kind === 'card' && item.card_id === streamingId);
-        if (hasStreaming) {
-          return prev.map((item) =>
-            item.kind === 'card' && item.card_id === streamingId
-              ? { ...item, card_id: payload.card_id, content: payload.content }
-              : item
-          );
-        }
-        return [...prev, {
-          kind: 'card',
-          card_id: payload.card_id,
-          message_id: payload.message_id,
-          card_type: payload.card_type,
-          content: payload.content,
-        }];
-      });
-    });
+    ch.on(
+      'analysis_card_received',
+      (payload: {
+        message_id: string;
+        card_id: string;
+        card_type: AnalysisCard['card_type'];
+        content: string | AnalysisCode[];
+      }) => {
+        setChatItems((prev) => {
+          if (prev.some((item) => item.kind === 'card' && item.card_id === payload.card_id))
+            return prev;
+          // Si llega la tarjeta definitiva de summary, sustituye el buffer de streaming
+          const streamingId = `streaming-summary-${payload.message_id}`;
+          const hasStreaming =
+            payload.card_type === 'summary' &&
+            prev.some((item) => item.kind === 'card' && item.card_id === streamingId);
+          if (hasStreaming) {
+            return prev.map((item) =>
+              item.kind === 'card' && item.card_id === streamingId
+                ? { ...item, card_id: payload.card_id, content: payload.content }
+                : item
+            );
+          }
+          return [
+            ...prev,
+            {
+              kind: 'card',
+              card_id: payload.card_id,
+              message_id: payload.message_id,
+              card_type: payload.card_type,
+              content: payload.content,
+            },
+          ];
+        });
+      }
+    );
 
-    ch.on('analysis_complete', (payload: { message_id: string; predicted_codes?: PredictedCode[]; engine?: string }) => {
-      setIsAnalyzing(false);
-      if (payload.predicted_codes?.length) setPredictedCodes(payload.predicted_codes);
-      if (payload.engine) setEngine(payload.engine);
-      // Si quedó alguna tarjeta de summary en modo streaming, quitarle el indicador
-      setChatItems((prev) =>
-        prev.map((item) =>
-          item.kind === 'card' && item.card_id.startsWith('streaming-summary-')
-            ? { ...item, card_id: `done-summary-${item.message_id}` }
-            : item
-        )
-      );
-      setChatItems((prev) => {
-        if (prev.some((item) => item.kind === 'card' && item.card_type === 'suggest')) return prev;
-        const reportMsg = prev.find((item) => item.kind === 'user');
-        if (!reportMsg || reportMsg.kind !== 'user') return prev;
-        return [...prev, {
-          kind: 'card' as const,
-          card_id: `suggest-${Date.now()}`,
-          message_id: reportMsg.message_id,
-          card_type: 'suggest' as const,
-          content: reportMsg.content,
-        }];
-      });
-      loadConversations();
-    });
+    ch.on(
+      'analysis_complete',
+      (payload: { message_id: string; predicted_codes?: PredictedCode[]; engine?: string }) => {
+        setIsAnalyzing(false);
+        if (payload.predicted_codes?.length) setPredictedCodes(payload.predicted_codes);
+        if (payload.engine) setEngine(payload.engine);
+        // Si quedó alguna tarjeta de summary en modo streaming, quitarle el indicador
+        setChatItems((prev) =>
+          prev.map((item) =>
+            item.kind === 'card' && item.card_id.startsWith('streaming-summary-')
+              ? { ...item, card_id: `done-summary-${item.message_id}` }
+              : item
+          )
+        );
+        setChatItems((prev) => {
+          if (prev.some((item) => item.kind === 'card' && item.card_type === 'suggest'))
+            return prev;
+          const reportMsg = prev.find((item) => item.kind === 'user');
+          if (!reportMsg || reportMsg.kind !== 'user') return prev;
+          return [
+            ...prev,
+            {
+              kind: 'card' as const,
+              card_id: `suggest-${Date.now()}`,
+              message_id: reportMsg.message_id,
+              card_type: 'suggest' as const,
+              content: reportMsg.content,
+            },
+          ];
+        });
+        loadConversations();
+      }
+    );
 
     ch.on('analysis_failed', (payload: { error: string }) => {
       setIsAnalyzing(false);
@@ -260,13 +327,15 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
 
     ch.on('code_validated', (payload: { code_id: string }) => {
       setPredictedCodes((prev) =>
-        prev.map((c) => c.code_id === payload.code_id ? { ...c, status: 'validated' as const } : c)
+        prev.map((c) =>
+          c.code_id === payload.code_id ? { ...c, status: 'validated' as const } : c
+        )
       );
     });
 
     ch.on('code_rejected', (payload: { code_id: string }) => {
       setPredictedCodes((prev) =>
-        prev.map((c) => c.code_id === payload.code_id ? { ...c, status: 'rejected' as const } : c)
+        prev.map((c) => (c.code_id === payload.code_id ? { ...c, status: 'rejected' as const } : c))
       );
     });
 
@@ -281,51 +350,71 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
               : item
           );
         }
-        return [...prev, {
-          kind: 'card' as const,
-          card_id: streamingId,
-          message_id: payload.message_id,
-          card_type: 'summary' as const,
-          content: payload.token,
-        }];
+        return [
+          ...prev,
+          {
+            kind: 'card' as const,
+            card_id: streamingId,
+            message_id: payload.message_id,
+            card_type: 'summary' as const,
+            content: payload.token,
+          },
+        ];
       });
     });
 
     // Los términos explicativos llegan en una segunda petición porque cuestan dos órdenes de magnitud más que predecir;
     // mientras tanto la tarjeta muestra lo que ya tiene.
-    ch.on('triggers_received', (payload: { message_id: string; method: string; triggers: Record<string, { term: string; source?: 'dict' | 'bert'; weight: number | null }[]> }) => {
-      setChatItems((prev) =>
-        prev.map((item) => {
-          if (item.kind !== 'card' || item.message_id !== payload.message_id) return item;
-          if (item.card_type !== 'codes' || !Array.isArray(item.content)) return item;
-          return {
-            ...item,
-            content: (item.content as AnalysisCode[]).map((c) => {
-              const llegados = payload.triggers[c.code] ?? [];
-              if (llegados.length === 0) return { ...c, triggers_complete: true };
-              const detalle = [
-                ...(c.trigger_detail ?? []),
-                ...llegados.map((t) => ({ term: t.term, source: t.source ?? ('bert' as const), weight: t.weight })),
-              ];
-              // El diccionario y el modelo pueden coincidir en un término: se conserva uno solo.
-              const unicos = detalle.filter(
-                (d, i) => detalle.findIndex((o) => o.term.toLowerCase() === d.term.toLowerCase()) === i
-              );
-              return {
-                ...c,
-                triggers: unicos.map((d) => d.term),
-                trigger_detail: unicos,
-                triggers_complete: true,
-              };
-            }),
-          };
-        })
-      );
-    });
+    ch.on(
+      'triggers_received',
+      (payload: {
+        message_id: string;
+        method: string;
+        triggers: Record<
+          string,
+          { term: string; source?: 'dict' | 'bert'; weight: number | null }[]
+        >;
+      }) => {
+        setChatItems((prev) =>
+          prev.map((item) => {
+            if (item.kind !== 'card' || item.message_id !== payload.message_id) return item;
+            if (item.card_type !== 'codes' || !Array.isArray(item.content)) return item;
+            return {
+              ...item,
+              content: (item.content as AnalysisCode[]).map((c) => {
+                const llegados = payload.triggers[c.code] ?? [];
+                if (llegados.length === 0) return { ...c, triggers_complete: true };
+                const detalle = [
+                  ...(c.trigger_detail ?? []),
+                  ...llegados.map((t) => ({
+                    term: t.term,
+                    source: t.source ?? ('bert' as const),
+                    weight: t.weight,
+                  })),
+                ];
+                // El diccionario y el modelo pueden coincidir en un término: se conserva uno solo.
+                const unicos = detalle.filter(
+                  (d, i) =>
+                    detalle.findIndex((o) => o.term.toLowerCase() === d.term.toLowerCase()) === i
+                );
+                return {
+                  ...c,
+                  triggers: unicos.map((d) => d.term),
+                  trigger_detail: unicos,
+                  triggers_complete: true,
+                };
+              }),
+            };
+          })
+        );
+      }
+    );
 
     ch.on('trigger_verified', (payload: { code_id: string; verified_triggers: string[] }) => {
       setPredictedCodes((prev) =>
-        prev.map((c) => c.code_id === payload.code_id ? { ...c, verified_triggers: payload.verified_triggers } : c)
+        prev.map((c) =>
+          c.code_id === payload.code_id ? { ...c, verified_triggers: payload.verified_triggers } : c
+        )
       );
     });
 
@@ -336,7 +425,7 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
       ch.leave();
       channelRef.current = null;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeConversationId, token, loadConversations]);
 
   const createConversation = useCallback(() => {
@@ -352,78 +441,105 @@ export function ConversationProvider({ children, userId, token, onUnauthorized }
     setActiveConversationId(conversationId);
   }, []);
 
-  const analyzeReport = useCallback((reportText: string) => {
-    if (!activeConversationId) {
-      const newId = `conv-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      pendingReportRef.current = reportText;
-      setPendingConversation(false);
-      setActiveConversationId(newId);
-    } else if (channel) {
-      channel.push('analyze_report', { report_text: reportText })
-        .receive('error', () => toast.error(t('errors.analyze_failed')));
-    }
-  }, [activeConversationId, channel, t]);
-
-  const validateCode = useCallback((codeId: string, cie10Code: string) => {
-    if (!channel) return;
-    channel.push('validate_code', { code_id: codeId, cie10_code: cie10Code })
-      .receive('error', () => toast.error(t('errors.validate_failed')));
-  }, [channel, t]);
-
-  const rejectCode = useCallback((codeId: string, cie10Code: string, reason: string) => {
-    if (!channel) return;
-    channel.push('reject_code', { code_id: codeId, cie10_code: cie10Code, reason })
-      .receive('error', () => toast.error(t('errors.reject_failed')));
-  }, [channel, t]);
-
-  const suggestCode = useCallback((selectedText: string, suggestedCode: string) => {
-    if (!channel) return;
-    channel.push('suggest_code', { selected_text: selectedText, suggested_code: suggestedCode })
-      .receive('ok', () => toast.success(t('cards.suggestion_saved')))
-      .receive('error', () => toast.error(t('errors.suggest_failed')));
-  }, [channel, t]);
-
-  const verifyTrigger = useCallback((codeId: string, trigger: string, verified: boolean) => {
-    if (!channel) return;
-    setPredictedCodes((prev) =>
-      prev.map((c) => {
-        if (c.code_id !== codeId) return c;
-        const current = c.verified_triggers ?? [];
-        return {
-          ...c,
-          verified_triggers: verified
-            ? [...new Set([...current, trigger])]
-            : current.filter((t) => t !== trigger),
-        };
-      })
-    );
-    channel.push('verify_trigger', { code_id: codeId, trigger, verified });
-  }, [channel]);
-
-  const deleteConversation = useCallback(async (conversationId: string) => {
-    try {
-      await authFetch(`${config.apiUrl}/conversations/${conversationId}`, { method: 'DELETE' });
-      setConversations((prev) => prev.filter((c) => c.conversation_id !== conversationId));
-      loadTrashed();
-      if (activeConversationId === conversationId) {
-        setActiveConversationId(null);
-        setChatItems([]);
-        setPredictedCodes([]);
+  const analyzeReport = useCallback(
+    (reportText: string) => {
+      if (!activeConversationId) {
+        const newId = `conv-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        pendingReportRef.current = reportText;
+        setPendingConversation(false);
+        setActiveConversationId(newId);
+      } else if (channel) {
+        channel
+          .push('analyze_report', { report_text: reportText })
+          .receive('error', () => toast.error(t('errors.analyze_failed')));
       }
-    } catch {
-      toast.error(t('errors.delete_failed'));
-    }
-  }, [authFetch, activeConversationId, loadTrashed, t]);
+    },
+    [activeConversationId, channel, t]
+  );
 
-  const restoreConversation = useCallback(async (conversationId: string) => {
-    try {
-      await authFetch(`${config.apiUrl}/conversations/${conversationId}/restore`, { method: 'PUT' });
-      setTrashedConversations((prev) => prev.filter((c) => c.conversation_id !== conversationId));
-      loadConversations();
-    } catch {
-      toast.error(t('errors.restore_failed'));
-    }
-  }, [authFetch, loadConversations, t]);
+  const validateCode = useCallback(
+    (codeId: string, cie10Code: string) => {
+      if (!channel) return;
+      channel
+        .push('validate_code', { code_id: codeId, cie10_code: cie10Code })
+        .receive('error', () => toast.error(t('errors.validate_failed')));
+    },
+    [channel, t]
+  );
+
+  const rejectCode = useCallback(
+    (codeId: string, cie10Code: string, reason: string) => {
+      if (!channel) return;
+      channel
+        .push('reject_code', { code_id: codeId, cie10_code: cie10Code, reason })
+        .receive('error', () => toast.error(t('errors.reject_failed')));
+    },
+    [channel, t]
+  );
+
+  const suggestCode = useCallback(
+    (selectedText: string, suggestedCode: string) => {
+      if (!channel) return;
+      channel
+        .push('suggest_code', { selected_text: selectedText, suggested_code: suggestedCode })
+        .receive('ok', () => toast.success(t('cards.suggestion_saved')))
+        .receive('error', () => toast.error(t('errors.suggest_failed')));
+    },
+    [channel, t]
+  );
+
+  const verifyTrigger = useCallback(
+    (codeId: string, trigger: string, verified: boolean) => {
+      if (!channel) return;
+      setPredictedCodes((prev) =>
+        prev.map((c) => {
+          if (c.code_id !== codeId) return c;
+          const current = c.verified_triggers ?? [];
+          return {
+            ...c,
+            verified_triggers: verified
+              ? [...new Set([...current, trigger])]
+              : current.filter((t) => t !== trigger),
+          };
+        })
+      );
+      channel.push('verify_trigger', { code_id: codeId, trigger, verified });
+    },
+    [channel]
+  );
+
+  const deleteConversation = useCallback(
+    async (conversationId: string) => {
+      try {
+        await authFetch(`${config.apiUrl}/conversations/${conversationId}`, { method: 'DELETE' });
+        setConversations((prev) => prev.filter((c) => c.conversation_id !== conversationId));
+        loadTrashed();
+        if (activeConversationId === conversationId) {
+          setActiveConversationId(null);
+          setChatItems([]);
+          setPredictedCodes([]);
+        }
+      } catch {
+        toast.error(t('errors.delete_failed'));
+      }
+    },
+    [authFetch, activeConversationId, loadTrashed, t]
+  );
+
+  const restoreConversation = useCallback(
+    async (conversationId: string) => {
+      try {
+        await authFetch(`${config.apiUrl}/conversations/${conversationId}/restore`, {
+          method: 'PUT',
+        });
+        setTrashedConversations((prev) => prev.filter((c) => c.conversation_id !== conversationId));
+        loadConversations();
+      } catch {
+        toast.error(t('errors.restore_failed'));
+      }
+    },
+    [authFetch, loadConversations, t]
+  );
 
   return (
     <ConversationContext.Provider

@@ -18,7 +18,13 @@ interface AuthContextType {
   /** False until localStorage has been read: avoids SSR/client mismatch */
   mounted: boolean;
   login: (email: string, password: string) => Promise<{ error?: string }>;
-  register: (fields: { first_name: string; last_name: string; username: string; email: string; password: string }) => Promise<{ error?: string }>;
+  register: (fields: {
+    first_name: string;
+    last_name: string;
+    username: string;
+    email: string;
+    password: string;
+  }) => Promise<{ error?: string }>;
   logout: () => void;
   clearPending: () => void;
 }
@@ -56,49 +62,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    try {
-      const res = await fetch(`${config.apiUrl}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) return { error: data.error ?? 'Error al iniciar sesión' };
-      persist({ user: data.user, token: data.token });
-      return {};
-    } catch {
-      return { error: 'No se pudo conectar con el servidor' };
-    }
-  }, [persist]);
-
-  const register = useCallback(async ({ first_name, last_name, username, email, password }: { first_name: string; last_name: string; username: string; email: string; password: string }) => {
-    try {
-      const res = await fetch(`${config.apiUrl}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ first_name, last_name, username, email, password }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        const firstError = data.errors
-          ? Object.values(data.errors as Record<string, string[]>).flat()[0]
-          : 'Error al registrarse';
-        return { error: firstError as string };
-      }
-
-      if (data.status === 'pending_confirmation') {
-        setPendingEmail(email);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      try {
+        const res = await fetch(`${config.apiUrl}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) return { error: data.error ?? 'Error al iniciar sesión' };
+        persist({ user: data.user, token: data.token });
         return {};
+      } catch {
+        return { error: 'No se pudo conectar con el servidor' };
       }
+    },
+    [persist]
+  );
 
-      persist({ user: data.user, token: data.token });
-      return {};
-    } catch {
-      return { error: 'No se pudo conectar con el servidor' };
-    }
-  }, [persist]);
+  const register = useCallback(
+    async ({
+      first_name,
+      last_name,
+      username,
+      email,
+      password,
+    }: {
+      first_name: string;
+      last_name: string;
+      username: string;
+      email: string;
+      password: string;
+    }) => {
+      try {
+        const res = await fetch(`${config.apiUrl}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ first_name, last_name, username, email, password }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          const firstError = data.errors
+            ? Object.values(data.errors as Record<string, string[]>).flat()[0]
+            : 'Error al registrarse';
+          return { error: firstError as string };
+        }
+
+        if (data.status === 'pending_confirmation') {
+          setPendingEmail(email);
+          return {};
+        }
+
+        persist({ user: data.user, token: data.token });
+        return {};
+      } catch {
+        return { error: 'No se pudo conectar con el servidor' };
+      }
+    },
+    [persist]
+  );
 
   const clearPending = useCallback(() => setPendingEmail(null), []);
 
@@ -108,7 +132,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [persist]);
 
   return (
-    <AuthContext.Provider value={{ user: auth?.user ?? null, token: auth?.token ?? null, pendingEmail, mounted, login, register, logout, clearPending }}>
+    <AuthContext.Provider
+      value={{
+        user: auth?.user ?? null,
+        token: auth?.token ?? null,
+        pendingEmail,
+        mounted,
+        login,
+        register,
+        logout,
+        clearPending,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

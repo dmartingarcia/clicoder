@@ -10,12 +10,12 @@ interface Props {
 }
 
 const RIGHTS = [
-  { key: 'art15', inApp: true,  icon: <Download className="h-3.5 w-3.5 shrink-0 text-blue-400" /> },
-  { key: 'art16', inApp: false, icon: <Mail     className="h-3.5 w-3.5 shrink-0 text-gray-400" /> },
-  { key: 'art17', inApp: true,  icon: <UserX    className="h-3.5 w-3.5 shrink-0 text-red-400"  /> },
-  { key: 'art18', inApp: false, icon: <Mail     className="h-3.5 w-3.5 shrink-0 text-gray-400" /> },
-  { key: 'art20', inApp: true,  icon: <Download className="h-3.5 w-3.5 shrink-0 text-blue-400" /> },
-  { key: 'art21', inApp: false, icon: <Mail     className="h-3.5 w-3.5 shrink-0 text-gray-400" /> },
+  { key: 'art15', inApp: true, icon: <Download className="h-3.5 w-3.5 shrink-0 text-blue-400" /> },
+  { key: 'art16', inApp: false, icon: <Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" /> },
+  { key: 'art17', inApp: true, icon: <UserX className="h-3.5 w-3.5 shrink-0 text-red-400" /> },
+  { key: 'art18', inApp: false, icon: <Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" /> },
+  { key: 'art20', inApp: true, icon: <Download className="h-3.5 w-3.5 shrink-0 text-blue-400" /> },
+  { key: 'art21', inApp: false, icon: <Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" /> },
 ] as const;
 
 export function PrivacyModal({ onClose, onExport, onDeleteAccount }: Props) {
@@ -31,11 +31,18 @@ export function PrivacyModal({ onClose, onExport, onDeleteAccount }: Props) {
 
         <div className="overflow-y-auto flex-1 px-5 py-3 space-y-2">
           {RIGHTS.map(({ key, inApp, icon }) => (
-            <div key={key} className="flex items-start gap-2.5 py-2 border-b border-gray-700/50 last:border-0">
+            <div
+              key={key}
+              className="flex items-start gap-2.5 py-2 border-b border-gray-700/50 last:border-0"
+            >
               <div className="mt-0.5">{icon}</div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-medium">{t(`privacy.${key}_title` as never)}</p>
-                <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">{t(`privacy.${key}_desc` as never)}</p>
+                <p className="text-white text-xs font-medium">
+                  {t(`privacy.${key}_title` as never)}
+                </p>
+                <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">
+                  {t(`privacy.${key}_desc` as never)}
+                </p>
               </div>
               {inApp && key === 'art15' && onExport && (
                 <button

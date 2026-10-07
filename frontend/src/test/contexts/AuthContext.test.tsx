@@ -20,7 +20,11 @@ function renderProvider() {
 
   render(
     <AuthProvider>
-      <Probe onRender={(ctx) => { capturedCtx = ctx; }} />
+      <Probe
+        onRender={(ctx) => {
+          capturedCtx = ctx;
+        }}
+      />
     </AuthProvider>
   );
 
@@ -55,7 +59,13 @@ describe('AuthProvider', () => {
 
     it('restores user and token from localStorage on mount', async () => {
       const stored = {
-        user: { id: 'u1', first_name: 'Ana', last_name: 'García', username: 'ana', email: 'ana@ex.com' },
+        user: {
+          id: 'u1',
+          first_name: 'Ana',
+          last_name: 'García',
+          username: 'ana',
+          email: 'ana@ex.com',
+        },
         token: 'tok-stored',
       };
       localStorage.setItem('cie10_auth', JSON.stringify(stored));
@@ -76,10 +86,19 @@ describe('AuthProvider', () => {
 
   describe('login', () => {
     it('returns empty object and persists session on success', async () => {
-      mockFetch({
-        token: 'tok-ok',
-        user: { id: 'u1', first_name: 'María', last_name: 'García', username: 'maria', email: 'maria@h.com' },
-      }, 200);
+      mockFetch(
+        {
+          token: 'tok-ok',
+          user: {
+            id: 'u1',
+            first_name: 'María',
+            last_name: 'García',
+            username: 'maria',
+            email: 'maria@h.com',
+          },
+        },
+        200
+      );
 
       const getCtx = renderProvider();
       await waitFor(() => expect(getCtx().mounted).toBe(true));
@@ -95,15 +114,20 @@ describe('AuthProvider', () => {
     });
 
     it('persists session to localStorage on success', async () => {
-      mockFetch({
-        token: 'tok-local',
-        user: { id: 'u1', first_name: 'A', last_name: 'B', username: 'ab', email: 'ab@ex.com' },
-      }, 200);
+      mockFetch(
+        {
+          token: 'tok-local',
+          user: { id: 'u1', first_name: 'A', last_name: 'B', username: 'ab', email: 'ab@ex.com' },
+        },
+        200
+      );
 
       const getCtx = renderProvider();
       await waitFor(() => expect(getCtx().mounted).toBe(true));
 
-      await act(async () => { await getCtx().login('ab@ex.com', 'pass'); });
+      await act(async () => {
+        await getCtx().login('ab@ex.com', 'pass');
+      });
 
       const stored = JSON.parse(localStorage.getItem('cie10_auth') ?? 'null');
       expect(stored?.token).toBe('tok-local');
@@ -140,7 +164,13 @@ describe('AuthProvider', () => {
   });
 
   describe('register', () => {
-    const fields = { first_name: 'Ana', last_name: 'López', username: 'ana_lopez', email: 'ana@h.com', password: 'SecurePass1!' };
+    const fields = {
+      first_name: 'Ana',
+      last_name: 'López',
+      username: 'ana_lopez',
+      email: 'ana@h.com',
+      password: 'SecurePass1!',
+    };
 
     it('sets pendingEmail on successful pending_confirmation response', async () => {
       mockFetch({ status: 'pending_confirmation' }, 201);
@@ -148,7 +178,9 @@ describe('AuthProvider', () => {
       const getCtx = renderProvider();
       await waitFor(() => expect(getCtx().mounted).toBe(true));
 
-      await act(async () => { await getCtx().register(fields); });
+      await act(async () => {
+        await getCtx().register(fields);
+      });
 
       expect(getCtx().pendingEmail).toBe('ana@h.com');
     });
@@ -196,10 +228,19 @@ describe('AuthProvider', () => {
     });
 
     it('persists session on register success with user/token (not pending_confirmation)', async () => {
-      mockFetch({
-        user: { id: 'u2', first_name: 'Ana', last_name: 'López', username: 'ana_lopez', email: 'ana@h.com' },
-        token: 'tok-register',
-      }, 201);
+      mockFetch(
+        {
+          user: {
+            id: 'u2',
+            first_name: 'Ana',
+            last_name: 'López',
+            username: 'ana_lopez',
+            email: 'ana@h.com',
+          },
+          token: 'tok-register',
+        },
+        201
+      );
 
       const getCtx = renderProvider();
       await waitFor(() => expect(getCtx().mounted).toBe(true));
@@ -231,34 +272,48 @@ describe('AuthProvider', () => {
 
   describe('logout', () => {
     it('clears user and token on logout', async () => {
-      mockFetch({
-        token: 'tok-x',
-        user: { id: 'u1', first_name: 'A', last_name: 'B', username: 'ab', email: 'ab@ex.com' },
-      }, 200);
+      mockFetch(
+        {
+          token: 'tok-x',
+          user: { id: 'u1', first_name: 'A', last_name: 'B', username: 'ab', email: 'ab@ex.com' },
+        },
+        200
+      );
 
       const getCtx = renderProvider();
       await waitFor(() => expect(getCtx().mounted).toBe(true));
 
-      await act(async () => { await getCtx().login('ab@ex.com', 'pass'); });
+      await act(async () => {
+        await getCtx().login('ab@ex.com', 'pass');
+      });
       expect(getCtx().user).not.toBeNull();
 
-      act(() => { getCtx().logout(); });
+      act(() => {
+        getCtx().logout();
+      });
 
       expect(getCtx().user).toBeNull();
       expect(getCtx().token).toBeNull();
     });
 
     it('removes session from localStorage on logout', async () => {
-      mockFetch({
-        token: 'tok-x',
-        user: { id: 'u1', first_name: 'A', last_name: 'B', username: 'ab', email: 'ab@ex.com' },
-      }, 200);
+      mockFetch(
+        {
+          token: 'tok-x',
+          user: { id: 'u1', first_name: 'A', last_name: 'B', username: 'ab', email: 'ab@ex.com' },
+        },
+        200
+      );
 
       const getCtx = renderProvider();
       await waitFor(() => expect(getCtx().mounted).toBe(true));
-      await act(async () => { await getCtx().login('ab@ex.com', 'pass'); });
+      await act(async () => {
+        await getCtx().login('ab@ex.com', 'pass');
+      });
 
-      act(() => { getCtx().logout(); });
+      act(() => {
+        getCtx().logout();
+      });
 
       expect(localStorage.getItem('cie10_auth')).toBeNull();
     });
@@ -270,11 +325,19 @@ describe('AuthProvider', () => {
       await waitFor(() => expect(getCtx().mounted).toBe(true));
 
       await act(async () => {
-        await getCtx().register({ first_name: 'A', last_name: 'B', username: 'ab', email: 'ab@h.com', password: 'SecurePass1!' });
+        await getCtx().register({
+          first_name: 'A',
+          last_name: 'B',
+          username: 'ab',
+          email: 'ab@h.com',
+          password: 'SecurePass1!',
+        });
       });
       expect(getCtx().pendingEmail).toBe('ab@h.com');
 
-      act(() => { getCtx().logout(); });
+      act(() => {
+        getCtx().logout();
+      });
       expect(getCtx().pendingEmail).toBeNull();
     });
   });
@@ -282,9 +345,9 @@ describe('AuthProvider', () => {
   describe('useAuth outside provider', () => {
     it('throws when used outside AuthProvider', () => {
       const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      expect(() =>
-        render(<Probe onRender={() => {}} />)
-      ).toThrow('useAuth must be used within AuthProvider');
+      expect(() => render(<Probe onRender={() => {}} />)).toThrow(
+        'useAuth must be used within AuthProvider'
+      );
       spy.mockRestore();
     });
   });
@@ -297,5 +360,4 @@ describe('AuthProvider', () => {
       expect(getCtx().user).toBeNull();
     });
   });
-
 });

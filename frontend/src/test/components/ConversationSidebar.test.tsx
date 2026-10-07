@@ -36,7 +36,13 @@ const mockLogout = vi.fn();
 
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
-    user: { id: 'u1', first_name: 'María', last_name: 'García', username: 'dra_garcia', email: 'maria@hosp.com' },
+    user: {
+      id: 'u1',
+      first_name: 'María',
+      last_name: 'García',
+      username: 'dra_garcia',
+      email: 'maria@hosp.com',
+    },
     token: 'tok-123',
     logout: mockLogout,
   }),
@@ -97,8 +103,22 @@ describe('ConversationSidebar', () => {
   describe('conversation list', () => {
     beforeEach(() => {
       mockConversations = [
-        { conversation_id: 'c1', started_at: now, status: 'active', deleted_at: null, message_count: 3, last_message: { content: 'Patient report', timestamp: now } },
-        { conversation_id: 'c2', started_at: now, status: 'active', deleted_at: null, message_count: 1, last_message: { content: 'Another note', timestamp: now } },
+        {
+          conversation_id: 'c1',
+          started_at: now,
+          status: 'active',
+          deleted_at: null,
+          message_count: 3,
+          last_message: { content: 'Patient report', timestamp: now },
+        },
+        {
+          conversation_id: 'c2',
+          started_at: now,
+          status: 'active',
+          deleted_at: null,
+          message_count: 1,
+          last_message: { content: 'Another note', timestamp: now },
+        },
       ];
     });
 
@@ -122,7 +142,14 @@ describe('ConversationSidebar', () => {
 
     it('shows message count using messages_one for 1 message', () => {
       mockConversations = [
-        { conversation_id: 'c1', started_at: now, status: 'active', deleted_at: null, message_count: 1, last_message: null },
+        {
+          conversation_id: 'c1',
+          started_at: now,
+          status: 'active',
+          deleted_at: null,
+          message_count: 1,
+          last_message: null,
+        },
       ];
       render(<ConversationSidebar />);
       expect(screen.getByText(/1.*sidebar\.messages_one/)).toBeInTheDocument();
@@ -137,7 +164,14 @@ describe('ConversationSidebar', () => {
   describe('trash section', () => {
     beforeEach(() => {
       mockTrashedConversations = [
-        { conversation_id: 't1', started_at: now, status: 'active', deleted_at: now, message_count: 0, last_message: { content: 'Old report', timestamp: now } },
+        {
+          conversation_id: 't1',
+          started_at: now,
+          status: 'active',
+          deleted_at: now,
+          message_count: 0,
+          last_message: { content: 'Old report', timestamp: now },
+        },
       ];
     });
 
@@ -206,7 +240,9 @@ describe('ConversationSidebar', () => {
     });
 
     it('cierra la sesión si el token ha caducado al exportar', async () => {
-      global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401 }) as unknown as typeof fetch;
+      global.fetch = vi
+        .fn()
+        .mockResolvedValue({ ok: false, status: 401 }) as unknown as typeof fetch;
 
       const user = userEvent.setup();
       render(<ConversationSidebar />);
@@ -216,7 +252,9 @@ describe('ConversationSidebar', () => {
     });
 
     it('no descarga nada si la exportación falla', async () => {
-      global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 }) as unknown as typeof fetch;
+      global.fetch = vi
+        .fn()
+        .mockResolvedValue({ ok: false, status: 500 }) as unknown as typeof fetch;
       const clickSpy = vi.fn();
       const originalCreate = document.createElement.bind(document);
       vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
@@ -256,7 +294,9 @@ describe('ConversationSidebar', () => {
     });
 
     it('borra la cuenta y cierra la sesión tras confirmar', async () => {
-      global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 }) as unknown as typeof fetch;
+      global.fetch = vi
+        .fn()
+        .mockResolvedValue({ ok: true, status: 200 }) as unknown as typeof fetch;
       const user = userEvent.setup();
       render(<ConversationSidebar />);
 
@@ -271,7 +311,9 @@ describe('ConversationSidebar', () => {
     });
 
     it('cierra la sesión sin borrar nada si el token ha caducado al confirmar', async () => {
-      global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401 }) as unknown as typeof fetch;
+      global.fetch = vi
+        .fn()
+        .mockResolvedValue({ ok: false, status: 401 }) as unknown as typeof fetch;
       const user = userEvent.setup();
       render(<ConversationSidebar />);
 
@@ -310,10 +352,16 @@ describe('ConversationSidebar', () => {
       render(<ConversationSidebar />);
       await user.click(screen.getByText('privacy.title'));
 
-      const boton = screen.getByText('privacy.art15_title').closest('div.flex.items-start')!.querySelector('button')!;
+      const boton = screen
+        .getByText('privacy.art15_title')
+        .closest('div.flex.items-start')!
+        .querySelector('button')!;
       await user.click(boton);
 
-      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/users/export'), expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/users/export'),
+        expect.anything()
+      );
       expect(screen.queryByText('privacy.intro')).not.toBeInTheDocument();
       vi.restoreAllMocks();
     });
@@ -323,7 +371,10 @@ describe('ConversationSidebar', () => {
       render(<ConversationSidebar />);
       await user.click(screen.getByText('privacy.title'));
 
-      const boton = screen.getByText('privacy.art17_title').closest('div.flex.items-start')!.querySelector('button')!;
+      const boton = screen
+        .getByText('privacy.art17_title')
+        .closest('div.flex.items-start')!
+        .querySelector('button')!;
       await user.click(boton);
 
       expect(screen.queryByText('privacy.intro')).not.toBeInTheDocument();
@@ -346,7 +397,14 @@ describe('ConversationSidebar', () => {
   describe('interacción con una fila de conversación', () => {
     beforeEach(() => {
       mockConversations = [
-        { conversation_id: 'c1', started_at: now, status: 'active', deleted_at: null, message_count: 3, last_message: { content: 'Patient report', timestamp: now } },
+        {
+          conversation_id: 'c1',
+          started_at: now,
+          status: 'active',
+          deleted_at: null,
+          message_count: 3,
+          last_message: { content: 'Patient report', timestamp: now },
+        },
       ];
     });
 
@@ -373,5 +431,4 @@ describe('ConversationSidebar', () => {
       expect(mockSwitchConversation).not.toHaveBeenCalled();
     });
   });
-
 });

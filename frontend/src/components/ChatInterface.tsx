@@ -2,7 +2,13 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useConversation, ChatItem, AnalysisCard, AnalysisCode, PredictedCode } from '@/contexts/ConversationContext';
+import {
+  useConversation,
+  ChatItem,
+  AnalysisCard,
+  AnalysisCode,
+  PredictedCode,
+} from '@/contexts/ConversationContext';
 import { ConversationSidebar } from '@/components/ConversationSidebar';
 import { useI18n } from '@/contexts/I18nContext';
 import { Card } from '@/components/ui/card';
@@ -12,8 +18,17 @@ import { Badge } from '@/components/ui/badge';
 import { searchCie10, Cie10Result, getAncestors } from '@/lib/cie10';
 import { config } from '@/lib/config';
 import {
-  Loader2, FileText, Stethoscope, CheckCircle2, XCircle,
-  AlertCircle, ClipboardList, Lightbulb, Activity, Tag, ExternalLink,
+  Loader2,
+  FileText,
+  Stethoscope,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  ClipboardList,
+  Lightbulb,
+  Activity,
+  Tag,
+  ExternalLink,
 } from 'lucide-react';
 
 function SummaryCard({ content, streaming = false }: { content: string; streaming?: boolean }) {
@@ -22,12 +37,18 @@ function SummaryCard({ content, streaming = false }: { content: string; streamin
     <Card className="p-4 border-l-4 border-l-blue-400 bg-blue-50">
       <div className="flex items-center gap-2 mb-2 text-blue-700">
         <ClipboardList className="h-4 w-4 shrink-0" />
-        <span className="text-xs font-semibold uppercase tracking-wide">{t('cards.summary_title')}</span>
-        {streaming && <span className="ml-auto text-[10px] text-blue-400 animate-pulse">generando…</span>}
+        <span className="text-xs font-semibold uppercase tracking-wide">
+          {t('cards.summary_title')}
+        </span>
+        {streaming && (
+          <span className="ml-auto text-[10px] text-blue-400 animate-pulse">generando…</span>
+        )}
       </div>
       <p className="text-sm text-gray-700 leading-relaxed">
         {content}
-        {streaming && <span className="inline-block w-0.5 h-3.5 bg-blue-400 ml-0.5 animate-pulse align-middle" />}
+        {streaming && (
+          <span className="inline-block w-0.5 h-3.5 bg-blue-400 ml-0.5 animate-pulse align-middle" />
+        )}
       </p>
     </Card>
   );
@@ -52,7 +73,12 @@ function CodesCard({
 
   const enriched = codes.map((c) => {
     const db = predictedCodes.find((p) => p.cie10_code === c.code);
-    return { ...c, code_id: db?.code_id, status: db?.status ?? 'pending', verified_triggers: db?.verified_triggers ?? [] };
+    return {
+      ...c,
+      code_id: db?.code_id,
+      status: db?.status ?? 'pending',
+      verified_triggers: db?.verified_triggers ?? [],
+    };
   });
 
   return (
@@ -101,7 +127,11 @@ function CodesCard({
                   variant={c.status === 'rejected' ? 'destructive' : 'secondary'}
                   className={`text-xs ${c.status === 'validated' ? 'bg-green-100 text-green-700 border border-green-300' : ''}`}
                 >
-                  {c.status === 'validated' ? t('cards.status_validated') : c.status === 'rejected' ? t('cards.status_rejected') : t('cards.pending')}
+                  {c.status === 'validated'
+                    ? t('cards.status_validated')
+                    : c.status === 'rejected'
+                      ? t('cards.status_rejected')
+                      : t('cards.pending')}
                 </Badge>
               </div>
               <div className="shrink-0 flex flex-col items-end gap-0.5 min-w-12">
@@ -111,8 +141,8 @@ function CodesCard({
                       (c.relative_confidence ?? 1) >= 0.66
                         ? 'bg-green-500'
                         : (c.relative_confidence ?? 1) >= 0.33
-                        ? 'bg-yellow-400'
-                        : 'bg-orange-400'
+                          ? 'bg-yellow-400'
+                          : 'bg-orange-400'
                     }`}
                     style={{ width: `${Math.round((c.relative_confidence ?? 1) * 100)}%` }}
                   />
@@ -132,10 +162,14 @@ function CodesCard({
                   // El color y el tooltip dependen del origen: diccionario (coincidencia literal) o modelo (palabra influyente).
                   const source = c.trigger_detail?.find((d) => d.term === term)?.source;
                   const origin =
-                    source === 'dict' ? t('cards.trigger_from_dict')
-                    : source === 'bert' ? t('cards.trigger_from_model')
-                    : '';
-                  const action = isVerified ? t('cards.trigger_unverify') : t('cards.trigger_verify');
+                    source === 'dict'
+                      ? t('cards.trigger_from_dict')
+                      : source === 'bert'
+                        ? t('cards.trigger_from_model')
+                        : '';
+                  const action = isVerified
+                    ? t('cards.trigger_unverify')
+                    : t('cards.trigger_verify');
                   const palette = isVerified
                     ? 'bg-green-50 text-green-700 border-green-300'
                     : source === 'dict'
@@ -148,7 +182,8 @@ function CodesCard({
                       title={origin ? `${origin} · ${action}` : action}
                       className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${palette}`}
                     >
-                      {isVerified ? '✓ ' : ''}{term}
+                      {isVerified ? '✓ ' : ''}
+                      {term}
                     </button>
                   );
                 })}
@@ -178,7 +213,9 @@ function CodesCard({
                     size="sm"
                     variant="outline"
                     className="flex-1 text-xs h-7 border-red-200 text-red-600 hover:bg-red-50"
-                    onClick={() => setShowReject((prev) => (prev === c.code_id ? null : c.code_id!))}
+                    onClick={() =>
+                      setShowReject((prev) => (prev === c.code_id ? null : c.code_id!))
+                    }
                   >
                     <XCircle className="h-3 w-3 mr-1" /> {t('cards.reject')}
                   </Button>
@@ -191,7 +228,9 @@ function CodesCard({
                       autoFocus
                       placeholder={t('cards.reject_placeholder')}
                       value={rejectInputs[c.code_id!] ?? ''}
-                      onChange={(e) => setRejectInputs((prev) => ({ ...prev, [c.code_id!]: e.target.value }))}
+                      onChange={(e) =>
+                        setRejectInputs((prev) => ({ ...prev, [c.code_id!]: e.target.value }))
+                      }
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && rejectInputs[c.code_id!]?.trim()) {
                           rejectCode(c.code_id!, c.code, rejectInputs[c.code_id!]);
@@ -242,12 +281,18 @@ function SuggestionCard({ content }: { content: string }) {
   const [suggestions, setSuggestions] = useState<Cie10Result[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState<Cie10Result | null>(null);
-  const [submitted, setSubmitted] = useState<{ text: string; code: string; description?: string }[]>([]);
+  const [submitted, setSubmitted] = useState<
+    { text: string; code: string; description?: string }[]
+  >([]);
   const textRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchSuggestions = useCallback(async (q: string) => {
-    if (q.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    if (q.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
     const results = await searchCie10(q, 8);
     setSuggestions(results);
     setShowSuggestions(results.length > 0);
@@ -256,7 +301,9 @@ function SuggestionCard({ content }: { content: string }) {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchSuggestions(codeInput), 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [codeInput, fetchSuggestions]);
 
   const handleMouseUp = () => {
@@ -282,7 +329,10 @@ function SuggestionCard({ content }: { content: string }) {
     if (!selectedText || !codeInput.trim()) return;
     const code = codeInput.trim().toUpperCase();
     suggestCode(selectedText, code);
-    setSubmitted((prev) => [...prev, { text: selectedText, code, description: selectedSuggestion?.description }]);
+    setSubmitted((prev) => [
+      ...prev,
+      { text: selectedText, code, description: selectedSuggestion?.description },
+    ]);
     setSelectedText('');
     setCodeInput('');
     setSelectedSuggestion(null);
@@ -291,13 +341,19 @@ function SuggestionCard({ content }: { content: string }) {
   };
 
   const typeLabel = (type: string) =>
-    type === 'diagnosis' ? t('cie10.type_diagnosis') : type === 'procedure' ? t('cie10.type_procedure') : t('cie10.type_chemical');
+    type === 'diagnosis'
+      ? t('cie10.type_diagnosis')
+      : type === 'procedure'
+        ? t('cie10.type_procedure')
+        : t('cie10.type_chemical');
 
   return (
     <Card className="p-4 border-l-4 border-l-purple-400 bg-purple-50">
       <div className="flex items-center gap-2 mb-2 text-purple-700">
         <Tag className="h-4 w-4 shrink-0" />
-        <span className="text-xs font-semibold uppercase tracking-wide">{t('cards.suggest_title')}</span>
+        <span className="text-xs font-semibold uppercase tracking-wide">
+          {t('cards.suggest_title')}
+        </span>
       </div>
       <p className="text-xs text-purple-600 mb-3">{t('cards.suggest_hint')}</p>
 
@@ -322,12 +378,22 @@ function SuggestionCard({ content }: { content: string }) {
                 type="text"
                 placeholder={t('cards.suggest_code_placeholder')}
                 value={codeInput}
-                onChange={(e) => { setCodeInput(e.target.value.toUpperCase()); setSelectedSuggestion(null); }}
+                onChange={(e) => {
+                  setCodeInput(e.target.value.toUpperCase());
+                  setSelectedSuggestion(null);
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') { setShowSuggestions(false); handleSubmit(); }
+                  if (e.key === 'Enter') {
+                    setShowSuggestions(false);
+                    handleSubmit();
+                  }
                   if (e.key === 'Escape') {
-                    if (showSuggestions) { setShowSuggestions(false); }
-                    else { setSelectedText(''); window.getSelection()?.removeAllRanges(); }
+                    if (showSuggestions) {
+                      setShowSuggestions(false);
+                    } else {
+                      setSelectedText('');
+                      window.getSelection()?.removeAllRanges();
+                    }
                   }
                 }}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
@@ -345,7 +411,10 @@ function SuggestionCard({ content }: { content: string }) {
                 size="sm"
                 variant="ghost"
                 className="text-xs h-8"
-                onClick={() => { setSelectedText(''); window.getSelection()?.removeAllRanges(); }}
+                onClick={() => {
+                  setSelectedText('');
+                  window.getSelection()?.removeAllRanges();
+                }}
               >
                 <XCircle className="h-3 w-3" />
               </Button>
@@ -357,12 +426,21 @@ function SuggestionCard({ content }: { content: string }) {
                   <button
                     key={s.code}
                     type="button"
-                    onMouseDown={(e) => { e.preventDefault(); pickSuggestion(s); }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      pickSuggestion(s);
+                    }}
                     className="w-full text-left px-3 py-2 hover:bg-purple-50 flex items-start gap-2 border-b border-gray-100 last:border-0"
                   >
-                    <span className="font-bold text-purple-700 text-xs shrink-0 mt-0.5">{s.code}</span>
-                    <span className="text-xs text-gray-600 line-clamp-1 flex-1">{s.description}</span>
-                    <Badge variant="outline" className="text-[10px] shrink-0 px-1">{typeLabel(s.type)}</Badge>
+                    <span className="font-bold text-purple-700 text-xs shrink-0 mt-0.5">
+                      {s.code}
+                    </span>
+                    <span className="text-xs text-gray-600 line-clamp-1 flex-1">
+                      {s.description}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] shrink-0 px-1">
+                      {typeLabel(s.type)}
+                    </Badge>
                   </button>
                 ))}
               </div>
@@ -380,7 +458,10 @@ function SuggestionCard({ content }: { content: string }) {
       {submitted.length > 0 && (
         <div className="mt-3 space-y-1">
           {submitted.map((s, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs bg-purple-100 text-purple-800 rounded px-2 py-1">
+            <div
+              key={i}
+              className="flex items-center gap-2 text-xs bg-purple-100 text-purple-800 rounded px-2 py-1"
+            >
               <CheckCircle2 className="h-3 w-3 shrink-0 text-purple-600" />
               <span className="truncate">&ldquo;{s.text}&rdquo;</span>
               <span className="font-bold shrink-0">→</span>
@@ -482,11 +563,25 @@ function nombreMotor(engine: string, t: (k: never) => string): string {
 }
 
 export function ChatInterface() {
-  const { activeConversationId, pendingConversation, chatItems, predictedCodes, isAnalyzing, engine, analyzeReport, validateCode, rejectCode, verifyTrigger, createConversation } = useConversation();
+  const {
+    activeConversationId,
+    pendingConversation,
+    chatItems,
+    predictedCodes,
+    isAnalyzing,
+    engine,
+    analyzeReport,
+    validateCode,
+    rejectCode,
+    verifyTrigger,
+    createConversation,
+  } = useConversation();
   const { t } = useI18n();
   const MAX_TOKENS = 512;
   const [reportText, setReportText] = useState('');
-  const [serverTokenEntry, setServerTokenEntry] = useState<{ text: string; count: number } | null>(null);
+  const [serverTokenEntry, setServerTokenEntry] = useState<{ text: string; count: number } | null>(
+    null
+  );
   // Deriving null from text mismatch avoids a synchronous setState inside the effect.
   const serverTokenCount = serverTokenEntry?.text === reportText ? serverTokenEntry.count : null;
   const approxTokenCount = Math.ceil(reportText.length / 4);
@@ -550,7 +645,11 @@ export function ChatInterface() {
               <h2 className="font-semibold text-gray-800">{t('chat.analysis_header')}</h2>
               <p className="text-xs text-gray-400">
                 ID: {activeConversationId}
-                {engine && <span className="ml-3 text-blue-500 font-medium">{t('chat.engine_label')}: {nombreMotor(engine, t)}</span>}
+                {engine && (
+                  <span className="ml-3 text-blue-500 font-medium">
+                    {t('chat.engine_label')}: {nombreMotor(engine, t)}
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -573,12 +672,19 @@ export function ChatInterface() {
                       <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                         <div className="flex items-center gap-2 mb-2 text-gray-500">
                           <FileText className="h-4 w-4 shrink-0" />
-                          <span className="text-xs font-semibold uppercase tracking-wide">{t('chat.report_label')}</span>
+                          <span className="text-xs font-semibold uppercase tracking-wide">
+                            {t('chat.report_label')}
+                          </span>
                           <span className="ml-auto text-xs text-gray-400">
-                            {new Date(firstUser.timestamp).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                            {new Date(firstUser.timestamp).toLocaleString(undefined, {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                            })}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{firstUser.content}</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                          {firstUser.content}
+                        </p>
                       </div>
                     )}
                     {rest.map((item, i) => (
@@ -639,7 +745,9 @@ export function ChatInterface() {
                 </p>
               )}
               <div className="flex items-center justify-between mt-2">
-                <span className={`text-xs ${tokenCount > MAX_TOKENS ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
+                <span
+                  className={`text-xs ${tokenCount > MAX_TOKENS ? 'text-red-600 font-medium' : 'text-gray-400'}`}
+                >
                   {t('chat.word_count', { count: tokenCount, max: MAX_TOKENS })}
                 </span>
                 <Button
@@ -648,9 +756,11 @@ export function ChatInterface() {
                   className="bg-blue-600 hover:bg-blue-700 gap-2"
                   size="sm"
                 >
-                  {isAnalyzing
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <FileText className="h-4 w-4" />}
+                  {isAnalyzing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
+                  )}
                   {t('chat.analyze_button')}
                 </Button>
               </div>

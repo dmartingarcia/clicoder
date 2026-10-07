@@ -55,5 +55,5 @@ export function getAncestors(code: string): string[] {
     }
   }
 
-  return ancestors.filter(a => a !== code);
+  return ancestors.filter((a) => a !== code);
 }

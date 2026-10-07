@@ -105,7 +105,10 @@ describe('AuthPage', () => {
       await user.type(screen.getByPlaceholderText('García López'), 'Lopez');
       await user.type(screen.getByPlaceholderText('dr_garcia'), 'dr_maria');
       await user.type(screen.getByPlaceholderText('doctor@hospital.com'), 'maria@hosp.com');
-      await user.type(screen.getByPlaceholderText('auth.password_placeholder_register'), 'Password123!');
+      await user.type(
+        screen.getByPlaceholderText('auth.password_placeholder_register'),
+        'Password123!'
+      );
       await user.click(screen.getByRole('button', { name: /auth\.submit_register/i }));
 
       await waitFor(() => {

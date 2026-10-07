@@ -13,8 +13,22 @@ const mockVerifyTrigger = vi.fn();
 let mockState = {
   activeConversationId: 'conv-test-1',
   pendingConversation: false,
-  chatItems: [] as Array<{ kind: string; message_id?: string; card_id?: string; content: string; timestamp?: string; card_type?: string }>,
-  predictedCodes: [] as Array<{ code_id: string; cie10_code: string; reasoning: string; confidence: number; status: string; verified_triggers?: string[] }>,
+  chatItems: [] as Array<{
+    kind: string;
+    message_id?: string;
+    card_id?: string;
+    content: string;
+    timestamp?: string;
+    card_type?: string;
+  }>,
+  predictedCodes: [] as Array<{
+    code_id: string;
+    cie10_code: string;
+    reasoning: string;
+    confidence: number;
+    status: string;
+    verified_triggers?: string[];
+  }>,
   isAnalyzing: false,
 };
 
@@ -155,7 +169,12 @@ describe('ChatInterface', () => {
 
     it('renders the first user message as the report card', () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report content here', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report content here',
+          timestamp: new Date().toISOString(),
+        },
       ];
       render(<ChatInterface />);
       expect(screen.getByText('Patient report content here')).toBeInTheDocument();
@@ -172,17 +191,30 @@ describe('ChatInterface', () => {
   describe('codes card validation', () => {
     it('shows validate/reject buttons for pending codes with code_id', () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Report text here for patient visit', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Report text here for patient visit',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-1',
           message_id: 'msg-1',
           card_type: 'codes',
-          content: [{ code: 'I10', description: 'Hypertension', reason: 'High BP', confidence: 0.94 }],
+          content: [
+            { code: 'I10', description: 'Hypertension', reason: 'High BP', confidence: 0.94 },
+          ],
         },
       ] as typeof mockState.chatItems;
       mockState.predictedCodes = [
-        { code_id: 'code-uuid-1', cie10_code: 'I10', reasoning: 'High BP', confidence: 0.94, status: 'pending' },
+        {
+          code_id: 'code-uuid-1',
+          cie10_code: 'I10',
+          reasoning: 'High BP',
+          confidence: 0.94,
+          status: 'pending',
+        },
       ];
       render(<ChatInterface />);
       expect(screen.getByText('cards.validate')).toBeInTheDocument();
@@ -191,17 +223,30 @@ describe('ChatInterface', () => {
 
     it('calls validateCode when validate button clicked', async () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report long enough to show', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report long enough to show',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-1',
           message_id: 'msg-1',
           card_type: 'codes',
-          content: [{ code: 'I10', description: 'Hypertension', reason: 'High BP', confidence: 0.94 }],
+          content: [
+            { code: 'I10', description: 'Hypertension', reason: 'High BP', confidence: 0.94 },
+          ],
         },
       ] as typeof mockState.chatItems;
       mockState.predictedCodes = [
-        { code_id: 'code-uuid-1', cie10_code: 'I10', reasoning: 'High BP', confidence: 0.94, status: 'pending' },
+        {
+          code_id: 'code-uuid-1',
+          cie10_code: 'I10',
+          reasoning: 'High BP',
+          confidence: 0.94,
+          status: 'pending',
+        },
       ];
       const user = userEvent.setup();
       render(<ChatInterface />);
@@ -211,17 +256,30 @@ describe('ChatInterface', () => {
 
     it('shows reject input and calls rejectCode via confirm button', async () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report long enough to show', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report long enough to show',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-1',
           message_id: 'msg-1',
           card_type: 'codes',
-          content: [{ code: 'I10', description: 'Hypertension', reason: 'High BP', confidence: 0.94 }],
+          content: [
+            { code: 'I10', description: 'Hypertension', reason: 'High BP', confidence: 0.94 },
+          ],
         },
       ] as typeof mockState.chatItems;
       mockState.predictedCodes = [
-        { code_id: 'code-uuid-1', cie10_code: 'I10', reasoning: 'High BP', confidence: 0.94, status: 'pending' },
+        {
+          code_id: 'code-uuid-1',
+          cie10_code: 'I10',
+          reasoning: 'High BP',
+          confidence: 0.94,
+          status: 'pending',
+        },
       ];
       const user = userEvent.setup();
       render(<ChatInterface />);
@@ -237,17 +295,30 @@ describe('ChatInterface', () => {
 
     it('calls rejectCode via Enter key in reject input', async () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report long enough to show', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report long enough to show',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-1',
           message_id: 'msg-1',
           card_type: 'codes',
-          content: [{ code: 'J45', description: 'Asthma', reason: 'Breathing issues', confidence: 0.87 }],
+          content: [
+            { code: 'J45', description: 'Asthma', reason: 'Breathing issues', confidence: 0.87 },
+          ],
         },
       ] as typeof mockState.chatItems;
       mockState.predictedCodes = [
-        { code_id: 'code-uuid-2', cie10_code: 'J45', reasoning: 'Breathing issues', confidence: 0.87, status: 'pending' },
+        {
+          code_id: 'code-uuid-2',
+          cie10_code: 'J45',
+          reasoning: 'Breathing issues',
+          confidence: 0.87,
+          status: 'pending',
+        },
       ];
       const user = userEvent.setup();
       render(<ChatInterface />);
@@ -260,17 +331,30 @@ describe('ChatInterface', () => {
 
     it('shows validated status for validated codes', () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report long enough to show', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report long enough to show',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-1',
           message_id: 'msg-1',
           card_type: 'codes',
-          content: [{ code: 'I10', description: 'Hypertension', reason: 'High BP', confidence: 0.94 }],
+          content: [
+            { code: 'I10', description: 'Hypertension', reason: 'High BP', confidence: 0.94 },
+          ],
         },
       ] as typeof mockState.chatItems;
       mockState.predictedCodes = [
-        { code_id: 'code-uuid-1', cie10_code: 'I10', reasoning: 'High BP', confidence: 0.94, status: 'validated' },
+        {
+          code_id: 'code-uuid-1',
+          cie10_code: 'I10',
+          reasoning: 'High BP',
+          confidence: 0.94,
+          status: 'validated',
+        },
       ];
       render(<ChatInterface />);
       expect(screen.getByText('cards.validated')).toBeInTheDocument();
@@ -281,23 +365,30 @@ describe('ChatInterface', () => {
   describe('evidencias (triggers) de un código', () => {
     it('distingue el término que viene del diccionario del que detectó el modelo, y permite marcar o desmarcar cada uno', async () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report long enough to show', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report long enough to show',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-1',
           message_id: 'msg-1',
           card_type: 'codes',
-          content: [{
-            code: 'I10',
-            description: 'Hipertensión',
-            reason: 'High BP',
-            confidence: 0.94,
-            triggers: ['hipertensión', 'presión alta'],
-            trigger_detail: [
-              { term: 'hipertensión', source: 'dict', weight: null },
-              { term: 'presión alta', source: 'bert', weight: 0.8 },
-            ],
-          }],
+          content: [
+            {
+              code: 'I10',
+              description: 'Hipertensión',
+              reason: 'High BP',
+              confidence: 0.94,
+              triggers: ['hipertensión', 'presión alta'],
+              trigger_detail: [
+                { term: 'hipertensión', source: 'dict', weight: null },
+                { term: 'presión alta', source: 'bert', weight: 0.8 },
+              ],
+            },
+          ],
         },
       ] as typeof mockState.chatItems;
       mockState.predictedCodes = [
@@ -322,20 +413,27 @@ describe('ChatInterface', () => {
 
     it('avisa mientras el resto de evidencias todavía se están calculando', () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report long enough to show', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report long enough to show',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-1',
           message_id: 'msg-1',
           card_type: 'codes',
-          content: [{
-            code: 'I10',
-            description: 'Hipertensión',
-            reason: 'High BP',
-            confidence: 0.94,
-            triggers: [],
-            triggers_complete: false,
-          }],
+          content: [
+            {
+              code: 'I10',
+              description: 'Hipertensión',
+              reason: 'High BP',
+              confidence: 0.94,
+              triggers: [],
+              triggers_complete: false,
+            },
+          ],
         },
       ] as typeof mockState.chatItems;
       render(<ChatInterface />);
@@ -381,7 +479,9 @@ describe('ChatInterface', () => {
       const textarea = screen.getByPlaceholderText('chat.report_placeholder');
       fireEvent.change(textarea, { target: { value: 'a'.repeat(25) } });
 
-      await waitFor(() => expect(screen.getByText(/chat\.max_words_error/)).toBeInTheDocument(), { timeout: 1000 });
+      await waitFor(() => expect(screen.getByText(/chat\.max_words_error/)).toBeInTheDocument(), {
+        timeout: 1000,
+      });
       expect(screen.getByRole('button', { name: /chat\.analyze_button/i })).toBeDisabled();
     });
   });
@@ -405,7 +505,12 @@ describe('ChatInterface', () => {
     function setupSuggestionCard() {
       const content = 'El paciente presenta hipertensión arterial severa';
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Report here', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Report here',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-s',
@@ -496,7 +601,9 @@ describe('ChatInterface', () => {
 
       screen.getByPlaceholderText('cards.suggest_code_placeholder');
       await user.keyboard('{Escape}');
-      expect(screen.queryByPlaceholderText('cards.suggest_code_placeholder')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('cards.suggest_code_placeholder')
+      ).not.toBeInTheDocument();
     });
 
     it('cancel button hides the form', async () => {
@@ -519,7 +626,9 @@ describe('ChatInterface', () => {
       const formRow = input.parentElement!;
       const cancelBtn = within(formRow).getAllByRole('button').at(-1)!;
       await user.click(cancelBtn);
-      expect(screen.queryByPlaceholderText('cards.suggest_code_placeholder')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('cards.suggest_code_placeholder')
+      ).not.toBeInTheDocument();
     });
 
     it('shows submitted suggestions after successful submit', async () => {
@@ -548,11 +657,15 @@ describe('ChatInterface', () => {
       const content = setupSuggestionCard();
       render(<ChatInterface />);
       const textDiv = screen.getByText(content);
-      vi.spyOn(window, 'getSelection').mockReturnValue({ isCollapsed: true } as unknown as Selection);
+      vi.spyOn(window, 'getSelection').mockReturnValue({
+        isCollapsed: true,
+      } as unknown as Selection);
 
       fireEvent.mouseUp(textDiv);
 
-      expect(screen.queryByPlaceholderText('cards.suggest_code_placeholder')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('cards.suggest_code_placeholder')
+      ).not.toBeInTheDocument();
     });
 
     it('ignora selecciones de un solo carácter, probablemente un clic accidental', () => {
@@ -567,7 +680,9 @@ describe('ChatInterface', () => {
 
       fireEvent.mouseUp(textDiv);
 
-      expect(screen.queryByPlaceholderText('cards.suggest_code_placeholder')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('cards.suggest_code_placeholder')
+      ).not.toBeInTheDocument();
     });
 
     it('ignora selecciones hechas fuera del texto de la propia tarjeta', () => {
@@ -582,7 +697,9 @@ describe('ChatInterface', () => {
 
       fireEvent.mouseUp(textDiv);
 
-      expect(screen.queryByPlaceholderText('cards.suggest_code_placeholder')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('cards.suggest_code_placeholder')
+      ).not.toBeInTheDocument();
     });
 
     it('Enter sin haber escrito ningún código todavía no envía ninguna sugerencia', async () => {
@@ -625,7 +742,9 @@ describe('ChatInterface', () => {
       const input = screen.getByPlaceholderText('cards.suggest_code_placeholder');
       await user.type(input, 'HI');
 
-      await waitFor(() => expect(screen.getByText('Hipertensión esencial')).toBeInTheDocument(), { timeout: 1000 });
+      await waitFor(() => expect(screen.getByText('Hipertensión esencial')).toBeInTheDocument(), {
+        timeout: 1000,
+      });
       expect(screen.getByText('cie10.type_diagnosis')).toBeInTheDocument();
 
       await user.click(screen.getByText('Hipertensión esencial'));
@@ -685,14 +804,22 @@ describe('ChatInterface', () => {
 
       fireEvent.blur(input);
 
-      await waitFor(() => expect(screen.queryByText('cie10.type_diagnosis')).not.toBeInTheDocument(), { timeout: 1000 });
+      await waitFor(
+        () => expect(screen.queryByText('cie10.type_diagnosis')).not.toBeInTheDocument(),
+        { timeout: 1000 }
+      );
     });
   });
 
   describe('text and suggestion cards', () => {
     it('renders TextCard for unknown card_type', () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report text here', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report text here',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-2',
@@ -707,7 +834,12 @@ describe('ChatInterface', () => {
 
     it('renders SuggestionCard with hint text', () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report text here', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report text here',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-3',
@@ -724,7 +856,12 @@ describe('ChatInterface', () => {
     it('renders SuggestionCard content text', () => {
       const content = 'El paciente presenta síntomas respiratorios agudos';
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report text here', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report text here',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-3',
@@ -741,8 +878,18 @@ describe('ChatInterface', () => {
   describe('subsequent user messages', () => {
     it('renders a second user message through ChatItemView', () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'First patient report', timestamp: new Date().toISOString() },
-        { kind: 'user', message_id: 'msg-2', content: 'Follow-up patient report', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'First patient report',
+          timestamp: new Date().toISOString(),
+        },
+        {
+          kind: 'user',
+          message_id: 'msg-2',
+          content: 'Follow-up patient report',
+          timestamp: new Date().toISOString(),
+        },
       ];
       render(<ChatInterface />);
       expect(screen.getByText('Follow-up patient report')).toBeInTheDocument();
@@ -750,8 +897,18 @@ describe('ChatInterface', () => {
 
     it('shows MD badge on user messages in ChatItemView', () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'First message here', timestamp: new Date().toISOString() },
-        { kind: 'user', message_id: 'msg-2', content: 'Second message rendered via ChatItemView', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'First message here',
+          timestamp: new Date().toISOString(),
+        },
+        {
+          kind: 'user',
+          message_id: 'msg-2',
+          content: 'Second message rendered via ChatItemView',
+          timestamp: new Date().toISOString(),
+        },
       ];
       render(<ChatInterface />);
       expect(screen.getAllByText('MD').length).toBeGreaterThan(0);
@@ -761,7 +918,12 @@ describe('ChatInterface', () => {
   describe('summary and recommendations cards', () => {
     it('renders SummaryCard content', () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report text here', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report text here',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-s',
@@ -777,7 +939,12 @@ describe('ChatInterface', () => {
 
     it('does not render recommendations cards (handled externally)', () => {
       mockState.chatItems = [
-        { kind: 'user', message_id: 'msg-1', content: 'Patient report text here', timestamp: new Date().toISOString() },
+        {
+          kind: 'user',
+          message_id: 'msg-1',
+          content: 'Patient report text here',
+          timestamp: new Date().toISOString(),
+        },
         {
           kind: 'card',
           card_id: 'card-r',

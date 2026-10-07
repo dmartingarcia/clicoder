@@ -37,7 +37,7 @@ function ConfirmEmailContent() {
         setStatus('error');
         setErrorMsg('No se pudo conectar con el servidor.');
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (status === 'loading') {
@@ -63,7 +63,9 @@ function ConfirmEmailContent() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center space-y-4">
         <p className="text-red-600 font-semibold">{errorMsg}</p>
-        <Link href="/" className="text-blue-600 text-sm underline">Volver al inicio</Link>
+        <Link href="/" className="text-blue-600 text-sm underline">
+          Volver al inicio
+        </Link>
       </div>
     </div>
   );
