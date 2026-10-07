@@ -196,7 +196,7 @@
 	{\fancyhead[RO,LE]{\sffamily\thepage}}
 
 % Formato para el capítulo: N. Nombre
-\renewcommand{\chaptermark}[1]{\markboth{\textbf{\thechapter.#1}}{}}
+\renewcommand{\chaptermark}[1]{\markboth{\textbf{\thechapter. #1}}{}}
 % Formato para la sección: N.M. Nombre
 \renewcommand{\sectionmark}[1]{\markright{\textbf{\thesection. #1}}} 
 \renewcommand{\headrulewidth}{0.6pt} % Ancho línea horizontal bajo el encabezado

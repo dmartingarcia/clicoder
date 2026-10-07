@@ -32,6 +32,14 @@
 			   pageonfooter=false % Paginación en el pie
 ]{TFGesi}
 
+\let\oldttfamily\ttfamily
+\renewcommand{\ttfamily}{\oldttfamily\hyphenchar\font=45\relax}
+\usepackage{xurl}
+\raggedbottom
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\AtBeginDocument{\renewcommand{\_}{\textunderscore\allowbreak{}}}
+\emergencystretch=3em
+
 % -------------------------
 % EDITA: Los datos del documento con la información de tu trabajo.
 %
