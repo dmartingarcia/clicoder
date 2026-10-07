@@ -3,9 +3,9 @@
 
 Este anexo describe la técnica de \emph{back-translation} (retrotraducción) aplicada al corpus CodiEsp para paliar la escasez de datos de entrenamiento, la motivación estadística que la justifica, el servicio externo empleado y los comandos necesarios para reproducirla.
 
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Motivación: el problema de la escasez de datos}
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 El clasificador CIE-10 del proyecto debe asignar etiquetas de un vocabulario de \textbf{1.767 códigos} a notas clínicas en español. El conjunto de entrenamiento de CodiEsp cuenta únicamente con \textbf{500 documentos}. La ratio documentos/clases es de $\approx 0{,}28$, lo que significa que la mayoría de códigos aparece en muy pocas notas de entrenamiento.
 
@@ -18,9 +18,9 @@ Esta situación genera dos patologías complementarias:
 
 La técnica habitual para abordar la escasez de datos en NLP cuando no se dispone de más datos anotados es la \textbf{aumentación de datos}: generar nuevas muestras sintéticas que preserven la etiqueta original pero aporten variedad léxica y sintáctica.
 
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Back-translation como aumentación}
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 La retrotraducción es el método de aumentación más consolidado en NLP~\cite{sennrich2016improving}. El procedimiento es:
 
@@ -51,9 +51,9 @@ El francés es una lengua romance que comparte con el español raíces latinas y
 
 El alemán, en cambio, pertenece a la rama germánica. Sus estructuras sintácticas y su formación de compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) obligan al motor de traducción a reformular las oraciones de forma más profunda al retraducir al español, generando paráfrasis más diversas. Azure Translator dispone de alta calidad para el par ES$\leftrightarrow$DE en textos clínicos, comparable al par ES$\leftrightarrow$EN. Por estos motivos se incorporó \textbf{alemán (DE)} como segundo pivote y \textbf{francés (FR)} como tercero. Los tres se generaron finalmente, de modo que el corpus aumentado combina los 500 documentos originales con las 500 variantes de cada pivote; la Tabla~\ref{tab:bt-quality} confirma la previsión, con el francés como el pivote de menor variación (mediana de $0{,}0$ caracteres) y el alemán el de mayor recomposición en palabras ($+5{,}9$ de media).
 
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Servicio empleado: Azure Translator}
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Se evaluaron tres alternativas para la traducción:
 
@@ -87,13 +87,13 @@ Latencia típica            & 200--800 ms por lote \\
 \end{tabular}
 \end{table}
 
-El corpus CodiEsp de entrenamiento contiene \textbf{1.158.623 caracteres}. Cada pivote traduce ida y vuelta (por ejemplo ES→EN→ES), de modo que consume el doble: \textbf{2.317.246 caracteres por pivote}, ya un 16\,\% por encima del límite mensual del nivel F0. Con los tres pivotes empleados el total asciende a \textbf{6.951.738 caracteres}, equivalentes a 3,5 cuotas mensuales gratuitas. Los primeros 2.000.000 se cubrieron con la cuota mensual del nivel F0 y los 4.951.738 restantes se facturaron en modalidad \emph{pay-as-you-go} contra el \textbf{crédito gratuito de 200\,\$} que Azure concede a las cuentas nuevas, que quedó agotado al completar los tres pivotes. La aumentación no tuvo coste real, pero conviene dejar claro que \textbf{no cabe en el nivel gratuito}: quien quiera reproducirla necesita ese crédito inicial, repartir la carga entre varios recursos F0 en regiones distintas o extenderla a lo largo de varios meses.
+El corpus CodiEsp de entrenamiento contiene \textbf{1.158.623 caracteres}. Cada pivote traduce ida y vuelta (por ejemplo ES→EN→ES), de modo que consume el doble: \textbf{2.317.246 caracteres por pivote}, ya un 16\,\% por encima del límite mensual del nivel F0. Con los tres pivotes empleados el total asciende a \textbf{6.951.738 caracteres}, equivalentes a 3,5 cuotas mensuales gratuitas. Los primeros 2.000.000 se cubrieron con la cuota mensual del nivel F0 y los 4.951.738 restantes se facturaron en modalidad de pago por uso (\emph{pay-as-you-go}) contra el \textbf{crédito gratuito de 200\,\$} que Azure concede a las cuentas nuevas, que quedó agotado al completar los tres pivotes. La aumentación no tuvo coste real, pero conviene dejar claro que \textbf{no cabe en el nivel gratuito}: quien quiera reproducirla necesita ese crédito inicial, repartir la carga entre varios recursos F0 en regiones distintas o extenderla a lo largo de varios meses.
 
 Si el crédito gratuito se agotase antes de completar las notas, el script permite reanudar con \texttt{RESUME=1}: cuenta las filas ya escritas en el CSV de salida y retoma desde la siguiente sin retraducir nada. Como alternativa, Azure permite crear múltiples recursos Translator F0 en diferentes regiones bajo la misma cuenta, cada uno con su cuota independiente.
 
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Resultados de la aumentación}
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Distribución de códigos antes y después}
 
@@ -115,6 +115,8 @@ $>$ 5 apariciones   & 200  & 11,3\,\% \\
 \textbf{Total}    & \textbf{1.767} & \textbf{100\,\%} \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con \texttt{make ai-augment-stats} (\texttt{ai\_engine/augment\_stats.py}) sobre \texttt{codiesp\_\allowbreak{}D\_\allowbreak{}source\_\allowbreak{}train.csv}: recuento de apariciones de cada código entre las 500 notas.}
 \end{table}
 
 La evolución del corpus en cada etapa de aumentación queda recogida en la Tabla~\ref{tab:aug-results}.
@@ -125,18 +127,20 @@ La evolución del corpus en cada etapa de aumentación queda recogida en la Tabl
 \label{tab:aug-results}
 \begin{tabular}{lrrrr}
 \hline
-\textbf{Métrica} & \textbf{Original} & \textbf{+ pivot EN} & \textbf{+ pivot DE} & \textbf{+ pivot FR} \\
+\textbf{Métrica} & \textbf{Original} & \textbf{+ pivote EN} & \textbf{+ pivote DE} & \textbf{+ pivote FR} \\
 \hline
 Documentos (acumulado)      & 500       & 1.000   & 1.500   & 2.000   \\
 Códigos únicos cubiertos    & 1.767     & 1.767   & 1.767   & 1.767   \\
 Total anotaciones           & 5.639     & 11.278  & 16.917  & 22.556  \\
 Media etiquetas por nota    & 11,28     & 11,28   & 11,28   & 11,28   \\
-Caracteres totales          & 1.158.623 & $\approx$2.320.000 & $\approx$3.479.000 & $\approx$4.637.000 \\
+Caracteres totales          & 1.158.623 & $\approx$2.321.000 & $\approx$3.479.000 & $\approx$4.639.000 \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con \texttt{make ai-augment-stats} a partir de los CSV de \texttt{make ai-augment}; los caracteres totales de las etapas aumentadas se redondean al millar.}
 \end{table}
 
-La retrotraducción cuadruplica el número de ejemplos por código sin coste de anotación. Para los 999 códigos que aparecen una sola vez, pasar a cuatro ejemplos (el original más los tres pivotes) multiplica por cuatro la señal disponible en la señal de entrenamiento: con un único ejemplo el gradiente solo puede ajustar la proyección del embedding hacia esa etiqueta; con dos formulaciones distintas del mismo concepto, el modelo aprende a activar la misma salida ante representaciones diferentes, lo que equivale a capturar la invarianza semántica del código.
+La retrotraducción cuadruplica el número de ejemplos por código sin coste de anotación. Para los 999 códigos que aparecen una sola vez, pasar a cuatro ejemplos (el original más los tres pivotes) multiplica por cuatro la señal de entrenamiento disponible: con un único ejemplo el gradiente solo puede ajustar la proyección del \emph{embedding} hacia esa etiqueta; con varias formulaciones distintas del mismo concepto (basta con dos), el modelo aprende a activar la misma salida ante representaciones diferentes, lo que equivale a capturar la invarianza semántica del código.
 
 \subsection{Calidad de la traducción}
 
@@ -148,7 +152,7 @@ Se aplicaron tres pivotes independientes: inglés (EN), alemán (DE) y francés 
 \label{tab:bt-quality}
 \begin{tabular}{lrrr}
 \hline
-\textbf{Métrica} & \textbf{Pivot EN} & \textbf{Pivot DE} & \textbf{Pivot FR} \\
+\textbf{Métrica} & \textbf{Pivote EN} & \textbf{Pivote DE} & \textbf{Pivote FR} \\
 \hline
 Notas con variación léxica  & 496 / 500 (99,2\,\%) & 497 / 500 (99,4\,\%) & 495 / 500 (99,0\,\%) \\
 $\Delta$ caracteres (media)      & $+7{,}6$  & $-2{,}4$  & $+3{,}7$  \\
@@ -159,9 +163,11 @@ $\Delta$ caracteres (rango)      & $-2.696$ a $+2.648$ & $-473$ a $+307$ & $-305
 $\Delta$ palabras (rango)   & $-398$ a $+404$     & $-74$ a $+96$   & $-61$ a $+59$   \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con \texttt{make ai-augment-stats}, comparando cada nota original con su variante; se considera variación léxica que cambie el número de caracteres.}
 \end{table}
 
-Los tres pivotes muestran patrones claramente distintos que se complementan. El inglés produce la mayor variación absoluta en caracteres (rango $\pm$2600), con un sesgo positivo que refleja la tendencia del español recuperado a ser más explícito. El alemán reduce el recuento de caracteres ($-2{,}4$ de media) pero aumenta el de palabras ($+5{,}9$): sus compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) se descomponen al retraducirse al español en frases de varias palabras. El francés es el pivote más conservador, con mediana de variación en caracteres de $0{,}0$ y el rango más estrecho ($\pm$305~caracteres, $\pm$61~palabras), lo que era esperado dada su proximidad lingüística al español.
+Los tres pivotes muestran patrones distintos que se complementan. El inglés produce la mayor variación absoluta en caracteres (rango $\pm$2600), con un sesgo positivo que refleja la tendencia del español recuperado a ser más explícito. El alemán reduce el recuento de caracteres ($-2{,}4$ de media) pero aumenta el de palabras ($+5{,}9$): sus compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) se descomponen al retraducirse al español en frases de varias palabras. El francés es el pivote más conservador, con mediana de variación en caracteres de $0{,}0$ y el rango más estrecho ($\pm$305~caracteres, $\pm$61~palabras), lo que era esperado dada su proximidad lingüística al español.
 
 Agrupando las notas en intervalos de 5 palabras se obtiene la distribución de la Tabla~\ref{tab:bt-dist}.
 
@@ -187,15 +193,17 @@ $> +20$        &  55 & 11,0 &  66 & 13,2 &  59 & 11,8 \\
 \textbf{Total} & \textbf{500} & \textbf{100} & \textbf{500} & \textbf{100} & \textbf{500} & \textbf{100} \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con \texttt{make ai-augment-stats} sobre los mismos CSV que la Tabla~\ref{tab:bt-quality}; los intervalos son abiertos por la izquierda y cerrados por la derecha.}
 \end{table}
 
 Las tres distribuciones son simétricas en torno a cero con desplazamiento positivo. El alemán concentra más masa en los extremos superiores ($>+15$: 21\,\%) confirmando que genera paráfrasis más expansivas. El francés tiene más peso en la zona negativa ($< -10$: 15\,\%) que el inglés (11\,\%), coherente con su tendencia a condensar expresiones equivalentes. La variabilidad complementaria de los tres pivotes es la señal útil para el entrenamiento: el modelo aprende que textos muy distintos en forma pueden corresponder al mismo conjunto de códigos CIE-10.
 
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Implementación técnica}
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-El script \texttt{ai\_engine/augment.py} encapsula la lógica completa de aumentación con dos \emph{backends} intercambiables:
+El script \texttt{ai\_engine/augment.py} encapsula la lógica completa de aumentación con dos motores de traducción intercambiables:
 
 \begin{description}
   \item[\texttt{NLLBTranslator}] Carga el modelo \texttt{facebook/nllb-200-distilled-1.3B} en GPU con precisión FP16. Traduce en lotes de hasta \texttt{nllb\_batch} textos.
@@ -206,9 +214,9 @@ El flujo de retrotraducción divide los textos largos en párrafos si superan el
 
 El checkpoint es incremental y no requiere fichero auxiliar: al reanudar con \texttt{RESUME=1} el script cuenta las filas del CSV de salida, deduce cuántas notas ya están traducidas y retoma desde la siguiente. Esto permite interrumpir y reanudar la aumentación sin retraducir notas ya procesadas.
 
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Configuración y uso}
-% ---------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 La documentación oficial de Azure Translator, que incluye referencia completa de la API REST, lista de idiomas soportados y guías de inicio rápido, está disponible en:
 
@@ -226,7 +234,7 @@ La documentación oficial de Azure Translator, que incluye referencia completa d
       \item \textit{Resource group}: crear uno nuevo, p.~ej. \texttt{cie10-rg}.
       \item \textit{Region}: la más cercana geográficamente, p.~ej. \texttt{West Europe}.
       \item \textit{Name}: nombre libre, p.~ej. \texttt{cie10-translator}.
-      \item \textit{Pricing tier}: seleccionar \textbf{F0 (Free: 2M chars/month)}.
+      \item \textit{Pricing tier}: seleccionar \textbf{F0 (Free: 2M chars/month)} (texto literal de la interfaz de Azure).
     \end{itemize}
   \item Hacer clic en \textbf{Review + create} $\rightarrow$ \textbf{Create} y esperar $\sim$30 segundos.
   \item Navegar al recurso creado $\rightarrow$ sidebar \textbf{Keys and Endpoint}.
@@ -258,7 +266,7 @@ set -a && source .env && set +a && \
   TRANS_BACKEND=azure make ai-augment RESUME=1 2>&1 | tee -a tmp/augment_azure.log
 \end{lstlisting}
 
-La opción \texttt{RESUME=1} activa el \emph{checkpoint} incremental desde el inicio. Si el proceso se interrumpe (corte de red, agotamiento del nivel gratuito, reinicio del sistema), basta con relanzar exactamente el mismo comando: el script cuenta las filas ya guardadas en el CSV de salida y retoma desde donde lo dejó sin retraducir nada.
+La opción \texttt{RESUME=1} activa el \emph{checkpoint} incremental desde el inicio. Si el proceso se interrumpe (corte de red, agotamiento del nivel gratuito, reinicio del sistema), basta con relanzar el mismo comando: el script cuenta las filas ya guardadas en el CSV de salida y retoma desde donde lo dejó sin retraducir nada.
 
 \begin{lstlisting}[language=bash]
 # Usar NLLB-200 local si no se dispone de clave Azure
@@ -273,21 +281,21 @@ tail -f tmp/augment_azure.log
 
 \subsection{Ficheros de salida}
 
-Cada combinación de backend y lengua pivote genera un fichero CSV independiente, derivado del nombre base especificado en \texttt{--output\_file}:
+Cada combinación de motor de traducción y lengua pivote genera un fichero CSV independiente, derivado del nombre base especificado en \texttt{--output\_file}:
 
 \begin{center}
-\texttt{<base>\_<backend>\_<pivot>.csv}
+\texttt{<base>\_<motor>\_<pivote>.csv}
 \end{center}
 
 Por ejemplo, con el fichero base \texttt{codiesp\_D\_source\_train\_augmented.csv}, se generan los ficheros de la Tabla~\ref{tab:augment-files}:
 
 \begin{table}[h]
 \centering
-\caption{Ficheros generados por combinación de backend y pivote.}
+\caption{Ficheros generados por combinación de motor de traducción y pivote.}
 \label{tab:augment-files}
 \begin{tabular}{lll}
 \hline
-\textbf{Fichero} & \textbf{Backend} & \textbf{Pivote} \\
+\textbf{Fichero} & \textbf{Motor} & \textbf{Pivote} \\
 \hline
 \texttt{..\_azure\_en.csv} & Azure Translator & Inglés \\
 \texttt{..\_azure\_fr.csv} & Azure Translator & Francés \\
@@ -297,7 +305,7 @@ Por ejemplo, con el fichero base \texttt{codiesp\_D\_source\_train\_augmented.cs
 \end{tabular}
 \end{table}
 
-Cada fichero contiene las 500 notas originales más las 500 variantes retrotraducidas con ese pivote concreto, lo que permite combinarlos de forma modular. El resume funciona de forma independiente por fichero: si se interrumpe la generación de \texttt{azure\_en}, el reinicio no afecta al estado de \texttt{azure\_fr}.
+Cada fichero contiene las 500 notas originales más las 500 variantes retrotraducidas con ese pivote concreto, lo que permite combinarlos de forma modular. La reanudación funciona de forma independiente por fichero: si se interrumpe la generación de \texttt{azure\_en}, el reinicio no afecta al estado de \texttt{azure\_fr}.
 
 \subsection{Combinación de pivotes y entrenamiento}
 
@@ -307,16 +315,15 @@ Cada pivote genera un fichero independiente con 500 notas originales + 500 aumen
 make ai-combine
 \end{lstlisting}
 
-El script toma el corpus original y añade las variantes aumentadas de cada pivote (EN, DE, FR), produciendo \texttt{codiesp\_D\_source\_train\_augmented\_all.csv} con \textbf{2.000 documentos} (500 originales + 1500 aumentados). A continuación, entrenar con el corpus completo requiere únicamente pasar el fichero combinado como \texttt{TRAIN\_FILE}:
+El script toma el corpus original y añade las variantes aumentadas de cada pivote (EN, DE, FR), produciendo \texttt{codiesp\_D\_source\_train\_augmented\_all.csv} con \textbf{2.000 documentos} (500 originales + 1500 aumentados). A continuación, entrenar con el corpus completo requiere únicamente añadir \texttt{TRAIN\_FILE} al comando completo de entrenamiento del Anexo~\ref{cap:AnexoK}, que fija todos los hiperparámetros del modelo servido (\texttt{make ai-train-gpu} por sí solo usa otros valores por defecto):
 
 \begin{lstlisting}[language=bash, breaklines=true, breakatwhitespace=false]
 make ai-train-gpu \
   TRAIN_FILE=/data/codiesp_csvs/codiesp_D_source_train_augmented_all.csv \
-  FREEZE_LAYERS=20 LR=1e-4 BATCH_SIZE=8 EPOCHS=150 PATIENCE=20 \
-  FULL_CODES=1 LABEL_SMOOTHING=0.1 LR_SCHEDULE=plateau \
-  UNFREEZE_EVERY=30 UNFREEZE_LAYERS=4 UNFREEZE_LR_RATIO=0.1 \
-  2>&1 | tee -a /tmp/train_paso32.log
+  <resto de variables del Anexo K>
 \end{lstlisting}
+
+Los experimentos descritos en el Anexo~\ref{cap:AnexoF} partieron de la configuración vigente en cada paso, no de este comando.
 
 El corpus de entrenamiento crece de 500 a 2.000 documentos (4×) sin modificar la arquitectura ni los hiperparámetros. La hipótesis de partida era que la mejora fuese más pronunciada en F1-macro, que es la métrica más sensible a los códigos raros.
 

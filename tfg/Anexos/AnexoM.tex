@@ -16,8 +16,8 @@ El backend Phoenix expone análogamente su documentación interactiva en \texttt
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=\textwidth]{figs/swagger-ui}
-\caption{Swagger UI generada automáticamente por FastAPI para el motor de IA (\texttt{/docs}).}
+\includegraphics[width=0.9\textwidth, trim=0 330 0 0, clip]{figs/swagger-ui}
+\caption{Swagger UI generada automáticamente por FastAPI (\texttt{/docs}). Captura del motor simulado (\emph{mock}) de las pruebas: muestra cuatro endpoints; la lista completa del motor de IA está en la Tabla~\ref{tab:openapi-endpoints}.}
 \label{fig:swagger}
 \end{figure}
 
@@ -26,46 +26,46 @@ El backend Phoenix expone análogamente su documentación interactiva en \texttt
 {\small
 \begin{verbatim}
 "/predict": {
- "post": {
- "summary": "Predecir códigos CIE-10",
- "operationId": "predict_codes_predict_post",
- "requestBody": {
- "required": true,
- "content": { "application/json": {
- "schema": { "$ref": "#/components/schemas/AnalysisRequest" } } }
- },
- "responses": {
- "200": { "description": "Successful Response" },
- "422": { "description": "Validation Error", "content": {
- "application/json": { "schema": {
- "$ref": "#/components/schemas/HTTPValidationError" } } } }
- }
- }
+  "post": {
+    "summary": "Predecir códigos CIE-10",
+    "operationId": "predict_codes_predict_post",
+    "requestBody": {
+      "required": true,
+      "content": { "application/json": {
+          "schema": { "$ref": "#/components/schemas/AnalysisRequest" } } }
+    },
+    "responses": {
+      "200": { "description": "Successful Response" },
+      "422": { "description": "Validation Error", "content": {
+          "application/json": { "schema": {
+              "$ref": "#/components/schemas/HTTPValidationError" } } } }
+    }
+  }
 }
 
 "AnalysisRequest": {
- "type": "object",
- "required": ["text"],
- "properties": {
- "text": { "type": "string", "title": "Text" },
- "engine": { "type": "string", "title": "Engine", "default": "bert",
- "enum": ["bert", "dict", "both", "fused"] },
- "include_triggers": { "type": "boolean", "title": "Include Triggers",
- "default": false }
- }
+  "type": "object",
+  "required": ["text"],
+  "properties": {
+    "text": { "type": "string", "title": "Text" },
+    "engine": { "type": "string", "title": "Engine", "default": "bert",
+      "enum": ["bert", "dict", "both", "fused"] },
+    "include_triggers": { "type": "boolean", "title": "Include Triggers",
+      "default": false }
+  }
 }
 
 "ExplainRequest": {
- "type": "object",
- "required": ["text", "codes"],
- "properties": {
- "text": { "type": "string", "title": "Text" },
- "codes": { "type": "array", "items": { "type": "string" },
- "title": "Codes" },
- "method": { "anyOf": [{ "type": "string" }, { "type": "null" }],
- "title": "Method" },
- "top_k": { "type": "integer", "title": "Top K", "default": 5 }
- }
+  "type": "object",
+  "required": ["text", "codes"],
+  "properties": {
+    "text": { "type": "string", "title": "Text" },
+    "codes": { "type": "array", "items": { "type": "string" },
+      "title": "Codes" },
+    "method": { "anyOf": [{ "type": "string" }, { "type": "null" }],
+      "title": "Method" },
+    "top_k": { "type": "integer", "title": "Top K", "default": 5 }
+  }
 }
 \end{verbatim}
 }
@@ -79,7 +79,7 @@ La Tabla~\ref{tab:openapi-endpoints} resume los \emph{endpoints} expuestos por e
 \small
 \caption{Endpoints del motor de IA (OpenAPI).}
 \label{tab:openapi-endpoints}
-\begin{tabular}{llp{7.2cm}}
+\begin{tabular}{llP{7.2cm}}
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
@@ -108,33 +108,33 @@ Petición:
 {\small
 \begin{verbatim}
 {
- "text": "<informe clínico en español>",
- "engine": "bert" // opcional: "bert" (def.), "dict", "both" o "fused"
+  "text": "<informe clínico en español>",
+  "engine": "bert" // opcional: "bert" (def.), "dict", "both" o "fused"
 }
 \end{verbatim}
 }
 
-Respuesta: un objeto con el campo \texttt{cards}, que contiene una única tarjeta de tipo \texttt{codes} (el resumen se solicita por separado con \texttt{/summarize/stream}):
+Respuesta: un objeto con los campos \texttt{cards}, \texttt{timing} (tiempos de la llamada) y \texttt{model\_version}; \texttt{cards} contiene una única tarjeta de tipo \texttt{codes} (el resumen se solicita por separado con \texttt{/summarize/stream}):
 
 {\small
 \begin{verbatim}
 {
- "cards": [
- {
- "type": "codes",
- "content": [
- {
- "code": "E11.9",
- "description": "Diabetes mellitus tipo 2 sin complicaciones",
- "reason": "Capítulo IV: confianza 91.0%",
- "confidence": 0.91,
- "relative_confidence": 0.86,
- "triggers": ["diabetes", "glucosa"],
- "engine": "bert"
- }
- ]
- }
- ]
+  "cards": [
+    {
+      "type": "codes",
+      "content": [
+        {
+          "code": "E11.9",
+          "description": "Diabetes mellitus tipo 2 sin complicaciones",
+          "reason": "Capítulo IV: confianza 91.0%",
+          "confidence": 0.91,
+          "relative_confidence": 0.86,
+          "triggers": ["diabetes", "glucosa"],
+          "engine": "bert"
+        }
+      ]
+    }
+  ]
 }
 \end{verbatim}
 }
@@ -143,7 +143,7 @@ El campo \texttt{confidence} es la probabilidad bruta de la sigmoide; \texttt{re
 
 \subsection{POST /explain}
 
-La atribución de importancia viaja en un \emph{endpoint} separado porque cuesta del orden de cien veces más que predecir: mide el efecto real de eliminar cada palabra del informe, lo que exige una pasada del \emph{encoder} por palabra. Atarla a \texttt{/predict} obligaba al usuario a esperar por una información que todavía no estaba consultando, ya que primero lee la lista de códigos y solo después despliega uno para saber por qué se ha propuesto. Separadas, los códigos se devuelven en cuanto están y las palabras llegan después.
+La atribución de importancia viaja en un \emph{endpoint} separado porque cuesta entre 30 y 50 veces más que predecir: mide el efecto real de eliminar cada palabra del informe, lo que exige una pasada del \emph{encoder} por palabra. Atarla a \texttt{/predict} obligaba al usuario a esperar por una información que todavía no estaba consultando, ya que primero lee la lista de códigos y solo después despliega uno para saber por qué se ha propuesto. Separadas, los códigos se devuelven en cuanto están y las palabras llegan después.
 
 Por ese motivo \texttt{/predict} admite el campo \texttt{include\_triggers}, desactivado por defecto: activarlo reproduce el comportamiento anterior, en el que la respuesta completa esperaba a la atribución.
 
@@ -154,14 +154,14 @@ La petición indica el texto, los códigos que se quieren justificar y, opcional
 \small
 \caption{Estrategias de atribución admitidas por \texttt{/explain}.}
 \label{tab:explain-metodos}
-\begin{tabular}{p{3.3cm}p{9.5cm}}
+\begin{tabular}{P{3.3cm}P{9.5cm}}
 \hline
 \textbf{Método} & \textbf{Descripción} \\
 \hline
 \texttt{diccionario} & No emplea el \emph{encoder}: devuelve las frases clínicas que hicieron coincidencia por expresión regular. Responde en centésimas de segundo. En el motor fusionado estos términos ya viajan con la predicción sin coste adicional, de modo que esta vía sirve al motor neuronal, que no ejecuta el diccionario. \\
-\texttt{gradiente\_filtrado} & Una pasada hacia atrás ordena las palabras candidatas y solo se enmascaran las más prometedoras. \\
-\texttt{exhaustivo} & Pregunta por todas las palabras. Es la referencia fiel y la más costosa. \\
-\texttt{divide\_y\_venceras} & Enmascara grupos y descarta el que no altera ningún \emph{logit}. Documentado como resultado negativo: en este corpus resulta más lento que el exhaustivo. \\
+\texttt{gradiente\_\allowbreak{}filtrado} & Una pasada hacia atrás ordena las palabras candidatas y solo se enmascaran las más prometedoras. \\
+\texttt{exhaustivo} & Pregunta por todas las palabras. Es la referencia fiel, la más costosa y el método por defecto. \\
+\texttt{divide\_y\_\allowbreak{}venceras} & Enmascara grupos y descarta el que no altera ningún \emph{logit}. Documentado como resultado negativo: en este corpus resulta más lento que el exhaustivo. \\
 \hline
 \end{tabular}
 \end{table}
@@ -195,6 +195,6 @@ El protocolo es el siguiente: se emite una línea por cada fragmento generado y 
 \end{verbatim}
 }
 
-En caso de fallo del generador, la última línea es \texttt{\{"error": "<mensaje>"\}} en lugar de \texttt{\{"done": true\}}. Si el modelo de resumen no está cargado, el servicio devuelve un único fragmento con un resumen estadístico de reserva y a continuación \texttt{\{"done": true\}}, de modo que el cliente siempre recibe una respuesta bien formada.
+En caso de fallo del generador, se emite una línea \texttt{\{\textquotedbl{}error\textquotedbl{}: \textquotedbl{}<mensaje>\textquotedbl{}\}} y, a continuación, la línea final \texttt{\{"done": true\}} que cierra el flujo. Si el modelo de resumen no está cargado, el servicio devuelve un único fragmento con un resumen estadístico de reserva y a continuación \texttt{\{"done": true\}}, de modo que el cliente recibe en ambos casos una respuesta bien formada.
 
 El backend retransmite cada línea recibida al frontend a través del canal WebSocket como eventos \texttt{summary\_token} (véase el Anexo~\ref{cap:AnexoC}), desacoplando así el protocolo interno (NDJSON) del protocolo con el cliente (WebSocket).

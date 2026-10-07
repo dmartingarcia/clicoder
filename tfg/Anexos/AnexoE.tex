@@ -12,9 +12,9 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 \textbf{Justificación.}
 \begin{itemize}
     \item WebSocket permite que el servidor notifique al cliente en cuanto la predicción está lista, evitando el sondeo periódico: sin él, el frontend tendría que interrogar al servidor repetidamente hasta obtener respuesta, lo que introduce latencia innecesaria y carga superflua. Con WebSocket la comunicación es asíncrona de forma nativa: el frontend queda a la espera y el servidor empuja el resultado en cuanto está disponible.
-    \item El modelo de actores de la BEAM (\emph{Erlang VM}) gestiona de forma nativa miles de procesos ligeros concurrentes sin bloqueos, lo que encaja directamente con el modelo de canales WebSocket de Phoenix~\cite{phoenix2024}.
+    \item El modelo de actores de la BEAM (\emph{Erlang VM}) gestiona de forma nativa procesos ligeros concurrentes sin bloqueos entre ellos, lo que encaja directamente con el modelo de canales WebSocket de Phoenix~\cite{phoenix2024}.
     \item Phoenix Channels proporciona soporte integrado para WebSocket con reconexión automática, multiplexación de temas y difusión (\emph{broadcast}) a todos los clientes suscritos a un canal.
-    \item La tolerancia a fallos de la BEAM (supervisores OTP) garantiza que un error en el procesamiento de una conversación no afecta al resto.
+    \item La tolerancia a fallos de la BEAM (supervisores OTP) está pensada para aislar un error en el procesamiento de una conversación del resto de conversaciones, aunque este aislamiento no se ha medido con pruebas de fallos.
     \item La biblioteca Commanded~\cite{commanded2024}, disponible solo en el ecosistema Elixir/Erlang, ofrece una implementación madura de CQRS y Event Sourcing con soporte para PostgreSQL~\cite{postgresql2024} como almacén de eventos.
 \end{itemize}
 
@@ -51,7 +51,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 \begin{itemize}
     \item Next.js ofrece renderizado del lado del servidor (SSR) para la carga inicial y enrutamiento basado en el sistema de ficheros, lo que simplifica la estructura del proyecto.
     \item React 19 incorpora mejoras en el modelo de concurrencia que facilitan la gestión de actualizaciones asíncronas (tarjetas llegando por WebSocket).
-    \item TypeScript garantiza la coherencia de los tipos de datos entre las capas de estado (contextos) y los componentes de UI, reduciendo los errores en tiempo de ejecución.
+    \item TypeScript contribuye a la coherencia de los tipos de datos entre las capas de estado (contextos) y los componentes de UI, lo que reduce, en principio, los errores en tiempo de ejecución.
     \item Tailwind CSS 4 y shadcn/ui permiten construir una interfaz consistente y accesible con velocidad de desarrollo alta.
 \end{itemize}
 
@@ -65,8 +65,8 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 \begin{itemize}
     \item Reducción de la complejidad operacional: un único sistema de base de datos para administrar, monitorizar y respaldar.
     \item Commanded para Elixir tiene soporte nativo y maduro para PostgreSQL como \emph{event store}.
-    \item PostgreSQL ofrece tipos JSONB que permiten almacenar el contenido de las tarjetas de análisis sin necesidad de un esquema fijo, lo que facilita la evolución del formato de respuesta del motor de IA.
-    \item Las transacciones ACID de PostgreSQL garantizan la coherencia entre la escritura del evento y la actualización de la proyección en operaciones que requieren atomicidad.
+    \item PostgreSQL admite tipos JSON, útiles para el contenido de eventos y tarjetas. En la implementación actual, el contenido de las tarjetas (\texttt{analysis\_cards.content}) se guarda como texto con JSON serializado, sin esquema fijo en la base de datos, lo que facilita la evolución del formato de respuesta del motor de IA sin migraciones.
+    \item Las transacciones ACID de PostgreSQL ofrecen la coherencia entre la escritura del evento y la actualización de la proyección en operaciones que requieren atomicidad.
 \end{itemize}
 
 \section{ADR-05: Clasificador plano (\emph{flat}) frente a clasificador jerárquico}
@@ -83,7 +83,11 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
     \item La simplicidad del clasificador plano facilita el mantenimiento y la actualización del modelo cuando se publiquen nuevas versiones de CIE.
 \end{itemize}
 
-\textbf{Alternativa registrada.} Los notebooks \texttt{0\_clasificador\_jerarquico\_Introducción.ipynb} y \texttt{7\_clasificador\_jerarquico\_analisis\_nivel\_2.ipynb} documentan la arquitectura jerárquica de dos niveles como vía de mejora futura para incrementar la precisión en códigos de alta especificidad.
+\textbf{Alternativa registrada.} Los \emph{notebooks} siguientes documentan la arquitectura jerárquica de dos niveles como vía de mejora futura para incrementar la precisión en códigos de alta especificidad:
+\begin{itemize}
+ \item \texttt{0\_\allowbreak{}clasificador\_\allowbreak{}jerarquico\_\allowbreak{}Introducción.ipynb}
+ \item \texttt{7\_\allowbreak{}clasificador\_\allowbreak{}jerarquico\_\allowbreak{}analisis\_nivel\_2.ipynb}
+\end{itemize}
 
 \section{ADR-06: FastAPI como interfaz del motor de IA}
 
@@ -120,7 +124,7 @@ Las siete decisiones se resumen en la Tabla~\ref{tab:adr-resumen}.
 \centering
 \caption{Resumen de las decisiones de arquitectura.}
 \label{tab:adr-resumen}
-\begin{tabular}{llp{7cm}}
+\begin{tabular}{llP{7cm}}
 \hline
 \textbf{ADR} & \textbf{Componente} & \textbf{Decisión} \\
 \hline

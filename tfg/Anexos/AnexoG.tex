@@ -22,6 +22,8 @@ Prueba & 250 & 25{,}0\,\% \\
 \textbf{Total} & \textbf{1.000} & 100\,\% \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con el \emph{notebook} \texttt{codiesp\_\allowbreak{}analisis\_\allowbreak{}estadistico.ipynb} (\texttt{training/\allowbreak{}data\_analysis/}).}
 \end{table}
 
 \section{Estadísticas de los textos clínicos}
@@ -36,14 +38,16 @@ Los documentos son informes de alta hospitalaria en español. La Tabla~\ref{tab:
 \hline
 \textbf{Conjunto} & \textbf{Media} & \textbf{Des. est.} & \textbf{Mín.} & \textbf{Q1} & \textbf{Mediana} & \textbf{Máx.} \\
 \hline
-Entrenamiento & 349 & 165 & 73 & 225 & 314 & 1172 \\
+Entrenamiento & 349 & 165 & 73 & 225 & 314 & 1.172 \\
 Validación & 352 & 168 & 69 & 225 & 328 & 956 \\
 Prueba & 353 & 163 & 90 & 236 & 330 & 965 \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con el \emph{notebook} \texttt{codiesp\_\allowbreak{}analisis\_\allowbreak{}estadistico.ipynb} (\texttt{training/\allowbreak{}data\_analysis/}).}
 \end{table}
 
-La longitud media de 349 palabras puede superar el límite de 512 \emph{tokens} de RigoBERTa-Clinical, dado que la tokenización subpalabra genera típicamente más tokens que palabras. Una fracción significativa de los documentos excede ese límite, lo que implica truncación del texto al final del informe; los experimentos muestran que los diagnósticos clave aparecen mayoritariamente en los primeros 512 tokens, por lo que el impacto sobre el F1 es limitado.
+La longitud media de 349 palabras puede superar el límite de 512 \emph{tokens} de RigoBERTa-Clinical, dado que la tokenización subpalabra genera típicamente más tokens que palabras. Con el tokenizador del modelo, el 53,6\,\% de los documentos de entrenamiento y el 58\,\% de los de validación y de prueba superan ese límite, lo que implica truncar el final del informe. Los experimentos con ventanas más largas (sección~\ref{sec:entrenamiento}) no mejoraron el resultado, por lo que el impacto sobre el F1 parece limitado.
 
 \section{Estadísticas de las etiquetas}
 
@@ -62,6 +66,8 @@ Validación & 10{,}71 & 6{,}81 & 1 & 5 & 10 & 33 \\
 Prueba & 11{,}37 & 6{,}59 & 1 & 6 & 10 & 35 \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con el \emph{notebook} \texttt{codiesp\_\allowbreak{}analisis\_\allowbreak{}estadistico.ipynb} (\texttt{training/\allowbreak{}data\_analysis/}).}
 \end{table}
 
 En total, el corpus contiene 11.158 asignaciones de código. Los códigos únicos presentes son 2.557, de los cuales 1.767 aparecen en el conjunto de entrenamiento y conforman el espacio de clases del clasificador.
@@ -78,18 +84,20 @@ La distribución de frecuencias de los códigos sigue una ley de potencia: un pe
 \hline
 \textbf{Código} & \textbf{Descripción} & \textbf{Frecuencia} & \textbf{Porcentaje} \\
 \hline
-R52 & Dolor no clasificado en otra parte & 219 & 1{,}96\,\% \\
-R69 & Enfermedad no especificada & 198 & 1{,}77\,\% \\
-R50.9 & Fiebre no especificada & 191 & 1{,}71\,\% \\
-I10 & Hipertensión esencial & 161 & 1{,}44\,\% \\
+R52 & Dolor, no especificado & 219 & 1{,}96\,\% \\
+R69 & Enfermedad NEOM & 198 & 1{,}77\,\% \\
+R50.9 & Fiebre, no especificada & 191 & 1{,}71\,\% \\
+I10 & Hipertensión esencial (primaria) & 161 & 1{,}44\,\% \\
 R59.9 & Adenomegalia, no especificada & 136 & 1{,}22\,\% \\
-R60.9 & Edema no especificado & 124 & 1{,}11\,\% \\
+R60.9 & Edema, no especificado & 124 & 1{,}11\,\% \\
 R11.10 & Vómitos, no especificados & 92 & 0{,}82\,\% \\
 R59.0 & Adenomegalia localizada & 91 & 0{,}82\,\% \\
 B99.9 & Enfermedad infecciosa no especificada & 89 & 0{,}80\,\% \\
-R58 & Hemorragia no clasificada en otra parte & 88 & 0{,}79\,\% \\
+R58 & Hemorragia, no clasificada bajo otro concepto & 88 & 0{,}79\,\% \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con el \emph{notebook} \texttt{codiesp\_\allowbreak{}analisis\_\allowbreak{}estadistico.ipynb} (\texttt{training/\allowbreak{}data\_analysis/}).}
 \end{table}
 
 Este desequilibrio extremo motivó el uso de \emph{pos\_weight\_cap} durante el entrenamiento para penalizar los errores en códigos poco frecuentes.
@@ -103,11 +111,11 @@ El análisis de correlación entre la longitud del texto y el número de etiquet
  \item Correlación número de palabras -- número de etiquetas: $r = 0{,}528$
 \end{itemize}
 
-Los textos más extensos corresponden a ingresos más complejos con más diagnósticos asociados. Esta correlación explica por qué los informes más largos son los más penalizados por la truncación a 512 \emph{tokens}. La alternativa de ventana deslizante se evaluó y no compensó el coste, ya que la fragmentación degrada la coherencia clínica del texto (véase el Anexo~\ref{cap:AnexoF}).
+Los textos más extensos corresponden a ingresos más complejos con más diagnósticos asociados. Esta correlación explica por qué los informes más largos son los más penalizados por la truncación a 512 \emph{tokens}. La alternativa de ventana deslizante se evaluó y no compensó el coste, ya que la fragmentación degrada la coherencia clínica del texto (sección~\ref{sec:entrenamiento}).
 
 \section{Solapamiento entre conjuntos}
 
-La Tabla~\ref{tab:jaccard} muestra el solapamiento de códigos entre los tres conjuntos. El bajo coeficiente de Jaccard refleja la escasez de códigos por conjunto: muchos códigos de validación y prueba no aparecen en entrenamiento, lo que introduce un problema de \emph{zero-shot} implícito que limita el techo teórico del F1-micro.
+La Tabla~\ref{tab:jaccard} muestra el solapamiento de códigos entre los tres conjuntos. El bajo coeficiente de Jaccard refleja la cola larga de la distribución (999 códigos aparecen una sola vez en entrenamiento) y el hecho de que 439 de los 1.143 códigos distintos de prueba (38,4\,\%) no aparecen en entrenamiento. Esto introduce un problema implícito de clasificación sin ejemplos previos que limita el techo teórico del F1-micro: solo 2.345 de las 2.842 asignaciones de código de prueba (82,5\,\%) corresponden a códigos vistos al entrenar.
 
 \begin{table}[h]
 \centering
@@ -117,11 +125,13 @@ La Tabla~\ref{tab:jaccard} muestra el solapamiento de códigos entre los tres co
 \hline
 \textbf{Par} & \textbf{Únicos A} & \textbf{Únicos B} & \textbf{Comunes} & \textbf{Jaccard} \\
 \hline
-Train vs. Test & 1.767 & 1.143 & 704 & 0{,}319 \\
-Train vs. Validation & 1.767 & 1.158 & 731 & 0{,}333 \\
-Test vs. Validation & 1.143 & 1.158 & 551 & 0{,}315 \\
+Entrenamiento vs. Prueba & 1.767 & 1.143 & 704 & 0{,}319 \\
+Entrenamiento vs. Validación & 1.767 & 1.158 & 731 & 0{,}333 \\
+Prueba vs. Validación & 1.143 & 1.158 & 551 & 0{,}315 \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con el \emph{notebook} \texttt{codiesp\_\allowbreak{}analisis\_\allowbreak{}estadistico.ipynb} (\texttt{training/\allowbreak{}data\_analysis/}).}
 \end{table}
 
 \section{Análisis lingüístico del catálogo CIE-10-ES}
@@ -147,6 +157,8 @@ Lemas de especificidad máxima (un único código) & 4.823 (44{,}4\,\%) \\
 Lemas transversales (aparecen en múltiples códigos) & 6.051 (55{,}6\,\%) \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con los \emph{notebooks} \texttt{cie10\_\allowbreak{}spacy\_\allowbreak{}word\_\allowbreak{}analysis.ipynb} y \texttt{cie10\_\allowbreak{}analisis\_\allowbreak{}estadistico.ipynb} (\texttt{training/\allowbreak{}data\_analysis/}).}
 \end{table}
 
 El hecho de que casi la mitad de los lemas (44,4\,\%) esté asociada a un único código CIE-10 indica que el catálogo contiene una gran proporción de terminología altamente diagnóstica: si ese término aparece en un informe, la asignación del código correspondiente es casi unívoca. El problema es que, como se analiza más adelante, muchos de estos términos de alta especificidad no aparecen en el lenguaje clínico real.
@@ -171,6 +183,8 @@ Numeral & 139 & 1{,}3\,\% \\
 Otros & 234 & 2{,}1\,\% \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con el \emph{notebook} \texttt{cie10\_\allowbreak{}spacy\_\allowbreak{}word\_\allowbreak{}analysis.ipynb} (\texttt{training/\allowbreak{}data\_analysis/}) y su salida \texttt{cie10\_\allowbreak{}word\_\allowbreak{}analysis.csv}.}
 \end{table}
 
 Los nombres propios (15,2\,\%) corresponden principalmente a epónimos y topónimos clínicos (síndrome de Marfan, enfermedad de Crohn, fiebre del Nilo Occidental), que son marcadores diagnósticos muy específicos pero cuya presencia en el texto clínico real depende de que el médico emplee el epónimo exacto y no una descripción funcional equivalente.
@@ -179,7 +193,7 @@ Los nombres propios (15,2\,\%) corresponden principalmente a epónimos y topóni
 
 El análisis de asociación entre lemas y códigos permite distinguir dos tipos de términos con distinta utilidad para la clasificación automática.
 
-Los \textbf{términos de alta especificidad} (Tabla~\ref{tab:high-spec}) aparecen asociados a un único código CIE-10. Actúan como marcadores casi exclusivos de un diagnóstico concreto y son los más valiosos para el clasificador de diccionario: su presencia en el texto prácticamente determina la asignación. Sin embargo, corresponden en su mayoría a patologías poco frecuentes cuyo nombre técnico rara vez aparece en la redacción habitual de los informes.
+Los \textbf{términos de alta especificidad} (Tabla~\ref{tab:high-spec}) aparecen asociados a un único código CIE-10. Actúan como marcadores casi exclusivos de un diagnóstico concreto y son los más valiosos para el clasificador de diccionario: su presencia en el texto prácticamente determina la asignación. Sin embargo, corresponden en su mayoría a patologías poco frecuentes (como la crioglobulinemia o las infecciones por la cepa O157 de \emph{E. coli}) cuyo nombre técnico rara vez aparece en la redacción habitual de los informes.
 
 \begin{table}[h]
 \centering
@@ -191,9 +205,11 @@ Los \textbf{términos de alta especificidad} (Tabla~\ref{tab:high-spec}) aparece
 \hline
 leucemoide & 7 & 1 \\
 crioglobulinemia & 6 & 1 \\
-acumulación & 7 & 1 \\
+o157 & 6 & 1 \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con el \emph{notebook} \texttt{cie10\_\allowbreak{}spacy\_\allowbreak{}word\_\allowbreak{}analysis.ipynb} (\texttt{training/\allowbreak{}data\_analysis/}) y su salida \texttt{cie10\_\allowbreak{}word\_\allowbreak{}analysis.csv}.}
 \end{table}
 
 Los \textbf{términos de alta dispersión} (Tabla~\ref{tab:high-disp}) aparecen en miles de códigos diferentes; funcionan como modificadores estructurales de las descripciones (lateralidad, temporalidad, tipo de lesión) y no aportan capacidad discriminativa por sí solos.
@@ -213,6 +229,8 @@ fractura & 36.297 & 20.481 \\
 izquierdo & 15.396 & 15.310 \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con el \emph{notebook} \texttt{cie10\_\allowbreak{}spacy\_\allowbreak{}word\_\allowbreak{}analysis.ipynb} (\texttt{training/\allowbreak{}data\_analysis/}) y su salida \texttt{cie10\_\allowbreak{}word\_\allowbreak{}analysis.csv}.}
 \end{table}
 
 \section{Brecha léxica entre catálogo oficial y lenguaje clínico real}
@@ -236,6 +254,8 @@ Lemas exclusivos de CIE-10-ES & 6.708 \\
 Lemas exclusivos de CodiEsp & 9.476 \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Generada con el \emph{notebook} \texttt{cie10\_\allowbreak{}spacy\_\allowbreak{}word\_\allowbreak{}analysis.ipynb} (\texttt{training/\allowbreak{}data\_analysis/}) y su salida \texttt{cie10\_\allowbreak{}word\_\allowbreak{}analysis.csv}.}
 \end{table}
 
 Solo el 38,3\,\% de los lemas del catálogo oficial aparece también en los textos clínicos reales. Los 6.708 lemas restantes (nomenclatura estandarizada) no forman parte del lenguaje habitual de los informes. Inversamente, los 9.476 lemas exclusivos de CodiEsp corresponden a abreviaturas, epónimos coloquiales, jerga clínica y variantes morfológicas propias del entorno hospitalario que no figuran en las descripciones oficiales.
@@ -249,3 +269,45 @@ Esta asimetría léxica tiene consecuencias directas para el diseño del sistema
  \item La expansión explícita de abreviaturas clínicas (\texttt{HTA} → «hipertensión arterial», \texttt{DM2} → «diabetes mellitus tipo 2», \texttt{EPOC} → «enfermedad pulmonar obstructiva crónica») implementada en el clasificador de diccionario actúa como puente parcial entre los dos vocabularios.
  \item El clasificador neuronal basado en RigoBERTa-Clinical supera esta limitación estructural porque su preentrenamiento sobre grandes corpus de texto clínico en español le permite relacionar las expresiones del lenguaje médico real con los diagnósticos correspondientes sin depender de coincidencia léxica exacta con las descripciones oficiales.
 \end{enumerate}
+
+\section{Capítulos de la CIE-10-ES}
+\label{sec:capitulos-cie10}
+
+Las figuras de rendimiento por capítulo (Figura~\ref{fig:chapters}) identifican cada capítulo de la CIE-10-ES por su número romano. La Tabla~\ref{tab:capitulos-cie10} recoge la equivalencia con su nombre y su intervalo de códigos, junto con los pares documento-código del conjunto de prueba que contiene cada uno y el F1-micro obtenido.
+
+{\small
+\begin{longtable}{lP{6.6cm}lrr}
+\caption{Capítulos de la CIE-10-ES, intervalo de códigos, pares del conjunto de prueba y F1-micro del modelo servido (umbral 0,2). Los nombres salen de \texttt{ai\_engine/model/cie10\_chapters.json}, los intervalos de \texttt{CHAPTER\_RANGES} en \texttt{ai\_engine/classifier.py} y las cifras de \texttt{model/eval\_test.json} (\texttt{make ai-eval-test}). $^{\dagger}$ Menos de 10 pares: excluido de la Figura~\ref{fig:chapters}.}\label{tab:capitulos-cie10}\\
+\hline
+\textbf{Cap.} & \textbf{Nombre} & \textbf{Códigos} & \textbf{Pares} & \textbf{F1-micro} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Cap.} & \textbf{Nombre} & \textbf{Códigos} & \textbf{Pares} & \textbf{F1-micro} \\
+\hline
+\endhead
+I & Ciertas enfermedades infecciosas y parasitarias & A00--B99 & 148 & 0,42 \\
+II & Neoplasias & C00--D49 & 138 & 0,30 \\
+III & Enfermedades de la sangre y órganos hematopoyéticos & D50--D89 & 82 & 0,52 \\
+IV & Enfermedades endocrinas, nutricionales y metabólicas & E00--E89 & 121 & 0,60 \\
+V & Trastornos mentales y del comportamiento & F01--F99 & 51 & 0,38 \\
+VI & Enfermedades del sistema nervioso & G00--G99 & 51 & 0,20 \\
+VII & Enfermedades del ojo y sus anexos & H00--H59 & 115 & 0,44 \\
+VIII & Enfermedades del oído y de la apófisis mastoides & H60--H95 & 1 & 0,00$^{\dagger}$ \\
+IX & Enfermedades del sistema circulatorio & I00--I99 & 187 & 0,51 \\
+X & Enfermedades del sistema respiratorio & J00--J99 & 67 & 0,51 \\
+XI & Enfermedades del aparato digestivo & K00--K95 & 178 & 0,49 \\
+XII & Enfermedades de la piel y del tejido subcutáneo & L00--L99 & 59 & 0,50 \\
+XIII & Enfermedades del sistema osteomuscular & M00--M99 & 66 & 0,36 \\
+XIV & Enfermedades del aparato genitourinario & N00--N99 & 165 & 0,41 \\
+XV & Embarazo, parto y puerperio & O00--O9A & 1 & 0,00$^{\dagger}$ \\
+XVI & Ciertas afecciones originadas en el período perinatal & P00--P96 & 1 & 0,00$^{\dagger}$ \\
+XVII & Malformaciones congénitas & Q00--Q99 & 12 & 0,11 \\
+XVIII & Síntomas, signos y hallazgos anormales & R00--R99 & 781 & 0,59 \\
+XIX & Traumatismos, envenenamientos y otras consecuencias & S00--T88 & 42 & 0,50 \\
+XX & Causas externas de morbilidad y mortalidad & V00--Y99 & 7 & 0,67$^{\dagger}$ \\
+XXI & Factores que influyen en el estado de salud & Z00--Z99 & 72 & 0,32 \\
+XXII & Códigos para propósitos especiales & U00--U85 & 0 & sin pares \\
+\hline
+\end{longtable}
+}

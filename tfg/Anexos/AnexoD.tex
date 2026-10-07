@@ -24,7 +24,7 @@ Almacena los usuarios registrados en el sistema (Tabla~\ref{tab:users}).
 \centering
 \caption{Columnas de la tabla \texttt{users}.}
 \label{tab:users}
-\begin{tabular}{llp{3.5cm}p{4.5cm}}
+\begin{tabular}{llP{3.1cm}P{3.9cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -36,7 +36,7 @@ Almacena los usuarios registrados en el sistema (Tabla~\ref{tab:users}).
 \texttt{password\_hash}      & \texttt{varchar}       & NOT NULL          & Hash bcrypt de la contraseña. \\
 \texttt{confirmation\_token} & \texttt{varchar}       & NULLABLE          & Token de confirmación por email. \\
 \texttt{confirmed\_at}       & \texttt{timestamptz}   & NULLABLE          & Fecha de confirmación de la cuenta. \\
-\texttt{locale}              & \texttt{varchar}       & DEFAULT \texttt{'es'} & Idioma preferido (\texttt{es} o \texttt{en}). \\
+\texttt{locale}              & \texttt{varchar}       & DEFAULT \texttt{'es'} & Idioma preferido (\texttt{es}, \texttt{en}, \texttt{fr}, \texttt{it} o \texttt{de}). \\
 \texttt{is\_admin}           & \texttt{boolean}       & NOT NULL, DEFAULT \texttt{false} & Distingue a los administradores con acceso al \emph{backoffice}. \\
 \texttt{inserted\_at}        & \texttt{timestamptz}   & NOT NULL          & Fecha de creación. \\
 \texttt{updated\_at}         & \texttt{timestamptz}   & NOT NULL          & Fecha de última modificación. \\
@@ -52,7 +52,7 @@ Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario (
 \centering
 \caption{Columnas de la tabla \texttt{conversations}.}
 \label{tab:conversations}
-\begin{tabular}{llp{3.5cm}p{4.5cm}}
+\begin{tabular}{llP{3.1cm}P{3.9cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -78,13 +78,13 @@ Proyección CQRS de los mensajes intercambiados dentro de cada conversación (Ta
 \centering
 \caption{Columnas de la tabla \texttt{messages}.}
 \label{tab:messages}
-\begin{tabular}{llp{3.5cm}p{4.5cm}}
+\begin{tabular}{llP{3.1cm}P{3.9cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
 \texttt{id}               & \texttt{uuid}        & PK, NOT NULL   & Identificador interno. \\
 \texttt{message\_id}      & \texttt{varchar}     & UNIQUE, NOT NULL & UUID del mensaje. \\
-\texttt{content}          & \texttt{text}        & NOT NULL       & Contenido textual del mensaje. \\
+\texttt{content}          & \texttt{text}        & NULLABLE       & Contenido textual del mensaje (vacío hasta que el canal lo escribe; el texto del informe no viaja en los eventos). \\
 \texttt{user\_id}         & \texttt{varchar}     & NOT NULL       & Usuario que emitió el mensaje. \\
 \texttt{timestamp}        & \texttt{timestamptz} & NOT NULL, INDEX & Momento de emisión. \\
 \texttt{message\_type}    & \texttt{varchar}     & NOT NULL       & Tipo: \texttt{user}, \texttt{system} o \texttt{analysis}. \\
@@ -105,7 +105,7 @@ Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para 
 \centering
 \caption{Columnas de la tabla \texttt{analysis\_cards}.}
 \label{tab:cards}
-\begin{tabular}{llp{3.5cm}p{4.5cm}}
+\begin{tabular}{llP{3.1cm}P{3.9cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -114,6 +114,7 @@ Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para 
 \texttt{card\_type}       & \texttt{varchar} & NOT NULL               & Tipo: \texttt{summary} o \texttt{codes}. \\
 \texttt{content}          & \texttt{text}    & NOT NULL               & JSON (tipo \texttt{codes}) o texto libre. \\
 \texttt{position}         & \texttt{integer} & NOT NULL               & Orden de renderizado dentro del mensaje. \\
+\texttt{engine}           & \texttt{varchar} & NULLABLE               & Motor de IA que generó la tarjeta. \\
 \texttt{message\_id}      & \texttt{varchar} & NOT NULL, INDEX        & UUID del mensaje al que pertenece. \\
 \texttt{conversation\_id} & \texttt{uuid}    & FK → \texttt{conversations}, CASCADE & Conversación. \\
 \texttt{inserted\_at}     & \texttt{timestamptz} & NOT NULL           & Fecha de inserción. \\
@@ -132,19 +133,20 @@ Proyección CQRS de los códigos CIE-10-ES predichos por el motor de IA, con su 
 \centering
 \caption{Columnas de la tabla \texttt{predicted\_codes}.}
 \label{tab:predicted-codes}
-\begin{tabular}{llp{3.5cm}p{4.5cm}}
+\begin{tabular}{llP{3.1cm}P{3.9cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
 \texttt{id}               & \texttt{uuid}    & PK, NOT NULL           & Identificador interno. \\
 \texttt{code\_id}         & \texttt{varchar} & UNIQUE, NOT NULL       & UUID de la predicción. \\
 \texttt{cie10\_code}      & \texttt{varchar} & NOT NULL, INDEX        & Código CIE-10-ES (p. ej., \texttt{E11}). \\
-\texttt{reasoning}        & \texttt{text}    & NOT NULL               & Explicación textual del modelo. \\
-\texttt{confidence\_score}& \texttt{float}   & NOT NULL               & Puntuación de confianza [0, 1]. \\
+\texttt{reasoning}        & \texttt{text}    & NULLABLE               & Explicación textual del modelo. \\
+\texttt{confidence\_score}& \texttt{float}   & NULLABLE               & Puntuación de confianza [0, 1]. \\
 \texttt{status}           & \texttt{varchar} & DEFAULT \texttt{'pending'}, INDEX & Estado: \texttt{pending}, \texttt{validated} o \texttt{rejected}. \\
 \texttt{validated\_by}    & \texttt{varchar} & NULLABLE               & ID del usuario que validó. \\
 \texttt{rejected\_by}     & \texttt{varchar} & NULLABLE               & ID del usuario que rechazó. \\
 \texttt{rejection\_reason}& \texttt{text}    & NULLABLE               & Motivo del rechazo. \\
+\texttt{verified\_triggers}& \texttt{varchar[]} & NOT NULL, DEFAULT \texttt{[]} & Términos explicativos verificados por el usuario. \\
 \texttt{conversation\_id} & \texttt{uuid}    & FK → \texttt{conversations}, CASCADE & Conversación. \\
 \texttt{inserted\_at}     & \texttt{timestamptz} & NOT NULL           & Fecha de inserción. \\
 \texttt{updated\_at}      & \texttt{timestamptz} & NOT NULL           & Fecha de modificación. \\
@@ -162,7 +164,7 @@ Catálogo de referencia de los códigos CIE-10-ES cargados desde los ficheros CS
 \centering
 \caption{Columnas de la tabla \texttt{cie10\_codes}.}
 \label{tab:cie10codes}
-\begin{tabular}{llp{3.5cm}p{4.5cm}}
+\begin{tabular}{llP{3.1cm}P{3.9cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -187,7 +189,7 @@ Sugerencias manuales de código realizadas por el usuario al seleccionar un frag
 \centering
 \caption{Columnas de la tabla \texttt{code\_suggestions}.}
 \label{tab:suggestions}
-\begin{tabular}{llp{3.5cm}p{4.5cm}}
+\begin{tabular}{llP{3.1cm}P{3.9cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -203,6 +205,10 @@ Sugerencias manuales de código realizadas por el usuario al seleccionar un frag
 \end{tabular}
 \end{table}
 
+\subsection{Tabla \texttt{settings}}
+
+Configuración del backoffice de administración: modelo y modo del generador de resúmenes (\texttt{summarizer\_model}, \texttt{summarizer\_mode}), sus \emph{prompts} de sistema y de usuario (\texttt{prompt\_summary}, \texttt{prompt\_paraphrase}, \texttt{user\_prompt\_summary}, \texttt{user\_prompt\_paraphrase}) y el método de atribución de términos (\texttt{explain\_method}, nulo por defecto). Tiene una clave primaria \texttt{uuid} y las marcas temporales habituales.
+
 \subsection{Tabla \texttt{projection\_versions}}
 
 Registro de control interno de Commanded para garantizar la coherencia de las proyecciones al reproducir el registro de eventos (Tabla~\ref{tab:proj-versions}).
@@ -211,7 +217,7 @@ Registro de control interno de Commanded para garantizar la coherencia de las pr
 \centering
 \caption{Columnas de la tabla \texttt{projection\_versions}.}
 \label{tab:proj-versions}
-\begin{tabular}{p{3.5cm}lp{3cm}p{4cm}}
+\begin{tabular}{P{3.5cm}lP{3cm}P{4cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline

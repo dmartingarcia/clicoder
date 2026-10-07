@@ -16,23 +16,45 @@ La Figura~\ref{fig:c4-contenedores} muestra la vista de contenedores C4 del sist
 
 \section{Topología de contenedores}
 
-El sistema está formado por siete servicios Docker~\cite{merkel2014docker}. La Tabla~\ref{tab:servicios} resume su función, tecnología, puerto expuesto y dependencias.
+El \emph{Compose} base define siete servicios Docker~\cite{merkel2014docker}. La Tabla~\ref{tab:servicios} resume su función, tecnología, puerto expuesto y dependencias. Los ficheros de proxy y de monitorización añaden otros diez servicios de apoyo (Tabla~\ref{tab:servicios-apoyo}), que no forman parte del sistema de codificación y por eso no aparecen en la Figura~\ref{fig:c4-contenedores}; su papel en el despliegue se describe en el Anexo~\ref{cap:AnexoI} y la monitorización, en el Anexo~\ref{cap:AnexoK}.
 
 \begin{table}[h]
 \centering
 \caption{Servicios del sistema y sus características de despliegue.}
 \label{tab:servicios}
-\begin{tabular}{lp{3.5cm}rp{2.5cm}l}
+\begin{tabular}{lP{3.2cm}rP{2.3cm}P{2.8cm}}
 \hline
 \textbf{Servicio} & \textbf{Tecnología} & \textbf{Puerto} & \textbf{Depende de} & \textbf{Rol} \\
 \hline
 \texttt{frontend} & Next.js 16, React 19, TypeScript & 3000 & backend & Interfaz web \\
 \texttt{backend} & Elixir 1.15, Phoenix 1.8 & 4000 & db, ai\_engine & Orquestador \\
-\texttt{ai\_engine} & Python 3.11, FastAPI & 8000 &  n/d & Inferencia IA \\
-\texttt{db} & PostgreSQL 15 & 5432 &  n/d & Persistencia \\
-\texttt{mailpit} & Mailpit & 8025/1025 &  n/d & Email (dev) \\
-\texttt{cie10\_ml\_base} & CUDA + PyTorch + Transformers &  n/d &  n/d & Imagen base ML \\
+\texttt{ai\_engine} & Python 3.11, FastAPI & 8000 &  ninguna & Inferencia IA \\
+\texttt{db} & PostgreSQL 15 & 5432 &  ninguna & Persistencia \\
+\texttt{mailpit} & Mailpit & 8025/1025 &  ninguna & Correo de captura (solo desarrollo) \\
+\texttt{cie10\_ml\_base} & CUDA + PyTorch + Transformers & ninguno &  ninguna & Imagen base de ML \\
 \texttt{training} & Python, Jupyter Lab & 8888 & cie10\_ml\_base & Entrenamiento \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Servicios de apoyo (proxy y monitorización). Fuente: \texttt{docker-compose-proxy.yml} y \texttt{docker-compose.monitoring.yml}.}
+\label{tab:servicios-apoyo}
+\begin{tabular}{llP{7.2cm}}
+\hline
+\textbf{Servicio} & \textbf{Fichero} & \textbf{Función} \\
+\hline
+\texttt{traefik} & proxy & Proxy inverso: enruta por nombre de host a frontend, backend, Grafana y a su propio panel \\
+\texttt{cloudflared} & proxy & Túnel de Cloudflare: entrada del tráfico sin abrir puertos \\
+\texttt{maintenance} & proxy & Página de mantenimiento (nginx) cuando el frontend no responde \\
+\texttt{prometheus} & monitorización & Recoge y almacena métricas \\
+\texttt{grafana} & monitorización & Paneles de visualización \\
+\texttt{loki} & monitorización & Almacén de registros \\
+\texttt{promtail} & monitorización & Envía los registros de los contenedores a Loki \\
+\texttt{cadvisor} & monitorización & Métricas de uso de los contenedores \\
+\texttt{blackbox\_exporter} & monitorización & Sondas de disponibilidad de los servicios \\
+\texttt{node\_exporter} & monitorización & Métricas del equipo anfitrión \\
 \hline
 \end{tabular}
 \end{table}
@@ -65,11 +87,11 @@ El repositorio incluye tres ficheros de configuración adicional de Docker Compo
 
 La Tabla~\ref{tab:envvars} recoge las variables de entorno más relevantes del sistema, con sus valores por defecto en el entorno de desarrollo. El fichero \texttt{.env.example} del repositorio contiene el listado completo.
 
-\begin{table}[h]
+\begin{table}[!t]
 \centering
 \caption{Variables de entorno del sistema.}
 \label{tab:envvars}
-\begin{tabular}{lp{6.5cm}l}
+\begin{tabular}{lP{5.2cm}l}
 \hline
 \textbf{Variable} & \textbf{Valor por defecto} & \textbf{Consumidor} \\
 \hline
@@ -85,22 +107,21 @@ La Tabla~\ref{tab:envvars} recoge las variables de entorno más relevantes del s
 \texttt{BACKEND\_PORT} & \texttt{4000} & backend \\
 \hline
 \multicolumn{3}{l}{\textit{Frontend}} \\
-\texttt{NEXT\_PUBLIC\_API\_URL} & \texttt{http://localhost:4000/api} & frontend \\
-\texttt{NEXT\_PUBLIC\_WS\_URL} & \texttt{ws://localhost:4000/socket} & frontend \\
+\texttt{NEXT\_PUBLIC\_API\_URL} & \texttt{http://\allowbreak{}localhost:4000/api} & frontend \\
+\texttt{NEXT\_PUBLIC\_WS\_URL} & \texttt{ws://\allowbreak{}localhost:4000/socket} & frontend \\
 \texttt{NODE\_ENV} & \texttt{development} & frontend \\
 \hline
 \multicolumn{3}{l}{\textit{Motor de IA}} \\
 \texttt{AI\_ENGINE\_PORT} & \texttt{8000} & ai\_engine \\
-\texttt{AI\_ENGINE\_URL} & \texttt{http://ai\_engine:8000} & backend \\
+\texttt{AI\_ENGINE\_URL} & \texttt{http://\allowbreak{}ai\_engine:8000} & backend \\
 \texttt{SUMMARIZER\_MODEL} & \texttt{none} & ai\_engine \\
 \texttt{SUMMARIZER\_MODE} & \texttt{summary} & ai\_engine \\
 \texttt{HF\_TOKEN} & (token HuggingFace) & ai\_engine, training \\
 \hline
 \multicolumn{3}{l}{\textit{Producción y red}} \\
 \texttt{DOMAIN} & \texttt{clicoder.app} & traefik \\
-\texttt{TRAEFIK\_ACME\_EMAIL} & (correo para Let's Encrypt) & traefik \\
 \texttt{CLOUDFLARE\_TUNNEL\_TOKEN} & (token del túnel) & cloudflared \\
-\texttt{CORS\_ORIGINS} & \texttt{http://localhost:3000} & backend \\
+\texttt{CORS\_ORIGINS} & \texttt{http://\allowbreak{}localhost:3000} & backend \\
 \hline
 \multicolumn{3}{l}{\textit{Observabilidad}} \\
 \texttt{GRAFANA\_PASSWORD} & \texttt{changeme} & grafana \\
@@ -112,8 +133,8 @@ La Tabla~\ref{tab:envvars} recoge las variables de entorno más relevantes del s
 \texttt{SEED\_ADMIN\_PASSWORD} & \texttt{password123!} & backend \\
 \hline
 \multicolumn{3}{l}{\textit{Email}} \\
-\texttt{SMTP\_HOST} & \texttt{mailpit} & backend \\
-\texttt{SMTP\_PORT} & \texttt{1025} & backend \\
+\texttt{SMTP\_HOST} & \texttt{mailpit} (desarrollo; en despliegue, el servidor SMTP de Mailjet) & backend \\
+\texttt{SMTP\_PORT} & \texttt{1025} (desarrollo) & backend \\
 \texttt{APP\_HOST} & \texttt{localhost} & backend \\
 \hline
 \end{tabular}

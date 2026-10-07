@@ -59,12 +59,14 @@ Frontend (Next.js) & \url{http://localhost:3000} \\
 Backend API (Phoenix) & \url{http://localhost:4000} \\
 Motor de IA (FastAPI) & \url{http://localhost:8000} \\
 Backoffice admin (Phoenix) & \url{http://localhost:4000/admin} \\
-Mailpit (bandeja SMTP de pruebas) & \url{http://localhost:8025} \\
+Mailpit (bandeja SMTP, solo desarrollo) & \url{http://localhost:8025} \\
 Prometheus & \url{http://localhost:9090} \\
 Grafana & \url{http://localhost:3030} \\
 PostgreSQL & \texttt{localhost:5432} \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Fuente: objetivo \texttt{up} del \texttt{Makefile}.}
 \end{table}
 
 \section{Modos de ejecución}
@@ -75,7 +77,7 @@ El sistema admite tres modos de ejecución en función de la disponibilidad de h
 \centering
 \caption{Modos de ejecución disponibles.}
 \label{tab:modos}
-\begin{tabular}{lll}
+\begin{tabular}{llP{6.2cm}}
 \hline
 \textbf{Modo} & \textbf{Comando} & \textbf{Requisito} \\
 \hline
@@ -84,6 +86,8 @@ CPU & \texttt{make cpu-up} & Modelo entrenado (soporte, cuando no hay GPU dispon
 Mock & \texttt{make mock-up} & Ninguno (respuestas simuladas) \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Fuente: objetivos \texttt{up}, \texttt{cpu-up} y \texttt{mock-up} del \texttt{Makefile}.}
 \end{table}
 
 Cada modo se describe a continuación:
@@ -98,11 +102,11 @@ Cada modo se describe a continuación:
 
 \section{Usuarios de prueba}
 
-El comando \texttt{make setup} (a través de \texttt{mix run priv/repo/seeds.exs}) crea automáticamente los siguientes usuarios con la cuenta ya confirmada (tabla~\ref{tab:seeds}).
+El comando \texttt{make setup} (a través de \texttt{mix run priv/repo/seeds.exs}) crea automáticamente el siguiente usuario administrador con la cuenta ya confirmada (tabla~\ref{tab:seeds}).
 
 \begin{table}[h]
 \centering
-\caption{Usuarios de prueba creados por el seed.}
+\caption{Usuario de prueba creado por el seed.}
 \label{tab:seeds}
 \begin{tabular}{llll}
 \hline
@@ -111,6 +115,8 @@ El comando \texttt{make setup} (a través de \texttt{mix run priv/repo/seeds.exs
 \texttt{myadminuser@clicoder.app} & \texttt{password123!} & \texttt{admin} & Administrador \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Fuente: \texttt{backend/\allowbreak{}priv/\allowbreak{}repo/\allowbreak{}seeds.exs}.}
 \end{table}
 
 El correo y la contraseña del administrador son configurables mediante las variables de entorno \texttt{SEED\_ADMIN\_EMAIL} y \texttt{SEED\_ADMIN\_PASSWORD} (los valores de la tabla son los predeterminados). El usuario administrador tiene acceso al backoffice en \url{http://localhost:4000/admin}.
@@ -137,7 +143,7 @@ El motor de IA opera en dos modos complementarios: un clasificador neuronal basa
 
 \subsection{Regenerar el diccionario de términos clínicos}
 
-El clasificador por diccionario utiliza un fichero \texttt{model/baseline\_dict.json} que mapea términos clínicos lematizados a bloques CIE-10. Este fichero se construye a partir de cuatro fuentes combinadas: las descripciones oficiales del catálogo CIE-10-ES, los términos clínicos reales extraídos de las anotaciones del corpus CodiEsp, y \emph{n}-gramas discriminativos minados de las notas de entrenamiento. Adicionalmente, el sistema expande abreviaturas clínicas frecuentes en español (\texttt{HTA}, \texttt{DM2}, \texttt{EPOC}, \texttt{IAM}\dots) a su forma completa antes de lematizar, siguiendo la estrategia del equipo IAM ganador de CodiEsp~2020.
+El clasificador por diccionario utiliza un fichero \texttt{model/baseline\_dict.json} que mapea términos clínicos lematizados a bloques CIE-10. Este fichero se construye con tres fuentes, las que pasa el \texttt{Makefile} en \texttt{--sources clinical corpus combined}: \texttt{clinical} (términos clínicos reales extraídos de las anotaciones de la tarea~X de CodiEsp, ampliados con sinónimos léxicos), \texttt{corpus} (\emph{n}-gramas discriminativos minados de las notas de entrenamiento) y \texttt{combined}, la unión de las dos anteriores, que es el diccionario que se guarda. Las descripciones oficiales del catálogo (\texttt{diagnoses}, \texttt{procedures}, \texttt{chemicals}) existen como fuentes opcionales de \texttt{baseline\_dict.py}, pero no entran en el diccionario servido porque, medidas, empeoran el resultado. Adicionalmente, el sistema expande abreviaturas clínicas frecuentes en español (\texttt{HTA}, \texttt{DM2}, \texttt{EPOC}, \texttt{IAM}\dots) a su forma completa antes de lematizar, siguiendo la estrategia del equipo IAM ganador de CodiEsp~2020.
 
 Es necesario regenerarlo cuando se modifica \texttt{baseline\_dict.py}, se actualizan los ficheros de datos de CodiEsp o se cambia cualquier parámetro de construcción del diccionario. El proceso lee los datos desde \texttt{/data/}, lematiza todos los términos con spaCy (el resultado se almacena en caché en \texttt{model/baseline\_cache/} para acelerar ejecuciones sucesivas) y escribe el diccionario resultante:
 
@@ -155,17 +161,25 @@ make ai-baseline-dict NO_ABBREVS=1 2>&1 | tee /tmp/dict_noabbrev.log
 
 \subsection{Entrenar el clasificador neuronal}
 
-El clasificador neuronal se entrena con \texttt{train.py} sobre el corpus CodiEsp. El proceso descarga el modelo base desde Hugging Face (requiere \texttt{HF\_TOKEN} en \texttt{.env}), ajusta mediante \emph{fine-tuning} el \emph{encoder} RigoBERTa-Clinical con una cabeza de clasificación \emph{multi-label} y guarda el modelo resultante en \texttt{ai\_engine/model/}. El entrenamiento se lanza con GPU explícita mediante:
+El clasificador neuronal se entrena con \texttt{train.py} sobre el corpus CodiEsp. El proceso descarga el modelo base desde Hugging Face (requiere \texttt{HF\_TOKEN} en \texttt{.env}), ajusta mediante \emph{fine-tuning} el \emph{encoder} RigoBERTa-Clinical con una cabeza de clasificación \emph{multi-label} y guarda el modelo resultante en \texttt{ai\_engine/model/}. El objetivo \texttt{make ai-train-gpu} lanza \texttt{train.py} con GPU explícita (\texttt{--device cuda}) a través del servicio \texttt{ai\_engine} y el fichero \texttt{docker-compose.gpu.yml}. Exige que la imagen del servicio se haya construido con soporte CUDA (\texttt{make build-ai GPU=1}): con una imagen construida solo para CPU falla con «Torch not compiled with CUDA enabled». En el equipo de desarrollo el entrenamiento se lanzó con \texttt{train.py} directamente sobre otra imagen que ya incluye PyTorch con CUDA (\texttt{cie-10-training}). Ejecutado sin variables usa los valores por defecto del \texttt{Makefile} (\texttt{MAX\_LENGTH=1024}, \texttt{LR=5e-6}, \texttt{DROPOUT=0.1}, \texttt{WEIGHT\_DECAY=0.01}, \texttt{FREEZE\_LAYERS=0}, \texttt{EPOCHS=20}), que \textbf{no} reproducen el modelo servido. Para reproducirlo hay que pasar todos los hiperparámetros de la ejecución \texttt{20260921T091919Z} registrada en \texttt{training\_runs.csv}:
 
-\begin{lstlisting}[language=bash]
-make ai-train-gpu 2>&1 | tee /tmp/train.log
+\begin{lstlisting}[language=bash, breaklines=true, breakatwhitespace=false]
+make ai-train-gpu MAX_LENGTH=512 BATCH_SIZE=8 GRAD_ACCUM=4 \
+  THRESHOLD=0.3 LR=1e-4 WARMUP_RATIO=0.1 WEIGHT_DECAY=0.1 \
+  DROPOUT=0.3 FREEZE_LAYERS=20 EPOCHS=150 PATIENCE=20 \
+  FULL_CODES=1 LABEL_SMOOTHING=0.1 LR_SCHEDULE=plateau \
+  UNFREEZE_EVERY=30 UNFREEZE_LAYERS=4 UNFREEZE_LR_RATIO=0.1 \
+  PRETRAIN_EPOCHS=10 LAMBDA_HIER=0.5 SELECT_METRIC=map_macro \
+  RANK_LOSS_WEIGHT=0.1 2>&1 | tee /tmp/train.log
 \end{lstlisting}
 
-Cada ejecución guarda un \emph{checkpoint} con el mejor F1-micro de validación, los umbrales por clase optimizados y un registro de métricas por época en \texttt{model/training\_runs.csv}. El proceso completo dura entre 2 y 4~horas en una GPU de la familia Ampere, dependiendo del número de épocas configurado.
+El resto de parámetros (\texttt{POS\_WEIGHT\_CAP=10}, \texttt{CHUNK\_OVERLAP=64}, \texttt{ASL\_CLIP=0.05}) coinciden con los valores por defecto de \texttt{Makefile} y \texttt{train.py}; la ejecución original no fijó semilla, por lo que una repetición no reproduce las métricas al decimal. Este mismo comando, con las variables adicionales que se indiquen (por ejemplo \texttt{TRAIN\_FILE}), es el que se toma como base en el Anexo~\ref{cap:AnexoL}.
+
+Cada ejecución guarda un \emph{checkpoint} con el mejor F1-micro de validación, los umbrales por clase optimizados y un registro de métricas por época en \texttt{model/training\_runs.csv}. El proceso completo dura entre 2 y 4~horas en una GPU de gama alta, dependiendo del número de épocas configurado.
 
 \section{Monitorización con Prometheus y Grafana}
 
-El sistema incluye una pila de observabilidad compuesta por Prometheus y Grafana, levantada automáticamente junto con el resto de servicios al ejecutar \texttt{make up}.
+El sistema incluye una pila de observabilidad compuesta por Prometheus y Grafana, que en desarrollo se levanta con \texttt{make start-monitoring-dev} (\texttt{make up} no la arranca, aunque muestra sus URLs).
 
 \subsection{URLs y credenciales}
 
@@ -183,23 +197,25 @@ Prometheus & \url{http://localhost:9090} & Sin autenticación \\
 Grafana & \url{http://localhost:3030} & \texttt{admin} / \texttt{GRAFANA\_PASSWORD} \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Fuente: \texttt{docker-compose.\allowbreak{}monitoring.\allowbreak{}dev.yml}.}
 \end{table}
 
-La contraseña de Grafana se configura mediante la variable \texttt{GRAFANA\_PASSWORD} del fichero \texttt{.env} (valor por defecto: \texttt{changeme}). El datasource de Prometheus queda provisionado automáticamente al arrancar: no es necesario configurarlo manualmente en la interfaz de Grafana.
+La contraseña de Grafana se configura mediante la variable \texttt{GRAFANA\_PASSWORD} del fichero \texttt{.env} (valor por defecto: \texttt{changeme}). La fuente de datos de Prometheus queda provisionada automáticamente al arrancar: no es necesario configurarla manualmente en la interfaz de Grafana.
 
 \subsection{Métricas expuestas}
 
-Prometheus recoge métricas de ocho \emph{jobs} con un intervalo de scraping de 15 segundos (tabla~\ref{tab:prometheus-jobs}).
+Prometheus recoge métricas de ocho tareas de recogida (\emph{jobs}) con un intervalo de muestreo de 15 segundos (tabla~\ref{tab:prometheus-jobs}).
 
 \begin{table}[h]
 \centering
-\caption{Jobs de scraping configurados en Prometheus.}
+\caption{Tareas de recogida (\emph{jobs}) configuradas en Prometheus.}
 \label{tab:prometheus-jobs}
-\begin{tabular}{lll}
+\begin{tabular}{llP{6.2cm}}
 \hline
 \textbf{Job} & \textbf{Endpoint} & \textbf{Métricas principales} \\
 \hline
-\texttt{backend} & \texttt{:9568/metrics} & Latencia HTTP (Phoenix), tiempos de query Ecto, memoria BEAM, colas de schedulers \\
+\texttt{backend} & \texttt{:9568/metrics} & Latencia HTTP (Phoenix), tiempos de consulta Ecto, memoria BEAM, colas de planificadores \\
 \texttt{ai\_engine} & \texttt{:8000/metrics} & Latencia de inferencia, peticiones totales, estado del modelo \\
 \texttt{prometheus} & \texttt{:9090/metrics} & Métricas internas de Prometheus \\
 \texttt{cadvisor} & \texttt{:8080/metrics} & CPU, memoria, red y disco por contenedor \\
@@ -209,9 +225,11 @@ Prometheus recoge métricas de ocho \emph{jobs} con un intervalo de scraping de 
 \texttt{blackbox} & \texttt{:9115/probe} & Sondas de disponibilidad HTTP de los servicios públicos \\
 \hline
 \end{tabular}
+\\[4pt]
+{\footnotesize Fuente: \texttt{docker/\allowbreak{}prometheus/\allowbreak{}prometheus.yml}.}
 \end{table}
 
-El backend Elixir utiliza \texttt{telemetry\_metrics\_prometheus} para exponer las métricas en el puerto \texttt{9568}. Las métricas de VM BEAM configuradas son \texttt{vm.memory.total} (memoria total del runtime) y \texttt{vm.total\_run\_queue\_lengths} (longitud de las colas de schedulers CPU e IO), útiles para detectar saturación en el procesamiento concurrente de WebSockets. El motor de IA expone las suyas en el endpoint \texttt{/metrics} del puerto \texttt{8000} mediante \texttt{prometheus\_fastapi\_instrumentator} (métricas HTTP automáticas) más dos métricas propias: \texttt{cie10\_inference\_duration\_seconds} (histograma de latencia de inferencia) y los gauges \texttt{cie10\_model\_loaded} y \texttt{cie10\_dict\_loaded} (estado de carga del modelo BERT y del clasificador de diccionario).
+El backend Elixir utiliza \texttt{telemetry\_metrics\_prometheus} para exponer las métricas en el puerto \texttt{9568}. Las métricas de VM BEAM configuradas son \texttt{vm.memory.total} (memoria total del runtime) y \texttt{vm.total\_run\_queue\_lengths} (longitud de las colas de planificadores de CPU y de E/S), útiles para detectar saturación en el procesamiento concurrente de WebSockets. El motor de IA expone las suyas en el endpoint \texttt{/metrics} del puerto \texttt{8000} mediante \texttt{prometheus\_fastapi\_instrumentator} (métricas HTTP automáticas) más dos métricas propias: \texttt{cie10\_inference\_duration\_seconds} (histograma de latencia de inferencia) y los indicadores (\emph{gauges}) \texttt{cie10\_model\_loaded} y \texttt{cie10\_dict\_loaded} (estado de carga del modelo BERT y del clasificador de diccionario).
 
 \subsection{Retención de datos}
 
@@ -231,6 +249,6 @@ cie10_model_loaded
 # Memoria total de la VM BEAM en kilobytes
 vm_memory_total_kilobytes
 
-# Longitud de la cola de schedulers CPU del runtime Elixir
+# Longitud de la cola de planificadores de CPU del runtime Elixir
 vm_total_run_queue_lengths_cpu
 \end{lstlisting}

@@ -9,13 +9,13 @@ Se emplea \texttt{IIC/RigoBERTa-Clinical}~\cite{garciasubies2026rigobertaclinica
 
 \section{Hiperparámetros}
 
-La Tabla~\ref{tab:hyperparams} recoge la configuración de la ejecución de producción (\texttt{20260530T030233Z}, paso~36).
+La Tabla~\ref{tab:hyperparams} recoge la configuración del modelo desplegado (\texttt{20260921T091919Z}, \texttt{zlpr-map}), que reproduce la del paso~36 (\texttt{20260530T030233Z}) salvo en la pérdida de ordenación, el criterio de selección del \emph{checkpoint}, el umbral y el número de épocas ejecutadas.
 
-\begin{table}[h]
+\begin{table}[!t]
 \centering
-\caption{Hiperparámetros del entrenamiento final.}
+\caption{Hiperparámetros del modelo desplegado (\texttt{zlpr-map}). Transcritos de la fila de \texttt{20260921T091919Z} de \texttt{ai\_engine/\allowbreak model/\allowbreak training\_runs.csv}, que escribe \texttt{ai\_engine/\allowbreak train.py} al terminar cada entrenamiento (sin objetivo de \texttt{make} propio; se lanza con \texttt{make ai-train-gpu}). Los valores coinciden con los de la fila.}
 \label{tab:hyperparams}
-\begin{tabular}{lll}
+\begin{tabular}{llP{6.6cm}}
 \hline
 \textbf{Parámetro} & \textbf{Valor} & \textbf{Descripción} \\
 \hline
@@ -27,10 +27,11 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración de la ejecución de prod
 \multicolumn{3}{l}{\textit{Optimización}} \\
 \texttt{lr}              & $10^{-4}$     & Tasa de aprendizaje \\
 \texttt{warmup\_ratio}   & 0{,}1         & Fracción de pasos de calentamiento \\
-\texttt{lr\_schedule}    & plateau       & Reducción al detectar estancamiento en val. F1 \\
+\texttt{lr\_schedule}    & plateau       & Reducción de la tasa de aprendizaje al detectar estancamiento de la métrica de selección (aquí el MAP de validación) \\
 \texttt{weight\_decay}   & 0{,}1         & Regularización L2 \\
+\texttt{pretrain\_epochs}& 10            & Épocas de preentrenamiento débil con las descripciones oficiales de los códigos, previas al ajuste sobre CodiEsp \\
 \texttt{epochs\_max}     & 150           & Máximo de épocas permitido \\
-\texttt{epochs\_run}     & 150           & Épocas ejecutadas (alcanzó el máximo sin parada temprana) \\
+\texttt{epochs\_run}     & 80            & Épocas ejecutadas (parada temprana; el paso~36 ejecutó 150) \\
 \texttt{patience}        & 20            & Épocas sin mejora antes de parar \\
 \hline
 \multicolumn{3}{l}{\textit{Arquitectura}} \\
@@ -38,21 +39,22 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración de la ejecución de prod
 \texttt{freeze\_layers}  & 20            & Capas del \emph{encoder} congeladas al inicio \\
 \texttt{unfreeze\_every} & 30            & Épocas entre descongelaciones \\
 \texttt{unfreeze\_layers}& 4             & Capas descongeladas en cada paso \\
-\texttt{unfreeze\_lr\_ratio} & 0{,}1     & Factor de reducción de LR para capas descongeladas \\
+\texttt{unfreeze\_lr\_ratio} & 0{,}1     & Factor de reducción de la tasa de aprendizaje para capas descongeladas \\
+\texttt{attn\_impl}     & \texttt{flash\_attention\_2} & Implementación de atención (FlashAttention 2) \\
 \hline
 \multicolumn{3}{l}{\textit{Función de pérdida}} \\
 \texttt{label\_smoothing} & 0{,}1       & Suavizado de etiquetas \\
+\texttt{rank\_loss\_weight} & 0{,}1     & Peso del término ZLPR de ordenación (ausente en el paso~36) \\
+\texttt{select\_metric}  & \texttt{map\_macro} & Criterio de selección del \emph{checkpoint} (el paso~36 usaba el F1 de validación) \\
 \texttt{pos\_weight\_cap} & 10{,}0      & Peso máximo de la clase positiva (desequilibrio) \\
 \hline
 \multicolumn{3}{l}{\textit{Batch}} \\
-\texttt{batch\_size}     & 8             & Tamaño de mini-lote efectivo en GPU \\
+\texttt{batch\_size}     & 8             & Tamaño de mini-lote en GPU \\
 \texttt{grad\_accum}     & 4             & Pasos de acumulación de gradiente \\
 \texttt{effective\_batch}& 32            & Tamaño de lote efectivo resultante \\
 \hline
 \multicolumn{3}{l}{\textit{Inferencia}} \\
-\texttt{threshold}       & 0{,}3         & Umbral de probabilidad para activar una etiqueta \\
-\texttt{pretrain\_epochs}& 10            & Épocas de precalentamiento con todo congelado \\
-\texttt{attn\_impl}     & \texttt{flash\_attention\_2} & Implementación de atención (FlashAttention 2) \\
+\texttt{threshold}       & 0{,}2         & Umbral de probabilidad para activar una etiqueta (el de la fila, no el configurado en el entrenamiento, 0,3) \\
 \hline
 \end{tabular}
 \end{table}
@@ -61,11 +63,11 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración de la ejecución de prod
 
 El sistema emplea dos estrategias de umbral diferentes. Durante el entrenamiento se usa un umbral global fijo para monitorizar la mejora. También se evaluaron umbrales por clase optimizados sobre el conjunto de validación, que ajustan individualmente el punto de corte de cada uno de los 1.767 códigos; se descartaron para producción por sobreajustar la validación (véase más abajo).
 
-La Tabla~\ref{tab:final-results} muestra ambas métricas para el modelo de producción (ejecución \texttt{20260530T030233Z}, paso~36).
+La Tabla~\ref{tab:final-results} muestra ambas métricas para el modelo desplegado (ejecución \texttt{20260921T091919Z}, \texttt{zlpr-map}).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
-\caption{Resultados del modelo final (paso~36) en validación y prueba, por estrategia de umbral. Generada con \texttt{make ai-eval-test} (\texttt{ai\_engine/eval\_test.py}); los valores quedan en \texttt{model/eval\_test.json}.}
+\caption[Resultados del modelo desplegado (\texttt{zlpr-map}) en validación y prueba, por estrategia de umbral]{Resultados del modelo desplegado (\texttt{zlpr-map}) en validación y prueba, por estrategia de umbral. Generada con \texttt{make ai-eval-test} (\texttt{ai\_engine/\allowbreak eval\_test.py}); los valores quedan en \texttt{model/\allowbreak eval\_test.json}, salvo el MAP de validación, que es el registrado por el entrenamiento en \texttt{training\_runs.csv}.}
 \label{tab:final-results}
 \begin{tabular}{llrrl}
 \hline
@@ -73,42 +75,41 @@ La Tabla~\ref{tab:final-results} muestra ambas métricas para el modelo de produ
 \hline
 Validación & global 0,2 & 0{,}4861 & 0{,}106 & 0{,}558$^{r}$ \\
 Test       & global 0,2 & 0{,}4946 & 0{,}108 & \textbf{0{,}454}$^{g}$ / 0{,}555$^{r}$ \\
-Test       & por clase  & 0{,}485  & 0{,}112 & n/d \\
+Test       & por clase  & 0{,}485  & 0{,}112 & no aplica \\
 \hline
 \end{tabular}
 
-\smallskip\par\footnotesize $^{g}$~MAP sobre el gold completo (directamente comparable con el \emph{benchmark} CodiEsp). $^{r}$~MAP restringido a los 1.767 códigos del vocabulario del modelo. Los umbrales por clase se ajustan sobre validación y no mejoran al global (F1-micro 0,485 frente a 0,495 en prueba), por lo que la configuración desplegada emplea el umbral global de 0,2.
+\smallskip\par\footnotesize P, R y F1 se calculan sobre los pares alcanzables del \emph{gold} (2.345 de 2.842 en prueba); sobre todos los pares el \emph{recall} de prueba es 0,379 y el F1-micro 0,444 (precisión 0,536), como en el capítulo de desarrollo. El F1-micro de validación (0,4861) es el de \texttt{eval\_test.py} con umbral 0,2; el registro de entrenamiento y \texttt{models.json} dan 0,4848 para la misma ejecución, porque lo miden en la época seleccionada durante el entrenamiento. $^{g}$~MAP sobre el gold completo (directamente comparable con el \emph{benchmark} CodiEsp). $^{r}$~MAP restringido a los 1.767 códigos del vocabulario del modelo. Los umbrales por clase se ajustan sobre validación y no mejoran al global (F1-micro 0,485 frente a 0,495 en prueba), por lo que la configuración desplegada emplea el umbral global de 0,2.
 \end{table}
 
-La ejecución desplegada es \texttt{20260921T091919Z}, la de pérdida de ordenación descrita en la subsección~\ref{sec:anexoF-alineacion}, publicada en Hugging Face como \texttt{zlpr-map}. Con umbral global de 0,2 alcanza F1-micro = 0{,}4861 en validación y 0{,}4946 en prueba. El MAP no aparece para los umbrales por clase porque no depende del umbral: es una métrica de ordenación y sería el mismo valor repetido. Los umbrales por clase, ajustados sobre validación, no compensan: se quedan en 0,485 en prueba frente a los 0,495 del umbral global, de modo que se emplea este último. El MAP por documento sobre el conjunto de prueba (métrica oficial del \emph{benchmark} CodiEsp) es \textbf{0{,}454} sobre el gold completo (0{,}555 restringido al vocabulario del modelo), situándose dentro del rango del \emph{benchmark}~\cite{miranda2020}, por detrás de los \emph{ensembles} y diccionarios de las primeras posiciones. El \emph{recall} de 0,459 debe leerse contra el techo de 0,825 que impone el vocabulario del modelo (497 de los 2.842 pares del \emph{gold} de prueba son códigos que no aparecen en entrenamiento): supone el 55,7\,\% del máximo alcanzable.
+La ejecución desplegada es \texttt{20260921T091919Z}, la de pérdida de ordenación descrita en la subsección~\ref{sec:anexoF-alineacion}, publicada en Hugging Face como \texttt{zlpr-map}. Con umbral global de 0,2 alcanza F1-micro = 0{,}4861 en validación (\texttt{eval\_test.py}; 0,4848 en el registro del entrenamiento) y 0{,}4946 en prueba, ambos sobre los pares alcanzables. El MAP no se da para los umbrales por clase porque no depende del umbral: es una métrica de ordenación y sería el mismo valor repetido. Los umbrales por clase, ajustados sobre validación, no compensan: se quedan en 0,485 en prueba frente a los 0,495 del umbral global, de modo que se emplea este último. El MAP por documento sobre el conjunto de prueba (métrica oficial del \emph{benchmark} CodiEsp) es \textbf{0{,}454} sobre el gold completo (0{,}555 restringido al vocabulario del modelo), situándose dentro del rango del \emph{benchmark}~\cite{miranda2020}, por detrás de los \emph{ensembles} y diccionarios de las primeras posiciones. Precisión, \emph{recall} y F1 se miden sobre los pares alcanzables: el \emph{recall} de 0,459 equivale a 0,379 y el F1-micro de 0,4946 a 0,444 sobre los 2.842 pares del \emph{gold} completo, porque 497 de ellos (el 17,5\,\%) son códigos que no aparecen en entrenamiento y fijan un techo de \emph{recall} de 0,825.
 
 \section{Selección del modelo desplegado}
 \label{sec:anexoH-candidatos}
 
 La elección no se hizo por la mejor cifra de validación sino midiendo en prueba a todos los candidatos, porque la ordenación por validación no se transfiere: \texttt{c102909} tenía el mejor F1 de validación de toda la serie (0,5028) y en prueba queda por debajo del modelo al que sustituía en esa misma métrica. La Tabla~\ref{tab:candidatos} recoge la comparación, generada con \texttt{make ai-eval-candidatos} y \texttt{make ai-eval-candidatos-fusion} (\texttt{ai\_engine/eval\_test.py}, \texttt{rerank\_map.py} y \texttt{tabla\_candidatos.py}).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
-\caption{Candidatos a despliegue, medidos sobre el conjunto de prueba. El MAP fusionado corresponde al motor \texttt{engine=fused}, con $\beta$ elegido en validación para cada modelo. La fila resaltada es el modelo desplegado.}
+\caption[Candidatos a despliegue, medidos sobre el conjunto de prueba]{Candidatos a despliegue, medidos sobre el conjunto de prueba. El MAP fusionado corresponde al motor \texttt{engine=fused}, con $\beta$ elegido en validación para cada modelo. La fila resaltada es el modelo desplegado. Cifras de la salida de \texttt{tabla\_candidatos.py} (\texttt{make ai-eval-candidatos} y \texttt{make ai-eval-candidatos-fusion}), redondeadas a tres decimales.}
 \label{tab:candidatos}
-\begin{tabular}{llrrr}
+\begin{tabular}{lP{6.2cm}rrr}
 \hline
 \textbf{Modelo} & \textbf{Diferencia} & \textbf{MAP} & \textbf{MAP fusión} & \textbf{F1-micro} \\
 \hline
 \rowcolor{gray!15}
-\textbf{zlpr-map} & Pérdida ZLPR, checkpoint elegido por MAP & \textbf{0{,}454} & \textbf{0{,}553} & \textbf{0{,}495} \\
+\textbf{zlpr-map} & Pérdida ZLPR, checkpoint elegido por MAP & \textbf{0{,}454} & \textbf{0{,}554} & \textbf{0{,}495} \\
 c102909 & Mejor F1 de validación de la serie (0,503) & 0{,}444 & 0{,}547 & 0{,}482 \\
-Paso 36 & Modelo desplegado hasta esta selección & 0{,}437 & 0{,}545 & 0{,}489 \\
-c225633 & Variante descartada de la misma serie & 0{,}433 & n/d & 0{,}480 \\
+Paso 36 & Modelo desplegado hasta esta selección & 0{,}437 & 0{,}545 & 0{,}488$^{*}$ \\
 \hline
 \end{tabular}
 
 \vspace{2mm}
-{\footnotesize El modelo desplegado gana en las tres métricas, que es la condición que se impuso para promocionarlo: una mejora de MAP a costa del F1 habría mejorado un titular y empeorado otro. La fila \texttt{c225633} se conserva porque justifica su descarte; su checkpoint se borró tras medirlo y su MAP fusionado no llegó a calcularse.}
+{\footnotesize El modelo desplegado gana en las tres métricas, que es la condición que se impuso para promocionarlo: una mejora de MAP a costa del F1 habría mejorado un titular y empeorado otro. $^{*}$~0,4882 en \texttt{eval\_cand\_produccion.json}; el capítulo de desarrollo cita 0,489, de una evaluación anterior (0,4887) del mismo modelo.}
 \end{table}
 
-\paragraph{Procedencia de las cifras.} Las métricas de esta tabla proceden de dos pasadas de evaluación distintas: el barrido de umbral y el MAP de prueba se calculan con \texttt{eval\_test.py}, mientras que las cifras de validación reportadas como referencia del paso~36 provienen del registro de entrenamiento. Ambas difieren en la tercera cifra decimal (por ejemplo, MAP de prueba 0,4539 frente a 0,4535) porque la inferencia de una de ellas se realiza con precisión reducida. La diferencia no altera ninguna conclusión, pero conviene declararla para que el lector no la interprete como una inconsistencia.
+\paragraph{Procedencia de las cifras.} Las métricas de esta tabla proceden de \texttt{eval\_test.py} en precisión completa. Otras tablas de la memoria (Anexo~\ref{cap:AnexoF} y \texttt{models.json}) usan \texttt{ensemble\_eval.py} en precisión reducida, que permite comparar muchas ejecuciones en una pasada: el MAP de prueba de \texttt{zlpr-map} es 0,4539 en la primera y 0,4535 en la segunda, y el del paso~36, 0,4373 frente a 0,4342. La diferencia está en la tercera cifra decimal y no altera ninguna conclusión, pero conviene declararla para que no se interprete como una inconsistencia.
 
 La diferencia entre F1-micro y F1-macro refleja el fuerte desequilibrio de clases del corpus: el modelo rinde bien sobre los códigos frecuentes, pero tiene dificultades con los poco representados. Este es un límite inherente al corpus de entrenamiento de 500 documentos, donde la mayoría de los 1.767 códigos aparecen menos de cinco veces.
 
@@ -119,16 +120,17 @@ La Figura~\ref{fig:epochs-graph} muestra la evolución del F1-micro de validaci�
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{figs/all_epochs_graph}
-\caption{Curvas de entrenamiento: F1-micro de validación y pérdida de entrenamiento por época.}
+\caption{Curvas de entrenamiento con \texttt{IIC/RigoBERTa-Clinical}: F1-micro de validación (arriba) y pérdida de entrenamiento (abajo) por época. En gris, el resto de ejecuciones con ese \emph{encoder}; resaltadas, el paso~36 y \texttt{c102909}; el eje de la pérdida se recorta en 1 porque una ejecución llega a 5,5. No se conserva el historial por época de la ejecución desplegada. Generada con \texttt{make ai-tfg-figures} (\texttt{ai\_engine/\allowbreak plot\_runs.py}) a partir de \texttt{model/\allowbreak training\_history\_*.json}.}
 \label{fig:epochs-graph}
 \end{figure}
 
 \section{Artefactos del modelo}
 
-Los artefactos del modelo desplegado en producción se encuentran en \texttt{ai\_engine/model/}:
+Los artefactos de los modelos se encuentran en \texttt{ai\_engine/model/}:
 
 \begin{description}
-    \item[\texttt{classifier.pt}] Pesos del modelo PyTorch (ejecución del paso~36).
-    \item[\texttt{thresholds.json}] Umbrales por clase optimizados sobre el conjunto de validación.
+    \item[\texttt{classifier.pt}] Pesos del modelo PyTorch del paso~36 (ejecución del paso~36, conservado como modelo \texttt{produccion} en \texttt{models.json}; el desplegado es \texttt{zlpr-map.pt}).
+    \item[\texttt{zlpr-map.pt}, \texttt{zlpr-map.thresholds.json}] Pesos y umbrales por clase del modelo desplegado (los umbrales por clase no se usan en inferencia, que emplea el umbral global).
+    \item[\texttt{thresholds.json}] Umbrales por clase del paso~36.
     \item[\texttt{config.json}] Metadatos del modelo activo: nombre, fichero de pesos, fichero de umbrales y parámetros de inferencia.
 \end{description}

@@ -12,30 +12,30 @@ Este anexo documenta los protocolos y contratos de comunicación entre los servi
 
 \section{Flujo de análisis clínico}
 
-La Figura~\ref{fig:seq-analisis} ilustra la secuencia completa de mensajes que se intercambian cuando el codificador envía un informe clínico al sistema.
+La Figura~\ref{fig:seq-analisis} resume los hitos de la secuencia de mensajes cuando el codificador clínico envía un informe al sistema; los contratos de cada mensaje se detallan en las secciones siguientes.
 
 \begin{figure}[ht]
 \centering
 \resizebox{\textwidth}{!}{\input{figs/seq-analisis}}
-\caption{Diagrama de secuencia del flujo de análisis clínico.}
+\caption{Diagrama de secuencia simplificado del flujo de análisis clínico: la propuesta de códigos (pasos 3 a 5) y la justificación (pasos 6 a 8) viajan en peticiones distintas. Se omiten el resumen en \emph{streaming} y los comandos internos del backend.}
 \label{fig:seq-analisis}
 \end{figure}
 
 \section{API REST: frontend \texorpdfstring{$\rightarrow$}{->} backend}
 
-La base de la URL es configurable mediante la variable de entorno \texttt{NEXT\_PUBLIC\_API\_URL} (valor por defecto: \texttt{http://localhost:4000/api}). Las rutas protegidas requieren la cabecera \texttt{Authorization: Bearer <token>}, donde \texttt{<token>} es un token firmado con \texttt{Phoenix.Token} emitido al iniciar sesión, con una validez de una hora.
+La base de la URL es configurable mediante la variable de entorno \texttt{NEXT\_PUBLIC\_API\_URL} (valor por defecto: \texttt{http://localhost:\allowbreak{}4000/api}). Las rutas protegidas requieren la cabecera \texttt{Authorization: Bearer <token>}, donde \texttt{<token>} es un token firmado con \texttt{Phoenix.Token} emitido al iniciar sesión, con una validez de una hora.
 
 La especificación completa de la API está disponible a través de la interfaz web de Swagger UI en \texttt{http://localhost:4000/docs}, donde es posible explorar todos los \emph{endpoints}, consultar los esquemas de petición y respuesta, y ejecutar llamadas de prueba directamente desde el navegador.
 
 \subsection{Autenticación}
 
-Los endpoints de registro, inicio de sesión, confirmación de email y cambio de idioma se listan en la Tabla~\ref{tab:api-auth}.
+Los endpoints de registro, inicio de sesión, confirmación de email, cambio de idioma y derechos del usuario sobre sus datos (exportación y borrado de la cuenta, RGPD) se listan en la Tabla~\ref{tab:api-auth}. Las tablas de este anexo cubren todas las rutas bajo \texttt{/api} definidas en \texttt{router.ex}, salvo la especificación OpenAPI (\texttt{GET /api/openapi}) y el backoffice de administración (rutas \texttt{/admin}, interfaz LiveView), que no forman parte del contrato con el frontend. Los endpoints de registro y de inicio de sesión (y la confirmación) pasan por un limitador de peticiones propio (10 por IP cada 60 segundos).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Endpoints de autenticación.}
 \label{tab:api-auth}
-\begin{tabular}{llp{7cm}}
+\begin{tabular}{llP{7cm}}
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
@@ -43,6 +43,8 @@ POST & \texttt{/auth/register} & Registra un nuevo usuario. Envía email de conf
 POST & \texttt{/auth/login} & Autentica al usuario; devuelve \texttt{\{user, token\}}. \\
 GET & \texttt{/auth/confirm/:token} & Confirma el email del usuario a partir del enlace recibido. \\
 PUT & \texttt{/users/locale} & Actualiza el idioma preferido del usuario. \emph{Protegido.} \\
+GET & \texttt{/users/export} & Descarga en JSON los datos del usuario y sus conversaciones (RGPD, art.~20). \emph{Protegido.} \\
+DELETE & \texttt{/users/account} & Elimina la cuenta y todos sus datos (RGPD, art.~17). \emph{Protegido.} \\
 \hline
 \end{tabular}
 \end{table}
@@ -53,11 +55,11 @@ El token se almacena en \texttt{localStorage} bajo la clave \texttt{cie10\_auth}
 
 El detalle de los endpoints para listar, archivar, restaurar y purgar conversaciones está en la Tabla~\ref{tab:api-conv}.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Endpoints de conversaciones.}
 \label{tab:api-conv}
-\begin{tabular}{lp{5cm}p{5cm}}
+\begin{tabular}{lP{5cm}P{5cm}}
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
@@ -74,11 +76,11 @@ DELETE & \texttt{/conversations/\allowbreak{}:id/purge} & Borrado permanente e i
 
 Los endpoints de búsqueda y consulta del catálogo se resumen en la Tabla~\ref{tab:api-cie10}.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Endpoints del catálogo CIE-10-ES (públicos, solo lectura).}
 \label{tab:api-cie10}
-\begin{tabular}{lp{5cm}p{5cm}}
+\begin{tabular}{lP{5cm}P{5cm}}
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
@@ -89,19 +91,37 @@ GET & \texttt{/cie10/codes/\allowbreak{}:code/children} & Devuelve los códigos 
 \end{tabular}
 \end{table}
 
+\subsection{Estado y utilidades}
+
+La Tabla~\ref{tab:api-util} recoge los dos endpoints públicos restantes: la comprobación de estado del backend y el recuento de tokens, que el backend reenvía al motor de IA (\texttt{POST /count-tokens}) y que la interfaz usa para mostrar el recuento de tokens del informe (mientras llega la respuesta muestra una estimación local de un token cada cuatro caracteres).
+
+\begin{table}[H]
+\centering
+\caption{Endpoints de estado y utilidades (públicos).}
+\label{tab:api-util}
+\begin{tabular}{llP{7cm}}
+\hline
+\textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
+\hline
+GET & \texttt{/health} & Comprobación de estado del backend; devuelve \texttt{\{status: \textquotedbl{}ok\textquotedbl{}\}}. \\
+POST & \texttt{/ai/count-tokens} & Cuenta los tokens de \texttt{\{text\}} con el tokenizador del modelo; responde 503 si el motor de IA no está disponible. \\
+\hline
+\end{tabular}
+\end{table}
+
 \subsection{Traducciones}
 
 El único endpoint de internacionalización aparece en la Tabla~\ref{tab:api-i18n}.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Endpoints de internacionalización (públicos).}
 \label{tab:api-i18n}
-\begin{tabular}{llp{7cm}}
+\begin{tabular}{llP{7cm}}
 \hline
 \textbf{Método} & \textbf{Ruta} & \textbf{Descripción} \\
 \hline
-GET & \texttt{/translations/:locale} & Devuelve el mapa de cadenas de texto para \texttt{es} o \texttt{en}. \\
+GET & \texttt{/translations/\allowbreak{}:locale} & Devuelve el mapa de cadenas de texto para \texttt{es}, \texttt{en}, \texttt{fr}, \texttt{it} o \texttt{de}. \\
 \hline
 \end{tabular}
 \end{table}
@@ -110,7 +130,7 @@ GET & \texttt{/translations/:locale} & Devuelve el mapa de cadenas de texto para
 
 La conexión WebSocket se establece contra \texttt{ws://localhost:4000/socket} (configurable con \texttt{NEXT\_PUBLIC\_WS\_URL}) usando la librería \texttt{phoenix\_socket}. El token se pasa como parámetro de conexión para autenticar la sesión.
 
-Cada conversación se suscribe a un canal propio con el topic \texttt{conversation:<conversation\_id>}, donde \texttt{conversation\_id} es un UUID generado por el cliente.
+Cada conversación se suscribe a un canal propio con el topic \texttt{conversation:\allowbreak{}<conversation\_id>}, donde \texttt{conversation\_id} es un UUID generado por el cliente.
 
 \subsection{Mensajes entrantes (cliente \texorpdfstring{$\rightarrow$}{->} servidor)}
 
@@ -120,7 +140,7 @@ El frontend envía siete tipos de mensajes al canal (Tabla~\ref{tab:ws-in}). El 
 \centering
 \caption{Mensajes enviados por el frontend al canal WebSocket.}
 \label{tab:ws-in}
-\begin{tabular}{lp{4.5cm}p{5.5cm}}
+\begin{tabular}{lP{4.5cm}P{5.5cm}}
 \hline
 \textbf{Evento} & \textbf{Datos} & \textbf{Efecto} \\
 \hline
@@ -139,11 +159,11 @@ El frontend envía siete tipos de mensajes al canal (Tabla~\ref{tab:ws-in}). El 
 
 Los mensajes que el backend emite hacia el cliente se listan en la Tabla~\ref{tab:ws-out}.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Mensajes emitidos por el backend hacia el cliente WebSocket.}
 \label{tab:ws-out}
-\begin{tabular}{lp{4.5cm}p{5cm}}
+\begin{tabular}{lP{4.2cm}P{4.7cm}}
 \hline
 \textbf{Evento} & \textbf{Datos principales} & \textbf{Cuándo se emite} \\
 \hline
@@ -180,10 +200,12 @@ La especificación de los \emph{endpoints} del motor de IA está disponible a tr
 \begin{verbatim}
 {
  "text": "<informe clínico en español>",
- "engine": "bert" | "dict" | "both" | "fused", // opcional; por defecto "bert"
- "include_triggers": false                     // opcional; por defecto false
+ "engine": "bert" | "dict" | "both" | "fused", // opcional
+ "include_triggers": false                     // opcional
 }
 \end{verbatim}
+
+Ambos campos son opcionales: por defecto \texttt{engine} vale \texttt{\textquotedbl{}bert\textquotedbl{}} e \texttt{include\_triggers} vale \texttt{false}.
 
 \begin{description}
  \item[Respuesta] Objeto JSON con el campo \texttt{cards}, que contiene una única tarjeta de tipo \texttt{codes} con la lista de códigos predichos (cada uno con su descripción, confianza y términos que lo motivan). El resumen del informe se genera de forma independiente mediante \texttt{POST /summarize/stream}. El esquema completo de la petición y la respuesta se detalla en el Anexo~\ref{cap:AnexoM}.
@@ -199,7 +221,7 @@ La llamada se realiza dentro de una \texttt{Task.start} asíncrona, por lo que e
  \item[Respuesta] \texttt{\{method, triggers, unknown\_codes, timing\}}
 \end{description}
 
-La atribución de términos viaja en una llamada propia porque cuesta dos órdenes de magnitud más que la predicción. El parámetro \texttt{include\_triggers} de \texttt{/predict} está desactivado por defecto precisamente por eso: los códigos se devuelven en cuanto están y el backend lanza esta segunda petición en paralelo, emitiendo el evento \texttt{triggers\_received} por el canal WebSocket cuando la respuesta llega. La interfaz muestra entre tanto los términos que ya tiene (los del diccionario, si el motor es fusionado) junto a un indicador de progreso.
+La atribución de términos viaja en una llamada propia porque cuesta entre 30 y 50 veces más que la predicción (16,2\,s frente a 0,331\,s en CPU; 0,51\,s frente a 0,017\,s en GPU). El parámetro \texttt{include\_triggers} de \texttt{/predict} está desactivado por defecto precisamente por eso: los códigos se devuelven en cuanto están y el backend lanza esta segunda petición en paralelo, emitiendo el evento \texttt{triggers\_received} por el canal WebSocket cuando la respuesta llega. La interfaz muestra entre tanto los términos que ya tiene (los del diccionario, si el motor es fusionado) junto a un indicador de progreso.
 
 Si esta segunda llamada falla, la predicción no se invalida: se registra el aviso y la tarjeta conserva sus códigos sin términos explicativos.
 
@@ -214,4 +236,4 @@ Permite al backend verificar que el motor de IA está disponible y que el modelo
 
 \section{Mecanismo de resiliencia}
 
-Si la llamada al motor de IA tiene éxito pero el despacho del comando \texttt{ReceiveAIPrediction} mediante Commanded falla, el backend dispone de un mecanismo de escritura directa en base de datos (\texttt{persist\_cards\_direct/3} y \texttt{persist\_predicted\_codes\_direct/2}) que garantiza que las tarjetas y los códigos predichos se guardan igualmente. Esto asegura que el usuario recibe una respuesta aunque el \emph{event store} experimente un problema transitorio.
+Si la llamada al motor de IA tiene éxito pero el despacho del comando \texttt{ReceiveAIPrediction} mediante Commanded falla, el backend dispone de un mecanismo de escritura directa en base de datos (\texttt{persist\_cards\_direct/3} y \texttt{persist\_predicted\_codes\_direct/2}) que persiste igualmente las tarjetas y los códigos predichos. Esto permite que el usuario reciba una respuesta aunque el \emph{event store} experimente un problema transitorio.
