@@ -68,13 +68,13 @@ El sistema debe resolver tres problemas concretos:
  \item Generación de una puntuación de confianza que permita auditar cada predicción, en línea con los requisitos de trazabilidad del Reglamento UE 2017/745~\cite{eu2017745} aplicable al software de apoyo a la decisión clínica.
 \end{itemize}
 
-La metodología combina preentrenamiento débil sobre las descripciones oficiales del catálogo CIE-10-ES con \emph{fine-tuning} de RigoBERTa-Clinical~\cite{garciasubies2026rigobertaclinical} mediante \emph{Binary Cross-Entropy} ponderada para combatir el desequilibrio extremo de clases, y calibración del umbral de decisión sobre el conjunto de validación del corpus CodiEsp~\cite{miranda2020}.
+La metodología combina preentrenamiento débil sobre las descripciones del catálogo CIE-10-ES con ajuste fino (\emph{fine-tuning}) de RigoBERTa-Clinical~\cite{garciasubies2026rigobertaclinical} mediante \emph{Binary Cross-Entropy} ponderada con un término de ordenación (ZLPR), y calibración del umbral de decisión sobre validación en el corpus CodiEsp~\cite{miranda2020}.
 
-Sobre el conjunto de prueba, el sistema obtiene un F1-micro de 0,495 y un F1-macro de 0,108, y un MAP por documento de 0,454 sobre el conjunto completo de referencia (0,555 restringido al vocabulario de códigos que el modelo puede predecir).
+Sobre el conjunto de prueba, el clasificador solo (la configuración servida por defecto) obtiene un F1-micro de 0,495 y un F1-macro de 0,108, medidos sobre los pares anotados cuyo código está en el vocabulario de 1.767 códigos del modelo (0,444 de F1-micro sobre todos los pares anotados), y un MAP por documento de 0,454 sobre el conjunto completo de referencia (0,555 restringido a ese vocabulario, no comparable con el \emph{benchmark}).
 
-En \textbf{modo fusionado}, combinando el clasificador con un diccionario de patrones clínicos en un único \emph{ranking}, el MAP asciende a \textbf{0,554}, que lo sitúa en segunda posición del \emph{benchmark} CodiEsp, por delante de todos los sistemas basados en \emph{transformers}. El modelo propone los códigos de un informe en 0,331~s de mediana, como apoyo a la decisión del codificador clínico y no como sustituto: con ese F1-micro, la propuesta exige revisión humana completa.
+En \textbf{modo fusionado}, implementado pero no servido por defecto, la combinación con un diccionario de patrones clínicos eleva el MAP a \textbf{0,554}, segundo puesto del \emph{benchmark} CodiEsp. El modelo propone los códigos de un informe en 0,331~s de mediana en CPU, como apoyo y no como sustituto del codificador clínico: con ese F1-micro la propuesta exige revisión humana completa, que la confianza (relativa, no calibrada) y la ordenación pueden orientar; el ahorro de tiempo no se ha medido.
 
-El trabajo demuestra la viabilidad de los \emph{transformers} para codificación clínica automatizada mediante un \emph{pipeline} reproducible (clasificador, API REST e interfaz web de demostración). Las limitaciones identificadas (cobertura reducida de códigos poco frecuentes y ausencia de datos de hospitales reales) marcan las líneas de trabajo futuro.
+El trabajo muestra la viabilidad técnica de un asistente de codificación basado en \emph{transformers} mediante un \emph{pipeline} reproducible (clasificador, API REST e interfaz web de demostración), sin evaluación en un entorno clínico real. Sus limitaciones (el clasificador solo cubre 1.767 de los 68.069 códigos, con poca cobertura de los poco frecuentes, y no hay datos de hospitales reales) marcan el trabajo futuro.
 \end{resumenPral}
 
 
@@ -92,13 +92,13 @@ The system must solve three concrete problems:
  \item Generation of a confidence score that allows each prediction to be audited, in line with the traceability requirements of EU Regulation 2017/745~\cite{eu2017745} applicable to clinical decision-support software.
 \end{itemize}
 
-The methodology combines weakly supervised pre-training on the official ICD-10-ES catalogue descriptions with fine-tuning of RigoBERTa-Clinical~\cite{garciasubies2026rigobertaclinical} using weighted Binary Cross-Entropy loss to address extreme class imbalance, and calibration of the decision threshold on the CodiEsp validation set~\cite{miranda2020}.
+The methodology combines weakly supervised pre-training on the official ICD-10-ES catalogue descriptions with fine-tuning of RigoBERTa-Clinical~\cite{garciasubies2026rigobertaclinical} using weighted Binary Cross-Entropy loss with a ranking term (ZLPR) to address class imbalance, and calibration of the decision threshold on the CodiEsp validation set~\cite{miranda2020}.
 
-On the test set, the system achieves an F1-micro of 0.495 and an F1-macro of 0.108, and a per-document MAP of 0.454 over the full reference set (0.555 when restricted to the code vocabulary the model can predict).
+On the test set, the classifier alone, which is the configuration the system serves by default, achieves an F1-micro of 0.495 and an F1-macro of 0.108, measured over the annotated pairs whose code belongs to the 1,767-code vocabulary the model can predict (over all annotated pairs the F1-micro is 0.444, since the model cannot hit codes it did not see in training), and a per-document MAP of 0.454 over the full reference set (0.555 when restricted to that vocabulary, a figure not comparable with the benchmark).
 
-In \textbf{fused mode}, combining the classifier with a dictionary of clinical patterns into a single ranking, the MAP rises to \textbf{0.554}, ranking second in the CodiEsp benchmark, ahead of every transformer-based system. The model proposes the codes for a report in a median of 0.331~s, as decision support for the clinical coder rather than a replacement: at that F1-micro, the output requires full human review.
+In \textbf{fused mode}, which is implemented but not served by default, combining the classifier with a dictionary of clinical patterns into a single ranking, the MAP rises to \textbf{0.554}, ranking second in the CodiEsp benchmark, ahead of every transformer-based system. The model proposes the codes for a report in a median of 0.331~s on CPU, as decision support for the clinical coder rather than a replacement: at that F1-micro, the output requires full human review. The per-code confidence score (relative, not calibrated) and the ranking of the list can steer that review towards the most likely proposals; the time saving this would bring has not been measured.
 
-The work demonstrates the feasibility of transformers for automated clinical coding through a reproducible pipeline (classifier, REST API and demonstration web interface). The identified limitations (reduced coverage of rare codes and absence of real hospital data) define the priority lines of future work.
+The work shows the technical feasibility of a transformer-based clinical coding assistant through a reproducible pipeline (classifier, REST API and demonstration web interface); it has not been evaluated in a real clinical setting, nor its effect on coding time. The identified limitations (reduced coverage of rare codes and absence of real hospital data) define the priority lines of future work.
 \end{resumenAlt}
 
 % Ajuste al idioma pral.
