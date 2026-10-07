@@ -1,7 +1,7 @@
 {
   "descripcion": "Catálogo de modelos publicados en Hugging Face. Cada entrada nombra los ficheros tal como están en el repositorio remoto y recoge sus cifras, para poder elegir sin descargarlos todos.",
   "repo": "dmartingarcia/cie10-rigoberta-classifier",
-  "nota_medicion": "Las métricas 'comparables' salen todas de una misma pasada de evaluación en precisión reducida (ensemble_eval.py), que es lo que las hace comparables entre modelos. Las 'titulares' del modelo de producción proceden del guion en precisión completa (eval_test.py) y son las que cita la memoria. Difieren en la tercera cifra decimal. No mezclar unas con otras al citar.",
+  "nota_medicion": "Las métricas 'comparables' proceden de eval_test.py y rerank_map.py en precisión completa, sobre el conjunto de prueba (tabla_candidatos.py las reúne), y coinciden con las que cita la memoria. F1 sobre los pares alcanzables del gold; MAP por documento sobre el gold completo.",
   "modelos": {
     "produccion": {
       "checkpoint": "classifier.pt",
@@ -16,9 +16,9 @@
         "map_test": 0.4373
       },
       "comparables": {
-        "f1_micro_test": 0.4872,
-        "map_test": 0.4342,
-        "map_test_con_diccionario": 0.5446
+        "f1_micro_test": 0.4882,
+        "map_test": 0.4372,
+        "map_test_con_diccionario": 0.5449
       }
     },
     "zlpr-map": {
@@ -34,9 +34,9 @@
         "map_test": 0.4539
       },
       "comparables": {
-        "f1_micro_test": 0.4972,
-        "map_test": 0.4535,
-        "map_test_con_diccionario": 0.5535
+        "f1_micro_test": 0.4946,
+        "map_test": 0.4539,
+        "map_test_con_diccionario": 0.5537
       }
     },
     "c102909": {

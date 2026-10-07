@@ -3,13 +3,13 @@
 
 El objetivo de este trabajo es el \textbf{diseño e implementación de un sistema de codificación clínica automática en el estándar CIE-10-ES} capaz de asignar, a partir de informes de alta hospitalaria en español, uno o más códigos de diagnóstico siguiendo la nomenclatura CIE-10-ES. La codificación de procedimientos (CIE-10-ES-PCS) queda explícitamente fuera del alcance de este trabajo y se plantea como línea futura.
 
-Como resultado, tendremos un prototipo funcional compuesto por un modelo de clasificación multilabel basado en BERT, un módulo de generación de resúmenes clínicos mediante un modelo de lenguaje ligero, un servicio de inferencia accesible mediante una API REST y una página web para interactuar con dicha API.
+Como resultado se obtiene un prototipo funcional compuesto por un modelo de clasificación multilabel basado en BERT, un módulo de generación de resúmenes clínicos mediante un modelo de lenguaje ligero, un servicio de inferencia accesible mediante una API REST y una página web para interactuar con dicha API.
 
 El corpus CodiEsp~\cite{miranda2020} es el conjunto de datos de referencia para la codificación clínica automática en español. Proporciona informes clínicos anotados con sus correspondientes códigos CIE-10-ES tanto para diagnósticos como para procedimientos, e incluye las palabras del texto identificadas como evidencia de cada código.
 
-También se requerirá la adquisición del catálogo oficial de códigos CIE-10-ES, que contiene las descripciones en español de todos los códigos válidos, mediante técnicas de \emph{scraping} sobre el portal eCIE-maps~\cite{eciemaps2024} del Ministerio de Sanidad, dado que no existe ningún formato de descarga pública estructurada.
+También se requiere la adquisición del catálogo oficial de códigos CIE-10-ES, que contiene las descripciones en español de todos los códigos válidos, mediante técnicas de \emph{scraping} sobre el portal eCIE-maps~\cite{eciemaps2024} del Ministerio de Sanidad, dado que no existe ningún formato de descarga pública estructurada.
 
-El sistema busca asistir al codificador clínico, nunca sustituirlo: el flujo previsto (Figura~\ref{fig:c4-contexto}) es que el codificador envíe el informe de alta y revise la lista de códigos propuestos con su nivel de confianza asociado, interviniendo manualmente solo en los casos ambiguos o de baja certeza; el sistema no automatiza el registro final en el sistema de información hospitalario ni sustituye el criterio del codificador, que conserva la decisión sobre cada diagnóstico.
+El sistema busca asistir al codificador clínico, nunca sustituirlo: el flujo previsto (Figura~\ref{fig:c4-contexto}) es que el codificador envíe el informe de alta y revise la lista completa de códigos propuestos, ordenados y con su confianza relativa (no calibrada), que puede guiar la revisión; el sistema no automatiza el registro final en el sistema de información hospitalario ni sustituye el criterio del codificador, que conserva la decisión sobre cada diagnóstico.
 
 \begin{figure}[ht]
 \centering
@@ -18,7 +18,7 @@ El sistema busca asistir al codificador clínico, nunca sustituirlo: el flujo pr
 \label{fig:c4-contexto}
 \end{figure}
 
-La necesidad de partida, ya cuantificada en la introducción (68.069 códigos posibles y 14~minutos de media por alta hospitalaria), convierte la codificación manual en un cuello de botella difícil de escalar sin más personal especializado~\cite{sanidad2016cie10}. El valor del prototipo no es sustituir a ese personal, sino reducir el tiempo dedicado a los diagnósticos claros y dejar un registro auditable de cada predicción y de la versión del modelo empleada, en línea con el Reglamento UE 2017/745~\cite{eu2017745}. El resultado es, por tanto, un prototipo —no un sistema autónomo ni un producto certificado para uso clínico real— entrenado y evaluado exclusivamente sobre el corpus CodiEsp, por lo que su rendimiento fuera de ese dominio no está garantizado.
+La necesidad de partida, ya cuantificada en la introducción (68.069 códigos posibles y 14~minutos de media por alta hospitalaria), convierte la codificación manual en un cuello de botella difícil de escalar sin más personal especializado~\cite{sanidad2016cie10}. El valor del prototipo no es sustituir a ese personal, sino ofrecer una propuesta ordenada que puede agilizar la revisión (el ahorro de tiempo no se ha medido) y dejar un registro auditable de cada predicción y de la versión del modelo empleada, con la vista puesta en la trazabilidad que exige el Reglamento UE 2017/745~\cite{eu2017745}. El resultado es, por tanto, un prototipo (no un sistema autónomo ni un producto certificado para uso clínico real) entrenado y evaluado exclusivamente sobre el corpus CodiEsp, por lo que su rendimiento fuera de ese dominio no está garantizado.
 
 \section{Objetivos secundarios}
 
@@ -30,7 +30,7 @@ Dado que el sistema se puede descomponer de forma natural en módulos independie
 
  \item \textbf{Análisis estadístico de las fuentes de datos.} Análisis estadístico de las diferentes fuentes de datos, caracterizando la longitud, la distribución de etiquetas, el solapamiento entre particiones y la relación entre las descripciones oficiales de los códigos y su presencia en el corpus. Este análisis fundamenta las decisiones de diseño del modelo y las futuras estrategias de entrenamiento.
 
- \item \textbf{Módulo clasificador multilabel.} Componente central del sistema. Estará constituido por un modelo BERT preentrenado en español con dominio clínico y ajustado mediante \emph{fine-tuning} sobre el corpus CodiEsp. Incorpora una cabeza de clasificación multilabel con función de pérdida adaptada a la distribución de larga cola de la CIE-10 y una estrategia de umbral de decisión calibrada sobre el conjunto de validación.
+ \item \textbf{Módulo clasificador multilabel.} Componente central del sistema. Estará constituido por un modelo BERT preentrenado en español con dominio clínico y ajustado mediante \emph{fine-tuning} sobre el corpus CodiEsp. Incorpora una cabeza de clasificación multilabel con función de pérdida adaptada a la distribución de larga cola de la CIE-10 y un umbral de decisión global seleccionado sobre el conjunto de validación.
 
  \item \textbf{Backend de gestión y trazabilidad.} Servicio central que orquesta el flujo de análisis entre la interfaz y el motor de IA, gestiona la autenticación y el ciclo de vida de los usuarios, y registra de forma inmutable cada acción realizada sobre un análisis (envío, predicción, validación y rechazo de códigos) para garantizar la trazabilidad clínica exigida por los requisitos.
 
