@@ -22,7 +22,7 @@ El \emph{Compose} base define cinco servicios Docker~\cite{merkel2014docker} y c
 \centering
 \caption{Servicios del sistema y sus características de despliegue.}
 \label{tab:servicios}
-\begin{tabular}{lP{3.2cm}rP{2.3cm}P{2.8cm}}
+\begin{tabular}{lP{3.2cm}rP{2.3cm}P{3.6cm}}
 \hline
 \textbf{Servicio} & \textbf{Tecnología} & \textbf{Puerto} & \textbf{Depende de} & \textbf{Rol} \\
 \hline
@@ -31,7 +31,7 @@ El \emph{Compose} base define cinco servicios Docker~\cite{merkel2014docker} y c
 \texttt{ai\_engine} & Python 3.11, FastAPI & 8000 & db & Inferencia IA \\
 \texttt{db} & PostgreSQL 18 & 5432 &  ninguna & Persistencia \\
 \texttt{mailpit} & Mailpit & 8025/1025 &  ninguna & Correo de captura (solo desarrollo) \\
-\texttt{ml-base} & CUDA + PyTorch + Transformers & ninguno &  ninguna & Imagen base de ML (solo se construye) \\
+\texttt{ml-base} & CUDA + PyTorch + Transformers & ninguno &  ninguna & Imagen base de ML (no se ejecuta) \\
 \texttt{training} & Python, Jupyter Lab & 8888 & ml-base & Entrenamiento \\
 \hline
 \end{tabular}
@@ -89,9 +89,10 @@ La Tabla~\ref{tab:envvars} recoge las variables de entorno más relevantes del s
 
 \begin{table}[!t]
 \centering
+\small
 \caption{Variables de entorno del sistema.}
 \label{tab:envvars}
-\begin{tabular}{lP{5.2cm}l}
+\begin{tabular}{lP{6.5cm}l}
 \hline
 \textbf{Variable} & \textbf{Valor por defecto} & \textbf{Consumidor} \\
 \hline

@@ -71,6 +71,7 @@ Las condiciones del nivel F0 se resumen en la Tabla~\ref{tab:azure-f0}.
 
 \begin{table}[h]
 \centering
+\small
 \caption{Características del nivel gratuito F0 de Azure Translator.}
 \label{tab:azure-f0}
 \begin{tabular}{ll}
@@ -101,6 +102,7 @@ El corpus de entrenamiento de CodiEsp contiene 500 documentos con una media de \
 
 \begin{table}[h]
 \centering
+\small
 \caption{Distribución de frecuencias de códigos en el corpus de entrenamiento original.}
 \label{tab:code-dist}
 \begin{tabular}{lrr}
@@ -123,6 +125,7 @@ La evolución del corpus en cada etapa de aumentación queda recogida en la Tabl
 
 \begin{table}[h]
 \centering
+\small
 \caption{Corpus de entrenamiento en cada etapa de aumentación.}
 \label{tab:aug-results}
 \begin{tabular}{lrrrr}
@@ -148,6 +151,7 @@ Se aplicaron tres pivotes independientes: inglés (EN), alemán (DE) y francés 
 
 \begin{table}[h]
 \centering
+\small
 \caption{Estadísticas de calidad de la retrotraducción por pivote (Azure Translator).}
 \label{tab:bt-quality}
 \begin{tabular}{lrrr}
@@ -173,6 +177,7 @@ Agrupando las notas en intervalos de 5 palabras se obtiene la distribución de l
 
 \begin{table}[h]
 \centering
+\small
 \caption{Distribución de notas por rango de variación en palabras ($\Delta$ palabras, intervalos de 5).}
 \label{tab:bt-dist}
 \begin{tabular}{lrrrrrr}
@@ -291,6 +296,7 @@ Por ejemplo, con el fichero base \texttt{codiesp\_D\_source\_train\_augmented.cs
 
 \begin{table}[h]
 \centering
+\small
 \caption{Ficheros generados por combinación de motor de traducción y pivote.}
 \label{tab:augment-files}
 \begin{tabular}{lll}
@@ -327,4 +333,5 @@ Los experimentos descritos en el Anexo~\ref{cap:AnexoF} partieron de la configur
 
 El corpus de entrenamiento crece de 500 a 2.000 documentos (4×) sin modificar la arquitectura ni los hiperparámetros. La hipótesis de partida era que la mejora fuese más pronunciada en F1-macro, que es la métrica más sensible a los códigos raros.
 
-\paragraph{Resultado y decisión.} La hipótesis no se confirmó. Ninguna de las ejecuciones con corpus aumentado superó la referencia entrenada con los 500 documentos originales: el mejor resultado con aumentación fue F1-micro~0,4766 (paso~35d) frente a 0,4888 de la configuración de referencia, y el resto quedó más abajo (0,4668 en el paso~33 y 0,4518 en el 34b). El diagnóstico, detallado en el Anexo~\ref{cap:AnexoF} y en la sección de experimentos, es doble: por un lado los hiperparámetros de calendario (\texttt{UNFREEZE\_EVERY}, \texttt{GRAD\_ACCUM}) no se reescalaron al cambiar el tamaño del corpus; por otro, y de forma más determinante, el entrenamiento pasa a realizarse sobre texto retrotraducido mientras la validación sigue siendo español original, lo que introduce un desajuste de distribución que penaliza la evaluación. En consecuencia, \textbf{el modelo de producción se entrena sobre los 500 documentos originales} y la aumentación queda documentada como línea explorada y descartada, no como parte del sistema entregado.
+\enlargethispage{2\baselineskip}
+\paragraph{Resultado y decisión.} \looseness=-1 La hipótesis no se confirmó. Ninguna de las ejecuciones con corpus aumentado superó la referencia entrenada con los 500 documentos originales: el mejor resultado con aumentación fue F1-micro~0,4766 (paso~35d) frente a 0,4888 de la configuración de referencia, y el resto quedó más abajo (0,4668 en el paso~33 y 0,4518 en el 34b). El diagnóstico, detallado en el Anexo~\ref{cap:AnexoF} y en la sección de experimentos, es doble: por un lado los hiperparámetros de calendario (\texttt{UNFREEZE\_EVERY}, \texttt{GRAD\_ACCUM}) no se reescalaron al cambiar el tamaño del corpus; por otro, y de forma más determinante, el entrenamiento pasa a realizarse sobre texto retrotraducido mientras la validación sigue siendo español original, lo que introduce un desajuste de distribución que penaliza la evaluación. En consecuencia, \textbf{el modelo de producción se entrena sobre los 500 documentos originales} y la aumentación queda documentada como línea explorada y descartada, no como parte del sistema entregado.
