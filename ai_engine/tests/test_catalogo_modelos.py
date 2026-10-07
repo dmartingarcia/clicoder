@@ -20,7 +20,7 @@ def catalogo(tmp_path, monkeypatch):
         "repo": "ejemplo/repo",
         "nota_medicion": "misma pasada",
         "modelos": {
-            "produccion": {
+            "paso36": {
                 "checkpoint": "classifier.pt",
                 "thresholds": "thresholds.json",
                 "descripcion": "el de siempre",
@@ -56,20 +56,20 @@ def test_catalogo_ilegible_no_rompe(tmp_path, monkeypatch):
 
 
 def test_lee_los_modelos_del_catalogo(catalogo):
-    assert sorted(main._catalogo_modelos()["modelos"]) == ["otro", "produccion"]
+    assert sorted(main._catalogo_modelos()["modelos"]) == ["otro", "paso36"]
 
 
 def test_distingue_lo_descargado_de_lo_que_solo_esta_en_el_catalogo(catalogo):
     """Un modelo del catálogo puede no estar en disco: pesa 2 GB y se baja aparte."""
     modelos = main._catalogo_modelos()["modelos"]
-    assert (catalogo / modelos["produccion"]["checkpoint"]).exists()
+    assert (catalogo / modelos["paso36"]["checkpoint"]).exists()
     assert not (catalogo / modelos["otro"]["checkpoint"]).exists()
 
 
 def test_cada_modelo_trae_su_propio_umbral_de_fusion(catalogo):
     """Heredar el umbral del modelo anterior degradaría la fusión en silencio."""
     modelos = main._catalogo_modelos()["modelos"]
-    assert modelos["produccion"]["fusion_threshold"] != modelos["otro"]["fusion_threshold"]
+    assert modelos["paso36"]["fusion_threshold"] != modelos["otro"]["fusion_threshold"]
     for meta in modelos.values():
         assert "umbral" in meta and "fusion_threshold" in meta
 
@@ -100,7 +100,7 @@ def test_los_nombres_del_catalogo_son_los_que_deja_la_descarga():
     ruta = Path(__file__).parent.parent / "model" / "models.json"
     datos = json.loads(ruta.read_text(encoding="utf-8"))
     for nombre, meta in datos["modelos"].items():
-        if nombre == "produccion":  # el de siempre se llama classifier.pt en el repositorio
+        if nombre == "paso36":  # el de siempre se llama classifier.pt en el repositorio
             assert meta["checkpoint"] == "classifier.pt"
             assert meta["thresholds"] == "thresholds.json"
         else:

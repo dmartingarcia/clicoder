@@ -9,7 +9,7 @@
       "f1_macro": 0.11922456181297379,
       "thr": 0.3
     },
-    "41a_zlpr_map": {
+    "41b_zlpr_map": {
       "map_reachable": 0.557617251804729,
       "map_strict": 0.4459448016101624,
       "precision_micro": 0.5708128078817734,
@@ -47,7 +47,7 @@
       "f1_macro": 0.10864517341304013,
       "thr": 0.3
     },
-    "41a_zlpr_map": {
+    "41b_zlpr_map": {
       "map_reachable": 0.5546062632203711,
       "map_strict": 0.4535145919323394,
       "precision_micro": 0.5331683168316832,

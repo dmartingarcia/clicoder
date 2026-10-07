@@ -3,7 +3,7 @@
   "repo": "dmartingarcia/cie10-rigoberta-classifier",
   "nota_medicion": "Las métricas 'comparables' proceden de eval_test.py y rerank_map.py en precisión completa, sobre el conjunto de prueba (tabla_candidatos.py las reúne), y coinciden con las que cita la memoria. F1 sobre los pares alcanzables del gold; MAP por documento sobre el gold completo.",
   "modelos": {
-    "produccion": {
+    "paso36": {
       "checkpoint": "classifier.pt",
       "thresholds": "thresholds.json",
       "descripcion": "Modelo del paso 36. Es el que documentó la memoria hasta la promoción de zlpr-map; se conserva seleccionable para poder reproducir sus cifras.",

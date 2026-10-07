@@ -1071,7 +1071,7 @@
       "map_strict_val": 0.42163723682188364
     }
   ],
-  "label": "produccion",
+  "label": "paso36",
   "stats_split": "val",
   "rerank_val": {
     "map_reachable": 0.69589328286642,

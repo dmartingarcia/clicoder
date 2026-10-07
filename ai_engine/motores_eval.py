@@ -10,7 +10,7 @@ beta por la confianza que el diccionario da a su bloque. Beta se elige por MAP e
 validación** y se aplica sin retocar a prueba. No confundir con `rerank_map.py`, que además
 calibra entre clases y persigue otra cosa.
 
-Uso: python motores_eval.py [--device cuda] [--model_file X.pt] [--thresholds_file X.json]
+Uso: python motores_eval.py [--device cuda] [--model_file X.pt] [--thresholds_file X.json] [--sufijo _X]
 Salidas: model/comparativa_motores.json y model/fusion_sweep.json
 """
 
@@ -82,6 +82,7 @@ def main():
     ap.add_argument("--model_file", default=None)
     ap.add_argument("--thresholds_file", default=None)
     ap.add_argument("--batch_size", type=int, default=8)
+    ap.add_argument("--sufijo", default="")
     args = ap.parse_args()
 
     overrides = {
@@ -145,7 +146,7 @@ def main():
     }
 
     base = Path(args.model_dir)
-    (base / "comparativa_motores.json").write_text(
+    (base / f"comparativa_motores{args.sufijo}.json").write_text(
         json.dumps(
             {
                 "modelo": clf.version,
@@ -160,7 +161,7 @@ def main():
         ),
         encoding="utf-8",
     )
-    (base / "fusion_sweep.json").write_text(
+    (base / f"fusion_sweep{args.sufijo}.json").write_text(
         json.dumps(
             {
                 "descripcion": "Barrido de beta de la fusion modelo+diccionario. "

@@ -1,0 +1,56 @@
+{
+ "descripcion": "Barrido de beta de la fusion modelo+diccionario. s_c = logit_c + beta*conf(bloque(c)). Elegida por MAP estricto en validacion y aplicada sin retocar a prueba.",
+ "modelo": "IIC/RigoBERTa-Clinical@410b958b2160",
+ "beta_grid": [
+  {
+   "beta": 0.0,
+   "map_strict_val": 0.4354267407272695
+  },
+  {
+   "beta": 0.5,
+   "map_strict_val": 0.45541194994544076
+  },
+  {
+   "beta": 1.0,
+   "map_strict_val": 0.47459675547007213
+  },
+  {
+   "beta": 2.0,
+   "map_strict_val": 0.5041151798505599
+  },
+  {
+   "beta": 4.0,
+   "map_strict_val": 0.5360964185107637
+  },
+  {
+   "beta": 6.0,
+   "map_strict_val": 0.5480429833887188
+  },
+  {
+   "beta": 8.0,
+   "map_strict_val": 0.5467613842539343
+  },
+  {
+   "beta": 12.0,
+   "map_strict_val": 0.542154909023501
+  },
+  {
+   "beta": 16.0,
+   "map_strict_val": 0.5391699076884935
+  },
+  {
+   "beta": 24.0,
+   "map_strict_val": 0.5370149713000514
+  },
+  {
+   "beta": 32.0,
+   "map_strict_val": 0.535013616815565
+  },
+  {
+   "beta": 64.0,
+   "map_strict_val": 0.5346434283257115
+  }
+ ],
+ "beta_elegido": 6.0,
+ "diccionario_solo_map_strict_test": 0.14515501993262195
+}

@@ -53,10 +53,10 @@ def main():
     print(f"\nOrdenado por {'MAP fusionado' if clave == 'map_fusion' else 'MAP sin diccionario'}.")
 
     lider = filas[0]
-    prod = next((f for f in filas if f["nombre"] == "produccion"), None)
+    prod = next((f for f in filas if f["nombre"] == "zlpr-map"), None)
     if not prod:
         return
-    if lider["nombre"] == "produccion":
+    if lider["nombre"] == "zlpr-map":
         print("El modelo desplegado sigue siendo el mejor: no hay nada que promocionar.")
         return
     # Se declaran las dos diferencias: promocionar mirando solo una es como no mirar ninguna.

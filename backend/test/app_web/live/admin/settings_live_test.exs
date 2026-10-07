@@ -265,7 +265,7 @@ defmodule AppWeb.Admin.SettingsLiveTest do
     test "muestra los modelos del catálogo con su estado", %{conn: conn} do
       catalogo([
         %{
-          "name" => "produccion",
+          "name" => "paso36",
           "checkpoint" => "classifier.pt",
           "description" => "el de siempre",
           "metrics" => %{"map_test" => 0.43},
@@ -284,7 +284,7 @@ defmodule AppWeb.Admin.SettingsLiveTest do
 
       {:ok, _vista, html} = live(conn, ~p"/admin/settings")
 
-      assert html =~ "produccion"
+      assert html =~ "paso36"
       assert html =~ "en uso"
       # Sin este aviso, pulsar Cargar sobre un modelo ausente falla sin explicación
       assert html =~ "sin descargar"

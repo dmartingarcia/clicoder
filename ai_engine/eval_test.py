@@ -251,10 +251,16 @@ def main():
         if pct and len(pct) == num_codes:
             per_class = np.asarray(pct, dtype=np.float32)
             P_pc = (probs_te >= per_class[None, :]).astype(int)
+            pc = per_class
             per_class = {
                 "f1_micro": float(f1_score(T_te, P_pc, average="micro", zero_division=0)),
                 "f1_macro": float(f1_score(T_te, P_pc, average="macro", zero_division=0)),
             }
+            if have_val:
+                P_va = (probs_va >= pc[None, :]).astype(int)
+                per_class["val_f1_micro"] = float(
+                    f1_score(T_va, P_va, average="micro", zero_division=0)
+                )
 
     print("\n================ BARRIDO DE UMBRAL GLOBAL ================")
     hdr = "  umbral   F1-mi(val)  F1-ma(val)  F1-mi(test)  F1-ma(test)"
