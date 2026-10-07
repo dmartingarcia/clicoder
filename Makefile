@@ -1,4 +1,4 @@
-.PHONY: e2e-tests ai-bench-predict ai-eval-candidatos ai-eval-candidatos-fusion ai-motores ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-lint tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: e2e-tests ai-bench-predict ai-eval-candidatos ai-eval-candidatos-fusion ai-motores ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-augment-stats ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-lint tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 -include .env
 export
@@ -124,6 +124,9 @@ ai-combine: ## Combina los CSV aumentados (EN+DE+FR) en un único fichero de ent
 	@echo "$(BLUE)Combinando CSV aumentados...$(NC)"
 	$(COMPOSE) run --rm ai_engine python combine_augmented.py
 	@echo "$(GREEN)Combinado en /data/codiesp_csvs/codiesp_D_source_train_augmented_all.csv$(NC)"
+
+ai-augment-stats: ## Estadísticas de los corpus aumentados (tablas del Anexo L)
+	$(COMPOSE) run --rm ai_engine python augment_stats.py
 
 ai-format: ## Formatear código del AI engine (ruff format)
 	$(AI) pip install -q ruff

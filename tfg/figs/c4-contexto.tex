@@ -2,21 +2,21 @@
 % Uso: \input{figs/c4-contexto} dentro de figure+\centering+\resizebox{...}{!}{...}
 
 \begin{tikzpicture}[
-  every node/.style={font=\small\sffamily},
+  every node/.style={font=\normalsize\sffamily},
   actor/.style={draw=aquaESI!80, fill=aquaESI!12, thick, rectangle, rounded corners=3pt,
-                minimum width=3.0cm, minimum height=1.2cm, align=center},
+                minimum width=2.7cm, minimum height=1.3cm, align=center},
   sys/.style={draw=ocre!85, fill=ocre!15, very thick, rectangle, rounded corners=5pt,
-              minimum width=4.2cm, minimum height=1.7cm, align=center},
-  extn/.style={draw=gray!60, fill=gray!12, thick, rectangle, rounded corners=3pt,
-               minimum width=3.4cm, minimum height=1.3cm, align=center},
+              minimum width=5.2cm, minimum height=1.7cm, align=center},
+  extn/.style={draw=black!60, fill=gray!12, thick, rectangle, rounded corners=3pt,
+               minimum width=3.6cm, minimum height=1.3cm, align=center},
   arr/.style={->, >=Stealth, thick},
   brr/.style={<->, >=Stealth, thick},
-  lbl/.style={font=\scriptsize\sffamily, fill=white, inner sep=1.5pt, align=center},
+  lbl/.style={font=\small\sffamily, fill=white, inner sep=1.5pt, align=center},
 ]
 \node[actor] (cod) at (0,0) {Codificador\\clínico};
-\node[sys] (sys) at (5.6,0) {\textbf{Sistema de codificación}\\\textbf{CIE-10-ES}};
-\node[extn] (ecie) at (11.2,0) {eCIE-maps\\\scriptsize Ministerio de Sanidad};
+\node[sys] (sys) at (6.2,0) {\textbf{Sistema de codificación}\\\textbf{CIE-10-ES}};
+\node[extn] (ecie) at (12.6,0) {eCIE-maps\\\small Ministerio de Sanidad};
 
-\draw[brr] (cod) -- node[lbl, above]{envía informes,\\revisa códigos} (sys);
-\draw[arr] (sys) -- node[lbl, above]{obtiene el catálogo\\(fase de adquisición)} (ecie);
+\draw[brr] (cod.east) -- node[lbl, above=1pt]{informes y\\revisión} (sys.west);
+\draw[arr] (sys.east) -- node[lbl, above=1pt]{catálogo de\\códigos} (ecie.west);
 \end{tikzpicture}

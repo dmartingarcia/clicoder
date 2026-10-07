@@ -3,70 +3,66 @@
 % Uso: \input{figs/modelo-conceptual} dentro de figure+\centering+\resizebox{\textwidth}{!}{...}
 
 \begin{tikzpicture}[
-  every node/.style={font=\scriptsize\sffamily},
+  every node/.style={font=\small\sffamily},
   ent/.style={
     rectangle split, rectangle split parts=2,
     rectangle split part fill={aquaESI!70, white},
     draw=aquaESI!80, thick, rounded corners=3pt,
-    align=left, text width=3.6cm
+    align=left, text width=4.3cm
   },
   entref/.style={
     rectangle split, rectangle split parts=2,
     rectangle split part fill={gray!50, white},
-    draw=gray!60, thick, rounded corners=3pt,
-    align=left, text width=3.6cm
+    draw=gray!70, thick, rounded corners=3pt,
+    align=left, text width=4.3cm
   },
-  rel/.style={->, >=Stealth, thick, gray!60},
-  card/.style={font=\tiny\sffamily},
-  node distance=1.2cm and 2.0cm
+  rel/.style={-, thick, black!70},
+  card/.style={font=\small\sffamily\bfseries, fill=white, inner sep=1.5pt}
 ]
 
-\node[ent] (usuario) {
+\node[ent] (usuario) at (0,0) {
   \textbf{Usuario}
   \nodepart{two}
-  nombre, apellidos\\
-  usuario, email\\
+  nombre, usuario, email\\
   contraseña (hash)\\
-  idioma\\
-  confirmado / no confirmado
+  idioma, confirmado
 };
 
-\node[ent, right=of usuario] (analisis) {
+\node[ent] (analisis) at (8.6,0) {
   \textbf{Análisis}
   \nodepart{two}
   informe clínico enviado\\
   tarjetas de respuesta
 };
 
-\node[ent, right=of analisis] (tarjeta) {
+\node[ent] (tarjeta) at (8.6,-3.6) {
   \textbf{Tarjeta de análisis}
   \nodepart{two}
-  tipo: resumen \textbar{} códigos
+  tipo: resumen o códigos
 };
 
-\node[ent, below=of tarjeta] (codigo) {
+\node[ent] (codigo) at (0,-3.6) {
   \textbf{Código predicho}
   \nodepart{two}
   confianza\\
-  estado: pendiente \textbar{}\\
-  validado \textbar{} rechazado
+  estado: pendiente, validado\\
+  o rechazado
 };
 
-\node[entref, below=of analisis] (cie10) {
+\node[entref] (cie10) at (0,-7.0) {
   \textbf{Código CIE-10-ES}
   \nodepart{two}
   código, descripción\\
-  metadatos clínicos\\
-  (sexo, edad, POA\ldots)
+  metadatos clínicos
 };
 
-\draw[rel] (analisis.west) -- node[card, above]{N} ++(-0.5,0) -- (usuario.east)
-  node[card, pos=0.95]{1};
-\draw[rel] (tarjeta.west) -- node[card, above]{N} ++(-0.5,0) -- (analisis.east)
-  node[card, pos=0.95]{1};
-\draw[rel] (codigo.north) -- node[card, right]{N} ++(0,0.4) -- (tarjeta.south)
-  node[card, pos=0.9]{1};
-\draw[rel] (codigo.west) -- node[card, above]{N} ++(-0.6,0) |- (cie10.east)
-  node[card, pos=0.95]{1};
+\draw[rel] (analisis.west) -- (usuario.east)
+  node[card, pos=0.08, above]{N} node[card, pos=0.92, above]{1};
+\draw[rel] (tarjeta.north) -- (analisis.south)
+  node[card, pos=0.1, right]{N} node[card, pos=0.9, right]{1};
+\draw[rel] (codigo.east) -- (tarjeta.west)
+  node[card, pos=0.08, above]{N} node[card, pos=0.92, above]{1};
+\draw[rel] (codigo.south) -- (cie10.north)
+  node[card, pos=0.1, right]{N} node[card, pos=0.9, right]{1};
 
 \end{tikzpicture}

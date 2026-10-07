@@ -17,12 +17,12 @@
  db/.style={
  draw=turquesa!80, fill=turquesa!12, thick,
  cylinder, shape border rotate=90,
- minimum height=2.6cm, minimum width=2.8cm,
- align=center, text width=2.4cm
+ minimum height=2.8cm, minimum width=3.4cm,
+ align=center, text width=3.0cm
  },
- arr/.style={->, >=Stealth, thick, gray!60},
- biarr/.style={<->, >=Stealth, thick, gray!60},
- lbl/.style={font=\scriptsize\sffamily, fill=white,
+ arr/.style={->, >=Stealth, thick, black!70},
+ biarr/.style={<->, >=Stealth, thick, black!70},
+ lbl/.style={font=\small\sffamily, fill=white,
  inner sep=1.5pt, draw=gray!30, rounded corners=2pt},
  node distance=1.0cm and 2.2cm
 ]
@@ -30,40 +30,40 @@
 \node[actor] (usr) {
  \textbf{Codificador}\\[4pt]
  \small clínico\\[2pt]
- \scriptsize[Actor externo]
+ \footnotesize[Actor externo]
 };
 
 \node[cont, right=2.0cm of usr] (fe) {
  \textbf{Frontend}\\[6pt]
- \scriptsize Next.js 16, React 19\\TypeScript
+ \footnotesize Next.js 16, React 19\\TypeScript
 };
 
 \node[cont, right=2.2cm of fe] (be) {
  \textbf{Backend}\\[6pt]
- \scriptsize Elixir 1.15, Phoenix 1.8\\Commanded (CQRS/ES)
+ \footnotesize Elixir 1.15, Phoenix 1.8\\Commanded (CQRS/ES)
 };
 
 \node[cont, below=1.8cm of be] (ai) {
  \textbf{AI Engine}\\[6pt]
- \scriptsize Python 3.11, FastAPI\\IIC/RigoBERTa-Clinical
+ \footnotesize Python 3.11, FastAPI\\IIC/RigoBERTa-Clinical
 };
 
 \node[db, right=2.2cm of be] (pg) {
- \textbf{PostgreSQL 15}\\[6pt]
- \scriptsize Event Store\\+ Proyecciones
+ \textbf{PostgreSQL}\\[6pt]
+ \footnotesize versión 15\\Event Store y\\proyecciones
 };
 
 % Relaciones
 \draw[arr] (usr) -- node[lbl, above]{HTTPS} (fe);
 
 \draw[biarr, bend left=20] (fe) to
- node[lbl, above]{\footnotesize REST API} (be);
+ node[lbl, above]{REST API} (be);
 \draw[biarr, bend right=20] (fe) to
- node[lbl, below]{\footnotesize WebSocket} (be);
+ node[lbl, below]{WebSocket} (be);
 
-\draw[biarr] (be) -- node[lbl, right]{\footnotesize HTTP POST /predict} (ai);
+\draw[biarr] (be) -- node[lbl, right]{HTTP: /predict} (ai);
 
-\draw[biarr] (be) -- node[lbl, above]{\footnotesize SQL} (pg);
+\draw[biarr] (be) -- node[lbl, above]{SQL} (pg);
 
 % Límite del sistema
 \begin{pgfonlayer}{background}

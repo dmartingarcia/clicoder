@@ -4,19 +4,19 @@
 \begin{tikzpicture}[
   every node/.style={font=\small\sffamily},
   comp/.style={draw=aquaESI!80, fill=aquaESI!15, thick, rectangle, rounded corners=3pt,
-               minimum width=3.0cm, minimum height=1.5cm, align=center},
-  lbl/.style={font=\scriptsize\sffamily, fill=white, inner sep=1.5pt, align=center},
+               minimum width=3.0cm, minimum height=1.6cm, align=center},
+  lbl/.style={font=\small\sffamily, text=black, fill=white, inner sep=1.5pt, align=center},
   arr/.style={->, >=Stealth, thick},
   brr/.style={<->, >=Stealth, thick},
 ]
-\node[comp] (fe) at (0,0) {\textbf{Frontend}\\\scriptsize Next.js / React};
-\node[comp] (be) at (6.5,0) {\textbf{Backend}\\\scriptsize Phoenix (Elixir)};
-\node[comp] (ai) at (12.5,0) {\textbf{AI Engine}\\\scriptsize FastAPI (Python)};
+\node[comp] (fe) at (0,0) {\textbf{Frontend}\\\footnotesize Next.js / React};
+\node[comp] (be) at (7.5,0) {\textbf{Backend}\\\footnotesize Phoenix (Elixir)};
+\node[comp] (ai) at (14.5,0) {\textbf{AI Engine}\\\footnotesize FastAPI (Python)};
 
 % REST (arriba) y WebSocket (abajo) entre FE y BE
-\draw[arr] ([yshift=6mm]fe.east) -- node[lbl, above]{REST: auth, conversations,\\ cie10, translations} ([yshift=6mm]be.west);
-\draw[brr, ocre!85] ([yshift=-6mm]fe.east) -- node[lbl, below]{WebSocket \texttt{ConversationChannel}\\ analyze/validate $\cdot$ cards/summary\_token} ([yshift=-6mm]be.west);
+\draw[arr] ([yshift=6mm]fe.east) -- node[lbl, above]{REST: auth, conversaciones,\\ cie10, traducciones} ([yshift=6mm]be.west);
+\draw[brr, ocre!85] ([yshift=-6mm]fe.east) -- node[lbl, below]{\color{black}WebSocket: análisis y\\ validación en tiempo real} ([yshift=-6mm]be.west);
 
 % HTTP interno BE -> AI
-\draw[arr, turquesa!85] (be.east) -- node[lbl, above]{HTTP: \texttt{/predict}\\ \texttt{/summarize/stream}} (ai.west);
+\draw[arr, turquesa!85] (be.east) -- node[lbl, above]{HTTP: \texttt{/predict},\\ \texttt{/explain}} (ai.west);
 \end{tikzpicture}

@@ -50,7 +50,7 @@
   },
   %--- Flechas ---
   arr/.style={->, >=Stealth, thick},
-  lbl/.style={font=\scriptsize\sffamily, midway, fill=white,
+  lbl/.style={font=\small\sffamily, midway, fill=white,
               inner sep=1.5pt, draw=gray!25, rounded corners=2pt},
   node distance=0.5cm and 0.9cm
 ]
@@ -58,70 +58,54 @@
 %--- LADO ESCRITURA (fila superior) ---
 \node[cmd] (cmd1) at (0,0) {
   \textbf{Comando}\\
-  \scriptsize AnalyzeReport\\ValidateCode
+  \footnotesize AnalyzeReport,\\ValidateCode
 };
 
-\node[handler, right=0.9cm of cmd1] (hdlr) {
-  \textbf{Command}\\
-  \textbf{Handler}\\
-  \scriptsize Commanded
-};
-
-\node[agg, right=0.9cm of hdlr] (agg) {
+\node[agg, right=2.2cm of cmd1] (agg) {
   \textbf{Agregado}\\
-  \scriptsize Analysis\\(estado)
+  \footnotesize Analysis\\(estado)
 };
 
-\node[evt, right=0.9cm of agg] (evt1) {
+\node[evt, right=2.0cm of agg] (evt1) {
   \textbf{Evento}\\
-  \scriptsize ReportAnalyzed\\CodeValidated
+  \footnotesize ReportAnalyzed,\\CodeValidated
 };
 
-\node[store, right=0.9cm of evt1] (es) {
+\node[store, right=2.2cm of evt1] (es) {
   \textbf{Event Store}\\
-  \scriptsize PostgreSQL
+  \footnotesize PostgreSQL
 };
 
 %--- PROYECTOR (fila inferior) ---
 \node[proj, below=1.4cm of es] (proj) {
   \textbf{Proyector}\\
-  \scriptsize actualiza\\read models
+  \footnotesize una proyección\\por evento
 };
 
-%--- MODELOS DE LECTURA (fila inferior, de derecha a izquierda) ---
-\node[read, left=0.9cm of proj] (r3) {
-  \scriptsize predicted\_codes
-};
-\node[read, left=0.6cm of r3] (r2) {
-  \scriptsize analysis\_cards
-};
-\node[read, left=0.6cm of r2] (r1) {
-  \scriptsize conversations
+\node[read, left=1.2cm of proj, minimum width=5.4cm, text width=5.2cm] (r1) {
+  \textbf{Modelo de lectura}\\
+  \footnotesize conversations, analysis\_cards,\\predicted\_codes
 };
 
 %--- FLECHAS DE ESCRITURA ---
-\draw[arr] (cmd1) -- node[lbl, above]{dispatch} (hdlr);
-\draw[arr] (hdlr) -- node[lbl, above]{execute} (agg);
-\draw[arr] (agg)  -- node[lbl, above]{emit} (evt1);
-\draw[arr] (evt1) -- node[lbl, above]{persist} (es);
+\draw[arr] (cmd1) -- node[lbl, above]{ejecuta} (agg);
+\draw[arr] (agg)  -- node[lbl, above]{emite} (evt1);
+\draw[arr] (evt1) -- node[lbl, above]{guarda} (es);
 
 %--- FLECHA EventStore → Proyector ---
-\draw[arr] (es) -- node[lbl, right]{subscribe} (proj);
+\draw[arr] (es) -- node[lbl, right]{se suscribe} (proj);
 
-%--- FLECHAS Proyector → Modelos de lectura ---
-\draw[arr] (proj) -- (r3);
-\draw[arr] (proj) -- (r2);
-\draw[arr] (proj.west) -- (r1.east);
+\draw[arr] (proj) -- node[lbl, above]{actualiza} (r1);
 
 %--- ETIQUETAS DE ZONA ---
-\node[font=\footnotesize\sffamily\bfseries, palered!80]
-  at ($(cmd1)!0.5!(evt1) + (0,0.95)$) {Lado escritura (Commands)};
+\node[font=\small\sffamily\bfseries, palered!80]
+  at ($(cmd1)!0.5!(evt1) + (0,1.5)$) {Lado escritura (comandos)};
 
-\node[font=\footnotesize\sffamily\bfseries, aquaESI!80]
-  at ($(r1)!0.5!(proj) + (0,-0.8)$) {Lado lectura (Query / Proyecciones)};
+\node[font=\small\sffamily\bfseries, aquaESI!80]
+  at ($(r1)!0.5!(proj) + (0,-1.5)$) {Lado lectura (consultas y proyecciones)};
 
 %--- SEPARADOR ---
 \draw[dashed, gray!50, thick]
-  ($(es.south)!0.5!(proj.north)$) ++(-7,0) -- ++(10,0);
+  ($(es.south)!0.5!(proj.north)$) ++(-10,0) -- ++(13,0);
 
 \end{tikzpicture}

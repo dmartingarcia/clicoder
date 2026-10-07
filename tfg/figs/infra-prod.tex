@@ -17,14 +17,14 @@
 \node[ext] (cf)   at (0,2.0) {Cloudflare\\\scriptsize WAF $\cdot$ DDoS $\cdot$ TLS de borde};
 
 % Frontera del equipo
-\draw[rounded corners=6pt, dashed, gray!55, thick] (-4.7,-3.3) rectangle (4.7,1.15);
-\node[gray!70, font=\footnotesize\sffamily\bfseries] at (0,0.85)
-  {Estación de trabajo $\cdot$ Docker Compose $\cdot$ fail2ban};
+\draw[rounded corners=6pt, dashed, gray!55, thick] (-4.7,-3.75) rectangle (4.7,1.15);
+\node[black!70, font=\small\sffamily\bfseries] at (0,-3.5)
+  {Estación de trabajo $\cdot$ Docker Compose};
 
-\node[prox] (tk) at (0,0.2) {Traefik \scriptsize (proxy inverso $\cdot$ TLS Let's Encrypt)};
+\node[prox] (tk) at (0,0.2) {Traefik \scriptsize (proxy inverso)};
 \node[svc] (fe) at (-3.2,-1.3) {Frontend\\\scriptsize Next.js};
 \node[svc] (be) at (-0.3,-1.3) {Backend\\\scriptsize Phoenix};
-\node[svc] (mon) at (3.0,-1.3) {Prometheus\\\scriptsize + Grafana};
+\node[svc, minimum width=2.9cm] (mon) at (3.1,-1.3) {Prometheus,\\Grafana y Loki};
 \node[svc] (ai) at (-1.8,-2.7) {AI Engine\\\scriptsize FastAPI (GPU)};
 \node[dbc] (pg) at (1.4,-2.7) {PostgreSQL};
 
@@ -34,5 +34,5 @@
 \draw[arr] (tk) -- (be);
 \draw[arr] (be) -- (ai);
 \draw[arr] (be) -- (pg);
-\draw[arr, gray!60] (be) -- (mon);
+\draw[arr, black!70] (be) -- (mon);
 \end{tikzpicture}
