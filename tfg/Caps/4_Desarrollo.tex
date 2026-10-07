@@ -1133,6 +1133,15 @@ El número de candidatos que se verifican fija el compromiso, y el barrido muest
 
 Ninguna de las estrategias baja de los siete segundos, lo que confirma que la optimización algorítmica no basta por sí sola: lo que resuelve el problema de interacción es la separación en dos peticiones, y las estrategias mejoran el coste dentro de esa separación.
 
+El administrador elige la estrategia desde el \emph{backoffice} (Figura~\ref{fig:admin-explicabilidad}). El cambio se aplica a las siguientes explicaciones sin redesplegar, porque el backend envía la estrategia vigente como parámetro \texttt{method} en cada petición a \texttt{/explain}, y se guarda en la base de datos para que sobreviva a un reinicio.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.6\textwidth]{figs/ui-admin-explicabilidad}
+\caption{\emph{Backoffice} de administración: selección de la estrategia de atribución de términos (diccionario, gradiente filtrado, exhaustivo o divide y vencerás). Está activo el gradiente filtrado, que es el que sirve el sistema.}
+\label{fig:admin-explicabilidad}
+\end{figure}
+
 \paragraph{El diccionario como explicación inmediata.}
 Queda una cuarta vía que no consume el \emph{encoder} en absoluto: devolver las frases clínicas que hicieron coincidencia por expresión regular. Responde en 0{,}58~s, ochenta y tres veces más rápido que el método exhaustivo, y en el motor fusionado esos términos ya están calculados cuando se responde a la predicción, porque la coincidencia se ejecutó para ordenar los códigos.
 
