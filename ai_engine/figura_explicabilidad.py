@@ -74,7 +74,7 @@ def main():
             partes.append(f"\\colorbox{{amarillo!{nivel}}}{{{escapar(palabra)}}}")
 
     lista = ", ".join(
-        f"\\emph{{{escapar(palabra)}}} ({float(peso):.2f})"
+        f"\\emph{{{escapar(palabra)}}} ({float(peso):.2f})".replace(".", ",")
         for palabra, peso in triggers[principal][:5]
     )
     descripcion = escapar(str(pred[0].get("description", "") or ""))
