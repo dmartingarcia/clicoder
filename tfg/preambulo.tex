@@ -128,8 +128,9 @@ Por último, a todos los \textbf{profesores de la Escuela Superior de Informáti
 % -NOTACIÓN: Lista de símbolos con significado especial.
 % -------------------------
 \auxchapter{Notación y acrónimos}
-\section*{Notacion}
+\section*{Notación}
 
+\begin{table}[htb]
 \begin{tabular}{r r p{0.78\linewidth}}
 $z_c$        & : & \emph{Logit} del código $c$: salida del clasificador antes de la sigmoide. Puede tomar cualquier valor real \\
 $\sigma(z)$  & : & Función sigmoide, que convierte un \emph{logit} en una probabilidad entre 0 y 1 \\
@@ -138,11 +139,14 @@ $\beta$      & : & Peso del diccionario en el modo fusionado: $s_c = z_c + \beta
 $w_c$        & : & \texttt{pos\_weight} de la clase $c$: peso del término positivo en la pérdida, que compensa el desequilibrio \\
 $|W|$        & : & Número de palabras candidatas de un informe en el cálculo de la atribución \\
 \end{tabular}
+\end{table}
 
+\clearpage
 \section*{Lista de acrónimos}
 % OJO: Esta lista debería estar ordenada alfabeticamente (hacer de modo manual).
 
-\begin{tabular}{r r p{0.78\linewidth}}
+\begin{table}[htb]
+\begin{tabular}{r r p{0.85\linewidth}}
 API   & : & \emph{Application Programming Interface}, interfaz de programación \\
 BCE   & : & \emph{Binary Cross-Entropy}, entropía cruzada binaria; función de pérdida del clasificador \\
 BERT  & : & \emph{Bidirectional Encoder Representations from Transformers} \\
@@ -172,12 +176,16 @@ TLS   & : & \emph{Transport Layer Security}, cifrado del tráfico en tránsito \
 UUID  & : & \emph{Universally Unique Identifier} \\
 ZLPR  & : & \emph{Zero-bounded Log-sum-exp \& Pairwise Rank-based loss}, pérdida de ordenación multietiqueta \\
 \end{tabular}
+\end{table}
 
+
+\clearpage
 \section*{Glosario de términos}
 
 Términos que el texto emplea con un significado preciso y que conviene fijar antes de leerlo.
 
-\begin{tabular}{r r p{0.78\linewidth}}
+\begin{table}[htb] 
+\begin{tabular}{l r p{0.75\linewidth}}
 Atribución & : & Palabras del informe que sostienen un código predicho. Se calcula enmascarándolas y midiendo cuánto cae el \emph{logit} \\
 \emph{Benchmark} & : & Tarea compartida con datos y métrica fijos que permite comparar sistemas. Aquí, CodiEsp-D 2020 \\
 Bloque & : & Los tres primeros caracteres de un código CIE-10. Agrupa códigos de la misma familia (por ejemplo, \texttt{E11} para la diabetes tipo 2) \\
@@ -201,6 +209,7 @@ Retrotraducción & : & Generar variantes de un texto traduciéndolo a otra lengu
 Umbral & : & Valor a partir del cual una probabilidad se convierte en un código propuesto. Afecta al F1, no al MAP \\
 Vocabulario del modelo & : & Los 1.767 códigos presentes en el entrenamiento, que son los únicos que el clasificador puede proponer \\
 \end{tabular}
+\end{table}
 
 
 % -------------------------
