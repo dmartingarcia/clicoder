@@ -135,16 +135,16 @@ plt.close(fig)
 
 # --- 4. Contribución acumulada de cada técnica (F1-micro val, umbral 0,3) ---
 steps = [
-    ("Código completo\n(sin preentr.)", 0.327),
+    ("Código\ncompleto\n(sin preentr.)", 0.327),
     ("+ Preentr.\nCIE-10", 0.431),
     ("+ Snippets\ntask_X", 0.470),
     ("+ Reduce\nLROnPlateau", 0.475),
-    ("+ Smoothing +\ndescongelado", 0.484),
+    ("+ Smoothing\n+ descongelado", 0.484),
     ("+ Consist.\njerárquica", 0.489),
 ]
 labels = [s[0] for s in steps]
 vals = [s[1] for s in steps]
-fig, ax = plt.subplots(figsize=(7, 4))
+fig, ax = plt.subplots(figsize=(7.2, 4.4))
 x = np.arange(len(vals))
 ax.plot(x, vals, marker="o", color=TEAL)
 ax.fill_between(x, 0.30, vals, alpha=0.12, color=TEAL)
@@ -153,8 +153,8 @@ for i, v in enumerate(vals):
 ax.set_xticks(x)
 ax.set_xticklabels(labels, fontsize=9)
 ax.set_ylim(0.30, 0.51)
-ax.set_ylabel("F1-micro (validación, umbral 0,3)")
-ax.set_title("Contribución acumulada de cada técnica")
+ax.set_ylabel("F1-micro (validación, umbral 0,3)", fontsize=9)
+ax.set_title("Contribución acumulada de cada técnica", fontsize=10)
 ax.grid(True, axis="y", ls=":", alpha=0.4)
 fig.tight_layout()
 finalize(fig, f"{OUT}/tfg_waterfall.png")

@@ -1,5 +1,3 @@
-% Arquitectura de despliegue: Cloudflare -> equipo propio (Traefik + servicios Docker)
-% Uso: \input{figs/infra-prod} dentro de figure+\centering+\resizebox{\textwidth}{!}{...}
 
 \begin{tikzpicture}[
   every node/.style={font=\small\sffamily},
@@ -16,7 +14,6 @@
 \node[ext] (user) at (0,3.4) {Usuario};
 \node[ext] (cf)   at (0,2.0) {Cloudflare\\\scriptsize WAF $\cdot$ DDoS $\cdot$ TLS de borde};
 
-% Frontera del equipo
 \draw[rounded corners=6pt, dashed, gray!55, thick] (-4.7,-3.75) rectangle (4.7,1.15);
 \node[black!70, font=\small\sffamily\bfseries] at (0,-3.5)
   {Estación de trabajo $\cdot$ Docker Compose};

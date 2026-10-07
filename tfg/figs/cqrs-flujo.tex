@@ -1,11 +1,6 @@
-% Diagrama de flujo CQRS / Event Sourcing
-% Uso: \input{figs/cqrs-flujo} dentro de figure+\centering+\resizebox{\textwidth}{!}{...}
-%
-% Flujo: Comando → Manejador → Agregado → Evento → EventStore → Proyector → Modelo de lectura
 
 \begin{tikzpicture}[
   every node/.style={font=\small\sffamily},
-  %--- Escritura (lado izquierdo) ---
   cmd/.style={
     draw=palered!80, fill=palered!10, thick,
     rectangle, rounded corners=4pt,
@@ -48,14 +43,12 @@
     minimum width=2.6cm, minimum height=1.1cm,
     align=center
   },
-  %--- Flechas ---
   arr/.style={->, >=Stealth, thick},
   lbl/.style={font=\small\sffamily, midway, fill=white,
               inner sep=1.5pt, draw=gray!25, rounded corners=2pt},
   node distance=0.5cm and 0.9cm
 ]
 
-%--- LADO ESCRITURA (fila superior) ---
 \node[cmd] (cmd1) at (0,0) {
   \textbf{Comando}\\
   \footnotesize AnalyzeReport,\\ValidateCode
@@ -66,46 +59,36 @@
   \footnotesize Analysis\\(estado)
 };
 
-\node[evt, right=2.0cm of agg] (evt1) {
+\node[evt, right=2.2cm of agg] (evt1) {
   \textbf{Evento}\\
   \footnotesize ReportAnalyzed,\\CodeValidated
 };
 
-\node[store, right=2.2cm of evt1] (es) {
+\node[store, below=2.0cm of evt1] (es) {
   \textbf{Event Store}\\
   \footnotesize PostgreSQL
 };
 
-%--- PROYECTOR (fila inferior) ---
-\node[proj, below=1.4cm of es] (proj) {
+\node[proj, left=2.4cm of es] (proj) {
   \textbf{Proyector}\\
   \footnotesize una proyección\\por evento
 };
 
-\node[read, left=1.2cm of proj, minimum width=5.4cm, text width=5.2cm] (r1) {
+\node[read, left=2.4cm of proj, minimum width=3.8cm, text width=3.6cm] (r1) {
   \textbf{Modelo de lectura}\\
-  \footnotesize conversations, analysis\_cards,\\predicted\_codes
+  \footnotesize conversations,\\analysis\_cards,\\predicted\_codes
 };
 
-%--- FLECHAS DE ESCRITURA ---
 \draw[arr] (cmd1) -- node[lbl, above]{ejecuta} (agg);
 \draw[arr] (agg)  -- node[lbl, above]{emite} (evt1);
-\draw[arr] (evt1) -- node[lbl, above]{guarda} (es);
-
-%--- FLECHA EventStore → Proyector ---
-\draw[arr] (es) -- node[lbl, right]{se suscribe} (proj);
-
+\draw[arr] (evt1) -- node[lbl, right]{guarda} (es);
+\draw[arr] (es) -- node[lbl, above]{se suscribe} (proj);
 \draw[arr] (proj) -- node[lbl, above]{actualiza} (r1);
 
-%--- ETIQUETAS DE ZONA ---
-\node[font=\small\sffamily\bfseries, palered!80]
-  at ($(cmd1)!0.5!(evt1) + (0,1.5)$) {Lado escritura (comandos)};
+\node[font=\small\sffamily\bfseries, palered!80, above=0.5cm of agg]
+  {Lado escritura (comandos)};
 
-\node[font=\small\sffamily\bfseries, aquaESI!80]
-  at ($(r1)!0.5!(proj) + (0,-1.5)$) {Lado lectura (consultas y proyecciones)};
-
-%--- SEPARADOR ---
-\draw[dashed, gray!50, thick]
-  ($(es.south)!0.5!(proj.north)$) ++(-10,0) -- ++(13,0);
+\node[font=\small\sffamily\bfseries, aquaESI!80, below=0.7cm of proj]
+  {Lado lectura (consultas y proyecciones)};
 
 \end{tikzpicture}

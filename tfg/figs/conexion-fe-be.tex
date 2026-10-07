@@ -1,5 +1,3 @@
-% Esquema de conexión Frontend <-> Backend <-> AI Engine (REST + WebSocket + HTTP)
-% Uso: \input{figs/conexion-fe-be} dentro de figure+\centering+\resizebox{...}{!}{...}
 
 \begin{tikzpicture}[
   every node/.style={font=\small\sffamily},
@@ -13,10 +11,8 @@
 \node[comp] (be) at (7.5,0) {\textbf{Backend}\\\footnotesize Phoenix (Elixir)};
 \node[comp] (ai) at (14.5,0) {\textbf{AI Engine}\\\footnotesize FastAPI (Python)};
 
-% REST (arriba) y WebSocket (abajo) entre FE y BE
 \draw[arr] ([yshift=6mm]fe.east) -- node[lbl, above]{REST: auth, conversaciones,\\ cie10, traducciones} ([yshift=6mm]be.west);
 \draw[brr, ocre!85] ([yshift=-6mm]fe.east) -- node[lbl, below]{\color{black}WebSocket: análisis y\\ validación en tiempo real} ([yshift=-6mm]be.west);
 
-% HTTP interno BE -> AI
 \draw[arr, turquesa!85] (be.east) -- node[lbl, above]{HTTP: \texttt{/predict},\\ \texttt{/explain}} (ai.west);
 \end{tikzpicture}

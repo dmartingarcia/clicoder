@@ -1,24 +1,22 @@
-% C4 Level 2, Diagrama de contenedores
-% Uso: \input{figs/c4-contenedores} dentro de figure+\centering
 \begin{tikzpicture}[
- every node/.style={font=\small\sffamily},
+ every node/.style={font=\normalsize\sffamily},
  actor/.style={
  draw=gray!55, fill=gray!10, thick,
  rectangle, rounded corners=5pt,
- minimum width=2.4cm, minimum height=2.2cm,
- align=center, text width=2.2cm
+ minimum width=2.5cm, minimum height=2.2cm,
+ align=center, text width=2.3cm
  },
  cont/.style={
  draw=aquaESI!80, fill=aquaESI!12, thick,
  rectangle, rounded corners=4pt,
- minimum width=3.2cm, minimum height=2.6cm,
- align=center, text width=3.0cm
+ minimum width=3.0cm, minimum height=2.4cm,
+ align=center, text width=2.8cm
  },
  db/.style={
  draw=turquesa!80, fill=turquesa!12, thick,
- cylinder, shape border rotate=90,
- minimum height=2.8cm, minimum width=3.4cm,
- align=center, text width=3.0cm
+ cylinder, shape border rotate=90, aspect=0.12,
+ minimum height=2.6cm, minimum width=3.4cm,
+ align=center, text width=3.2cm
  },
  arr/.style={->, >=Stealth, thick, black!70},
  biarr/.style={<->, >=Stealth, thick, black!70},
@@ -29,31 +27,30 @@
 
 \node[actor] (usr) {
  \textbf{Codificador}\\[4pt]
- \small clínico\\[2pt]
- \footnotesize[Actor externo]
+ clínico\\[2pt]
+ \small[Actor externo]
 };
 
-\node[cont, right=2.0cm of usr] (fe) {
+\node[cont, right=1.8cm of usr] (fe) {
  \textbf{Frontend}\\[6pt]
- \footnotesize Next.js 16, React 19\\TypeScript
+ \small Next.js 16, React 19, TypeScript
 };
 
 \node[cont, right=2.2cm of fe] (be) {
  \textbf{Backend}\\[6pt]
- \footnotesize Elixir 1.19, Phoenix 1.8\\Commanded (CQRS/ES)
+ \small Elixir 1.19, Phoenix 1.8, Commanded (CQRS/ES)
 };
 
-\node[cont, below=1.8cm of be] (ai) {
+\node[cont] (ai) at ([xshift=5.8cm,yshift=2.2cm]be.center) {
  \textbf{AI Engine}\\[6pt]
- \footnotesize Python 3.11, FastAPI\\IIC/RigoBERTa-Clinical
+ \small Python 3.11, FastAPI, RigoBERTa-Clinical
 };
 
-\node[db, right=2.2cm of be] (pg) {
+\node[db] (pg) at ([xshift=5.8cm,yshift=-2.2cm]be.center) {
  \textbf{PostgreSQL}\\[6pt]
- \footnotesize versión 18\\Event Store y\\proyecciones
+ \small versión 18, Event Store y proyecciones
 };
 
-% Relaciones
 \draw[arr] (usr) -- node[lbl, above]{HTTPS} (fe);
 
 \draw[biarr, bend left=20] (fe) to
@@ -61,17 +58,16 @@
 \draw[biarr, bend right=20] (fe) to
  node[lbl, below]{WebSocket} (be);
 
-\draw[biarr] (be) -- node[lbl, right]{HTTP: /predict} (ai);
+\draw[biarr] (be) -- node[lbl, above, sloped]{HTTP} (ai);
 
-\draw[biarr] (be) -- node[lbl, above]{SQL} (pg);
+\draw[biarr] (be) -- node[lbl, below, sloped]{SQL} (pg);
 
-% Límite del sistema
 \begin{pgfonlayer}{background}
  \node[
  draw=aquaESI!60, dashed, thick, rounded corners=10pt,
- fill=aquaESI!4, inner sep=16pt,
+ fill=aquaESI!4, inner sep=14pt,
  fit=(fe)(be)(ai)(pg),
- label={[aquaESI!80, font=\footnotesize\sffamily\bfseries]above left:%
+ label={[aquaESI!80, font=\small\sffamily\bfseries]above left:%
  Sistema de Codificación CIE-10-ES}
  ] {};
 \end{pgfonlayer}
