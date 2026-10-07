@@ -16,7 +16,12 @@ defmodule AppWeb.ConversationController do
     tags: ["Conversations"],
     security: [%{"bearer_auth" => []}],
     parameters: [
-      OpenApiSpex.Operation.parameter(:user_id, :query, :string, "ID del usuario", required: true)
+      OpenApiSpex.Operation.parameter(
+        :user_id,
+        :query,
+        :string,
+        "ID del usuario (opcional: debe coincidir con el usuario autenticado)"
+      )
     ],
     responses: [
       ok:
@@ -33,22 +38,36 @@ defmodule AppWeb.ConversationController do
     ]
   )
 
-  def index(conn, %{"user_id" => user_id}) do
-    conversations =
-      ConversationProjection
-      |> where([c], c.user_id == ^user_id and is_nil(c.deleted_at))
-      |> order_by([c], desc: c.started_at)
-      |> preload(:messages)
-      |> Repo.all()
-      |> Enum.map(&format_conversation/1)
+  def index(conn, params) do
+    with :ok <- usuario_propio(conn, params) do
+      user_id = to_string(conn.assigns.current_user_id)
 
-    json(conn, %{conversations: conversations})
+      conversations =
+        ConversationProjection
+        |> where([c], c.user_id == ^user_id and is_nil(c.deleted_at))
+        |> order_by([c], desc: c.started_at)
+        |> preload(:messages)
+        |> Repo.all()
+        |> Enum.map(&format_conversation/1)
+
+      json(conn, %{conversations: conversations})
+    else
+      {:error, :forbidden} -> prohibido(conn)
+    end
   end
 
-  def index(conn, _params) do
+  defp usuario_propio(conn, %{"user_id" => user_id}) do
+    if to_string(conn.assigns.current_user_id) == to_string(user_id),
+      do: :ok,
+      else: {:error, :forbidden}
+  end
+
+  defp usuario_propio(_conn, _params), do: :ok
+
+  defp prohibido(conn) do
     conn
-    |> put_status(:bad_request)
-    |> json(%{error: "user_id is required"})
+    |> put_status(:forbidden)
+    |> json(%{error: "No puedes consultar las conversaciones de otro usuario"})
   end
 
   operation(:trash,
@@ -56,7 +75,12 @@ defmodule AppWeb.ConversationController do
     tags: ["Conversations"],
     security: [%{"bearer_auth" => []}],
     parameters: [
-      OpenApiSpex.Operation.parameter(:user_id, :query, :string, "ID del usuario", required: true)
+      OpenApiSpex.Operation.parameter(
+        :user_id,
+        :query,
+        :string,
+        "ID del usuario (opcional: debe coincidir con el usuario autenticado)"
+      )
     ],
     responses: [
       ok:
@@ -73,22 +97,22 @@ defmodule AppWeb.ConversationController do
     ]
   )
 
-  def trash(conn, %{"user_id" => user_id}) do
-    conversations =
-      ConversationProjection
-      |> where([c], c.user_id == ^user_id and not is_nil(c.deleted_at))
-      |> order_by([c], desc: c.deleted_at)
-      |> preload(:messages)
-      |> Repo.all()
-      |> Enum.map(&format_conversation/1)
+  def trash(conn, params) do
+    with :ok <- usuario_propio(conn, params) do
+      user_id = to_string(conn.assigns.current_user_id)
 
-    json(conn, %{conversations: conversations})
-  end
+      conversations =
+        ConversationProjection
+        |> where([c], c.user_id == ^user_id and not is_nil(c.deleted_at))
+        |> order_by([c], desc: c.deleted_at)
+        |> preload(:messages)
+        |> Repo.all()
+        |> Enum.map(&format_conversation/1)
 
-  def trash(conn, _params) do
-    conn
-    |> put_status(:bad_request)
-    |> json(%{error: "user_id is required"})
+      json(conn, %{conversations: conversations})
+    else
+      {:error, :forbidden} -> prohibido(conn)
+    end
   end
 
   operation(:delete,

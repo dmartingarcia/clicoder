@@ -61,10 +61,14 @@ defmodule AppWeb.ConversationChannel do
             {:error, %{reason: inspect(reason)}}
         end
 
-      _conversation ->
-        socket = assign(socket, :conversation_id, conversation_id)
-        history = load_conversation_history(conversation_id)
-        {:ok, %{status: "joined", history: history}, socket}
+      conversation ->
+        if to_string(conversation.user_id) == to_string(socket.assigns.user_id) do
+          socket = assign(socket, :conversation_id, conversation_id)
+          history = load_conversation_history(conversation_id)
+          {:ok, %{status: "joined", history: history}, socket}
+        else
+          {:error, %{reason: "forbidden"}}
+        end
     end
   end
 

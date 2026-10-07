@@ -42,15 +42,30 @@ defmodule AppWeb.ConversationControllerTest do
       assert list == []
     end
 
-    test "returns 400 when user_id query param is missing", %{conn: conn} do
+    test "lists the authenticated user's conversations when no user_id is sent", %{conn: conn} do
       user = user_fixture()
+      propia = conversation_fixture(user)
 
       conn =
         conn
         |> authed_conn(user)
         |> get("/api/conversations")
 
-      assert %{"error" => _} = json_response(conn, 400)
+      assert %{"conversations" => list} = json_response(conn, 200)
+      assert Enum.map(list, & &1["conversation_id"]) == [propia.conversation_id]
+    end
+
+    test "returns 403 when asking for another user's conversations", %{conn: conn} do
+      user = user_fixture()
+      otro = user_fixture()
+      _ajena = conversation_fixture(otro)
+
+      conn =
+        conn
+        |> authed_conn(user)
+        |> get("/api/conversations", %{"user_id" => otro.id})
+
+      assert %{"error" => _} = json_response(conn, 403)
     end
 
     test "returns 401 without authentication", %{conn: conn} do
@@ -115,15 +130,16 @@ defmodule AppWeb.ConversationControllerTest do
       assert %{"conversations" => []} = json_response(conn, 200)
     end
 
-    test "returns 400 when user_id is missing", %{conn: conn} do
+    test "returns 403 when asking for another user's trash", %{conn: conn} do
       user = user_fixture()
+      otro = user_fixture()
 
       conn =
         conn
         |> authed_conn(user)
-        |> get("/api/conversations/trash")
+        |> get("/api/conversations/trash", %{"user_id" => otro.id})
 
-      assert %{"error" => _} = json_response(conn, 400)
+      assert %{"error" => _} = json_response(conn, 403)
     end
 
     test "returns 401 without authentication", %{conn: conn} do

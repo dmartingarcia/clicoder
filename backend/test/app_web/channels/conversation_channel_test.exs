@@ -169,6 +169,23 @@ defmodule AppWeb.ConversationChannelTest do
     end
   end
 
+  describe "join/3: conversation of another user" do
+    test "is rejected and does not return the history" do
+      propietario = user_fixture()
+      intruso = user_fixture()
+      conv = conversation_fixture(propietario)
+
+      socket = connect_socket(intruso)
+
+      assert {:error, %{reason: "forbidden"}} =
+               subscribe_and_join(
+                 socket,
+                 AppWeb.ConversationChannel,
+                 "conversation:#{conv.conversation_id}"
+               )
+    end
+  end
+
   describe "join/3: new conversation" do
     test "dispatches StartConversation and returns 'conversation_started'", %{conn: _conn} do
       user = user_fixture()
