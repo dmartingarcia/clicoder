@@ -19,7 +19,7 @@ defmodule AppWeb.Admin.SettingsLive do
        "arbitrar entre ellos. Se conserva para poder contrastar los dos motores lado a lado."},
     {"fused", "Fusionado",
      "Suma la confianza del diccionario al logit del modelo antes de ordenar, en un único " <>
-       "ranking. La mejor opción medida: MAP 0,554 · F1 0,610."}
+       "ranking. Motor por defecto y la mejor opción medida: MAP 0,554 · F1 0,610."}
   ]
 
   # Las cuatro devuelven terminos medidos de verdad; cambia a cuantas palabras se pregunta
@@ -88,7 +88,7 @@ defmodule AppWeb.Admin.SettingsLive do
     ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
 
     peticion =
-      [json: %{name: nombre}, receive_timeout: 120_000] ++
+      [json: %{name: nombre}, receive_timeout: 120_000, headers: cabecera_admin()] ++
         Application.get_env(:app, :ai_req_opts, [])
 
     case Req.post("#{ai_url}/admin/models", peticion) do
@@ -157,7 +157,8 @@ defmodule AppWeb.Admin.SettingsLive do
           system_prompt: system_prompt,
           user_prompt: user_prompt
         },
-        receive_timeout: 120_000
+        receive_timeout: 120_000,
+        headers: cabecera_admin()
       ]
 
       # Opciones de transporte inyectables para probar el panel sin levantar el motor de IA.
@@ -497,11 +498,16 @@ defmodule AppWeb.Admin.SettingsLive do
     """
   end
 
+  defp cabecera_admin, do: [{"x-admin-token", Application.get_env(:app, :ai_admin_token, "")}]
+
   # El catalogo lo sirve el motor (sabe que checkpoints hay y cual esta cargado); si no
   # responde, el panel lo dice en vez de quedarse en blanco.
   defp cargar_catalogo_modelos do
     ai_url = Application.get_env(:app, :ai_engine_url, "http://localhost:8000")
-    opts = [receive_timeout: 10_000] ++ Application.get_env(:app, :ai_req_opts, [])
+
+    opts =
+      [receive_timeout: 10_000, headers: cabecera_admin()] ++
+        Application.get_env(:app, :ai_req_opts, [])
 
     # El rescue es necesario: sin el, un motor caido impide abrir el panel donde se cambia de motor.
     case Req.get("#{ai_url}/admin/models", opts) do

@@ -59,6 +59,7 @@ services:
       - "${AI_ENGINE_PORT}:8000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - AI_ADMIN_TOKEN=${AI_ADMIN_TOKEN:-}
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
       - PYTHONUNBUFFERED=1
       - SENTRY_DSN_AI=${SENTRY_DSN_AI:-}
@@ -94,6 +95,7 @@ services:
       - "${BACKEND_PORT}:4000"
     environment:
       - AI_ENGINE_URL=${AI_ENGINE_URL:?AI_ENGINE_URL no definido en .env}
+      - AI_ADMIN_TOKEN=${AI_ADMIN_TOKEN:-}
       - CORS_ORIGINS=${CORS_ORIGINS:?CORS_ORIGINS no definido en .env}
       - DATABASE_URL=${DATABASE_URL:?DATABASE_URL no definido en .env}
       - DOMAIN=${DOMAIN:?DOMAIN no definido en .env}

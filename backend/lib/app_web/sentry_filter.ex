@@ -12,9 +12,15 @@ if Code.ensure_loaded?(Sentry) do
         |> Map.update(:body_params, %{}, fn b -> if is_map(b), do: scrub_map(b), else: %{} end)
         # La query string no estaba cubierta y lleva los tokens de confirmacion de correo.
         |> Map.put(:query_string, "[FILTERED]")
+        |> Map.update(:url, nil, &scrub_path/1)
         # REMOTE_ADDR es dato personal (art. 4 RGPD) y no hace falta para diagnosticar.
         |> Map.update(:env, %{}, fn env ->
-          if is_map(env), do: Map.drop(env, ["REMOTE_ADDR", "REMOTE_PORT"]), else: %{}
+          if is_map(env),
+            do:
+              env
+              |> Map.drop(["REMOTE_ADDR", "REMOTE_PORT"])
+              |> Map.new(fn {k, v} -> {k, scrub_path(v)} end),
+            else: %{}
         end)
         # La clave puede existir con nil (Map.update no aplica el defecto); si el filtro revienta, se pierde el aviso.
         |> Map.update(:headers, [], &scrub_headers/1)
@@ -23,6 +29,11 @@ if Code.ensure_loaded?(Sentry) do
     end
 
     defp scrub_request(event), do: event
+
+    defp scrub_path(value) when is_binary(value),
+      do: Regex.replace(~r{/auth/confirm/[^/?#\s]+}, value, "/auth/confirm/[FILTERED]")
+
+    defp scrub_path(value), do: value
 
     defp scrub_extra(%{extra: extra} = event) when is_map(extra) do
       %{event | extra: scrub_map(extra)}

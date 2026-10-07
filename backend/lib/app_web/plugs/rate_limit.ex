@@ -26,7 +26,19 @@ defmodule AppWeb.Plugs.RateLimit do
   end
 
   defp ip_key(conn) do
-    conn.remote_ip |> :inet.ntoa() |> to_string()
+    case client_ip_header(conn) do
+      nil -> conn.remote_ip |> :inet.ntoa() |> to_string()
+      ip -> ip
+    end
+  end
+
+  defp client_ip_header(conn) do
+    with true <- Application.get_env(:app, :trust_proxy_headers, false),
+         [ip | _] when ip != "" <- get_req_header(conn, "cf-connecting-ip") do
+      ip
+    else
+      _ -> nil
+    end
   end
 
   defp check_rate(key, now) do

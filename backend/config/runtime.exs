@@ -5,6 +5,8 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
+  config :app, :trust_proxy_headers, System.get_env("TRUST_PROXY_HEADERS") in ~w(true 1)
+
   case System.get_env("SENTRY_DSN") do
     dsn when is_binary(dsn) and dsn != "" ->
       config :sentry,

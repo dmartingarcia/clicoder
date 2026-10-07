@@ -1,4 +1,4 @@
-.PHONY: e2e-tests ai-bench-predict ai-eval-candidatos ai-eval-candidatos-fusion ai-motores ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-augment-stats ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-lint tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: prod-ports-check e2e-tests ai-bench-predict ai-eval-candidatos ai-eval-candidatos-fusion ai-comparativa-motores ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-augment-stats ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-lint tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 -include .env
 export
@@ -11,7 +11,7 @@ COMPOSE_MOCK       = docker compose -f docker-compose.yml -f docker-compose.mock
 
 # Candidatos a promocion, en formato nombre:checkpoint:umbrales (ver ai-eval-candidatos)
 CANDIDATOS = \
-  produccion:classifier.pt:thresholds.json \
+  paso36:classifier.pt:thresholds.json \
   c102909:classifier_20260915T102909Z_f1=0.5028_map=0.5566.pt:thresholds_20260915T102909Z.json \
   zlpr-map:zlpr-map.pt:zlpr-map.thresholds.json
 COMPOSE_MONITORING     = docker compose -f docker-compose.monitoring.yml
@@ -306,12 +306,15 @@ ai-eval-candidatos-fusion: ## MAP de los candidatos en modo fusionado con el dic
 	done
 	@python3 ai_engine/tabla_candidatos.py
 
-ai-motores: ## Comparativa de los cuatro motores y barrido de beta de la fusion (GPU)
+ai-comparativa-motores: ## Comparativa de los cuatro motores y barrido de beta de la fusion (GPU). Uso: make ai-comparativa-motores [MODEL_FILE=X.pt THRESHOLDS_FILE=X.json SUFIJO=_X]
 	@echo "$(BLUE)Comparando motores y barriendo beta...$(NC)"
 # Cifras titulares del modo fusionado: necesita spaCy y CUDA (imagen de entrenamiento).
 	$(COMPOSE) run --rm --no-deps \
 		-v $(PWD)/ai_engine:/app -v $(PWD)/training/csv_import_scripts:/data \
-		-w /app --entrypoint python3 training motores_eval.py --device $(or $(DEVICE),cuda)
+		-w /app --entrypoint python3 training motores_eval.py --device $(or $(DEVICE),cuda) \
+		$(if $(MODEL_FILE),--model_file $(MODEL_FILE),) \
+		$(if $(THRESHOLDS_FILE),--thresholds_file $(THRESHOLDS_FILE),) \
+		$(if $(SUFIJO),--sufijo $(SUFIJO),)
 	@echo "$(GREEN)Resultados en ai_engine/model/comparativa_motores.json y fusion_sweep.json$(NC)"
 
 ai-eval-test: ## Evaluar sobre el test de CodiEsp. Uso: make ai-eval-test [GPU=1] [DEVICE=cpu|cuda] [THRESHOLD=0.3]
@@ -329,6 +332,11 @@ ai-tfg-figures: ## Generar las figuras de datos del TFG (lee model/eval_test.jso
 	@echo "$(BLUE)Copiando a tfg/figs/...$(NC)"
 	cp ai_engine/model/tfg_*.png ai_engine/model/all_*_graph.png tfg/figs/
 	@echo "$(GREEN)Figuras actualizadas en tfg/figs/$(NC)"
+
+prod-ports-check: ## Falla si el despliegue de produccion publica algun puerto en el equipo
+	@n=$$(AI_ADMIN_TOKEN=x $(COMPOSE_PROD) config | grep -c 'published:'); \
+	if [ "$$n" -ne 0 ]; then echo "$(RED)Produccion publica $$n puerto(s)$(NC)"; exit 1; fi; \
+	echo "$(GREEN)Produccion no publica ningun puerto$(NC)"
 
 audit: audit-python audit-js audit-backend ## Auditar CVEs en todas las dependencias
 
@@ -484,7 +492,7 @@ down: ## Detener todos los servicios. GPU=1 para modo GPU
 	$(COMPOSE_PROXY) down
 
 frontend-format: ## Formatear código del frontend
-	$(COMPOSE_CPU) run --rm --no-deps frontend npm format
+	$(COMPOSE_DEV) run --rm --no-deps frontend npm run format
 
 frontend-install: ## Instalar dependencias del frontend
 	$(COMPOSE_DEV) run --rm frontend sh -c "npm install && chown -R $$(id -u):$$(id -g) /app/package-lock.json /app/node_modules /app/.npm-cache 2>/dev/null || true"
@@ -655,7 +663,7 @@ stop-monitoring: ## Detener stack de monitorización
 	@echo "$(YELLOW)Deteniendo monitorización...$(NC)"
 	$(COMPOSE_MONITORING) down
 
-deploy: network-create start-proxy start-monitoring ## Deploy completo. GPU=1 para GPU, TUNNEL=1 para Cloudflare Tunnel
+deploy: network-create prod-ports-check start-proxy start-monitoring ## Deploy completo. GPU=1 para GPU, TUNNEL=1 para Cloudflare Tunnel
 	@echo "$(BLUE)Desplegando CIE-10...$(NC)"
 	$(if $(filter 1,$(GPU)),$(COMPOSE_PROD_GPU),$(COMPOSE_PROD)) build frontend backend ai_engine
 	$(MAKE) backend-migrate
@@ -747,7 +755,7 @@ training-setup: ## Configurar entorno de entrenamiento
 	$(COMPOSE_CPU) run --rm training bash -c 'cd bert-classifier && python3 -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install torch transformers scikit-learn pandas tqdm jupyter ipykernel && .venv/bin/python -m ipykernel install --user --name=cie10-training'
 	@echo "$(GREEN)Entorno configurado correctamente$(NC)"
 
-up: frontend-install ## Levantar todos los servicios. GPU=1 para modo GPU
+up: frontend-install ## Levantar todos los servicios. Usa la GPU si se detecta (nvidia-smi); GPU=0 fuerza CPU
 	@echo "$(GREEN)Levantando servicios...$(NC)"
 	$(if $(filter 1,$(GPU)),$(COMPOSE_DEV_GPU),$(COMPOSE_DEV)) up -d
 	@echo "$(GREEN)Servicios levantados:$(NC)"

@@ -57,6 +57,21 @@ defmodule AppWeb.SentryFilterTest do
       assert {"accept", "json"} in ev.request.headers
     end
 
+    test "el token de confirmación en la ruta no sale" do
+      ev =
+        evento(
+          request: %{
+            url: "https://x.test/auth/confirm/abc123",
+            body_params: %{},
+            headers: [],
+            env: %{"PATH_INFO" => "/auth/confirm/abc123"}
+          }
+        )
+
+      assert ev.request.url == "https://x.test/auth/confirm/[FILTERED]"
+      assert ev.request.env["PATH_INFO"] == "/auth/confirm/[FILTERED]"
+    end
+
     test "la cadena de consulta se filtra: lleva el token de confirmación" do
       ev = evento(request: %{body_params: %{}, headers: [], env: %{}, query_string: "token=abc"})
       assert ev.request.query_string == "[FILTERED]"

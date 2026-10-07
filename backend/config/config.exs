@@ -22,6 +22,7 @@ config :app, AppWeb.Endpoint,
 config :app, App.Mailer, adapter: Swoosh.Adapters.Local
 
 config :app, :ai_engine_url, System.get_env("AI_ENGINE_URL") || "http://localhost:8000"
+config :app, :ai_admin_token, System.get_env("AI_ADMIN_TOKEN") || ""
 
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",

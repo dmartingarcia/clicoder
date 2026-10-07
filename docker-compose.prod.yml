@@ -2,9 +2,24 @@
 
 services:
   db:
-    ports: []
+    ports: !reset []
+
+  training:
+    ports: !reset []
+
+  backend:
+    ports: !reset []
+    environment:
+      - AI_ADMIN_TOKEN=${AI_ADMIN_TOKEN:?AI_ADMIN_TOKEN no definido en .env}
+      - TRUST_PROXY_HEADERS=true
+
+  ai_engine:
+    ports: !reset []
+    environment:
+      - AI_ADMIN_TOKEN=${AI_ADMIN_TOKEN:?AI_ADMIN_TOKEN no definido en .env}
 
   frontend:
+    ports: !reset []
     build:
       target: runner
       args:
