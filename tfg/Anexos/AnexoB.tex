@@ -27,9 +27,9 @@ El \emph{Compose} base define siete servicios Docker~\cite{merkel2014docker}. La
 \textbf{Servicio} & \textbf{Tecnología} & \textbf{Puerto} & \textbf{Depende de} & \textbf{Rol} \\
 \hline
 \texttt{frontend} & Next.js 16, React 19, TypeScript & 3000 & backend & Interfaz web \\
-\texttt{backend} & Elixir 1.15, Phoenix 1.8 & 4000 & db, ai\_engine & Orquestador \\
+\texttt{backend} & Elixir 1.19, Phoenix 1.8 & 4000 & db, ai\_engine & Orquestador \\
 \texttt{ai\_engine} & Python 3.11, FastAPI & 8000 &  ninguna & Inferencia IA \\
-\texttt{db} & PostgreSQL 15 & 5432 &  ninguna & Persistencia \\
+\texttt{db} & PostgreSQL 18 & 5432 &  ninguna & Persistencia \\
 \texttt{mailpit} & Mailpit & 8025/1025 &  ninguna & Correo de captura (solo desarrollo) \\
 \texttt{cie10\_ml\_base} & CUDA + PyTorch + Transformers & ninguno &  ninguna & Imagen base de ML \\
 \texttt{training} & Python, Jupyter Lab & 8888 & cie10\_ml\_base & Entrenamiento \\

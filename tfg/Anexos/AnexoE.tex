@@ -7,7 +7,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 
 \textbf{Contexto.} El sistema requiere gestión de múltiples conexiones WebSocket concurrentes (una por sesión activa), comunicación asíncrona con el motor de IA (que propone los códigos en menos de un segundo, pero tarda decenas de segundos en justificarlos cuando no hay acelerador) y un modelo de datos con trazabilidad de todas las operaciones.
 
-\textbf{Decisión.} Se elige Elixir 1.15 con el framework Phoenix 1.8~\cite{phoenix2024}.
+\textbf{Decisión.} Se elige Elixir 1.19 con el framework Phoenix 1.8~\cite{phoenix2024}.
 
 \textbf{Justificación.}
 \begin{itemize}
@@ -59,7 +59,7 @@ Este anexo recoge las decisiones de diseño más relevantes tomadas durante el d
 
 \textbf{Contexto.} El sistema requiere persistencia para dos propósitos distintos: el registro de eventos inmutable (Commanded) y las proyecciones de lectura mutables. Podría usarse una base de datos diferente para cada propósito (p. ej., EventStoreDB para eventos y PostgreSQL para proyecciones).
 
-\textbf{Decisión.} Se usa PostgreSQL 15~\cite{postgresql2024} para ambos propósitos, con dos bases de datos lógicas: \texttt{cie10\_eventstore} y \texttt{cie10\_app}.
+\textbf{Decisión.} Se usa PostgreSQL 18~\cite{postgresql2024} para ambos propósitos, con dos bases de datos lógicas: \texttt{cie10\_eventstore} y \texttt{cie10\_app}.
 
 \textbf{Justificación.}
 \begin{itemize}
