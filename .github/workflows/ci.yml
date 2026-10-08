@@ -368,8 +368,8 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: tfg-latest
-          name: TFG (build automático)
+          tag_name: tfg-${{ github.run_number }}
+          name: TFG, compilación ${{ github.run_number }}
           body: PDF compilado automáticamente desde ${{ github.sha }}
           make_latest: false
           files: tfg/build/uclmTFGesi.pdf
