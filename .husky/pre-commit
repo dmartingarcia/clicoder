@@ -6,17 +6,17 @@ STAGED=$(git diff --cached --name-only)
 # Frontend: ESLint
 if echo "$STAGED" | grep -q "^frontend/"; then
   echo "→ Lint frontend..."
-  (cd frontend && npm run lint)
+  make frontend-lint
 fi
 
 # Backend: format check + credo
 if echo "$STAGED" | grep -q "^backend/"; then
   echo "→ Lint backend..."
-  (cd backend && mix format --check-formatted && mix credo)
+  make backend-lint
 fi
 
 # AI Engine: ruff check + format
 if echo "$STAGED" | grep -q "^ai_engine/"; then
   echo "→ Lint ai_engine..."
-  ruff check ai_engine/ && ruff format --check ai_engine/
+  make ai-lint
 fi
