@@ -6,5 +6,6 @@ services:
     profiles: ["gpu-only"]
 
   ai_engine:
+    image: cie-10-ai_engine:cpu
     environment:
       - DEVICE=cpu
