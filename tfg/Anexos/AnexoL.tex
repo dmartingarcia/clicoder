@@ -45,7 +45,7 @@ Fijado el inglés como primer pivote, quedaba decidir el orden en que incorporar
 
 El francés es una lengua romance que comparte con el español raíces latinas y una gran parte del vocabulario médico especializado (\emph{hematoma}, \emph{diagnóstico}, \emph{paciente}…). La retrotraducción ES→FR→ES tiende a devolver textos muy similares al original, con variación limitada que apenas aporta información nueva al modelo.
 
-El alemán, en cambio, pertenece a la rama germánica. Sus estructuras sintácticas y su formación de compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) obligan al motor de traducción a reformular las oraciones de forma más profunda al retraducir al español, generando paráfrasis más diversas. Azure Translator dispone de alta calidad para el par ES$\leftrightarrow$DE en textos clínicos, comparable al par ES$\leftrightarrow$EN. Por estos motivos se incorporó \textbf{alemán (DE)} como segundo pivote y \textbf{francés (FR)} como tercero. Los tres se generaron finalmente, de modo que el corpus aumentado combina los 500 documentos originales con las 500 variantes de cada pivote; la Tabla~\ref{tab:bt-quality} confirma la previsión, con el francés como el pivote de menor variación (mediana de $0{,}0$ caracteres) y el alemán el de mayor recomposición en palabras ($+5{,}9$ de media).
+El alemán, en cambio, pertenece a la rama germánica. Sus estructuras sintácticas y su formación de compuestos nominales (\emph{Herzinsuffizienz}, \emph{Bluthochdruck}) obligan al motor de traducción a reformular las oraciones de forma más profunda al retraducir al español, generando paráfrasis más diversas. Azure Translator dispone de alta calidad para el par ES$\leftrightarrow$DE en textos clínicos, comparable al par ES$\leftrightarrow$EN. Por estos motivos se incorporó \textbf{alemán (DE)} como segundo pivote y \textbf{francés (FR)} como tercero. Los tres se generaron finalmente, de modo que el corpus aumentado combina los 500 documentos originales con las 500 variantes de cada pivote; la Tabla~\ref{tab:bt-quality}, más adelante, confirma la previsión, con el francés como el pivote de menor variación (mediana de $0{,}0$ caracteres) y el alemán el de mayor recomposición en palabras ($+5{,}9$ de media).
 
 \section{Servicio empleado: Azure Translator}
 
@@ -170,7 +170,7 @@ Agrupando las notas en intervalos de 5 palabras se obtiene la distribución de l
 \begin{table}[h]
 \centering
 \small
-\caption{Distribución de notas por rango de variación en palabras ($\Delta$ palabras, intervalos de 5).}
+\caption{Distribución de notas por rango de variación en palabras ($\Delta$ palabras, tramos de 5).}
 \label{tab:bt-dist}
 \begin{tabular}{lrrrrrr}
 \hline

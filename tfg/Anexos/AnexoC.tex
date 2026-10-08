@@ -31,7 +31,7 @@ La especificación completa de la API está disponible a través de la interfaz 
 
 Los endpoints de registro, inicio de sesión, confirmación del correo electrónico, cambio de idioma y derechos del usuario sobre sus datos (exportación y borrado de la cuenta, RGPD) se listan en la Tabla~\ref{tab:api-auth}. Las tablas de este anexo cubren todas las rutas bajo \texttt{/api} definidas en \texttt{router.ex}, salvo la especificación OpenAPI (\texttt{GET /api/openapi}) y el backoffice de administración (rutas \texttt{/admin}, interfaz LiveView), que no forman parte del contrato con el frontend. Los endpoints de registro y de inicio de sesión (y la confirmación) pasan por un limitador de peticiones propio (10 por IP cada 60 segundos).
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Endpoints de autenticación.}
 \label{tab:api-auth}
@@ -55,7 +55,7 @@ El token se almacena en \texttt{localStorage} bajo la clave \texttt{cie10\_auth}
 
 El detalle de los endpoints para listar, archivar, restaurar y purgar conversaciones está en la Tabla~\ref{tab:api-conv}.
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Endpoints de conversaciones.}
 \label{tab:api-conv}
@@ -76,7 +76,7 @@ DELETE & \texttt{/conversations/\allowbreak{}:id/purge} & Borrado permanente e i
 
 Los endpoints de búsqueda y consulta del catálogo se resumen en la Tabla~\ref{tab:api-cie10}.
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Endpoints del catálogo CIE-10-ES (públicos, solo lectura).}
 \label{tab:api-cie10}
@@ -95,7 +95,7 @@ GET & \texttt{/cie10/codes/\allowbreak{}:code/children} & Devuelve los códigos 
 
 La Tabla~\ref{tab:api-util} recoge los dos endpoints públicos restantes: la comprobación de estado del backend y el recuento de tokens, que el backend reenvía al motor de IA (\texttt{POST /count-tokens}) y que la interfaz usa para mostrar el recuento de tokens del informe (mientras llega la respuesta muestra una estimación local de un token cada cuatro caracteres).
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Endpoints de estado y utilidades (públicos).}
 \label{tab:api-util}
@@ -113,7 +113,7 @@ POST & \texttt{/ai/count-tokens} & Cuenta los tokens de \texttt{\{text\}} con el
 
 El único endpoint de internacionalización aparece en la Tabla~\ref{tab:api-i18n}.
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Endpoints de internacionalización (públicos).}
 \label{tab:api-i18n}
@@ -136,7 +136,7 @@ Cada conversación se suscribe a un canal propio con el topic \texttt{conversati
 
 El frontend envía siete tipos de mensajes al canal (Tabla~\ref{tab:ws-in}). El mensaje \texttt{join} se emite automáticamente al montar el componente de conversación y recibe como respuesta el historial completo del canal. Los mensajes de acción (\texttt{validate\_code}, \texttt{reject\_code} y \texttt{suggest\_code}) se generan cuando el codificador interactúa con los códigos predichos; cada uno emite el comando CQRS correspondiente sobre el agregado de análisis.
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Mensajes enviados por el frontend al canal WebSocket.}
 \label{tab:ws-in}

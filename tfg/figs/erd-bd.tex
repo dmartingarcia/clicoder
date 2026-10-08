@@ -74,16 +74,16 @@
 };
 
 \draw[fk] (users.east) -- (conv.west)
- node[card, pos=0.1, above]{1} node[card, pos=0.9, above]{N};
+ node[card, pos=0.2, above]{1} node[card, pos=0.8, above]{N};
 \draw[fk] (conv.north) -- (msg.south)
- node[card, pos=0.12, right]{1} node[card, pos=0.88, right]{N};
+ node[card, pos=0.2, right=1.5mm]{1} node[card, pos=0.8, right=1.5mm]{N};
 \draw[fk] ([yshift=3mm]conv.east) -- (cards.west)
- node[card, pos=0.12, above]{1} node[card, pos=0.88, above]{N};
+ node[card, pos=0.2, above]{1} node[card, pos=0.8, above]{N};
 \draw[fk] ([yshift=-3mm]conv.east) -- (pred.west)
- node[card, pos=0.12, below]{1} node[card, pos=0.88, below]{N};
+ node[card, pos=0.2, below]{1} node[card, pos=0.8, below]{N};
 \draw[fk] (conv.south) -- (sugg.north)
- node[card, pos=0.12, right]{1} node[card, pos=0.88, right]{N};
-\draw[fk] (pred.south) -- (cie10.north)
- node[card, pos=0.12, right]{N} node[card, pos=0.88, right]{1};
+ node[card, pos=0.2, right=1.5mm]{1} node[card, pos=0.8, right=1.5mm]{N};
+\draw[fk, dashed] (pred.south) -- (cie10.north)
+ node[card, pos=0.2, right=1.5mm]{N} node[card, pos=0.8, right=1.5mm]{1};
 
 \end{tikzpicture}

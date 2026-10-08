@@ -64,9 +64,10 @@ def main():
         f"mejor: {f1[best]:.4f}".replace(".", ","),
         (x[best], f1[best]),
         textcoords="offset points",
-        xytext=(-8, -22),
+        xytext=(-30, -45),
         ha="right",
         fontsize=10,
+        arrowprops={"arrowstyle": "-", "color": "black", "linewidth": 0.8},
     )
     ax.set_ylabel("F1-micro de validación")
     ax.grid(linestyle="--", alpha=0.4)

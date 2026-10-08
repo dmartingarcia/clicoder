@@ -235,8 +235,10 @@ El backend Elixir utiliza \texttt{telemetry\_metrics\_prometheus} para exponer l
 
 Prometheus almacena los datos de series temporales durante \textbf{15 días} (configurado con \texttt{--storage.tsdb.retention.time=15d}). Los datos persisten entre reinicios del contenedor gracias al volumen Docker \texttt{prometheus\_data}. Los paneles de Grafana persisten en el volumen \texttt{grafana\_data}.
 
+\Needspace{6\baselineskip}
 \subsection{Exploración de métricas}
 
+\Needspace{10\baselineskip}
 Para explorar las métricas disponibles sin necesidad de construir un panel en Grafana, se puede usar directamente la interfaz web de Prometheus en \url{http://localhost:9090/graph}. Ejemplos de consultas PromQL útiles:
 
 \begin{lstlisting}[language=bash]

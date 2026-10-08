@@ -14,7 +14,7 @@ El motor de IA está implementado con FastAPI, que genera automáticamente la es
 
 El backend Phoenix expone análogamente su documentación interactiva en \texttt{GET /docs}, con el esquema OpenAPI en \texttt{GET /api/openapi}.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth, trim=20 770 820 40, clip]{figs/swagger-ui}
 \caption{Swagger UI generada automáticamente por FastAPI (\texttt{/docs}). Captura del motor simulado (\emph{mock}) de las pruebas: muestra los cuatro endpoints; la lista completa del motor de IA está en la Tabla~\ref{tab:openapi-endpoints}.}
@@ -160,7 +160,7 @@ La petición indica el texto, los códigos que se quieren justificar y, opcional
 \small
 \caption{Estrategias de atribución admitidas por \texttt{/explain}.}
 \label{tab:explain-metodos}
-\begin{tabular}{P{3.3cm}P{9.5cm}}
+\begin{tabular}{P{4.4cm}P{8.4cm}}
 \hline
 \textbf{Método} & \textbf{Descripción} \\
 \hline

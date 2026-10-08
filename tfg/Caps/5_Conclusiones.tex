@@ -34,8 +34,8 @@ Más allá de los subobjetivos enumerados, el desarrollo ha incluido componentes
 
 La Tabla~\ref{tab:verificacion-req} resume el grado de cumplimiento de los requisitos definidos en la sección~\ref{sec:requisitos} del capítulo~\ref{cap:Desarrollo}.
 
-{\small
-\begin{longtable}{llP{9.8cm}}
+{\footnotesize
+\begin{longtable}{llP{10.4cm}}
 \caption{Verificación de los requisitos funcionales (RF) y no funcionales (RNF).}\label{tab:verificacion-req}\\
 \hline
 \textbf{Req.} & \textbf{Estado} & \textbf{Evidencia} \\
@@ -50,7 +50,6 @@ RF2 & Cumplido & \texttt{POST /predict} devuelve los códigos de diagnóstico pr
 RF3 & Cumplido & Cada código incluye su probabilidad y una confianza relativa normalizada, no calibrada (sección~\ref{sec:confianza-predicciones}); la presencia del campo la comprueba \texttt{test\_\allowbreak{}api.py}. \\
 RF4 & No cumplido & El servicio procesa un informe por petición y no existe un \emph{endpoint} que reciba una lista de textos y devuelva los resultados en el mismo orden. Un cliente puede procesar un lote con llamadas independientes a la API (también concurrentes), pero eso no cumple el requisito tal como está formulado. \\
 RF5 & Cumplido & API REST documentada con OpenAPI, con \emph{endpoint} de inferencia y de estado (Anexo~\ref{cap:AnexoM}). La especificación la genera FastAPI y no tiene una prueba automática propia; el \emph{endpoint} de estado sí lo cubre \texttt{test\_\allowbreak{}api.py}. \\
-\hline
 RF6 & Cumplido & \texttt{POST /auth/register} da de alta sin conceder acceso y envía un correo con el enlace de \texttt{GET /auth/confirm/:token}; el recorrido completo lo cubre la prueba de extremo a extremo \texttt{test\_confirmar\_el\_correo\_da\_acceso}. \\
 RF7 & Cumplido & El canal WebSocket emite \texttt{analysis\_card\_received} con los códigos y, después, \texttt{triggers\_received} con los términos, de modo que la atribución no retrasa la aparición de los códigos (Anexo~\ref{cap:AnexoC}). \\
 RF8 & Cumplido & Los eventos \texttt{CodeValidated} y \texttt{CodeRejected} registran la decisión y, en el rechazo, su motivo; la interfaz exige el motivo antes de habilitar la confirmación. \\

@@ -59,7 +59,7 @@ La interfaz sigue un esquema de dos columnas: un panel lateral izquierdo con el 
 
 \begin{figure}[!ht]
 \centering
-\includegraphics[width=0.8\textwidth, trim=1020 410 510 145, clip]{figs/ui-analysis}
+\includegraphics[width=0.74\textwidth, trim=1020 410 510 145, clip]{figs/ui-analysis}
 \caption{Área central de la interfaz web: tarjetas de códigos CIE-10 predichos, cada una con su nivel de confianza, los términos del informe que la motivan (\emph{chips} ámbar) y los controles de validación y rechazo, y el campo de entrada del informe. Se omite el panel lateral (historial y controles de sesión, incluidos los de RGPD), descrito en el texto.}
 \label{fig:ui-analysis}
 \end{figure}
@@ -551,7 +551,7 @@ La Tabla~\ref{tab:codiesp-comparativa} sitúa el modelo en el contexto del \emph
 \begin{table}[!t]
 \centering
 \small
-\caption{Comparación con los sistemas del \emph{benchmark} CodiEsp-D (CLEF 2020)~\protect\cite{miranda2020}. Todas las métricas se calculan sobre el conjunto de prueba. Los equipos externos entregan listas de códigos ordenados por confianza (sin umbral de decisión), lo que explica sus valores de F1 muy bajos con \emph{recall} alto; el F1 de este trabajo corresponde a una decisión binaria con umbral global de 0,2, medida sobre el \emph{gold} alcanzable (sobre el completo, el \emph{recall} es 0,379 y el F1 0,444), y no es directamente comparable con esa columna. La métrica homogénea es el MAP por documento. Las dos filas sombreadas son este trabajo. Generada con \texttt{make ai-eval-test} (fila del clasificador solo, \texttt{model/\allowbreak{}eval\_test.json}) y \texttt{make ai-comparativa-motores} (fila fusionada, \texttt{model/\allowbreak{}comparativa\_motores.json}); las filas de los demás equipos se transcriben de la Tabla~7 de~\cite{miranda2020}.}
+\caption{Comparación con los sistemas del \emph{benchmark} CodiEsp-D (CLEF 2020)~\protect\cite{miranda2020}. Métricas sobre el conjunto de prueba; las dos filas sombreadas son este trabajo. Generada con \texttt{make ai-eval-test} (fila del clasificador solo, \texttt{model/\allowbreak{}eval\_test.json}) y \texttt{make ai-comparativa-motores} (fila fusionada, \texttt{model/\allowbreak{}comparativa\_motores.json}); las filas de los demás equipos se transcriben de la Tabla~7 de~\cite{miranda2020}.}
 \label{tab:codiesp-comparativa}
 \begin{tabular}{P{3.6cm}P{4.0cm}rrrr}
 \hline
@@ -574,7 +574,10 @@ IMS & CNN + atención & 0{,}373 & 0{,}709 & 0{,}474 & 0{,}449 \\
 \end{tabular}
 
 \vspace{2mm}
-{\footnotesize Nota: en la fuente, las filas de The Mental Strokers (F1 0,591), MEDIA (0,629) e IMS (0,474) no cumplen $F1=2PR/(P+R)$ con las P y R impresas (daría 0,693, 0,678 y 0,489), y la de FLE (0,679) difiere ligeramente (daría 0,682); se transcriben tal cual, y la discrepancia podría deberse a que cada columna procede de una ejecución distinta del equipo, pero el artículo no lo aclara.
+{\footnotesize Los equipos externos entregan listas de códigos ordenados por confianza (sin umbral de decisión), lo que explica sus valores de F1 muy bajos con \emph{recall} alto; el F1 de este trabajo corresponde a una decisión binaria con umbral global de 0,2, medida sobre el \emph{gold} alcanzable (sobre el completo, el \emph{recall} es 0,379 y el F1 0,444), y no es directamente comparable con esa columna. La métrica homogénea es el MAP por documento. 
+
+\vspace{1mm}
+Nota: en la fuente, las filas de The Mental Strokers (F1 0,591), MEDIA (0,629) e IMS (0,474) no cumplen $F1=2PR/(P+R)$ con las P y R impresas (daría 0,693, 0,678 y 0,489), y la de FLE (0,679) difiere ligeramente (daría 0,682); se transcriben tal cual, y la discrepancia podría deberse a que cada columna procede de una ejecución distinta del equipo, pero el artículo no lo aclara.
 
 \vspace{1mm}
 \footnotesize $^{*}$ El modo fusionado combina el clasificador y el diccionario en un único
@@ -659,6 +662,7 @@ Para un ciclo de reentrenamiento productivo con datos reales se recomienda fijar
 \begin{sloppypar}
 Tras confirmar en los pasos 33--35 que ninguna modificación de hiperparámetros mejoraba de forma robusta la referencia 32b, se realizó una reejecución con la configuración exacta de 32b para explotar la variabilidad estocástica inherente al entrenamiento. El resultado fue F1-micro~\textbf{0,4945} en validación ($+0{,}006$ respecto a 32b) y F1-macro~0,119. La ejecución completó las 150~épocas en \textbf{27~minutos} ($\sim$11~s/época). La ganancia en F1-micro, dentro del intervalo de variabilidad estocástica $\pm 0{,}01$, se debe a una inicialización aleatoria más favorable. Sobre el conjunto de prueba el modelo obtiene F1-micro~0,4887 (umbral global 0,3) y un MAP por documento de \textbf{0,437} sobre el gold completo, la métrica oficial del \emph{benchmark}, lo que lo sitúa dentro del rango de los sistemas de CodiEsp 2020~\cite{miranda2020}, por detrás de los \emph{ensembles} y diccionarios de las primeras posiciones (véase Tabla~\ref{tab:codiesp-comparativa}). Este modelo, \texttt{classifier\_20260530T030233Z\_f1=0.4945.pt}, fue la ejecución de referencia durante la mayor parte del trabajo. La comparación final de candidatos sobre el conjunto de prueba (sección~\ref{sec:anexoH-candidatos}) lo desplazó en favor de la ejecución con pérdida de ordenación de la subsección~\ref{sec:anexoF-alineacion}, que lo supera en MAP, MAP fusionado y F1-micro a la vez; sus cifras se conservan aquí porque son las que sostienen la lectura de este paso.
 
+\Needspace{16\baselineskip}
 El comando empleado para esta ejecución fue:
 \begin{lstlisting}[language=bash,basicstyle=\small\ttfamily,showstringspaces=false]
 FULL_CODES=1 MAX_LENGTH=512 FREEZE_LAYERS=20 LR=1e-4 DROPOUT=0.3 \
@@ -895,7 +899,7 @@ El modelo activo, el modo y los \emph{prompts} se configuran desde el \emph{back
 \subsubsection{Paralelización y \emph{streaming} del resumen}
 \label{sec:streaming-resumen}
 
-Un sistema de codificación clínica asistida debe minimizar la latencia percibida, especialmente cuando intervienen dos motores de inferencia con tiempos muy distintos: el clasificador BERT propone los códigos en 0{,}331\,s en CPU y 0{,}017\,s en GPU (tabla~\ref{tab:latencia}), mientras que la generación del resumen por parte del LLM tarda bastante más y depende del modelo y de la longitud del informe (no se ha medido de forma sistemática).
+Un sistema de codificación clínica asistida debe minimizar la latencia percibida, especialmente cuando intervienen dos motores de inferencia con tiempos muy distintos: el clasificador BERT propone los códigos en 0{,}331\,s en CPU y 0{,}017\,s en GPU (tabla~\ref{tab:latencia}, p.~\pageref{tab:latencia}), mientras que la generación del resumen por parte del LLM tarda bastante más y depende del modelo y de la longitud del informe (no se ha medido de forma sistemática).
 
 La arquitectura adoptada separa ambas responsabilidades en llamadas independientes y las ejecuta en paralelo mediante dos tareas Elixir asíncronas (\texttt{Task.async}):
 
@@ -928,20 +932,20 @@ El selector se expone en el \emph{backoffice} de administración (\texttt{/admin
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.7\textwidth]{figs/ui-admin-motor}
+\includegraphics[width=0.55\textwidth]{figs/ui-admin-motor}
 \caption{\emph{Backoffice} de administración (\texttt{/admin/settings}): selección del motor de IA entre las cuatro opciones disponibles, aplicable en caliente sin redesplegar.}
 \label{fig:admin-settings}
 \end{figure}
 
-\paragraph{Selección del modelo desplegado.}
-El mismo panel permite además cambiar el \emph{checkpoint} que sirve el clasificador. El motor de IA expone su catálogo en \texttt{GET /admin/models} y acepta cargar otro en caliente con \texttt{POST /admin/models}, sin reiniciar el servicio. El panel consulta ese catálogo al abrirse y presenta cada modelo con su descripción, sus métricas comparables y dos indicadores que conviene distinguir: si está \emph{cargado} y si está \emph{descargado} (Figura~\ref{fig:admin-modelo}). Un modelo del catálogo puede no estar en disco, porque cada \emph{checkpoint} ocupa algo más de 2\,GB y se obtiene por separado con \texttt{make model-download}; sin ese aviso, intentar activarlo fallaría sin explicación, de modo que la acción de carga solo se ofrece sobre los que están presentes.
-
-\begin{figure}[ht]
+\begin{figure}[!ht]
 \centering
-\includegraphics[width=0.65\textwidth]{figs/ui-admin-modelo}
+\includegraphics[width=0.5\textwidth]{figs/ui-admin-modelo}
 \caption[Selector de modelo del clasificador]{Selector de modelo del clasificador. Cada \emph{checkpoint} muestra sus métricas comparables y dos indicadores independientes: cuál está en uso y cuál está descargado. La acción de carga solo se ofrece sobre los que están presentes en disco.}
 \label{fig:admin-modelo}
 \end{figure}
+
+\paragraph{Selección del modelo desplegado.}
+El mismo panel permite además cambiar el \emph{checkpoint} que sirve el clasificador. El motor de IA expone su catálogo en \texttt{GET /admin/models} y acepta cargar otro en caliente con \texttt{POST /admin/models}, sin reiniciar el servicio. El panel consulta ese catálogo al abrirse y presenta cada modelo con su descripción, sus métricas comparables y dos indicadores que conviene distinguir: si está \emph{cargado} y si está \emph{descargado} (Figura~\ref{fig:admin-modelo}). Un modelo del catálogo puede no estar en disco, porque cada \emph{checkpoint} ocupa algo más de 2\,GB y se obtiene por separado con \texttt{make model-download}; sin ese aviso, intentar activarlo fallaría sin explicación, de modo que la acción de carga solo se ofrece sobre los que están presentes.
 
 La consulta del catálogo se hace de forma tolerante a fallos: si el motor de IA no responde, el panel se abre igualmente y muestra el error en lugar de quedarse en blanco. La razón es práctica, y es la misma que justifica el selector de motores: el panel es justamente donde se cambia de configuración cuando algo va mal, así que no puede depender de que el componente que falla esté disponible.
 
@@ -1011,7 +1015,7 @@ La atribución se calcula en el método \texttt{CIE10Classifier.explain()} (\tex
 El coste es $O(\lceil|W|/B\rceil)$ pasadas \emph{forward} adicionales, donde $|W|$ es el número de palabras candidatas y $B = 16$ el tamaño de \emph{batch}. Con informes de CodiEsp esto supone en torno a 128 evaluaciones por consulta, y resultó ser el componente que domina por completo la latencia del sistema.
 
 \paragraph{El coste de explicar, medido.}
-La medición de la predicción sobre 30 informes y la de la atribución sobre 6 informes del conjunto de prueba separa dos costes de orden distinto. Proponer los códigos de un informe cuesta 0{,}331~s de mediana y 0{,}340~s en el percentil 95 sobre el AMD Ryzen 9 7900X de la máquina de desarrollo, y 0{,}017~s sobre su NVIDIA RTX 4080. Justificarlos con el método exhaustivo cuesta 55{,}1~s en esa misma CPU (tabla~\ref{tab:explicabilidad}), más de dos órdenes de magnitud por encima. Dicho de otro modo, el 99~\% del tiempo que esperaba el usuario no se dedicaba a decidir los códigos sino a justificarlos.
+La medición de la predicción sobre 30 informes y la de la atribución sobre 6 informes del conjunto de prueba separa dos costes de orden distinto. Proponer los códigos de un informe cuesta 0{,}331~s de mediana y 0{,}340~s en el percentil 95 sobre el AMD Ryzen 9 7900X de la máquina de desarrollo, y 0{,}017~s sobre su NVIDIA RTX 4080. Justificarlos con el método exhaustivo cuesta 55{,}1~s en esa misma CPU (tabla~\ref{tab:explicabilidad}, p.~\pageref{tab:explicabilidad}), más de dos órdenes de magnitud por encima. Dicho de otro modo, el 99~\% del tiempo que esperaba el usuario no se dedicaba a decidir los códigos sino a justificarlos.
 
 La Tabla~\ref{tab:latencia} desglosa el ciclo completo con el método finalmente adoptado, que es lo que un usuario espera de principio a fin. Interesa verlo junto y no solo por partes, porque las dos peticiones se encadenan: la de atribución no se lanza hasta que llegan los códigos.
 
@@ -1069,7 +1073,7 @@ Diccionario & 0{,}7 & n/a & 0{,}09 & 0{,}23 \\
 \end{tabular}
 
 \vspace{2mm}
-{\footnotesize Cada columna de tiempos procede de una única ejecución sobre los mismos seis informes, de modo que las filas son comparables entre sí. La fidelidad es idéntica en ambos dispositivos, como corresponde al mismo algoritmo. El diccionario no consulta el \emph{encoder}, de modo que su tiempo no depende del acelerador y se omite esa medición. El método de diccionario no consulta el \emph{encoder}: devuelve las frases que hicieron coincidencia, lo que explica a la vez que sea dos órdenes de magnitud más rápido y que apenas coincida con la referencia. No es una aproximación barata de la atribución del modelo, sino otro tipo de evidencia.}
+{\footnotesize Cada columna de tiempos procede de una única ejecución sobre los mismos seis informes, de modo que las filas son comparables entre sí. La fidelidad es idéntica en ambos dispositivos, como corresponde al mismo algoritmo. El diccionario no consulta el \emph{encoder}, de modo que su tiempo no depende del acelerador y se omite esa medición; devuelve las frases que hicieron coincidencia, lo que explica a la vez que sea dos órdenes de magnitud más rápido y que apenas coincida con la referencia. No es una aproximación barata de la atribución del modelo, sino otro tipo de evidencia.}
 \end{table}
 
 La columna de GPU obliga a matizar la conclusión de este apartado. En la máquina de desarrollo ejecutando en CPU, el método exhaustivo tarda 55~s por informe y de ahí que la atribución tenga que resolverse en una petición aparte. Sobre la RTX~4080 ese mismo método baja a 1,79~s, un factor de 31, y el conjunto de estrategias rápidas queda por debajo del segundo y medio. Es decir, el coste que motiva toda la ingeniería de este apartado no es una propiedad del método de atribución sino del hardware sobre el que se ejecuta: con un acelerador, la variante más fiel sería utilizable en línea y las aproximaciones dejarían de hacer falta. La arquitectura elegida sigue siendo la adecuada, porque el sistema debe poder servirse sin acelerador: el modo CPU es un escenario de despliegue soportado (Anexo~\ref{cap:AnexoK}) y la atribución es justo lo que deja de ser viable en él. Conviene declarar, eso sí, que se trata de una decisión condicionada por esa restricción y no por el algoritmo: donde hay GPU, la variante más fiel sería utilizable en línea.
@@ -1209,7 +1213,7 @@ Un aviso de error viaja a un servicio de terceros, de modo que todo lo que se ad
 En el backend, el \emph{callback} \texttt{before\_send} del módulo \texttt{AppWeb.SentryFilter} interviene cada evento antes de enviarlo. Sustituye por \texttt{[FILTERED]} los campos sensibles del cuerpo de la petición, recorriendo también los mapas anidados: \texttt{password}, \texttt{password\_hash}, \texttt{token}, \texttt{content} (texto del informe), \texttt{report\_text}, \texttt{authorization} y \texttt{cookie}. A esos se añaden tres piezas que el filtrado por nombre de campo no cubría:
 
 \begin{itemize}
- \item La \textbf{cadena de consulta} completa y el segmento final de la ruta \texttt{/auth/confirm/:token}, porque por ahí viaja el token de confirmación de correo, que da acceso a la cuenta.
+ \item La \textbf{cadena de consulta} completa y el segmento final de la ruta \texttt{/auth/\allowbreak{}confirm/\allowbreak{}:token}, porque por ahí viaja el token de confirmación de correo, que da acceso a la cuenta.
  \item La \textbf{dirección IP} del cliente, tanto en \texttt{REMOTE\_ADDR} como en las cabeceras \texttt{X-Forwarded-For} y \texttt{X-Real-IP}. Es dato personal del artículo~4 del RGPD.
  \item Los \textbf{datos del usuario} adjuntos al evento, de los que solo se conserva el identificador de la base de datos.
 \end{itemize}
@@ -1386,7 +1390,7 @@ Las pruebas de la capa de dominio validan las reglas de negocio en aislamiento, 
 Las pruebas de integración usan el adaptador de sandbox de Ecto (\texttt{Ecto.\allowbreak{}Adapters.\allowbreak{}SQL.\allowbreak{}Sandbox}) para ejecutar cada test dentro de una transacción que se revierte automáticamente al finalizar, manteniendo el aislamiento entre tests. Este nivel cubre:
 
 \begin{itemize}
- \item \textbf{Esquemas de proyección}: \begin{sloppypar}\texttt{App.Projections.ConversationProjectorTest} verifica las operaciones Ecto sobre los cuatro modelos relacionales (\texttt{ConversationProjection}, \mbox{\texttt{MessageProjection}}, \texttt{PredictedCodeProjection}, \texttt{Analys\-isCardProjection}), incluyendo inserciones, actualizaciones de estado (\texttt{pending} $\to$ \texttt{validated}/\texttt{rejected}), borrado suave y ordenación.\end{sloppypar}
+ \item \textbf{Esquemas de proyección}: \begin{sloppypar}\texttt{App.\allowbreak{}Projections.\allowbreak{}ConversationProjectorTest} verifica las operaciones Ecto sobre los cuatro modelos relacionales (\texttt{ConversationProjection}, \mbox{\texttt{MessageProjection}}, \texttt{PredictedCodeProjection}, \texttt{Analys\-isCardProjection}), incluyendo inserciones, actualizaciones de estado (\texttt{pending} $\to$ \texttt{validated}/\texttt{rejected}), borrado suave y ordenación.\end{sloppypar}
  \item \textbf{Cuentas de usuario}: \texttt{App.AccountsTest} comprueba el registro, la confirmación por correo y la autenticación; \texttt{AppWeb.AuthControllerTest} verifica los \emph{endpoints} REST de registro, inicio y cierre de sesión.
  \item \textbf{Plug de autenticación}: \texttt{AppWeb.Plugs.RequireAdminTest} verifica los cuatro ramos de la lógica de autorización (sin sesión, usuario no-admin, usuario admin, identificador inexistente), alcanzando cobertura completa del plug.
 \end{itemize}
@@ -1435,7 +1439,7 @@ El proyecto distingue dos entornos con herramientas de orquestación distintas s
 
 Los servicios y sus puertos de escucha en el entorno local son los que se indican en la tabla~\ref{tab:servicios-puertos}.
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Servicios del sistema y puertos de escucha en el entorno local.}
 \label{tab:servicios-puertos}

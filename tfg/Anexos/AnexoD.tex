@@ -10,7 +10,7 @@ La Figura~\ref{fig:erd-bd} muestra el diagrama entidad-relación de la base de d
 \begin{figure}[ht]
 \centering
 \resizebox{\textwidth}{!}{\input{figs/erd-bd}}
-\caption{Diagrama entidad-relación de la base de datos de aplicación \texttt{cie10\_app}.}
+\caption{Diagrama entidad-relación de la base de datos de aplicación \texttt{cie10\_app}. La línea discontinua entre \texttt{predicted\_codes} y \texttt{cie10\_codes} es una referencia lógica por el campo \texttt{cie10\_code}, sin clave foránea.}
 \label{fig:erd-bd}
 \end{figure}
 
@@ -20,7 +20,7 @@ La Figura~\ref{fig:erd-bd} muestra el diagrama entidad-relación de la base de d
 
 Almacena los usuarios registrados en el sistema (Tabla~\ref{tab:users}).
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Columnas de la tabla \texttt{users}.}
 \label{tab:users}
@@ -48,7 +48,7 @@ Almacena los usuarios registrados en el sistema (Tabla~\ref{tab:users}).
 
 Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario (Tabla~\ref{tab:conversations}).
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Columnas de la tabla \texttt{conversations}.}
 \label{tab:conversations}
@@ -74,7 +74,7 @@ Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario (
 
 Proyección CQRS de los mensajes intercambiados dentro de cada conversación (Tabla~\ref{tab:messages}).
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Columnas de la tabla \texttt{messages}.}
 \label{tab:messages}
@@ -101,7 +101,7 @@ Proyección CQRS de los mensajes intercambiados dentro de cada conversación (Ta
 
 Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para cada mensaje de análisis (Tabla~\ref{tab:cards}).
 
-\begin{table}[H]
+\begin{table}[!ht]
 \centering
 \caption{Columnas de la tabla \texttt{analysis\_cards}.}
 \label{tab:cards}
@@ -131,6 +131,7 @@ Proyección CQRS de los códigos CIE-10-ES predichos por el motor de IA, con su 
 
 \begin{table}[H]
 \centering
+\small
 \caption{Columnas de la tabla \texttt{predicted\_codes}.}
 \label{tab:predicted-codes}
 \begin{tabular}{llP{3.1cm}P{3.9cm}}

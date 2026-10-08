@@ -5,13 +5,13 @@
                minimum width=3.0cm, minimum height=1.6cm, align=center},
   lbl/.style={font=\small\sffamily, text=black, fill=white, inner sep=1.5pt, align=center},
   arr/.style={->, >=Stealth, thick},
-  brr/.style={<->, >=Stealth, thick},
+  brr/.style={<->, >={Stealth[length=3mm]}, thick, shorten <=1pt, shorten >=1pt},
 ]
 \node[comp] (fe) at (0,0) {\textbf{Frontend}\\\footnotesize Next.js / React};
 \node[comp] (be) at (7.5,0) {\textbf{Backend}\\\footnotesize Phoenix (Elixir)};
 \node[comp] (ai) at (14.5,0) {\textbf{AI Engine}\\\footnotesize FastAPI (Python)};
 
-\draw[arr] ([yshift=6mm]fe.east) -- node[lbl, above]{REST: auth, conversaciones,\\ cie10, traducciones} ([yshift=6mm]be.west);
+\draw[brr] ([yshift=6mm]fe.east) -- node[lbl, above]{REST: auth, conversaciones,\\ cie10, traducciones} ([yshift=6mm]be.west);
 \draw[brr, ocre!85] ([yshift=-6mm]fe.east) -- node[lbl, below]{\color{black}WebSocket: análisis y\\ validación en tiempo real} ([yshift=-6mm]be.west);
 
 \draw[arr, turquesa!85] (be.east) -- node[lbl, above]{HTTP: \texttt{/predict},\\ \texttt{/explain}} (ai.west);

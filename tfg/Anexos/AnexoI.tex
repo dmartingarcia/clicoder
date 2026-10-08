@@ -34,7 +34,7 @@ La Figura~\ref{fig:infra-prod} resume la topología resultante, desde la entrada
 \begin{figure}[ht]
 \centering
 \resizebox{0.85\textwidth}{!}{\input{figs/infra-prod}}
-\caption{Arquitectura de despliegue: el tráfico entra por Cloudflare (WAF, DDoS y TLS de borde) y baja por el túnel hasta la estación de trabajo, donde Traefik actúa de proxy inverso y enruta a los servicios Docker (frontend, backend, motor de IA con GPU y PostgreSQL), monitorizados con Prometheus, Grafana y Loki.}
+\caption{Arquitectura de despliegue: el tráfico entra por Cloudflare (WAF, DDoS y TLS de borde) y baja por el túnel hasta la estación de trabajo, donde Traefik actúa de proxy inverso y enruta a los servicios Docker (frontend, backend, motor de IA con GPU y PostgreSQL). La flecha discontinua indica que Prometheus extrae las métricas del backend; por claridad no se dibujan las conexiones del resto de servicios con la monitorización.}
 \label{fig:infra-prod}
 \end{figure}
 
@@ -50,16 +50,19 @@ Partiendo de un clon del repositorio en la estación de trabajo, el despliegue s
 
 \texttt{make deploy} arranca en orden: la red Docker compartida, Traefik (proxy), el \emph{stack} de monitorización (Prometheus, Grafana y Loki) y los servicios de la aplicación (base de datos, backend, frontend, motor de IA). En entorno de desarrollo el flujo es equivalente pero sin Traefik ni monitorización: \texttt{make setup up}.
 
-\Needspace{0.95\textheight}
+\Needspace{0.3\textheight}
 \section{Proxy inverso con Traefik}
 
 Traefik se despliega como un servicio Docker independiente definido en \texttt{docker-compose-proxy.yml}. Su configuración es declarativa: cada servicio de la aplicación expone sus rutas mediante etiquetas Docker (\emph{labels}), y Traefik las descubre automáticamente sin necesidad de recargar configuración.
 
 \Needspace{8\baselineskip}
-\begin{lstlisting}[language=bash, caption={Fragmento de configuración de Traefik.}, label=lst:traefik-config]
-# Entrypoints: HTTP (:80) redirige permanentemente a HTTPS (:443)
-# Red Docker: escucha en la red `clicoder` y descubre servicios por labels
-# Dashboard: protegido con Basic Auth y rate-limiting
+\begin{lstlisting}[language=bash, basicstyle=\scriptsize\ttfamily, breakatwhitespace=false, caption={Fragmento de \texttt{command} y \texttt{labels} de Traefik en \texttt{docker-compose-proxy.yml}.}, label=lst:traefik-config]
+- "--providers.docker.network=clicoder"
+- "--entrypoints.web.address=:80"
+- "--entrypoints.websecure.address=:443"
+- "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+- "traefik.http.routers.dashboard.middlewares=dashboard-auth,dashboard-ratelimit"
+- "traefik.http.middlewares.dashboard-ratelimit.ratelimit.average=60"
 \end{lstlisting}
 
 El sistema no gestiona certificados públicos ni emplea Let's Encrypt: el certificado que ve el usuario lo genera y presenta Cloudflare en su borde, que es quien termina el TLS público. El túnel entrega el tráfico a Traefik por HTTPS dentro de la red de Docker, sin verificar su certificado (\texttt{noTLSVerify}), y Traefik solo enruta. El dominio \texttt{clicoder.app} está registrado en Cloudflare.

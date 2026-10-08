@@ -41,11 +41,11 @@ El \emph{notebook} \texttt{7\_\allowbreak{}clasificador\_\allowbreak{}jerarquico
 
 La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de las 62 ejecuciones de esta fase de optimización del F1-micro: 8 con mmBERT, 1 de comparación con Longformer-BSC (descartado por coste computacional, véase el Anexo~\ref{cap:AnexoA}) y 53 con RigoBERTa-Clinical. A ellas se suman dieciséis ejecuciones dirigidas al MAP: las seis de la sección~\ref{sec:anexoF-map} (control, ajuste, ampliación del promedio y destilación) y las diez de las secciones siguientes (tres del paso~40, tres de continuación, dos semillas adicionales y dos réplicas de control). El registro completo suma 78 ejecuciones.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Hitos representativos del proceso de entrenamiento. Elaborada a mano a partir de las filas homónimas de \texttt{ai\_engine/\allowbreak model/\allowbreak training\_runs.csv} (el número de ejecución es el de la fila); no tiene objetivo de \texttt{make}. La serie completa se dibuja con \texttt{make ai-tfg-figures} (Figura~\ref{fig:all-trainings}).}
 \label{tab:training-evolution}
-\begin{tabular}{clcrcP{3.6cm}}
+\begin{tabular}{clcrcP{4.0cm}}
 \hline
 \textbf{Ejec.} & \textbf{Modelo} & \textbf{Códigos} & \textbf{Épocas} & \textbf{F1-micro} & \textbf{Observación} \\
 \hline
@@ -55,9 +55,9 @@ La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de las 62
 18 & RigoBERTa-Clinical & 809 & 133 & 0{,}430 & Mejor con 809 códigos \\
 21 & RigoBERTa-Clinical & 1.767 & 79 & 0{,}327 & Expansión a espacio completo \\
 27 & RigoBERTa-Clinical & 1.767 & 60 & 0{,}470 & Introducción descongelación prog. \\
-39 & RigoBERTa-Clinical & 1.767 & 96 & 0{,}481 & Ajuste umbral y \emph{pos\_weight} \\
+39 & RigoBERTa-Clinical & 1.767 & 96 & 0{,}481 & Ajuste umbral y \emph{pos-weight} \\
 44 & RigoBERTa-Clinical & 1.767 & 150 & 0{,}489 & Configuración 32b de referencia \\
-55 & RigoBERTa-Clinical & 1.767 & 150 & 0{,}4945 & Referencia de evaluación: \texttt{20260530T030233Z} (paso 36) \\
+55 & RigoBERTa-Clinical & 1.767 & 150 & 0{,}4945 & Referencia de evaluación (paso 36) \\
 67 & RigoBERTa-Clinical & 1.767 & 112 & 0{,}5028 & Mejor ejecución registrada hasta la fecha \\
 \hline
 \end{tabular}
@@ -67,7 +67,7 @@ La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de las 62
 
 La Figura~\ref{fig:all-trainings} muestra el F1-micro de validación de cada ejecución registrada, en orden cronológico, y las épocas que ejecutó cada una.
 
-\begin{figure}[h]
+\begin{figure}[!ht]
 \centering
 \includegraphics[width=\textwidth]{figs/all_trainings_graph}
 \caption{F1-micro de validación (arriba) y épocas ejecutadas (abajo) de cada ejecución, en orden cronológico. Azul: 1.767 clases; naranja: 809 clases. El círculo marca la mejor ejecución con 1.767 clases. Generada con \texttt{make ai-tfg-figures} (\texttt{ai\_engine/plot\_runs.py}) a partir de \texttt{model/training\_runs.csv}.}
