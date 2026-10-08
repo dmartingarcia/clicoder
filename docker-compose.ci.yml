@@ -1,3 +1,9 @@
 services:
   backend:
     volumes: !reset []
+    ports:
+      - "${BACKEND_PORT}:4000"
+
+  frontend:
+    ports:
+      - "${FRONTEND_PORT}:3000"
