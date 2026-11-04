@@ -35,7 +35,6 @@ export function ConversationSidebar() {
   const { user, token, logout } = useAuth();
   const { locale, setLocale, t } = useI18n();
   const [trashOpen, setTrashOpen] = useState(false);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [localeOpen, setLocaleOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -93,7 +92,7 @@ export function ConversationSidebar() {
     new Date(dateStr).toLocaleDateString(locale, { day: '2-digit', month: 'short' });
 
   return (
-    <div className="w-64 flex flex-col bg-gray-900 text-white h-screen">
+    <div className="w-80 flex flex-col bg-gray-900 text-white h-screen">
       <div className="p-4 border-b border-gray-700">
         <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">{t('app.doctor')}</p>
         <p className="text-sm font-semibold truncate">
@@ -152,7 +151,7 @@ export function ConversationSidebar() {
           <div className="space-y-1 pb-2">
             {conversations.map((conv) => {
               const isActive = conv.conversation_id === activeConversationId;
-              const preview = conv.last_message?.content?.slice(0, 60) ?? '…';
+              const preview = conv.last_message?.content?.slice(0, 150) ?? '…';
               const msgLabel =
                 conv.message_count === 1 ? t('sidebar.messages_one') : t('sidebar.messages_other');
 
@@ -160,8 +159,6 @@ export function ConversationSidebar() {
                 <div
                   key={conv.conversation_id}
                   className="relative group"
-                  onMouseEnter={() => setHoveredId(conv.conversation_id)}
-                  onMouseLeave={() => setHoveredId(null)}
                 >
                   <button
                     onClick={() => switchConversation(conv.conversation_id)}
@@ -175,7 +172,7 @@ export function ConversationSidebar() {
                         <p className="text-xs font-medium truncate">
                           {formatDate(conv.started_at)}
                         </p>
-                        <p className="text-xs opacity-70 truncate">{preview}</p>
+                        <p className="text-xs opacity-70 line-clamp-3">{preview}</p>
                         <p className="text-xs opacity-50 mt-0.5">
                           {conv.message_count} {msgLabel}
                         </p>
@@ -183,18 +180,16 @@ export function ConversationSidebar() {
                     </div>
                   </button>
 
-                  {hoveredId === conv.conversation_id && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteConversation(conv.conversation_id);
                       }}
                       title={t('sidebar.delete')}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-red-400 hover:bg-gray-600 transition-colors"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded text-gray-500 opacity-40 hover:opacity-100 hover:text-red-400 hover:bg-gray-600 transition-colors"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
-                  )}
                 </div>
               );
             })}

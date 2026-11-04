@@ -153,7 +153,7 @@ function CodesCard({
               </div>
             </div>
 
-            <p className="text-xs text-gray-600 mb-1">{c.reason ?? c.reasoning}</p>
+            <p className="text-xs text-gray-600 mb-1 wrap-break-word">{c.reason ?? c.reasoning}</p>
 
             {((c.triggers && c.triggers.length > 0) || c.triggers_complete === false) && (
               <div className="flex flex-wrap items-center gap-1 mb-2">
@@ -525,7 +525,7 @@ function ChatItemView({
       <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-1">
         <Stethoscope className="h-4 w-4 text-blue-600" />
       </div>
-      <div className="flex-1 max-w-2xl">{children}</div>
+      <div className="flex-1 min-w-0 max-w-2xl">{children}</div>
     </div>
   );
 
@@ -654,7 +654,7 @@ export function ChatInterface() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-4" ref={scrollRef}>
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4" ref={scrollRef}>
             <div className="space-y-4 max-w-3xl mx-auto">
               {chatItems.length === 0 && !isAnalyzing && (
                 <div className="flex flex-col items-center gap-3 py-16 text-gray-400">
