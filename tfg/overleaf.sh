@@ -2,6 +2,7 @@
 set -euo pipefail
 P=6762f4f3a84f2b14bc58212b
 OL="npx -y claudeleaf"
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 cd "$(dirname "$0")"
 $OL doctor | grep -q "Signed in: yes" || { echo "sesión caducada: npx claudeleaf login" >&2; exit 1; }
 R=$(mktemp -d); trap 'rm -rf "$R"' EXIT
@@ -42,6 +43,6 @@ case ${1:-diff} in
     for f in $(find . -path ./build -prune -o -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.pdf' \) -print | sed 's|^\./||'); do
       [ -f "$R/$f" ] || echo "solo local:   $f"
     done ;;
-  all) rc=0; "$0" sync || rc=$?; "$0" imgs; exit $rc ;;
+  all) rc=0; "$SELF" sync || rc=$?; "$SELF" imgs; exit $rc ;;
   *) echo "uso: $0 [diff|sync|imgs|all]"; exit 1 ;;
 esac
