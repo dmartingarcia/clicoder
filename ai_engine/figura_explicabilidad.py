@@ -73,10 +73,6 @@ def main():
             nivel = 45 if peso >= techo * 0.66 else (28 if peso >= techo * 0.33 else 14)
             partes.append(f"\\colorbox{{amarillo!{nivel}}}{{{escapar(palabra)}}}")
 
-    lista = ", ".join(
-        f"\\emph{{{escapar(palabra)}}} ({float(peso):.2f})".replace(".", ",")
-        for palabra, peso in triggers[principal][:5]
-    )
     descripcion = escapar(str(pred[0].get("description", "") or ""))
 
     salida = f"""% Generado por ai_engine/figura_explicabilidad.py: no editar a mano.
@@ -86,9 +82,8 @@ def main():
 {" ".join(partes)}
 }}}}
 \\caption[Ejemplo de explicabilidad sobre un informe real]{{Términos que sostienen la predicción
-del código \\texttt{{{escapar(codigos[0])}}} ({descripcion}) sobre un informe del conjunto de
-prueba. El sombreado es proporcional a la caída del \\emph{{logit}} al enmascarar cada palabra,
-en tres niveles. Los cinco primeros: {lista}.}}
+de \\texttt{{{escapar(codigos[0])}}} ({descripcion}) sobre un informe de prueba. El sombreado es
+proporcional a la caída del \\emph{{logit}} al enmascarar cada palabra.}}
 \\label{{fig:ejemplo-explicabilidad}}
 \\end{{figure}}
 """

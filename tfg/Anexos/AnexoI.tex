@@ -34,7 +34,7 @@ La Figura~\ref{fig:infra-prod} resume la topología resultante, desde la entrada
 \begin{figure}[ht]
 \centering
 \resizebox{0.85\textwidth}{!}{\input{figs/infra-prod}}
-\caption{Arquitectura de despliegue: el tráfico entra por Cloudflare (WAF, DDoS y TLS de borde) y baja por el túnel hasta la estación de trabajo, donde Traefik actúa de proxy inverso y enruta a los servicios Docker (frontend, backend, motor de IA con GPU y PostgreSQL). La flecha discontinua indica que Prometheus extrae las métricas del backend; por claridad no se dibujan las conexiones del resto de servicios con la monitorización.}
+\caption{Arquitectura de despliegue: Cloudflare, túnel, Traefik y servicios Docker. La flecha discontinua es la extracción de métricas por Prometheus.}
 \label{fig:infra-prod}
 \end{figure}
 

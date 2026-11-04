@@ -122,9 +122,11 @@ La Figura~\ref{fig:epochs-graph} muestra la evolución del F1-micro de validaci�
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{figs/all_epochs_graph}
-\caption{Curvas de entrenamiento con \texttt{IIC/RigoBERTa-Clinical}: F1-micro de validación (arriba) y pérdida de entrenamiento (abajo) por época. En gris, el resto de ejecuciones con ese \emph{encoder} que conservan historial por época (59 series en total, incluidas las de 809 clases, de modo que no coincide con las 58 ejecuciones sobre 1.767 códigos de \texttt{training\_runs.csv}); resaltadas, el paso~36 y \texttt{c102909}; el eje de la pérdida se recorta en 1 porque una ejecución llega a 5,5. No se conserva el historial por época de la ejecución desplegada. Generada con \texttt{make ai-tfg-figures} (\texttt{ai\_engine/\allowbreak plot\_runs.py}) a partir de \texttt{model/\allowbreak training\_history\_*.json}.}
+\caption{Curvas de entrenamiento de \texttt{IIC/RigoBERTa-Clinical}: F1-micro de validación (arriba) y pérdida (abajo) por época. En gris, el resto de ejecuciones; resaltados, el paso~36 y \texttt{c102909}.}
 \label{fig:epochs-graph}
 \end{figure}
+
+En gris figuran las demás ejecuciones con ese \emph{encoder} que conservan historial por época: 59 series, que incluyen las de 809 clases y por eso no coinciden con las 58 ejecuciones sobre 1.767 códigos de \texttt{training\_runs.csv}. El eje de la pérdida se recorta en 1 porque una ejecución llega a 5,5, y no se conserva el historial por época de la ejecución desplegada. La figura la genera \texttt{make ai-tfg-figures} (\texttt{ai\_engine/\allowbreak plot\_runs.py}) a partir de \texttt{model/\allowbreak training\_history\_*.json}.
 
 \section{Artefactos del modelo}
 

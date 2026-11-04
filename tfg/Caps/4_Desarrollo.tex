@@ -24,7 +24,7 @@ La Figura~\ref{fig:modelo-conceptual} resume estas entidades y sus relaciones; e
 \begin{figure}[ht]
 \centering
 \resizebox{0.85\textwidth}{!}{\input{figs/modelo-conceptual}}
-\caption{Modelo conceptual: un usuario tiene varios análisis, cada análisis agrupa varias tarjetas de respuesta, y una tarjeta de tipo \texttt{codes} contiene varios códigos predichos, cada uno referido a una entrada del catálogo CIE-10-ES.}
+\caption{Modelo conceptual: usuario, análisis, tarjetas de respuesta, códigos predichos y su entrada en el catálogo CIE-10-ES.}
 \label{fig:modelo-conceptual}
 \end{figure}
 
@@ -48,7 +48,7 @@ El administrador dispone además de un conjunto propio de casos de uso, accesibl
 \begin{figure}[ht]
 \centering
 \resizebox{\textwidth}{!}{\input{figs/casos-uso}}
-\caption{Modelo de casos de uso: el codificador clínico y el administrador son actores principales que inician acciones sobre el sistema; el motor de IA es un actor secundario, invocado por el sistema para resolver la predicción de códigos.}
+\caption{Modelo de casos de uso: codificador clínico y administrador como actores principales; el motor de IA, como secundario.}
 \label{fig:casos-uso}
 \end{figure}
 
@@ -60,7 +60,7 @@ La interfaz sigue un esquema de dos columnas: un panel lateral izquierdo con el 
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=0.74\textwidth, trim=1020 410 510 145, clip]{figs/ui-analysis}
-\caption{Área central de la interfaz web: tarjetas de códigos CIE-10 predichos, cada una con su nivel de confianza, los términos del informe que la motivan (\emph{chips} ámbar) y los controles de validación y rechazo, y el campo de entrada del informe. Se omite el panel lateral (historial y controles de sesión, incluidos los de RGPD), descrito en el texto.}
+\caption{Área central de la interfaz: tarjetas de códigos predichos con su confianza, los términos que los motivan y los controles de validación.}
 \label{fig:ui-analysis}
 \end{figure}
 
@@ -134,7 +134,7 @@ El sistema requiere dos fuentes de datos complementarias: el corpus de informes 
 \begin{figure}[ht]
 \centering
 \resizebox{\textwidth}{!}{\input{figs/pipeline-datos}}
-\caption{Flujo de datos del sistema: adquisición de las dos fuentes (catálogo CIE-10-ES por \emph{scraping} de eCIE-maps y corpus CodiEsp), generación de los CSV, preprocesado al formato multilabel, partición en train/val/test y entrenamiento.}
+\caption{Flujo de datos: adquisición de las fuentes, generación de CSV, preprocesado multilabel, partición y entrenamiento.}
 \label{fig:pipeline-datos}
 \end{figure}
 
@@ -171,9 +171,11 @@ Los informes tienen una longitud media de 2.317 caracteres (349 palabras) en el 
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.72\textwidth]{figs/tfg_tokens}
-\caption[Longitud de los informes en \emph{tokens} por conjunto (train/val/test)]{Longitud de los informes en \emph{tokens} por conjunto (train/val/test). Más de la mitad supera los 512 \emph{tokens} de la ventana del modelo (54\,\% en entrenamiento, 58\,\% en validación y prueba), pero la totalidad queda por debajo de 2.048. La distribución es homogénea entre los tres conjuntos.}
+\caption[Longitud de los informes en \emph{tokens} por conjunto (train/val/test)]{Longitud de los informes en \emph{tokens} por conjunto (train/val/test), frente a la ventana de 512 del modelo.}
 \label{fig:tokens}
 \end{figure}
+
+La proporción es parecida en los tres conjuntos: supera los 512 \emph{tokens} el 54\,\% de los informes de entrenamiento y el 58\,\% de los de validación y prueba, y ninguno pasa de 2.048.
 
 \paragraph{Distribución de etiquetas.}
 Cada documento tiene una media de 11,3 códigos CIE-10-ES asignados (mediana: 10; máximo: 40; mínimo: 1). La correlación entre longitud del texto y número de etiquetas es de 0,56. La distribución de frecuencias sigue una ley de potencia: la mayoría de los 2.557 códigos únicos del corpus aparece en cinco o menos documentos. Esta distribución de cola larga motivó el uso de ponderación de clases en la función de pérdida (Figura~\ref{fig:longtail}).
@@ -181,7 +183,7 @@ Cada documento tiene una media de 11,3 códigos CIE-10-ES asignados (mediana: 10
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.72\textwidth]{figs/tfg_longtail}
-\caption{Distribución de frecuencias de los códigos en el conjunto de entrenamiento (escala log-log): una minoría de códigos concentra la mayoría de las apariciones y más de la mitad aparece una sola vez, lo que motiva la ponderación de clases y el preentrenamiento.}
+\caption{Frecuencia de los códigos en el conjunto de entrenamiento (escala log-log): unos pocos concentran la mayoría de las apariciones.}
 \label{fig:longtail}
 \end{figure}
 
@@ -247,7 +249,7 @@ La Figura~\ref{fig:arq-clasificador} resume esta arquitectura, del informe clín
 \begin{figure}[ht]
 \centering
 \resizebox{\textwidth}{!}{\input{figs/arq-clasificador}}
-\caption{Arquitectura del clasificador plano multilabel: el \emph{encoder} RigoBERTa-Clinical (preentrenado de forma débil sobre el catálogo CIE-10-ES antes del \emph{fine-tuning}) proyecta la representación del token \texttt{[CLS]} sobre los 1.767 códigos mediante una cabeza lineal con activación sigmoide por código.}
+\caption{Arquitectura del clasificador: \emph{encoder} RigoBERTa-Clinical, token \texttt{[CLS]} y cabeza lineal con sigmoide sobre 1.767 códigos.}
 \label{fig:arq-clasificador}
 \end{figure}
 
@@ -417,16 +419,18 @@ Dos ejecuciones consecutivas de esta etapa, con umbrales de decisión de 0,3 y 0
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.72\textwidth]{figs/tfg_threshold}
-\caption[Barrido del umbral global de decisión sobre validación y prueba]{Barrido del umbral global de decisión sobre validación y prueba. El F1-micro de validación se maximiza en 0,2 (umbral elegido); en prueba el máximo está en 0,25, a 0,6~pp del valor en 0,2, de modo que el umbral elegido sobre validación transfiere con una pérdida pequeña, aunque las curvas de precisión y \emph{recall} de ambas particiones difieren unos 4~pp en cada eje. El F1-macro decrece de forma monótona al subir el umbral.}
+\caption[Barrido del umbral global de decisión sobre validación y prueba]{Barrido del umbral global sobre validación y prueba. El F1-micro de validación se maximiza en 0,2, el umbral elegido.}
 \label{fig:threshold}
 \end{figure}
+
+En prueba el máximo del F1-micro está en 0,25, a 0,6~pp del valor en 0,2, de modo que el umbral elegido sobre validación transfiere con una pérdida pequeña, aunque las curvas de precisión y \emph{recall} de ambas particiones difieren unos 4~pp en cada eje. El F1-macro decrece de forma monótona al subir el umbral.
 
 El mismo barrido, representado como curva precisión-\emph{recall} (Figura~\ref{fig:pr}), aporta dos lecturas que el barrido de F1 no deja ver. La primera es que la curva es prácticamente lineal en todo el rango útil: no hay codo ni punto de inflexión, de modo que cada punto de \emph{recall} ganado cuesta aproximadamente un punto de precisión y la elección del umbral es una decisión de política de uso, no un óptimo que la geometría de la curva imponga. El umbral 0,2 es simplemente el que maximiza el F1-micro, que pondera ambas por igual; para un sistema de ayuda a la codificación, donde el profesional revisa la propuesta y descartar un código erróneo cuesta menos que echar en falta uno correcto, un punto algo más orientado al \emph{recall} sería igualmente defendible. Se mantiene el óptimo de F1 por ser el criterio declarado de antemano y no ajustado a posteriori. La segunda lectura es que las curvas de validación y prueba tienen la misma forma y quedan separadas unos 4~pp, lo que confirma que el umbral elegido sobre validación transfiere al conjunto de prueba y que la diferencia entre ambos conjuntos es de nivel, no de forma.
 
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=0.72\textwidth]{figs/tfg_pr_curve}
-\caption[Curva precisión-\emph{recall} del clasificador sobre validación y prueba, obtenida al barrer el umbral global de decisión]{Curva precisión-\emph{recall} del clasificador sobre validación y prueba, obtenida al barrer el umbral global de decisión. Se resalta el punto de operación de producción (umbral 0,2).}
+\caption[Curva precisión-\emph{recall} del clasificador sobre validación y prueba, obtenida al barrer el umbral global de decisión]{Curva precisión-\emph{recall} sobre validación y prueba, con el punto de operación (umbral 0,2) resaltado.}
 \label{fig:pr}
 \end{figure}
 
@@ -481,7 +485,7 @@ La Tabla~\ref{tab:progreso_pasos} recoge la evolución acumulada desde el clasif
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=\textwidth]{figs/tfg_waterfall}
-\caption{Contribución acumulada de cada técnica al F1-micro de validación (umbral 0,3), desde el clasificador plano inicial sobre códigos completos hasta la configuración final.}
+\caption{Contribución acumulada de cada técnica al F1-micro de validación (umbral 0,3).}
 \label{fig:waterfall}
 \end{figure}
 
@@ -600,7 +604,7 @@ Una lectura posible es que el rendimiento por código depende sobre todo de cuá
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.75\textwidth]{figs/tfg_freq}
-\caption{F1-micro y \emph{recall} sobre el conjunto de prueba según el número de apariciones del código en el corpus de entrenamiento (umbral 0,2, modelo desplegado). Bajo cada grupo se indica cuántos códigos lo forman y cuántos pares del \emph{gold} aportan.}
+\caption{F1-micro y \emph{recall} en prueba según las apariciones del código en entrenamiento (umbral 0,2).}
 \label{fig:freq}
 \end{figure}
 
@@ -609,16 +613,18 @@ La Figura~\ref{fig:benchmark} representa gráficamente esa clasificación y la F
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figs/tfg_benchmark}
-\caption[MAP por documento de los sistemas del \emph{benchmark} CodiEsp-D 2020 sobre el conjunto de prueba, con este trabajo resaltado]{MAP por documento de los sistemas del \emph{benchmark} CodiEsp-D 2020 sobre el conjunto de prueba, con este trabajo resaltado. Las primeras posiciones las ocupan \emph{ensembles} y diccionarios construidos manualmente.}
+\caption[MAP por documento de los sistemas del \emph{benchmark} CodiEsp-D 2020 sobre el conjunto de prueba, con este trabajo resaltado]{MAP por documento de los sistemas del \emph{benchmark} CodiEsp-D 2020, con este trabajo resaltado.}
 \label{fig:benchmark}
 \end{figure}
 
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=0.75\textwidth]{figs/tfg_chapters}
-\caption[F1-micro por capítulo CIE-10 sobre el conjunto de prueba (umbral 0,2, modelo desplegado), con el soporte de cada capítulo entre paréntesis]{F1-micro por capítulo CIE-10 sobre el conjunto de prueba (umbral 0,2, modelo desplegado), con el soporte de cada capítulo entre paréntesis. Se excluyen los capítulos con menos de diez pares en el \emph{gold} (VIII, XV, XVI y XX), donde el F1 carece de sentido estadístico. La equivalencia entre cada número romano y el capítulo de la CIE-10-ES se recoge en la Tabla~\ref{tab:capitulos-cie10} del Anexo~\ref{cap:AnexoG}.}
+\caption[F1-micro por capítulo CIE-10 sobre el conjunto de prueba (umbral 0,2, modelo desplegado), con el soporte de cada capítulo entre paréntesis]{F1-micro por capítulo CIE-10 sobre el conjunto de prueba (umbral 0,2), con el soporte de cada capítulo entre paréntesis.}
 \label{fig:chapters}
 \end{figure}
+
+Se excluyen de la figura los capítulos con menos de diez pares en el \emph{gold} (VIII, XV, XVI y XX), donde el F1 carece de sentido estadístico. La equivalencia entre cada número romano y el capítulo de la CIE-10-ES se recoge en la Tabla~\ref{tab:capitulos-cie10} del Anexo~\ref{cap:AnexoG}.
 
 A nivel de capítulo la relación con la frecuencia de entrenamiento es solo moderada ($r=0{,}40$ sobre los diecisiete capítulos con soporte suficiente, una muestra pequeña, por lo que es una cifra orientativa), bastante más débil que la que se observa por código en la Figura~\ref{fig:freq}. Una razón probable es que un capítulo agrupa códigos muy heterogéneos, de modo que su F1 depende menos del volumen total de ejemplos que de cómo se reparten: dos capítulos con el mismo número de pares rinden de forma muy distinta según si esos pares se concentran en unos pocos códigos o se dispersan en muchos.
 
@@ -759,7 +765,7 @@ Para cumplir el requisito de trazabilidad clínica, el backend se organiza en to
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=0.9\textwidth, trim=0 1150 1180 0, clip]{figs/ui-admin-conversations}
-\caption{Vista de administración de las conversaciones: cada análisis queda registrado con su usuario, estado y marca temporal, reflejo de la trazabilidad que aporta el \emph{Event Sourcing}.}
+\caption{Vista de administración de las conversaciones, con usuario, estado y marca temporal de cada análisis.}
 \label{fig:admin-conversations}
 \end{figure}
 
@@ -892,7 +898,7 @@ El modelo activo, el modo y los \emph{prompts} se configuran desde el \emph{back
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.75\textwidth, trim=35 2136 1770 1150, clip]{figs/ui-admin-settings}
-\caption{Configuración del resumidor en el \emph{backoffice}: selección del modelo generativo (con su tamaño y recomendación) y del modo de salida (resumen o paráfrasis). Los \emph{prompts} de sistema y de usuario son editables en la misma página y se aplican en caliente.}
+\caption{Configuración del resumidor en el \emph{backoffice}: modelo generativo y modo de salida.}
 \label{fig:admin-summarizer}
 \end{figure}
 
@@ -933,14 +939,14 @@ El selector se expone en el \emph{backoffice} de administración (\texttt{/admin
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.55\textwidth]{figs/ui-admin-motor}
-\caption{\emph{Backoffice} de administración (\texttt{/admin/settings}): selección del motor de IA entre las cuatro opciones disponibles, aplicable en caliente sin redesplegar.}
+\caption{\emph{Backoffice}: selección del motor de IA entre las cuatro opciones disponibles.}
 \label{fig:admin-settings}
 \end{figure}
 
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=0.5\textwidth]{figs/ui-admin-modelo}
-\caption[Selector de modelo del clasificador]{Selector de modelo del clasificador. Cada \emph{checkpoint} muestra sus métricas comparables y dos indicadores independientes: cuál está en uso y cuál está descargado. La acción de carga solo se ofrece sobre los que están presentes en disco.}
+\caption[Selector de modelo del clasificador]{Selector de modelo del clasificador: métricas por \emph{checkpoint} y su estado de uso y descarga.}
 \label{fig:admin-modelo}
 \end{figure}
 
@@ -1142,7 +1148,7 @@ El administrador elige la estrategia desde el \emph{backoffice} (Figura~\ref{fig
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.6\textwidth]{figs/ui-admin-explicabilidad}
-\caption{\emph{Backoffice} de administración: selección de la estrategia de atribución de términos (diccionario, gradiente filtrado, exhaustivo o divide y vencerás). Está activo el gradiente filtrado, que es el que sirve el sistema.}
+\caption{\emph{Backoffice}: selección de la estrategia de atribución de términos; está activo el gradiente filtrado.}
 \label{fig:admin-explicabilidad}
 \end{figure}
 
@@ -1170,7 +1176,7 @@ El sistema implementa autenticación mediante registro con confirmación por ema
 \begin{figure}[ht]
 \centering
 \resizebox{0.9\textwidth}{!}{\input{figs/auth-flujo}}
-\caption{Flujo de autenticación: del registro con confirmación por correo a la verificación del token \emph{Bearer} (\texttt{Phoenix.Token}, validez de una hora) en cada petición REST y en el \emph{handshake} del WebSocket.}
+\caption{Flujo de autenticación: del registro con confirmación por correo a la verificación del token \emph{Bearer} en cada petición.}
 \label{fig:auth-flujo}
 \end{figure}
 

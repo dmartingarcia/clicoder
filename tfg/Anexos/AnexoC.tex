@@ -6,7 +6,7 @@ Este anexo documenta los protocolos y contratos de comunicación entre los servi
 \begin{figure}[ht]
 \centering
 \resizebox{\textwidth}{!}{\input{figs/conexion-fe-be}}
-\caption{Esquema de comunicación entre servicios: el frontend habla con el backend por API REST (autenticación y consultas) y por un canal WebSocket (análisis en tiempo real); el backend invoca al motor de IA por HTTP.}
+\caption{Comunicación entre servicios: REST y WebSocket del frontend al backend, y HTTP del backend al motor de IA.}
 \label{fig:conexion-fe-be}
 \end{figure}
 
@@ -17,7 +17,7 @@ La Figura~\ref{fig:seq-analisis} resume los hitos de la secuencia de mensajes cu
 \begin{figure}[ht]
 \centering
 \resizebox{\textwidth}{!}{\input{figs/seq-analisis}}
-\caption{Diagrama de secuencia simplificado del flujo de análisis clínico: la propuesta de códigos (pasos 3 a 5) y la justificación (pasos 6 a 8) viajan en peticiones distintas. Se omiten el resumen en \emph{streaming} y los comandos internos del backend.}
+\caption{Diagrama de secuencia simplificado del flujo de análisis clínico, sin el resumen en \emph{streaming}.}
 \label{fig:seq-analisis}
 \end{figure}
 
