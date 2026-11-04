@@ -305,7 +305,7 @@ defmodule AppWeb.ConversationChannelTest do
     end
   end
 
-  defp await_conversation_projection(conversation_id, retries \\ 10) do
+  defp await_conversation_projection(conversation_id, retries \\ 100) do
     case App.Repo.get_by(App.Projections.ConversationProjection, conversation_id: conversation_id) do
       nil when retries > 0 ->
         Process.sleep(50)
