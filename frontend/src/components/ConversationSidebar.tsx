@@ -156,10 +156,7 @@ export function ConversationSidebar() {
                 conv.message_count === 1 ? t('sidebar.messages_one') : t('sidebar.messages_other');
 
               return (
-                <div
-                  key={conv.conversation_id}
-                  className="relative group"
-                >
+                <div key={conv.conversation_id} className="relative group">
                   <button
                     onClick={() => switchConversation(conv.conversation_id)}
                     className={`w-full text-left rounded-lg px-3 py-2 pr-8 transition-colors ${
@@ -180,16 +177,16 @@ export function ConversationSidebar() {
                     </div>
                   </button>
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteConversation(conv.conversation_id);
-                      }}
-                      title={t('sidebar.delete')}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded text-gray-500 opacity-40 hover:opacity-100 hover:text-red-400 hover:bg-gray-600 transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteConversation(conv.conversation_id);
+                    }}
+                    title={t('sidebar.delete')}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded text-gray-500 opacity-40 hover:opacity-100 hover:text-red-400 hover:bg-gray-600 transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               );
             })}
