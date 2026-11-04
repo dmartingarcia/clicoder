@@ -408,15 +408,15 @@ describe('ConversationSidebar', () => {
       ];
     });
 
-    it('oculta el botón de borrar cuando el ratón sale de la fila', () => {
+    it('muestra siempre el botón de borrar, sin depender del ratón', () => {
       render(<ConversationSidebar />);
       const fila = screen.getByText('Patient report').closest('div.relative.group')!;
 
-      fireEvent.mouseEnter(fila);
       expect(screen.getByTitle('sidebar.delete')).toBeInTheDocument();
 
+      fireEvent.mouseEnter(fila);
       fireEvent.mouseLeave(fila);
-      expect(screen.queryByTitle('sidebar.delete')).not.toBeInTheDocument();
+      expect(screen.getByTitle('sidebar.delete')).toBeInTheDocument();
     });
 
     it('borra la conversación sin activarla al pulsar la papelera', async () => {
