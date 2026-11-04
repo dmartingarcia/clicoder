@@ -1,5 +1,6 @@
 defmodule App.Accounts.Emails do
   import Swoosh.Email
+  require Logger
 
   alias App.Mailer
   alias App.Translations
@@ -53,7 +54,10 @@ defmodule App.Accounts.Emails do
       #{ignore}
       """)
 
-    Mailer.deliver(email)
+    with {:error, reason} = error <- Mailer.deliver(email) do
+      Logger.error("confirmation email failed: #{inspect(reason)}")
+      error
+    end
   end
 
   defp domain do

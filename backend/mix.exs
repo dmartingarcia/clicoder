@@ -69,6 +69,7 @@ defmodule App.MixProject do
       {:cors_plug, "~> 3.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:finch, "~> 0.13"},
+      {:hackney, "~> 1.8"},
       {:gen_smtp, "~> 1.2"},
       {:yaml_elixir, "~> 2.9"},
       {:nimble_csv, "~> 1.2"},
