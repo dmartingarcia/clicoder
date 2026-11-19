@@ -1,0 +1,97 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="estilo.css">
+<script src="comun.js"></script>
+</head>
+<body>
+<canvas id="fondo" width="1920" height="1080"></canvas>
+<div id="esc">
+  <div class="logo" id="logo"><div class="anillo" id="anillo"></div></div>
+  <div class="marca" id="marca"></div>
+  <div class="titulo" id="titulo"></div>
+  <div class="linea" id="linea"></div>
+  <div class="sub" id="sub"></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+let P, pal, ctx;
+window.setup = (params) => {
+  P = params;
+  ctx = $('fondo').getContext('2d');
+  const l = $('logo');
+  const px = 132;
+  l.style.width = l.style.height = px + 'px';
+  l.style.background = `linear-gradient(140deg, ${P.A}, ${P.B})`;
+  l.style.boxShadow = `0 24px 70px ${MC.rgba(P.A, 0.55)}, inset 0 1px 0 rgba(255,255,255,.4)`;
+  l.insertAdjacentHTML('afterbegin', MC.LOGO_SVG(Math.round(px * 0.56)));
+  const m = $('marca');
+  m.textContent = P.marca;
+  m.style.cssText += `;font-size:${Math.round(P.tituloPx * 0.4)}px;color:${MC.rgba(P.TXT, 0.7)};margin-top:38px`;
+  const t = $('titulo');
+  t.style.fontSize = P.tituloPx + 'px';
+  t.style.color = P.TXT;
+  t.style.marginTop = '26px';
+  pal = MC.palabras(t, P.titulo);
+  const ln = $('linea');
+  ln.style.background = `linear-gradient(90deg, transparent, ${P.ACC}, transparent)`;
+  ln.style.marginTop = '34px';
+  const s = $('sub');
+  s.textContent = P.sub || '';
+  s.style.cssText += `;font-size:${P.subPx}px;color:${MC.rgba(P.TXT, 0.82)};margin-top:30px`;
+};
+window.render = (treal) => {
+  const { seg, E, clamp } = MC;
+  const T = P.t0 + treal; // tiempo global: la malla coincide con la del clip y el cierre
+  const t = (treal * 4) / P.dur; // la coreografía está pensada para 4 s y se estira/comprime a INTRO_S
+  ctx.clearRect(0, 0, 1920, 1080);
+  MC.fondo(ctx, 1920, 1080, T, P);
+  MC.particulas(ctx, 1920, 1080, T, P);
+
+  const hz = seg(t, 1.0, 2.3);
+  if (hz > 0 && hz < 1) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.translate(-400 + hz * 2700, 0);
+    ctx.rotate(-0.35);
+    const g = ctx.createLinearGradient(-160, 0, 160, 0);
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(0.5, `rgba(255,255,255,${0.1 * Math.sin(Math.PI * hz)})`);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-160, -400, 320, 1900);
+    ctx.restore();
+  }
+
+  const lp = seg(t, 0.1, 0.7);
+  const sc = 0.55 + 0.45 * E.outBack(lp);
+  $('logo').style.transform = `scale(${sc})`;
+  $('logo').style.opacity = String(clamp(lp * 2.2));
+  MC.dibujarLogo($('logo'), seg(t, 0.25, 1.05));
+  const an = seg(t, 1.0, 1.7);
+  $('anillo').style.opacity = String((1 - an) * 0.9 * (an > 0 ? 1 : 0));
+  $('anillo').style.transform = `scale(${1 + an * 0.9})`;
+
+  const mp = E.outCubic(seg(t, 0.7, 1.2));
+  $('marca').style.opacity = String(mp);
+  $('marca').style.transform = `translateY(${(1 - mp) * 18}px)`;
+  $('marca').style.filter = `blur(${(1 - mp) * 6}px)`;
+
+  MC.animarPalabras(pal, t, 0.75);
+
+  const lp2 = E.outExpo(seg(t, 1.3, 1.9));
+  $('linea').style.width = lp2 * 420 + 'px';
+  $('linea').style.opacity = String(lp2);
+
+  const sp = E.outCubic(seg(t, 1.45, 2.05));
+  $('sub').style.opacity = String(sp);
+  $('sub').style.transform = `translateY(${(1 - sp) * 20}px)`;
+  $('sub').style.filter = `blur(${(1 - sp) * 8}px)`;
+
+  const D = 4;
+  const ex = E.inCubic(seg(t, D - 1.35, D - 0.55));
+  $('esc').style.transform = `scale(${1 + ex * 0.16})`;
+  $('esc').style.opacity = String(1 - ex);
+  $('esc').style.filter = `blur(${ex * 12}px)`;
+};
+</script>
+</body></html>

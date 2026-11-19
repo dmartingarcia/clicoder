@@ -1,4 +1,4 @@
-.PHONY: prod-ports-check e2e-tests ai-bench-predict ai-eval-candidatos ai-eval-candidatos-fusion ai-comparativa-motores ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-augment-stats ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-lint tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
+.PHONY: prod-ports-check demo-check demo-montaje demo-videos e2e-tests ai-bench-predict ai-eval-candidatos ai-eval-candidatos-fusion ai-comparativa-motores ai-bench-explain ai-error-analysis ai-coverage backend-coverage frontend-coverage coverage ai-augment ai-augment-stats ai-baseline-dict ai-combine ai-eval-test ai-format ai-install ai-lint ai-train ai-train-gpu audit audit-backend audit-js audit-python backend-dialyzer backend-format backend-install backend-lint backend-migrate backend-reset backend-rollback backend-seed backend-test build build-ai build-backend build-base build-frontend build-training clean clean-all cpu-build cpu-down cpu-up db-backup db-reset deploy down frontend-format frontend-install frontend-lint frontend-test help logs mock-build mock-down mock-up model-download model-upload network-create setup shell start-monitoring start-monitoring-dev start-proxy start-tunnel stop-monitoring stop-proxy stop-tunnel traefik-passwd tfg-clean tfg-lint tfg-pdf training-clean training-collect-chemicals training-collect-diagnoses training-collect-procedures training-dataset training-jupyter-cpu training-jupyter-gpu training-setup up
 
 -include .env
 export
@@ -771,6 +771,37 @@ up: frontend-install ## Levantar todos los servicios. Usa la GPU si se detecta (
 	@echo "  - PostgreSQL:    localhost:5432"
 
 .DEFAULT_GOAL := help
+
+DEMO_BASE_URL    ?= http://host.docker.internal:3100
+DEMO_CA_PEM      ?=
+DEMO_EMAIL       ?= $(SEED_ADMIN_EMAIL)
+DEMO_PASSWORD    ?= $(SEED_ADMIN_PASSWORD)
+
+demo-check: ## Comprueba que la aplicacion responde antes de grabar
+	@echo "$(BLUE)==> Comprobando la app en $(DEMO_BASE_URL)$(NC)"
+	curl -fsS -o /dev/null "$(subst host.docker.internal,localhost,$(DEMO_BASE_URL))/api/health" \
+		|| (echo "$(YELLOW)La aplicacion no responde en $(DEMO_BASE_URL). Levantala (make mock-up) y reintenta.$(NC)"; exit 1)
+
+demo-capturas-%: demo-check ## Graba un clip y sus capturas. Uso: make demo-capturas-1 (1..4)
+	@echo "$(BLUE)==> Video $*: grabando el clip (un solo clip a la vez)$(NC)"
+	mkdir -p demo/out/clips demo/out/screenshots
+	@echo "+ bash demo/capturas/run.sh 0$*"
+	@CA_PEM="$(DEMO_CA_PEM)" DEMO_EMAIL="$(DEMO_EMAIL)" DEMO_PASSWORD="$(DEMO_PASSWORD)" bash demo/capturas/run.sh 0$*
+
+demo-montaje-%: ## Monta el mp4 de un video. Uso: make demo-montaje-1
+	@echo "$(BLUE)==> Video $*: montando el mp4 (intro, marco, cierre y musica)$(NC)"
+	demo/montaje/montar.sh 0$*
+
+demo-montaje: ## Monta los mp4 de todos los clips de demo/out/clips
+	demo/montaje/montar.sh
+
+demo-video-%: ## Graba y monta un video (app levantada). Uso: make demo-video-1 (1..4)
+	$(MAKE) --no-print-directory demo-capturas-$*
+	$(MAKE) --no-print-directory demo-montaje-$*
+	@echo "$(GREEN)Listo: demo/out/videos/0$*.mp4 y demo/out/screenshots/0$*/$(NC)"
+
+demo-videos: ## Los 4 videos, uno detras de otro (nunca en paralelo)
+	for n in 1 2 3 4; do echo "$(BLUE)==> [$$n/4]$(NC)"; $(MAKE) --no-print-directory -j1 demo-video-$$n || exit 1; done
 
 e2e-tests: ## Tests de extremo a extremo con Playwright (requiere la aplicacion levantada)
 	@echo "$(GREEN)Tests de extremo a extremo...$(NC)"

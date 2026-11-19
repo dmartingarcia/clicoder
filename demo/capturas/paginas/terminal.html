@@ -1,0 +1,20 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Terminal</title>
+<style>
+html,body{margin:0;height:100%;background:#0b1020;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+.w{width:1560px;height:860px;background:#111827;border-radius:16px;box-shadow:0 30px 80px #000a;overflow:hidden;display:flex;flex-direction:column}
+.t{height:44px;background:#1f2937;display:flex;align-items:center;gap:8px;padding:0 16px;color:#9ca3af;font-size:14px}
+.t i{width:13px;height:13px;border-radius:50%;display:block}.t span{margin-left:12px}
+pre{margin:0;padding:22px 28px;color:#e5e7eb;font-size:19px;line-height:1.5;white-space:pre-wrap;flex:1;overflow:hidden}
+.p{color:#60a5fa}.c{color:#a7f3d0}.ok{color:#4ade80}.bad{color:#f87171}.k{display:inline-block;width:11px;height:22px;background:#e5e7eb;vertical-align:-4px;animation:b 1s steps(2) infinite}
+@keyframes b{50%{opacity:0}}
+</style></head><body><div class="w"><div class="t"><i style="background:#ef4444"></i><i style="background:#f59e0b"></i><i style="background:#22c55e"></i><span id="tit">cie-10 — zsh</span></div>
+<pre id="o"><span class="k"></span></pre></div>
+<script>
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const col=l=>esc(l).replace(/\(healthy\)/g,'<span class="ok">(healthy)</span>').replace(/\(unhealthy\)/g,'<span class="bad">(unhealthy)</span>');
+let buf="";const o=document.getElementById("o");const draw=()=>o.innerHTML=buf+'<span class="k"></span>';
+window.titulo=t=>document.getElementById("tit").textContent=t;
+window.limpiar=()=>{buf="";draw()};
+window.teclear=async(cmd,ms=45)=>{buf+='<span class="p">$ </span>';for(const ch of cmd){buf+='<span class="c">'+esc(ch)+'</span>';draw();await new Promise(r=>setTimeout(r,ms))}buf+="\n";draw()};
+window.salida=async(txt,ms=70)=>{for(const l of txt.split("\n")){buf+=col(l)+"\n";draw();await new Promise(r=>setTimeout(r,ms))}};
+</script></body></html>

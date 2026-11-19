@@ -1,0 +1,37 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Arquitectura Clicoder</title>
+<link rel="stylesheet" href="base.css">
+<style>
+.wrap{position:absolute;inset:0;padding:64px 80px}
+h1{margin:0 0 6px;font-size:40px}p.sub{margin:0 0 28px;color:var(--mut);font-size:20px}
+.row{display:flex;gap:22px;align-items:stretch;margin-bottom:22px}
+.n{flex:1;background:var(--card);border-radius:18px;padding:18px 20px;box-shadow:0 8px 24px #1e3a8a1a;
+ border:2px solid transparent;opacity:.35;transform:scale(.97);transition:all .6s cubic-bezier(.2,.8,.2,1)}
+.n.on{opacity:1;transform:scale(1);border-color:var(--blue)}
+.n b{display:block;font-size:22px}.n span{color:var(--mut);font-size:15px}
+.tag{display:inline-block;margin-top:10px;font-size:12px;font-weight:600;color:var(--ind);background:#e0e7ff;border-radius:99px;padding:3px 10px}
+.lbl{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:0 0 8px;font-weight:700}
+.arrow{align-self:center;font-size:28px;color:var(--blue);opacity:.3;transition:opacity .6s}.arrow.on{opacity:1}
+</style></head><body><div class="wrap">
+<h1>Así funciona Clicoder por dentro</h1><p class="sub">Seis piezas, todo en contenedores, desplegado con un comando.</p>
+<p class="lbl">Entrada</p>
+<div class="row">
+ <div class="n" id="s1"><b>Cloudflare Tunnel</b><span>Sin puertos abiertos en el VPS</span><br><i class="tag">cloudflared</i></div><div class="arrow" id="a1">→</div>
+ <div class="n" id="s2"><b>Traefik</b><span>Proxy inverso, TLS y enrutado</span><br><i class="tag">traefik v3</i></div></div>
+<p class="lbl">Aplicación</p>
+<div class="row">
+ <div class="n" id="s3"><b>Frontend</b><span>Chat clínico en tiempo real</span><br><i class="tag">Next.js 16 · React 19</i></div><div class="arrow" id="a3">⇄</div>
+ <div class="n" id="s4"><b>Backend</b><span>API, WebSocket, eventos</span><br><i class="tag">Elixir · Phoenix</i></div><div class="arrow" id="a4">→</div>
+ <div class="n" id="s5"><b>Motor de IA</b><span>RigoBERTa + diccionario</span><br><i class="tag">FastAPI · PyTorch</i></div></div>
+<p class="lbl">Datos y observabilidad</p>
+<div class="row">
+ <div class="n" id="s6"><b>PostgreSQL</b><span>Conversaciones y event store</span><br><i class="tag">postgres 18</i></div>
+ <div class="n" id="s7"><b>Prometheus · Loki · Grafana</b><span>Métricas, logs y SLA</span><br><i class="tag">7 dashboards</i></div>
+ <div class="n" id="s8"><b>CI/CD</b><span>Tests, lint, auditoría y e2e</span><br><i class="tag">GitHub Actions</i></div></div>
+</div>
+<script>
+const orden=[["s1"],["s2","a1"],["s3"],["s4","a3"],["s5","a4"],["s6"],["s7"],["s8"]];
+window.total=orden.length;
+window.paso=n=>{orden.forEach((ids,i)=>ids.forEach(id=>document.getElementById(id).classList.toggle("on",i<n)));
+ document.querySelectorAll(".n").forEach(e=>e.style.borderColor="");const u=orden[n-1];if(u)document.getElementById(u[0]).style.borderColor="#4f46e5"};
+window.todo=()=>window.paso(orden.length);window.paso(0);
+</script></body></html>

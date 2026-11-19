@@ -1,0 +1,57 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="estilo.css">
+<style>
+  #ventana { position: absolute; width: 1632px; height: 962px; border-radius: 16px; overflow: hidden; }
+  #barra {
+    position: absolute; left: 0; top: 0; width: 100%; height: 44px; display: flex; align-items: center;
+    border-bottom: 1px solid rgba(0,0,0,.09);
+  }
+  .pt { width: 12px; height: 12px; border-radius: 50%; position: absolute; top: 16px; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.18); }
+  #pildora {
+    position: absolute; left: 50%; top: 9px; transform: translateX(-50%); width: 560px; height: 26px; border-radius: 13px;
+    background: rgba(0,0,0,.055); display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 13px; font-weight: 500; color: #5b6270; letter-spacing: .01em;
+  }
+  #sombra, #reflejo, #mascara { position: absolute; }
+</style>
+<script src="comun.js"></script>
+</head>
+<body>
+<div id="ventana"><div id="barra"><i class="pt" style="left:20px;background:#ff5f57"></i><i class="pt" style="left:40px;background:#febc2e"></i><i class="pt" style="left:60px;background:#28c840"></i>
+  <div id="pildora"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span id="url"></span></div>
+</div></div>
+<div id="sombra"></div>
+<div id="reflejo"></div>
+<div id="mascara"></div>
+<script>
+window.setup = (P) => {
+  const v = document.getElementById('ventana');
+  const nada = (id) => (document.getElementById(id).style.display = 'none');
+  ['sombra', 'reflejo', 'mascara'].forEach((c) => c !== P.capa && nada(c));
+  if (P.capa !== 'fondo') v.style.display = 'none';
+  const WW = 1632, WH = 962, BAR = 44, CH = 918, R = 16;
+  if (P.capa === 'fondo') {
+    v.style.left = v.style.top = '0';
+    v.style.background = P.CF;
+    const barra = document.getElementById('barra');
+    barra.style.background = `linear-gradient(180deg, ${MC.mezcla(P.CF, '#ffffff', 0.85)}, ${MC.mezcla(P.CF, '#ffffff', 0.55)})`;
+    document.getElementById('url').textContent = P.url;
+  } else if (P.capa === 'mascara') {
+    document.documentElement.style.background = '#000';
+    document.body.style.background = '#000';
+    const m = document.getElementById('mascara');
+    m.style.cssText = `left:0;top:0;width:${WW}px;height:${CH}px;background:#fff;border-radius:0 0 ${R}px ${R}px`;
+  } else if (P.capa === 'sombra') {
+    const s = document.getElementById('sombra');
+    s.style.cssText = `left:${(1920 - WW) / 2}px;top:${(1080 - WH) / 2}px;width:${WW}px;height:${WH}px;border-radius:${R}px;` +
+      `box-shadow: 0 60px 120px -30px rgba(0,0,0,.65), 0 30px 60px -10px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.07), 0 0 160px ${MC.rgba(P.A, 0.32)}`;
+  } else if (P.capa === 'reflejo') {
+    const r = document.getElementById('reflejo');
+    r.style.cssText = `left:0;top:0;width:${WW}px;height:${WH}px;border-radius:${R}px;` +
+      `background: linear-gradient(118deg, rgba(255,255,255,.085) 0%, rgba(255,255,255,.02) 34%, rgba(255,255,255,0) 46%);` +
+      `box-shadow: inset 0 0 0 1px rgba(255,255,255,.26), inset 0 1px 0 rgba(255,255,255,.5)`;
+  }
+};
+</script>
+</body></html>

@@ -1,0 +1,63 @@
+id: "04"
+titulo: Infraestructura reproducible
+subtitulo: Docker, monitorización y CI/CD
+ritmo: 0.6
+velocidad: 1.0
+
+tema:
+  viewport: { ancho: 1920, alto: 1080 }
+  colores: { primario: "#2563eb", secundario: "#4f46e5", fondo: "#0b1220", texto: "#ffffff" }
+  rotulo: { posicion: bottom }
+
+pasos:
+  - js: { modulo: js/trafico.mjs }
+  - js: { modulo: js/paginas.mjs, args: { accion: abrir, pagina: arquitectura.html } }
+  - rotulo: { titulo: Todo en contenedores, sub: De la petición del médico al código CIE-10, ms: 2500 }
+  - js:
+      modulo: js/paginas.mjs
+      args: { accion: arquitectura, pausa: 2400, capturas: { 4: arquitectura-app } }
+  - captura: arquitectura-completa
+
+  - js: { modulo: js/paginas.mjs, args: { accion: abrir, pagina: terminal.html } }
+  - js:
+      modulo: js/paginas.mjs
+      args: { accion: terminal, titulo: "clicoder — docker", comando: "docker ps   # los servicios de Clicoder", fichero: compose_ps.txt, velocidad: 90, captura: terminal-docker-ps }
+  - js:
+      modulo: js/paginas.mjs
+      args: { accion: terminal, limpiar: true, comando: "make help | head -n 14", fichero: make_help.txt, lineas: 14, velocidad: 70, captura: terminal-make-help }
+
+  - rotulo: { titulo: Observabilidad incluida, sub: Métricas y SLA desde el primer día, ms: 2500 }
+  - js: { modulo: js/grafana.mjs }
+  - ir: "${GRAFANA_URL:-http://host.docker.internal:3030}/d/cie10-sla?kiosk&from=now-15m&to=now&refresh=5s"
+  - esperar: { selector: .react-grid-item, max: 30 }
+  - rotulo: { titulo: Disponibilidad medida, sub: Cada servicio se comprueba cada 15 s, ms: 2800 }
+  - captura: grafana-sla
+  - zoom: { en: ".react-grid-item >> nth=0", escala: 1.15, ms: 2500 }
+  - zoom: { reset: true }
+  - ir: "${GRAFANA_URL:-http://host.docker.internal:3030}/d/cie10-backend?kiosk&viewPanel=1&from=now-15m&to=now&refresh=5s"
+  - esperar: { selector: .uplot, max: 30 }
+  - rotulo: { titulo: "El backend, al detalle", sub: "Peticiones, latencia y base de datos en tiempo real", ms: 2800 }
+  - captura: grafana-backend-peticiones
+  - ir: "${GRAFANA_URL:-http://host.docker.internal:3030}/d/cie10-backend?kiosk&viewPanel=2&from=now-15m&to=now&refresh=5s"
+  - esperar: { selector: .uplot, max: 30 }
+  - pausa: 2800
+  - captura: grafana-backend-latencia
+  - ir: "${GRAFANA_URL:-http://host.docker.internal:3030}/d/cie10-backend?kiosk&viewPanel=5&from=now-15m&to=now&refresh=5s"
+  - esperar: { selector: .uplot, max: 30 }
+  - pausa: 2800
+  - captura: grafana-backend-bd
+  - ir: "${GRAFANA_URL:-http://host.docker.internal:3030}/d/cie10-node?kiosk&viewPanel=6&from=now-15m&to=now&refresh=5s"
+  - esperar: { selector: .uplot, max: 30 }
+  - rotulo: { titulo: "Y el equipo que lo ejecuta", sub: "CPU, memoria y carga del host", ms: 2800 }
+  - captura: grafana-host-cpu
+  - ir: "${GRAFANA_URL:-http://host.docker.internal:3030}/d/cie10-node?kiosk&viewPanel=7&from=now-15m&to=now&refresh=5s"
+  - esperar: { selector: .uplot, max: 30 }
+  - pausa: 2800
+  - captura: grafana-host-memoria
+  - ir: "${GRAFANA_URL:-http://host.docker.internal:3030}/d/cie10-node?kiosk&viewPanel=10&from=now-15m&to=now&refresh=5s"
+  - esperar: { selector: .uplot, max: 30 }
+  - pausa: 2800
+  - captura: grafana-host-carga
+  - js: { modulo: js/trafico.mjs, args: { accion: parar } }
+
+  - rotulo: { titulo: Un comando y en producción, sub: "Docker Compose · Traefik · Cloudflare Tunnel · CI/CD", ms: 3500 }

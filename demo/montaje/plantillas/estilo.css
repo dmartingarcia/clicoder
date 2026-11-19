@@ -1,0 +1,33 @@
+@font-face {
+  font-family: 'Inter';
+  src: url('file:///pw/node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden; background: transparent;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; font-feature-settings: 'cv11', 'ss01', 'calt';
+}
+canvas#fondo { position: absolute; inset: 0; width: 100%; height: 100%; }
+#esc { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; will-change: transform, filter, opacity; }
+
+.logo {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  border-radius: 28%; will-change: transform;
+}
+.logo .anillo { position: absolute; inset: 0; border-radius: inherit; border: 2px solid rgba(255,255,255,.55); pointer-events: none; }
+
+.marca {
+  font-weight: 600; text-transform: uppercase; letter-spacing: .55em; padding-left: .55em;
+  white-space: nowrap; will-change: transform, opacity, filter;
+}
+.titulo {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline;
+  max-width: 1560px; text-align: center; font-weight: 800; letter-spacing: -.035em; line-height: 1.06;
+}
+.titulo .pal { display: inline-block; overflow: hidden; padding: 0 .11em .14em; margin-bottom: -.14em; vertical-align: top; }
+.titulo .pal > span { display: inline-block; will-change: transform, filter, opacity; }
+.linea { height: 4px; border-radius: 4px; will-change: width, opacity; }
+.sub { text-align: center; font-weight: 500; letter-spacing: -.012em; max-width: 1400px; line-height: 1.3; will-change: transform, opacity, filter; }
