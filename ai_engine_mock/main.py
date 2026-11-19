@@ -258,6 +258,16 @@ async def predict_codes(request: AnalysisRequest):
     }
 
 
+@app.get("/admin/models", summary="Catálogo de modelos (mock)")
+async def list_models():
+    return {"models": []}
+
+
+@app.post("/admin/summarizer", summary="Configurar el resumidor (mock)")
+async def configure_summarizer(config: dict):
+    return {"status": "ok", "model": config.get("model"), "mode": config.get("mode")}
+
+
 @app.post("/summarize/stream", summary="Resumen médico en streaming (NDJSON, mock)")
 async def summarize_stream(request: SummarizeRequest):
     text = request.text.strip()
