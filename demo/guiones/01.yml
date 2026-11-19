@@ -1,0 +1,132 @@
+id: "01"
+titulo: Del informe al código en segundos
+subtitulo: Sugerencias CIE-10 con su explicación
+ritmo: 0.7
+velocidad: 1.35
+cuenta: registro
+
+textos:
+  informe: ./textos/informe.txt
+
+pasos:
+  - js: { modulo: js/retraso_ws.mjs }
+  - js: { modulo: js/admin.mjs, args: { accion: preparar } }
+  - ir: /
+  - pausa: 600
+  - captura: portada
+  - rotulo: { titulo: "Clicoder, codificación con IA", sub: "Codifica informes clínicos en segundos", ms: 3800 }
+  - teclear: { en: 'input[type="email"]', texto: "@email", retardo: 45 }
+  - teclear: { en: 'input[type="password"]', texto: "@password", retardo: 70 }
+  - clic: 'button[type="submit"]'
+  - esperar: { texto: Cerrar sesión, max: 30 }
+  - captura: sesion-iniciada
+
+  - rotulo: { titulo: "Empieza un análisis", sub: "Un informe, una conversación", ms: 2800 }
+  - clic: "rol=button[name=/nuevo análisis/i]"
+  - esperar: { selector: '[placeholder*="informe" i]', max: 30 }
+  - captura: nuevo-analisis
+
+  - rotulo: { titulo: "Pega el informe del paciente", sub: "Texto libre, tal y como lo escribe el médico", ms: 0, pos: top }
+  - teclear: { en: '[placeholder*="informe" i]', texto: "@informe", retardo: 18 }
+  - clic: "rol=button[name=/analizar/i]"
+  - esperar: { selector: "rol=button[name=/^validar/i]", max: 120 }
+  - quitar_rotulo: true
+  - captura: codigos-propuestos
+
+  - rotulo: { titulo: "Códigos CIE-10 propuestos", sub: "Ordenados por probabilidad, con su capítulo y descripción", ms: 4200 }
+  - zoom: { en: 'rol=button[name=/^validar/i] >> xpath=ancestor::div[contains(@class,"rounded")][1]', escala: 1.3, ms: 1000 }
+    seguro: true
+  - pausa: 1800
+  - captura: zoom-tarjeta
+  - zoom: { reset: true }
+    seguro: true
+
+  - rotulo: { titulo: "Sabes por qué", sub: "Los términos del informe que respaldan cada código", ms: 0 }
+  - mover: { en: 'button[class*="text-[10px]"]', ms: 900 }
+    seguro: true
+  - resaltar: { en: 'button[class*="text-[10px]"]', ms: 2600 }
+    seguro: true
+  - captura: terminos-explicacion
+  - quitar_rotulo: true
+
+  - rotulo: { titulo: "Tú decides", sub: "Valida o rechaza cada propuesta", ms: 0 }
+  - clic: "rol=button[name=/^validar/i]"
+  - pausa: 1400
+  - captura: codigo-validado
+  - quitar_rotulo: true
+
+  - rotulo: { titulo: "Tres estrategias, un mismo informe", sub: "Se eligen desde el panel de administración", ms: 3200 }
+  - js: { modulo: js/admin.mjs, args: { accion: entrar } }
+  - esperar: { selector: ".phx-connected", max: 30 }
+  - ir: "${BACKEND_URL:-http://localhost:4000}/admin/settings"
+  - esperar: { selector: ".phx-connected", max: 30 }
+  - clic: 'button[phx-value-engine="dict"]'
+  - esperar: { texto: "Motor actualizado correctamente", max: 15 }
+  - rotulo: { titulo: "Solo diccionario", sub: "Reglas deterministas, sin GPU y al instante · MAP 0,145", ms: 3600 }
+  - captura: admin-diccionario
+  - ir: /
+  - clic: "rol=button[name=/nuevo análisis/i]"
+  - esperar: { selector: '[placeholder*="informe" i]', max: 30 }
+  - teclear: { en: '[placeholder*="informe" i]', texto: "@informe", retardo: 3 }
+  - clic: "rol=button[name=/analizar/i]"
+  - esperar: { selector: "rol=button[name=/^validar/i]", max: 120 }
+  - resaltar: { en: 'text=/Motor:/', ms: 2400 }
+    seguro: true
+  - captura: analisis-diccionario
+
+  - ir: "${BACKEND_URL:-http://localhost:4000}/admin/settings"
+  - esperar: { selector: ".phx-connected", max: 30 }
+  - clic: 'button[phx-value-engine="bert"]'
+  - esperar: { texto: "Motor actualizado correctamente", max: 15 }
+  - rotulo: { titulo: "Solo clasificador (BERT)", sub: "Red neuronal multi-label, ordena dentro del bloque · MAP 0,454", ms: 3600 }
+  - captura: admin-bert
+  - ir: /
+  - clic: "rol=button[name=/nuevo análisis/i]"
+  - esperar: { selector: '[placeholder*="informe" i]', max: 30 }
+  - teclear: { en: '[placeholder*="informe" i]', texto: "@informe", retardo: 3 }
+  - clic: "rol=button[name=/analizar/i]"
+  - esperar: { selector: "rol=button[name=/^validar/i]", max: 120 }
+  - resaltar: { en: 'text=/Motor:/', ms: 2400 }
+    seguro: true
+  - captura: analisis-bert
+
+  - ir: "${BACKEND_URL:-http://localhost:4000}/admin/settings"
+  - esperar: { selector: ".phx-connected", max: 30 }
+  - clic: 'button[phx-value-engine="fused"]'
+  - esperar: { texto: "Motor actualizado correctamente", max: 15 }
+  - rotulo: { titulo: "Fusión: clasificador + diccionario", sub: "El diccionario suma confianza al modelo · MAP 0,554, la mejor opción medida", ms: 3600 }
+  - captura: admin-fusion
+  - ir: /
+  - clic: "rol=button[name=/nuevo análisis/i]"
+  - esperar: { selector: '[placeholder*="informe" i]', max: 30 }
+  - teclear: { en: '[placeholder*="informe" i]', texto: "@informe", retardo: 3 }
+  - clic: "rol=button[name=/analizar/i]"
+  - esperar: { selector: "rol=button[name=/^validar/i]", max: 120 }
+  - resaltar: { en: 'text=/Motor:/', ms: 2400 }
+    seguro: true
+  - captura: analisis-fusion
+
+  - ir: ${BACKEND_URL:-http://localhost:4000}/admin/settings
+  - esperar: { selector: ".phx-connected", max: 30 }
+  - scroll: { en: 'text=Summarizer LLM' }
+  - clic: 'label:has(input[name="model"][value="gemma4"])'
+  - clic: 'label:has(input[name="mode"][value="summary"])'
+  - rotulo: { titulo: "El resumidor", sub: "Un modelo local resume el informe en unas 120 palabras", ms: 3400 }
+  - clic: 'button:has-text("Aplicar y recargar modelo")'
+  - esperar: { texto: "Summarizer recargado correctamente", max: 60 }
+  - captura: admin-resumidor
+  - ir: /
+  - clic: "rol=button[name=/nuevo análisis/i]"
+  - esperar: { selector: '[placeholder*="informe" i]', max: 30 }
+  - teclear: { en: '[placeholder*="informe" i]', texto: "@informe", retardo: 3 }
+  - clic: "rol=button[name=/analizar/i]"
+  - esperar: { texto: "Resumen del informe", max: 120 }
+  - esperar: { selector: "rol=button[name=/^validar/i]", max: 120 }
+  - pausa: 1200
+  - scroll: { en: 'text=Resumen del informe' }
+  - resaltar: { en: 'text=Resumen del informe >> xpath=ancestor::div[contains(@class,"rounded")][1]', ms: 3200 }
+    seguro: true
+  - captura: resumen
+
+  - rotulo: { titulo: "Codificación asistida, decisión humana", sub: "Clicoder · Trabajo Fin de Grado", ms: 4200, pos: center }
+  - pausa: 800

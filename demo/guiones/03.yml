@@ -1,0 +1,39 @@
+id: "03"
+titulo: Cómo piensa el motor
+subtitulo: Datos reales, decisiones medidas
+ritmo: 1.0
+velocidad: 1.0
+
+textos:
+  informe: >-
+    Paciente varón de 68 años, fumador de 20 cigarrillos al día, que acude por disnea de esfuerzo
+    progresiva y tos productiva de tres semanas de evolución. Antecedentes de hipertensión arterial
+    y diabetes mellitus tipo 2 en tratamiento. A la exploración, crepitantes bibasales y saturación del 91 % basal.
+
+pasos:
+  - js: { modulo: js/motor.mjs, args: { accion: abrir } }
+  - pausa: 400
+
+  - js: { modulo: js/motor.mjs, args: { accion: escena, n: 1 } }
+  - rotulo: { titulo: "Un informe, miles de códigos posibles", sub: "La codificación manual es un cuello de botella", ms: 11500 }
+  - captura: problema
+
+  - js: { modulo: js/motor.mjs, args: { accion: escena, n: 2 } }
+  - rotulo: { titulo: "Cómo piensa el motor", sub: "Del texto libre a los códigos ordenados", ms: 10500 }
+  - captura: pipeline
+
+  - js: { modulo: js/motor.mjs, args: { accion: escena, n: 3 } }
+  - rotulo: { titulo: "Datos reales, decisiones medidas", sub: "Cada decisión se probó, también la que se descartó", ms: 11500 }
+  - captura: entrenamiento
+
+  - js: { modulo: js/motor.mjs, args: { accion: escena, n: 4 } }
+  - rotulo: { titulo: "Medido, no supuesto", sub: "Mismos informes de prueba para los tres motores", ms: 12500 }
+  - captura: evaluacion
+
+  - js: { modulo: js/motor.mjs, args: { accion: escena, n: 5 } }
+  - rotulo: { titulo: "Cada código, con su porqué", sub: "Las palabras que sostienen la predicción", ms: 10500 }
+  - captura: explicabilidad
+
+  - js: { modulo: js/motor.mjs, args: { accion: escena, n: 6, informe: "@informe" } }
+  - rotulo: { titulo: "Una llamada, códigos listos", sub: "API REST para integrar Clicoder en cualquier sistema", ms: 10500 }
+  - captura: api

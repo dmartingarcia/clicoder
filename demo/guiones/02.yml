@@ -1,0 +1,105 @@
+id: "02"
+titulo: Tu trabajo, siempre a mano
+subtitulo: Conversaciones, historial y privacidad
+ritmo: 0.7
+velocidad: 1
+cuenta: nueva
+
+textos:
+  informe_2: ./textos/informe_2.txt
+  informe_3: ./textos/informe_3.txt
+
+pasos:
+  - js: { modulo: js/retraso_ws.mjs }
+  - ir: /
+  - pausa: 500
+  - rotulo: { titulo: "Tus datos, bajo control", sub: "Registro con confirmación por correo y aviso de privacidad", ms: 3400 }
+  - clic: "rol=button[name=/^(registr|sign up|crear)/i]"
+    seguro: true
+  - teclear: { en: '[placeholder="Juan"]', texto: "@nombre", retardo: 60 }
+  - teclear: { en: '[placeholder="García López"]', texto: "@apellidos", retardo: 50 }
+  - teclear: { en: '[placeholder="dr_garcia"]', texto: "@usuario", retardo: 50 }
+  - teclear: { en: 'input[type="email"]', texto: "@email", retardo: 45 }
+  - teclear: { en: 'input[type="password"]', texto: "@password", retardo: 70 }
+  - captura: registro
+  - clic: "rol=button[name=/derechos|privacidad|privacy/i]"
+    seguro: true
+  - pausa: 2200
+  - captura: privacidad
+  - clic: "rol=button[name=/^cerrar$/i]"
+  - pausa: 400
+  - clic: 'button[type="submit"]'
+  - pausa: 2200
+  - captura: revisa-correo
+  - rotulo: { titulo: "Confirma tu cuenta", sub: "Un enlace llega al correo del médico", ms: 3000 }
+  - confirmar: correo
+  - captura: panel-vacio
+
+  - rotulo: { titulo: "Cada informe, su conversación", sub: "El historial queda siempre a mano", ms: 3000 }
+  - clic: "rol=button[name=/nuevo análisis/i]"
+  - esperar: { selector: '[placeholder*="informe" i]', max: 30 }
+  - teclear: { en: '[placeholder*="informe" i]', texto: "@informe_2", retardo: 12 }
+  - clic: "rol=button[name=/analizar/i]"
+  - esperar: { selector: "rol=button[name=/^validar/i]", max: 120 }
+  - captura: conversacion-1
+  - clic: "rol=button[name=/nuevo análisis/i]"
+  - esperar: { selector: '[placeholder*="informe" i]', max: 30 }
+  - teclear: { en: '[placeholder*="informe" i]', texto: "@informe_3", retardo: 12 }
+  - clic: "rol=button[name=/analizar/i]"
+  - esperar: { selector: "rol=button[name=/^validar/i]", max: 120 }
+  - captura: conversacion-2
+
+  - rotulo: { titulo: "Historial", sub: "Vuelve a cualquier análisis anterior", ms: 0 }
+  - clic: "div.relative.group >> nth=1 >> button >> nth=0"
+    seguro: true
+  - pausa: 1400
+  - captura: historial
+  - quitar_rotulo: true
+
+  - rotulo: { titulo: "Cinco idiomas", sub: "Español, inglés, francés, italiano y alemán", ms: 0 }
+  - clic: { en: "button:has(span.uppercase)", despues: 350 }
+    seguro: true
+  - clic: { en: "rol=button[name=/^\\S*\\s*en$/i] >> last", despues: 1300 }
+    seguro: true
+  - captura: idioma-en
+  - clic: { en: "button:has(span.uppercase)", despues: 350 }
+    seguro: true
+  - clic: { en: "rol=button[name=/^\\S*\\s*fr$/i] >> last", despues: 1300 }
+    seguro: true
+  - captura: idioma-fr
+  - clic: { en: "button:has(span.uppercase)", despues: 350 }
+    seguro: true
+  - clic: { en: "rol=button[name=/^\\S*\\s*es$/i] >> last", despues: 1300 }
+    seguro: true
+  - captura: idioma-es
+  - quitar_rotulo: true
+
+  - clic: "div.relative.group >> nth=0 >> button >> nth=0"
+  - pausa: 800
+  - rotulo: { titulo: "Papelera con rescate", sub: "Borra sin miedo: puedes restaurarlo", ms: 0 }
+  - clic: "div.relative.group >> nth=1 >> button[title]"
+    seguro: true
+  - pausa: 1000
+  - captura: conversacion-borrada
+  - clic: "rol=button[name=/papelera|trash/i]"
+    seguro: true
+  - pausa: 900
+  - captura: papelera
+  - clic: 'button[title*="estaur"]'
+    seguro: true
+  - pausa: 1200
+  - captura: restaurada
+  - clic: "div.relative.group >> nth=1 >> button >> nth=0"
+  - pausa: 1400
+  - captura: conversacion-abierta
+  - quitar_rotulo: true
+
+  - rotulo: { titulo: "Tus datos son tuyos", sub: "Exporta o elimina tu cuenta cuando quieras", ms: 0 }
+  - mover: { en: "rol=button[name=/exportar|export/i]", ms: 800 }
+    seguro: true
+  - pausa: 2200
+  - captura: exportar-datos
+  - quitar_rotulo: true
+
+  - rotulo: { titulo: "Privacidad y control, por diseño", sub: "Clicoder · Trabajo Fin de Grado", ms: 4200, pos: center }
+  - pausa: 600

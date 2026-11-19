@@ -1,0 +1,92 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="estilo.css">
+<script src="comun.js"></script>
+<style>
+  .cta {
+    display: flex; align-items: center; gap: 18px; padding: 20px 38px 20px 30px; border-radius: 999px;
+    border: 1.5px solid rgba(255,255,255,.28); font-weight: 600; letter-spacing: -.01em; white-space: nowrap;
+    background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.06));
+    will-change: transform, opacity;
+  }
+  .cta .punto { width: 14px; height: 14px; border-radius: 50%; }
+  .cta svg { margin-left: 6px; }
+  .datos { text-align: center; font-weight: 500; letter-spacing: .02em; will-change: opacity, transform; }
+</style>
+</head>
+<body>
+<canvas id="fondo" width="1920" height="1080"></canvas>
+<div id="esc">
+  <div class="logo" id="logo"></div>
+  <div class="marca" id="marca"></div>
+  <div class="titulo" id="titulo"></div>
+  <div class="cta" id="cta"><span class="punto" id="punto"></span><span id="ctatxt"></span>
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+  </div>
+  <div class="datos" id="datos"></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+let P, pal, ctx;
+window.setup = (params) => {
+  P = params;
+  ctx = $('fondo').getContext('2d');
+  const l = $('logo');
+  const px = 104;
+  l.style.width = l.style.height = px + 'px';
+  l.style.background = `linear-gradient(140deg, ${P.A}, ${P.B})`;
+  l.style.boxShadow = `0 20px 60px ${MC.rgba(P.A, 0.55)}, inset 0 1px 0 rgba(255,255,255,.4)`;
+  l.insertAdjacentHTML('afterbegin', MC.LOGO_SVG(Math.round(px * 0.56)));
+  MC.dibujarLogo(l, 1);
+  const m = $('marca');
+  m.textContent = P.marca;
+  m.style.cssText += `;font-size:${Math.round(P.tituloPx * 0.36)}px;color:${MC.rgba(P.TXT, 0.7)};margin-top:30px`;
+  const t = $('titulo');
+  t.style.fontSize = Math.round(P.tituloPx * 0.86) + 'px';
+  t.style.color = P.TXT;
+  t.style.marginTop = '30px';
+  pal = MC.palabras(t, P.c1);
+  const c = $('cta');
+  c.style.color = P.TXT;
+  c.style.fontSize = Math.round(P.subPx * 0.95) + 'px';
+  c.style.marginTop = '56px';
+  $('punto').style.background = P.ACC;
+  $('ctatxt').textContent = P.c2;
+  const d = $('datos');
+  d.textContent = P.c3 || '';
+  d.style.cssText += `;font-size:${Math.round(P.subPx * 0.62)}px;color:${MC.rgba(P.TXT, 0.6)};margin-top:34px`;
+  d.style.display = P.c3 ? 'block' : 'none';
+};
+window.render = (treal) => {
+  const { seg, E, clamp } = MC;
+  const T = P.t0 + treal;
+  const t = (treal * 4) / P.dur;
+  ctx.clearRect(0, 0, 1920, 1080);
+  MC.fondo(ctx, 1920, 1080, T, P);
+  MC.particulas(ctx, 1920, 1080, T, P);
+
+  const lp = seg(t, 0.3, 0.95);
+  $('logo').style.transform = `scale(${0.6 + 0.4 * E.outBack(lp)})`;
+  $('logo').style.opacity = String(clamp(lp * 2));
+
+  const mp = E.outCubic(seg(t, 0.55, 1.1));
+  $('marca').style.opacity = String(mp);
+  $('marca').style.transform = `translateY(${(1 - mp) * 16}px)`;
+  $('marca').style.filter = `blur(${(1 - mp) * 6}px)`;
+
+  MC.animarPalabras(pal, t, 0.7);
+
+  const cp = seg(t, 1.35, 2.05);
+  $('cta').style.opacity = String(clamp(cp * 2));
+  $('cta').style.transform = `translateY(${(1 - E.outBack(cp)) * 40}px) scale(${0.9 + 0.1 * E.outBack(cp)})`;
+  const lat = 0.5 + 0.5 * Math.sin((MC.TAU * T) / 2);
+  $('punto').style.boxShadow = `0 0 ${14 + lat * 22}px ${6 + lat * 8}px ${MC.rgba(P.ACC, 0.45 + lat * 0.25)}`;
+  $('cta').style.borderColor = MC.rgba('#ffffff', 0.22 + lat * 0.18);
+  $('cta').style.boxShadow = `0 0 ${40 + lat * 40}px ${MC.rgba(P.A, 0.35)}`;
+
+  const dp = E.outCubic(seg(t, 1.8, 2.4));
+  $('datos').style.opacity = String(dp);
+  $('datos').style.transform = `translateY(${(1 - dp) * 14}px)`;
+};
+</script>
+</body></html>

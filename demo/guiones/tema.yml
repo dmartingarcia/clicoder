@@ -1,0 +1,78 @@
+colores:
+  primario: "#4338ca"
+  secundario: "#2563eb"
+  acento: "#22d3ee"
+  texto: "#ffffff"
+  texto_suave: "rgba(255,255,255,0.74)"
+  fondo: "#eef2ff"
+  rotulo_a: "#1b1764"
+  rotulo_b: "#080c26"
+  borde: "rgba(255,255,255,0.18)"
+  cursor: "#ffffff"
+  onda: "#6366f1"
+
+tipografia:
+  familia: '"Inter Variable",Inter,system-ui,-apple-system,"Segoe UI",sans-serif'
+  titulo_px: 46
+  sub_px: 25
+  fuente_embebida:
+    activada: true
+    paquete: "@fontsource-variable/inter"
+    fichero: files/inter-latin-wght-normal.woff2
+    nombre: Inter Variable
+
+rotulo:
+  pos: bottom
+  radio_px: 24
+  opacidad: 0.90
+  blur_px: 22
+  sombra: true
+  margen_px: 56
+  ancho_max_px: 1180
+  contador: true
+  progreso: true
+  entrada_ms: 800
+  salida_ms: 380
+  escalonado_ms: 90
+
+cursor:
+  tamano: 30
+  color: null
+  onda_color: null
+  halo: true
+  halo_px: 48
+
+spotlight:
+  oscurecido: 0.58
+  radio_px: 18
+  margen_px: 14
+  ms: 520
+
+camara:
+  easing: "cubic-bezier(.65,0,.35,1)"
+  pan: 0.55
+  ms: 1000
+
+transicion:
+  fundido_ms: 450
+  color: null
+
+intro:
+  segundos: 3
+  marca: Clicoder
+  titulo_px: 84
+  sub_px: 44
+
+cierre:
+  segundos: 3
+  linea1: Codificación clínica asistida por IA
+  linea2: Proyecto de fin de grado
+
+musica:
+  activada: true
+  volumen: 0.10
+  tonos: [110, 164.81, 220, 277.18]
+
+viewport:
+  ancho: 1920
+  alto: 1080

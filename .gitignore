@@ -114,3 +114,10 @@ e2e/screenshots/
 
 # Volcados de base de datos
 backup_*.sql
+
+# Videos promocionales: salida generada y dependencias
+demo/out/
+demo/node_modules/
+
+*.pem
+*.crt
