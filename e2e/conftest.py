@@ -34,14 +34,15 @@ INFORME = (
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    """Captura de pantalla en el fallo, antes de que la propia página se cierre."""
+    """Captura de pantalla al terminar cada test, pase o falle, antes de que la página se cierre."""
     outcome = yield
     rep = outcome.get_result()
-    if rep.when == "call" and rep.failed:
+    if rep.when == "call":
         pag = item.funcargs.get("pagina") or item.funcargs.get("sesion")
-        if pag:
+        if pag and not pag.is_closed():
             os.makedirs("screenshots", exist_ok=True)
-            pag.screenshot(path=f"screenshots/{item.name}.png")
+            sufijo = "fallo" if rep.failed else "ok"
+            pag.screenshot(path=f"screenshots/{item.name}-{sufijo}.png")
 
 
 @pytest.fixture(scope="session")

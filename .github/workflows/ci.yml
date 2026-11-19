@@ -450,7 +450,7 @@ jobs:
       - name: Tests de extremo a extremo
         run: make e2e-tests
 
-      - name: Capturas de los fallos
+      - name: Capturas de los e2e (artefacto)
         uses: actions/upload-artifact@v7
         if: always()
         with:
