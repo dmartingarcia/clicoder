@@ -147,6 +147,8 @@ cie10:
   times_selected: "Fois sélectionné"
   definition: "Définition"
   variant_codes: "Codes variants"
+  subcategories: "Sous-catégories"
+  category: "Catégorie"
   chem_accidental: "Intoxication accidentelle"
   chem_self_harm: "Automutilation"
   chem_assault: "Agression"

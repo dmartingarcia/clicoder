@@ -147,6 +147,8 @@ cie10:
   times_selected: "Volte selezionato"
   definition: "Definizione"
   variant_codes: "Codici varianti"
+  subcategories: "Sottocategorie"
+  category: "Categoria"
   chem_accidental: "Avvelenamento accidentale"
   chem_self_harm: "Autolesionismo"
   chem_assault: "Aggressione"

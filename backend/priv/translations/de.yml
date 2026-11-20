@@ -147,6 +147,8 @@ cie10:
   times_selected: "Mal ausgewählt"
   definition: "Definition"
   variant_codes: "Variantencodes"
+  subcategories: "Unterkategorien"
+  category: "Kategorie"
   chem_accidental: "Versehentliche Vergiftung"
   chem_self_harm: "Selbstverletzung"
   chem_assault: "Angriff"
