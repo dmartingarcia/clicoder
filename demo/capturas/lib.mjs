@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 export const OUT = process.env.DEMO_OUT || path.resolve(AQUI, '../out');
+const RESOLVER = '--host-resolver-rules=MAP localhost host.docker.internal';
 export const BASE_URL = process.env.BASE_URL || 'http://localhost:3100';
 export const MAILPIT_URL = process.env.MAILPIT_URL || 'http://host.docker.internal:8025';
 export let ANCHO = 1920;
@@ -18,6 +19,11 @@ export function setRitmo(r) {
   const n = Number(r);
   RITMO = Number.isFinite(n) && n > 0 ? Math.min(Math.max(n, 0.1), 3) : 1;
   return RITMO;
+}
+let VELOCIDAD = 1;
+export function setVelocidad(v) {
+  const n = Number(v);
+  VELOCIDAD = Number.isFinite(n) && n >= 1 ? n : 1;
 }
 export const pausaFija = (ms) => new Promise((r) => setTimeout(r, Math.max(0, ms)));
 export const pausa = (ms) => pausaFija(Math.round(ms * RITMO));
@@ -327,9 +333,7 @@ export async function abrir(id, opciones = {}) {
   const pw = await cargarPlaywright();
   const base = opciones.base || BASE_URL;
   const args = ['--hide-scrollbars', '--force-device-scale-factor=1'];
-  if (/\/\/localhost[:/]/.test(base) || base === 'http://localhost') {
-    args.push('--host-resolver-rules=MAP localhost host.docker.internal');
-  }
+  args.push(RESOLVER);
   const browser = await pw.chromium.launch({ args });
   const tmp = path.join(OUT, 'clips', `.tmp-${id}`);
   fs.rmSync(tmp, { recursive: true, force: true });
@@ -414,9 +418,13 @@ export async function rotulo(page, titulo, subtitulo = '', { ms = 3200, pos, con
     },
     [titulo, subtitulo, lugar, conContador ? CAP : 0, CAP_TOTAL, barra],
   );
+  const palabras = `${titulo} ${subtitulo}`.split(/\s+/).filter(Boolean).length;
+  const lectura = (1400 + palabras * 260) * VELOCIDAD;
   if (ms > 0) {
-    await pausa(ms);
+    await pausaFija(Math.max(Math.round(ms * RITMO), lectura));
     await quitarRotulo(page);
+  } else {
+    await pausaFija(Math.round(lectura / 2));
   }
 }
 
@@ -559,12 +567,12 @@ export async function zoom(page, loc = null, escala = 1.35, ms, opciones = {}) {
 }
 
 export function datosCuenta() {
-  const sufijo = Math.random().toString(36).slice(2, 10);
+  const n = 100 + Math.floor(Math.random() * 900);
   return {
     first_name: 'Laura',
     last_name: 'Martín Gil',
-    username: `dra_martin_${sufijo}`,
-    email: `demo_${sufijo}@ejemplo.test`,
+    username: `dra_martin${n}`,
+    email: `laura.martin${n}@clicoder.app`,
     password: 'PruebaSegura1!',
   };
 }
@@ -580,9 +588,7 @@ export async function cuentaDemo(v, { nueva = false } = {}) {
     return { email: process.env.DEMO_EMAIL, password: process.env.DEMO_PASSWORD };
   }
   const datos = datosCuenta();
-  const args = v.base.includes('localhost')
-    ? ['--host-resolver-rules=MAP localhost host.docker.internal']
-    : [];
+  const args = [RESOLVER];
   const br = await v.pw.chromium.launch({ args });
   const ctx = await br.newContext({ viewport: { width: 1280, height: 900 }, locale: 'es-ES' });
   await ctx.addInitScript(() => {

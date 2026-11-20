@@ -2,14 +2,14 @@ id: "01"
 titulo: Del informe al código en segundos
 subtitulo: Sugerencias CIE-10 con su explicación
 ritmo: 0.7
-velocidad: 1.35
+velocidad: 1.25
 cuenta: registro
 
 textos:
   informe: ./textos/informe.txt
 
 pasos:
-  - js: { modulo: js/retraso_ws.mjs }
+  - js: { modulo: js/retraso_ws.mjs, args: { resumen: "Varón de 68 años, fumador de 20 cigarrillos al día, con disnea de esfuerzo progresiva y tos productiva de tres semanas. Antecedentes de hipertensión arterial y diabetes mellitus tipo 2 en tratamiento. En la exploración, crepitantes bibasales y saturación basal del 91 %. Se proponen hipertensión esencial, diabetes mellitus tipo 2 y asma, pendientes de revisión médica." } }
   - js: { modulo: js/admin.mjs, args: { accion: preparar } }
   - ir: /
   - pausa: 600
@@ -53,6 +53,32 @@ pasos:
   - clic: "rol=button[name=/^validar/i]"
   - pausa: 1400
   - captura: codigo-validado
+  - clic: "rol=button[name=/^rechazar/i] >> nth=-1"
+  - teclear: { en: 'input[placeholder*="rechazo" i]', texto: "No consta asma en el informe", retardo: 45 }
+  - clic: "rol=button[name=/confirmar rechazo/i]"
+  - pausa: 1600
+  - captura: codigo-rechazado
+  - quitar_rotulo: true
+
+  - rotulo: { titulo: "Añade el código que falta", sub: "Selecciona un texto del informe y sugiere su código", ms: 0, pos: top }
+  - js: { modulo: js/acciones.mjs, args: { accion: seleccionar, frase: "disnea de esfuerzo progresiva" } }
+  - teclear: { en: 'input[placeholder^="Ej"]', texto: "R06", retardo: 120 }
+  - esperar: { selector: ".absolute button", max: 15 }
+  - captura: sugerir-codigo
+  - clic: ".absolute button >> nth=0"
+  - clic: "rol=button[name=/^sugerir$/i]"
+  - pausa: 1800
+  - captura: codigo-sugerido
+  - quitar_rotulo: true
+
+  - ir: /codes/I50.1
+  - esperar: { texto: "Asma cardial", max: 30 }
+  - rotulo: { titulo: "Cada código, con su ficha", sub: "Jerarquía y descripción completa, con sus sinónimos", ms: 0 }
+  - pausa: 5200
+  - captura: detalle-codigo
+  - js: { modulo: js/acciones.mjs, args: { accion: volver } }
+  - clic: "div.relative.group >> nth=0 >> button >> nth=0"
+  - esperar: { texto: "Códigos CIE-10 detectados", max: 30 }
   - quitar_rotulo: true
 
   - rotulo: { titulo: "Tres estrategias, un mismo informe", sub: "Se eligen desde el panel de administración", ms: 3200 }
@@ -94,7 +120,7 @@ pasos:
   - esperar: { selector: ".phx-connected", max: 30 }
   - clic: 'button[phx-value-engine="fused"]'
   - esperar: { texto: "Motor actualizado correctamente", max: 15 }
-  - rotulo: { titulo: "Fusión: clasificador + diccionario", sub: "El diccionario suma confianza al modelo · MAP 0,554, la mejor opción medida", ms: 3600 }
+  - rotulo: { titulo: "Fusión: clasificador + diccionario", sub: "El diccionario suma confianza · MAP 0,554, la mejor medida", ms: 3600 }
   - captura: admin-fusion
   - ir: /
   - clic: "rol=button[name=/nuevo análisis/i]"

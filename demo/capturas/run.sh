@@ -60,6 +60,7 @@ done
 CMD='set -e
 [ -d /tmp/pw/node_modules/playwright ] && [ -d /tmp/pw/node_modules/yaml ] || \
   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm i --prefix /tmp/pw --no-audit --no-fund playwright@1.56.1 yaml@2 >/dev/null'
+CMD+=$'\n'"trap 'chown -R $(id -u):$(id -g) /work/demo/out' EXIT"
 for o in "${ordenes[@]}"; do CMD+=$'\n'"echo '>> $o'"$'\n'"$o"; done
 
 echo "+ docker run mcr.microsoft.com/playwright:v1.56.1-jammy  (runner.mjs, BASE_URL=${BASE_URL:-http://localhost:3100})"

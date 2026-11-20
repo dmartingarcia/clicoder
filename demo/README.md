@@ -54,6 +54,7 @@ Para probar un guion sin grabar: `bash demo/capturas/run.sh --validar 01`.
 - Solo se graba un vídeo a la vez. `run.sh` crea `demo/out/.grabando` y las demás grabaciones esperan.
 - Los vídeos 01 y 02 se registran con una cuenta nueva cada vez, así que no se ven conversaciones de pruebas anteriores. El 02 hace el registro entero, incluido el correo de confirmación, que lee de Mailpit.
 - Al crear una conversación nueva, la app empuja el informe antes de que exista la conversación en la base de datos y el texto se pierde. `js/retraso_ws.mjs` retrasa ese mensaje 300 ms solo en la grabación.
+- La terminal del vídeo 04 enseña el `docker ps` real. Si hay más contenedores que los de Clicoder, `DEMO_PS_FILTRO` (regex de `grep -E`) deja solo los que interesan.
 - Con el motor mock, el vídeo 01 muestra lo que devuelve el mock. Para códigos reales hay que levantar el motor de verdad.
 - En el vídeo 04 hay paneles de Grafana vacíos en el entorno mock (no hay métricas del motor ni de Traefik), así que solo se enseñan los que tienen datos.
 

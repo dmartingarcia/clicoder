@@ -69,6 +69,16 @@ pasos:
   - captura: idioma-fr
   - clic: { en: "button:has(span.uppercase)", despues: 350 }
     seguro: true
+  - clic: { en: "rol=button[name=/^\\S*\\s*it$/i] >> last", despues: 1300 }
+    seguro: true
+  - captura: idioma-it
+  - clic: { en: "button:has(span.uppercase)", despues: 350 }
+    seguro: true
+  - clic: { en: "rol=button[name=/^\\S*\\s*de$/i] >> last", despues: 1300 }
+    seguro: true
+  - captura: idioma-de
+  - clic: { en: "button:has(span.uppercase)", despues: 350 }
+    seguro: true
   - clic: { en: "rol=button[name=/^\\S*\\s*es$/i] >> last", despues: 1300 }
     seguro: true
   - captura: idioma-es
@@ -95,10 +105,17 @@ pasos:
   - quitar_rotulo: true
 
   - rotulo: { titulo: "Tus datos son tuyos", sub: "Exporta o elimina tu cuenta cuando quieras", ms: 0 }
-  - mover: { en: "rol=button[name=/exportar|export/i]", ms: 800 }
+  - clic: { en: "rol=button[name=/exportar mis datos/i]", despues: 1800 }
     seguro: true
-  - pausa: 2200
   - captura: exportar-datos
+  - clic: "rol=button[name=/eliminar mi cuenta/i]"
+  - esperar: { texto: "¿Eliminar tu cuenta?", max: 15 }
+  - pausa: 2200
+  - captura: eliminar-cuenta
+  - clic: "rol=button[name=/^sí, eliminar/i]"
+  - esperar: { selector: 'input[type="email"]', max: 30 }
+  - pausa: 1400
+  - captura: cuenta-eliminada
   - quitar_rotulo: true
 
   - rotulo: { titulo: "Privacidad y control, por diseño", sub: "Clicoder · Trabajo Fin de Grado", ms: 4200, pos: center }

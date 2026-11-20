@@ -252,6 +252,7 @@ async function main() {
   }
   const tema = lib.setTema(lib.mezclarTema(temaGlobal, guion.tema || {}));
   const ritmo = lib.setRitmo(guion.ritmo ?? 1);
+  lib.setVelocidad(guion.velocidad ?? 1);
   const pasos = guion.pasos;
   lib.setCapitulos(pasos.filter((p) => accionDe(p) === 'rotulo').length);
 

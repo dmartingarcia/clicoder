@@ -785,8 +785,9 @@ demo-check: ## Comprueba que la aplicacion responde antes de grabar
 demo-capturas-%: demo-check ## Graba un clip y sus capturas. Uso: make demo-capturas-1 (1..4)
 	@echo "$(BLUE)==> Video $*: grabando el clip (un solo clip a la vez)$(NC)"
 	mkdir -p demo/out/clips demo/out/screenshots
+	@bash demo/capturas/paginas/gen_datos.sh
 	@echo "+ bash demo/capturas/run.sh 0$*"
-	@CA_PEM="$(DEMO_CA_PEM)" DEMO_EMAIL="$(DEMO_EMAIL)" DEMO_PASSWORD="$(DEMO_PASSWORD)" bash demo/capturas/run.sh 0$*
+	@BASE_URL="$(DEMO_BASE_URL)" CA_PEM="$(DEMO_CA_PEM)" DEMO_EMAIL="$(DEMO_EMAIL)" DEMO_PASSWORD="$(DEMO_PASSWORD)" bash demo/capturas/run.sh 0$*
 
 demo-montaje-%: ## Monta el mp4 de un video. Uso: make demo-montaje-1
 	@echo "$(BLUE)==> Video $*: montando el mp4 (intro, marco, cierre y musica)$(NC)"

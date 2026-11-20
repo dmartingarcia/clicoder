@@ -98,7 +98,7 @@ EOF
   local t0=$SECONDS
   echo "+ docker run $PW_IMAGE  (render de intro, cierre y marco: $nn)"
   docker run --rm --ipc=host -v "$AQUI/plantillas:/plantillas:ro" -v "$PW_CACHE:/pw:ro" -v "$W:/salida" \
-    "$PW_IMAGE" node /plantillas/render.mjs
+    "$PW_IMAGE" sh -c "node /plantillas/render.mjs; r=\$?; chown -R $(id -u):$(id -g) /salida; exit \$r"
   echo "$nn: recursos listos en $((SECONDS - t0)) s"
 
   cat > "$W/montaje.env" <<EOF
@@ -108,7 +108,7 @@ MUSICA='$MUS'; MVOL='$MVOL'; MARCO='$USA_MARCO'; PROGRESO='$USA_PROG'
 EOF
   t0=$SECONDS
   echo "+ docker run $FFMPEG_IMAGE  (composicion con ffmpeg: $nn)"
-  docker run --rm --entrypoint sh -e FFLOG="${FFLOG:-error}" \
+  docker run --rm --user "$(id -u):$(id -g)" --entrypoint sh -e FFLOG="${FFLOG:-error}" \
     -v "$AQUI/componer.sh:/montar.sh:ro" -v "$CLIPS_DIR:/clips:ro" -v "$W:/work:ro" -v "$VIDEOS_DIR:/videos" \
     "$FFMPEG_IMAGE" /montar.sh
   echo "$nn: composición en $((SECONDS - t0)) s"

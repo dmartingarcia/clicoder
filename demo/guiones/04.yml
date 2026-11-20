@@ -1,7 +1,7 @@
 id: "04"
 titulo: Infraestructura reproducible
 subtitulo: Docker, monitorización y CI/CD
-ritmo: 0.6
+ritmo: 1
 velocidad: 1.0
 
 tema:

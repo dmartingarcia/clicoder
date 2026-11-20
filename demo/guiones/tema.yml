@@ -13,8 +13,8 @@ colores:
 
 tipografia:
   familia: '"Inter Variable",Inter,system-ui,-apple-system,"Segoe UI",sans-serif'
-  titulo_px: 46
-  sub_px: 25
+  titulo_px: 56
+  sub_px: 32
   fuente_embebida:
     activada: true
     paquete: "@fontsource-variable/inter"
@@ -28,7 +28,7 @@ rotulo:
   blur_px: 22
   sombra: true
   margen_px: 56
-  ancho_max_px: 1180
+  ancho_max_px: 1400
   contador: true
   progreso: true
   entrada_ms: 800
