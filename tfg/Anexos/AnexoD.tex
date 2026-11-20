@@ -5,26 +5,29 @@ Este anexo documenta el esquema de base de datos del sistema. PostgreSQL 18 aloj
 
 \section{Diagrama entidad-relación}
 
-La Figura~\ref{fig:erd-bd} muestra el diagrama entidad-relación de la base de datos \texttt{cie10\_app}, con las tablas de proyección y la tabla de referencia del catálogo CIE-10-ES.
+La Figura~\ref{fig:erd-bd} muestra el diagrama entidad-relación de la base de datos \texttt{cie10\_app}, con las tablas de proyección y la tabla de referencia del catálogo CIE-10-ES. La línea discontinua entre \texttt{predicted\_codes} y \texttt{cie10\_codes} es una referencia lógica por el campo \texttt{cie10\_code}, sin clave foránea.
 
 \begin{figure}[ht]
 \centering
 \resizebox{\textwidth}{!}{\input{figs/erd-bd}}
-\caption{Diagrama entidad-relación de \texttt{cie10\_app}. La línea discontinua es una referencia lógica, sin clave foránea.}
+\caption{Diagrama entidad-relación de la base de datos de aplicación \texttt{cie10\_app}.}
 \label{fig:erd-bd}
 \end{figure}
 
+\Needspace{22\baselineskip}
 \section{Tablas de la base de datos de aplicación (\texttt{cie10\_app})}
 
+\Needspace{16\baselineskip}
 \subsection{Tabla \texttt{users}}
 
 Almacena los usuarios registrados en el sistema (Tabla~\ref{tab:users}).
 
-\begin{table}[!ht]
+\begin{table}[H]
 \centering
+\footnotesize
 \caption{Columnas de la tabla \texttt{users}.}
 \label{tab:users}
-\begin{tabular}{llP{3.1cm}P{3.9cm}}
+\begin{tabular}{llP{3.2cm}P{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -44,15 +47,17 @@ Almacena los usuarios registrados en el sistema (Tabla~\ref{tab:users}).
 \end{tabular}
 \end{table}
 
+\Needspace{13\baselineskip}
 \subsection{Tabla \texttt{conversations}}
 
 Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario (Tabla~\ref{tab:conversations}).
 
-\begin{table}[!ht]
+\begin{table}[H]
 \centering
+\footnotesize
 \caption{Columnas de la tabla \texttt{conversations}.}
 \label{tab:conversations}
-\begin{tabular}{llP{3.1cm}P{3.9cm}}
+\begin{tabular}{llP{3.2cm}P{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -70,15 +75,17 @@ Proyección CQRS de las conversaciones (sesiones de análisis) de cada usuario (
 
 \textbf{Índices}: \texttt{(user\_id)}, \texttt{(deleted\_at)}.
 
+\Needspace{14\baselineskip}
 \subsection{Tabla \texttt{messages}}
 
 Proyección CQRS de los mensajes intercambiados dentro de cada conversación (Tabla~\ref{tab:messages}).
 
-\begin{table}[!ht]
+\begin{table}[H]
 \centering
+\footnotesize
 \caption{Columnas de la tabla \texttt{messages}.}
 \label{tab:messages}
-\begin{tabular}{llP{3.1cm}P{3.9cm}}
+\begin{tabular}{llP{3.2cm}P{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -97,15 +104,17 @@ Proyección CQRS de los mensajes intercambiados dentro de cada conversación (Ta
 
 \textbf{Índices}: \texttt{(conversation\_id)}, \texttt{(message\_id)}, \texttt{(timestamp)}.
 
+\Needspace{15\baselineskip}
 \subsection{Tabla \texttt{analysis\_cards}}
 
 Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para cada mensaje de análisis (Tabla~\ref{tab:cards}).
 
-\begin{table}[!ht]
+\begin{table}[H]
 \centering
+\footnotesize
 \caption{Columnas de la tabla \texttt{analysis\_cards}.}
 \label{tab:cards}
-\begin{tabular}{llP{3.1cm}P{3.9cm}}
+\begin{tabular}{llP{3.2cm}P{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -125,16 +134,18 @@ Proyección CQRS de las tarjetas de respuesta generadas por el motor de IA para 
 
 \textbf{Índices}: \texttt{(conversation\_id)}, \texttt{(message\_id)}.
 
+\Needspace{17\baselineskip}
 \subsection{Tabla \texttt{predicted\_codes}}
 
 Proyección CQRS de los códigos CIE-10-ES predichos por el motor de IA, con su ciclo de vida de validación (Tabla~\ref{tab:predicted-codes}).
 
 \begin{table}[H]
 \centering
+\footnotesize
 \small
 \caption{Columnas de la tabla \texttt{predicted\_codes}.}
 \label{tab:predicted-codes}
-\begin{tabular}{llP{3.1cm}P{3.9cm}}
+\begin{tabular}{llP{3.2cm}P{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -157,15 +168,17 @@ Proyección CQRS de los códigos CIE-10-ES predichos por el motor de IA, con su 
 
 \textbf{Índices}: \texttt{(conversation\_id)}, \texttt{(code\_id)}, \texttt{(cie10\_code)}, \texttt{(status)}.
 
+\Needspace{12\baselineskip}
 \subsection{Tabla \texttt{cie10\_codes}}
 
 Catálogo de referencia de los códigos CIE-10-ES cargados desde los ficheros CSV obtenidos del portal eCIE-maps (Tabla~\ref{tab:cie10codes}).
 
 \begin{table}[H]
 \centering
+\footnotesize
 \caption{Columnas de la tabla \texttt{cie10\_codes}.}
 \label{tab:cie10codes}
-\begin{tabular}{llP{3.1cm}P{3.9cm}}
+\begin{tabular}{llP{3.2cm}P{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -180,17 +193,20 @@ Catálogo de referencia de los códigos CIE-10-ES cargados desde los ficheros CS
 \end{tabular}
 \end{table}
 
+\Needspace{5\baselineskip}
 El catálogo contiene 101.246 entradas de diagnóstico, 78.496 de procedimientos y 5.050 de sustancias químicas; al obtenerse por \emph{scraping} incluye los nodos intermedios del árbol, que no son códigos asignables (sección~\ref{sec:analisis_datos}).
 
+\Needspace{13\baselineskip}
 \subsection{Tabla \texttt{code\_suggestions}}
 
 Sugerencias manuales de código realizadas por el usuario al seleccionar un fragmento de texto del informe (Tabla~\ref{tab:suggestions}).
 
 \begin{table}[H]
 \centering
+\footnotesize
 \caption{Columnas de la tabla \texttt{code\_suggestions}.}
 \label{tab:suggestions}
-\begin{tabular}{llP{3.1cm}P{3.9cm}}
+\begin{tabular}{llP{3.2cm}P{4.5cm}}
 \hline
 \textbf{Columna} & \textbf{Tipo} & \textbf{Restricciones} & \textbf{Descripción} \\
 \hline
@@ -206,16 +222,19 @@ Sugerencias manuales de código realizadas por el usuario al seleccionar un frag
 \end{tabular}
 \end{table}
 
+\Needspace{7\baselineskip}
 \subsection{Tabla \texttt{settings}}
 
 Configuración del backoffice de administración: modelo y modo del generador de resúmenes (\texttt{summarizer\_model}, \texttt{summarizer\_mode}), sus \emph{prompts} de sistema y de usuario (\texttt{prompt\_summary}, \texttt{prompt\_paraphrase}, \texttt{user\_prompt\_summary}, \texttt{user\_prompt\_paraphrase}) y el método de atribución de términos (\texttt{explain\_method}, nulo por defecto). Tiene una clave primaria \texttt{uuid} y las marcas temporales habituales.
 
+\Needspace{10\baselineskip}
 \subsection{Tabla \texttt{projection\_versions}}
 
 Registro de control interno de Commanded para garantizar la coherencia de las proyecciones al reproducir el registro de eventos (Tabla~\ref{tab:proj-versions}).
 
 \begin{table}[H]
 \centering
+\footnotesize
 \caption{Columnas de la tabla \texttt{projection\_versions}.}
 \label{tab:proj-versions}
 \begin{tabular}{P{3.5cm}lP{3cm}P{4cm}}
@@ -235,6 +254,7 @@ Registro de control interno de Commanded para garantizar la coherencia de las pr
 La base de datos \texttt{cie10\_eventstore} es gestionada íntegramente por la biblioteca \texttt{EventStore} (dependencia de Commanded). Su esquema incluye las tablas \texttt{streams}, \texttt{events} y \texttt{subscriptions}, que almacenan el registro de eventos inmutable. No se modifica directamente; toda la interacción se realiza a través del módulo \texttt{App.CommandedApplication}.
 
 \begin{sloppypar}
+\Needspace{6\baselineskip}
 Los eventos registrados son: \texttt{ConversationStarted}, \texttt{MessageSent}, \mbox{\texttt{AnalysisRequested}}, \texttt{AIPredictionReceived}, \texttt{CodeValidated} y \texttt{CodeRejected}. Cada evento incluye los campos de la acción más metadatos de Commanded (\texttt{causation\_id}, \texttt{correlation\_id}, \texttt{created\_at}).
 \end{sloppypar}
 

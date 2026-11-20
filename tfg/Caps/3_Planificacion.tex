@@ -84,8 +84,8 @@ Las herramientas y tecnologías empleadas en el proyecto se agrupan en las sigui
  \item Mailpit como servidor SMTP de captura de correo electrónico en el entorno local.
  \item GitHub Container Registry como caché de construcción de las imágenes en el CI.
  \item Docker Compose y Traefik (proxy inverso para la gestión de rutas) para el entorno de despliegue, publicado con un túnel de Cloudflare desde la propia estación de trabajo.
- \item Prometheus y Grafana para la monitorización del rendimiento y la salud del sistema desplegado.
- \item Sentry, un servicio externo (SaaS), para la gestión de errores y excepciones del sistema desplegado.
+ \item Prometheus y Grafana para monitorizar el rendimiento y la salud del sistema.
+ \item Sentry, un servicio externo (SaaS), para la gestión de errores y excepciones.
 \end{itemize}
 
 \section{Gestión de la configuración y aseguramiento de la calidad}
@@ -100,7 +100,7 @@ Los mensajes de commit siguen el estándar \emph{Conventional Commits}~\cite{con
 
 \subsection{Integración continua}
 
-Se configura un flujo de CI con GitHub Actions que se ejecuta en cada \emph{push} a la rama principal y en cada \emph{pull request}. El flujo incluye el análisis estático y el formato (ESLint, Credo, Dialyzer y Ruff), la compilación del frontend, las pruebas con cobertura del frontend, el backend y el motor de IA, las pruebas de extremo a extremo y la compilación de la memoria. La verificación del formato de los commits con commitlint se ejecuta en el CI solo en los \emph{pull requests}; en la rama principal la valida el \emph{hook} local de Husky.
+Un flujo de CI con GitHub Actions se ejecuta en cada \emph{push} a la rama principal y en cada \emph{pull request}. Incluye análisis estático y formato (ESLint, Credo, Dialyzer y Ruff), compilación del frontend, pruebas con cobertura (frontend, backend y motor de IA), pruebas de extremo a extremo y compilación de la memoria. El formato de los commits (commitlint) se verifica en el CI solo en los \emph{pull requests}; en la rama principal lo valida el \emph{hook} local de Husky.
 
 \subsection{Aseguramiento de la calidad}
 
@@ -108,19 +108,18 @@ La calidad del código se procura mediante varios mecanismos complementarios:
 
 \begin{itemize}
  \item \textbf{Pruebas automáticas}: La creación de la suite ExUnit para el backend (con informe de cobertura generado por excoveralls) y Vitest para el frontend.
- \item \textbf{Linting}: El uso y configuración de linters específicos para cada lenguaje (ESLint para TypeScript, Ruff para Python, Credo para Elixir) con reglas adaptadas al estilo del proyecto.
- \item \textbf{Revisión de código}: Al tratarse de un proyecto unipersonal, el código se revisa mediante la lectura sistemática antes de cada \emph{commit} significativo y mediante las comprobaciones automáticas del CI. La memoria, en cambio, se revisa además con una herramienta de apoyo basada en un asistente de IA (capítulo~\ref{cap:Conclusiones}).
+ \item \textbf{Linting}: El uso y configuración de linters específicos para cada lenguaje (ESLint para TypeScript, Ruff para Python, Credo para Elixir) con reglas del proyecto.
+ \item \textbf{Revisión de código}: Al tratarse de un proyecto unipersonal, el código se revisa mediante la lectura sistemática antes de cada \emph{commit} significativo y mediante las comprobaciones automáticas del CI. La memoria, en cambio, se revisa además con una herramienta de apoyo basada en un asistente de IA (sección~\ref{sec:valoracion-personal}).
  \item \textbf{Separación de entornos}: El uso de stubs y \emph{mocks} (objetos simulados) para el motor de inferencia (\texttt{ai\_engine\_mock}) permite desarrollar y evaluar el estado, tanto del backend como del frontend, sin necesidad del modelo BERT entrenado, evitando dependencias que dificulten las pruebas de integración.
  \item \textbf{Métricas de entrenamiento}: El proceso de entrenamiento registra las métricas de validación en cada época y genera curvas de aprendizaje, lo que permite detectar sobreajuste o problemas de convergencia de forma inmediata para actuar en consecuencia (ajuste de hiperparámetros, cambio de modelo base, etc.).
 \end{itemize}
 
 \section{Planificación}
 
-El tablero Kanban se organiza en torno a seis \textbf{hitos o épicas} que agrupan el conjunto de tareas del proyecto y cada una representa un componente o fase del sistema. Las tareas se priorizan y completan de forma continua a lo largo del desarrollo.
+El tablero Kanban se organiza en torno a seis \textbf{hitos o épicas} que agrupan el conjunto de tareas del proyecto y cada una representa un componente o fase del sistema. Las tareas se priorizan y completan de forma continua a lo largo del desarrollo. Bajo cada épica se listan las tareas completadas.
 
 \subsection{Épica 1: Adquisición y preparación de datos}
 
-Tareas completadas:
 \begin{itemize}[noitemsep]
  \item Descarga del corpus CodiEsp (diagnósticos, procedimientos y variante extendida).
  \item Desarrollo del script de \emph{scraping} sobre el portal eCIE-maps para obtener el catálogo CIE-10-ES.
@@ -130,9 +129,9 @@ Tareas completadas:
  \item Aumentación del corpus CodiEsp mediante retrotraducción con tres pivotes (EN, DE, FR) usando Azure Translator: cada pivote genera 500 paráfrasis adicionales que, sumadas a los 500 documentos originales, cuadruplican el corpus hasta 2.000 documentos (500 originales + 500 EN + 500 DE + 500 FR). La aumentación se evaluó y se descartó porque empeoró el resultado (Anexo~\ref{cap:AnexoL}).
 \end{itemize}
 
+\Needspace{10\baselineskip}
 \subsection{Épica 2: Modelo de clasificación}
 
-Tareas completadas:
 \begin{itemize}[noitemsep]
  \item Comparativa de los distintos modelos base apropiados para este uso.
  \item Implementación del clasificador plano multilabel basado en un modelo clínico preentrenado BERT.
@@ -144,7 +143,6 @@ Tareas completadas:
 
 \subsection{Épica 3: Servicio de inferencia (AI Engine)}
 
-Tareas completadas:
 \begin{itemize}[noitemsep]
  \item Implementación del servicio FastAPI y su entorno.
  \item Endpoints básicos \texttt{POST /predict} y \texttt{GET /}; los definitivos figuran en el Anexo~\ref{cap:AnexoM}.
@@ -154,7 +152,6 @@ Tareas completadas:
 
 \subsection{Épica 4: Backend}
 
-Tareas completadas:
 \begin{itemize}[noitemsep]
  \item Preparación del entorno y las diferentes herramientas (\emph{linting}, análisis estático)
  \item Sistema de autenticación con registro, confirmación por correo electrónico e inicio de sesión con un token Bearer.
@@ -168,7 +165,6 @@ Tareas completadas:
 
 \subsection{Épica 5: Frontend}
 
-Tareas completadas:
 \begin{itemize}[noitemsep]
  \item Página de autenticación con formularios de registro e inicio de sesión.
  \item Interfaz de chat con renderizado de tarjetas tipadas (resumen y códigos).
@@ -181,7 +177,6 @@ Tareas completadas:
 
 \subsection{Épica 6: Infraestructura y calidad}
 
-Tareas completadas:
 \begin{itemize}[noitemsep]
  \item Configuración de Docker Compose para todos los servicios.
  \item Makefile con targets para todo el ciclo de vida del proyecto.
@@ -226,7 +221,7 @@ Redacción de la memoria & 20 & 22 \\
 \label{tab:planificacion}
 \end{table}
 
-La épica de modelo de clasificación es la que más desviación ha sufrido. La diferencia de ocho puntos se atribuye a que se exploraron más combinaciones de \emph{batch size}, tasa de aprendizaje, función de pérdida y descongelación de las previstas (el proceso se documenta en el Anexo~\ref{cap:AnexoF}). Esta atribución es una estimación del autor y no una medición, como lo es la de los cuatro puntos de desviación del servicio de inferencia, que se achacan a adaptar el formato de entrada y salida del servicio a las configuraciones sucesivas del modelo. Este tipo de desviación es habitual en proyectos con componentes de investigación aplicada, donde el resultado de un experimento condiciona las decisiones que siguen.
+La épica de modelo de clasificación es la que más desviación ha sufrido. La diferencia de ocho puntos se atribuye a que se exploraron más combinaciones de \emph{batch size}, tasa de aprendizaje, función de pérdida y descongelación de las previstas (el proceso se documenta en el Anexo~\ref{cap:AnexoF}). Esta atribución es una estimación mía y no una medición, como lo es la de los cuatro puntos de desviación del servicio de inferencia, que se achacan a adaptar el formato de entrada y salida del servicio a las configuraciones sucesivas del modelo. Este tipo de desviación es habitual en proyectos con componentes de investigación aplicada, donde el resultado de un experimento condiciona las decisiones que siguen.
 
 \section{Costes y análisis de riesgos}
 
@@ -234,19 +229,9 @@ La épica de modelo de clasificación es la que más desviación ha sufrido. La 
 
 Los costes del proyecto se dividen en dos categorías: costes de personal y costes de recursos materiales. Dado que se trata de un TFG desarrollado por un único alumno, los costes de personal son los más significativos y los que mejor reflejan el esfuerzo real invertido.
 
-\textbf{Costes de personal.} A partir de los 94 puntos de historia finalmente registrados (frente a los 82 estimados), asumiendo que cada punto equivale a media jornada de trabajo efectivo de cuatro horas, el volumen total de trabajo se sitúa en torno a las 376 horas. Se parte de un perfil sénior, con un salario bruto anual de entre 36.000 y 45.000~€ (supuesto del autor; la ganancia media anual de todos los trabajadores en España en 2024 fue de 29.540~€~\cite{ineeaes2024}, de modo que un perfil sénior de desarrollo queda por encima), unas cotizaciones a cargo de la empresa de en torno al 32\,\% (el 30,65\,\% de los tipos de contingencias comunes, desempleo, FOGASA, formación profesional y MEI de 2026~\cite{ordencotizacion2026}, más una prima de accidentes de trabajo supuesta de en torno al 1,4\,\%) y una jornada de 1.680 horas anuales (supuesto: las 40 horas semanales y los 30 días naturales de vacaciones del Estatuto de los Trabajadores~\cite{estatutotrabajadores2015} dejan unas 1.900 horas, de las que se descuentan festivos y ausencias). El coste horario es de entre unos 28 y 35 € con todos los costes sociales incluidos, y el coste de personal asciende a entre 10.528 y 13.160 €. Este rango representa el presupuesto de referencia si el proyecto se encargara a un profesional externo.
+La Tabla~\ref{tab:costes} resume la estimación total, con el coste de personal como partida dominante; los apartados siguientes detallan ambas categorías.
 
-\textbf{Costes de recursos materiales.}
-\begin{itemize}
- \item \textbf{Hardware de desarrollo (equipo y GPU)}: El desarrollo se ha realizado sobre hardware propio ya adquirido, por lo que no genera un coste adicional directo. No obstante, se imputa su amortización con dos supuestos del autor: un valor inicial de 2.500~€ para el equipo completo (AMD Ryzen 9 7900X y NVIDIA RTX 4080 incluidas) y una vida útil de cuatro años (625~€/año, unos 52~€ al mes). La amortización se imputa por el calendario del proyecto, de finales de enero a diciembre de 2026 (unos once meses), lo que da unos 573~€. La GPU forma parte de ese precio (1.469~€ de los 2.500~€, el precio de lanzamiento en España que publicó el fabricante~\cite{nvidiartx40anuncio2022}), por lo que su amortización no se cuenta aparte: de los 573~€, unos 337~€ corresponden a la GPU y unos 236~€ al resto del equipo. Repartidos entre las 376~horas de trabajo, el equipo cuesta en media unos 0,6~€ por hora de desarrollo (sin la GPU). Como referencia de mercado, alquilar una RTX 4090, de mayor potencia, cuesta desde 0,34~dólares por hora en RunPod~\cite{runpodprecios2026}, de modo que unas 95~horas de GPU (según se detalla más abajo) costarían desde unos 32~dólares, muy por debajo de los 337~€ imputados a la GPU. La diferencia se debe a que esa amortización se calcula por calendario y la GPU también sirve al sistema en funcionamiento, no solo al entrenamiento.
- \item \textbf{Electricidad del equipo}: El equipo funciona con energía solar de autoconsumo, de modo que el coste eléctrico directo es nulo. Como referencia a precio de la red convencional (0,14~€/kWh, tarifa del autor sin impuestos, que con el impuesto especial sobre la electricidad del 5,11\,\%~\cite{ley38impuestosespeciales1992} y el IVA del 21\,\%~\cite{ley37iva1992} resulta en unos 0,18~€/kWh) y con consumos supuestos por el autor, la electricidad del proyecto sumaría unos 143~€ (800~kWh), en tres partidas: \emph{(a)}~unas 95~horas de GPU a plena carga (450~W, 43~kWh; la GPU consume hasta 320~W~\cite{nvidiartx4080} y la CPU hasta 170~W~\cite{amdryzen7900x}), unos 8~€; \emph{(b)}~las 376~horas de trabajo de desarrollo (150~W, 56~kWh), unos 10~€; y \emph{(c)}~el servicio encendido de forma continua desde mayo hasta diciembre de 2026, ocho meses (unas 5.840~horas a 120~W con el modelo cargado, 701~kWh), unos 125~€. Las horas de GPU suman tres partidas de distinta fiabilidad: \emph{(i)}~38,8~horas de ajuste fino, registradas en \texttt{training\_runs.csv} (suma de \texttt{total\_seconds} de las 78 ejecuciones); \emph{(ii)}~unas 37~horas de preentrenamiento débil, que no se registran, estimadas a partir de las 550~épocas de preentrenamiento de las 56 ejecuciones que lo usaron (columna \texttt{pretrain\_epochs}) a unos 4~minutos por época, tiempo extrapolado de una medición con tres ejecuciones simultáneas (unas 2~horas por 10~épocas, a 0,6--0,9~s por paso frente a unos 0,25~s en solitario); y \emph{(iii)}~unas 20~horas, estimadas por el autor, de los cuadernos de la fase de selección de modelos (\texttt{training/bert-classifier/*.ipynb}), cuyo tiempo no se registró. Las partidas (ii) y (iii) son estimaciones y la suma no incluye las evaluaciones y mediciones sueltas ni la carga de los modelos.
- \item \textbf{Software}: Todas las herramientas, \emph{frameworks} y modelos utilizados son de código abierto y gratuitos. El acceso al modelo RigoBERTa desde HuggingFace Hub requiere un token de usuario, cuya obtención es completamente gratuita.
- \item \textbf{Infraestructura de red y almacenamiento}: El corpus CodiEsp y los artefactos del modelo se almacenan localmente. Por tanto, no se han generado costes de almacenamiento en la nube ni de ancho de banda significativos.
-\end{itemize}
-
-La Tabla~\ref{tab:costes} resume la estimación total, con el coste de personal como partida dominante.
-
-\begin{table}[h]
+\begin{table}[!ht]
 \centering
 \begin{tabular}{lrr}
 \hline
@@ -266,6 +251,25 @@ Software e infraestructura & 0\,€ & 0\,€ \\
 
 El coste total estimado del proyecto, incluyendo personal y materiales, se sitúa entre \textbf{11.100 y 13.900~€}, siendo el coste de personal el componente dominante, con alrededor del 95\,\% del total.
 
+\textbf{Costes de personal.} A partir de los 94 puntos de historia finalmente registrados (frente a los 82 estimados), asumiendo que cada punto equivale a media jornada de trabajo efectivo de cuatro horas, el volumen total de trabajo se sitúa en torno a las 376 horas. El cálculo parte de:
+
+\begin{itemize}
+ \item un salario bruto anual de entre 36.000 y 45.000~€, en torno a la ganancia media anual de 42.741,94~€ por trabajador del sector de información y comunicaciones (el de las TIC) en 2024, según el INE~\cite{ineeaes2024};
+ \item unas cotizaciones a cargo de la empresa de aproximadamente un 32\,\%\footnote{Tipos de 2026 a cargo de la empresa~\cite{ordencotizacion2026}: contingencias comunes 23,60\,\%, desempleo 5,50\,\%, formación profesional 0,60\,\%, MEI 0,75\,\% y FOGASA 0,20\,\% (30,65\,\% en total), más en torno al 1,4\,\% de accidentes de trabajo, estimado.};
+ \item una jornada de 1.680 horas anuales~\cite{estatutotrabajadores2015}.
+\end{itemize}
+
+El coste horario es de entre unos 28 y 35 € con todos los costes sociales incluidos, y el coste de personal asciende a entre 10.528 y 13.160 €. Este rango representa el presupuesto de referencia si el proyecto se encargara a un profesional externo.
+
+\textbf{Costes de recursos materiales.}
+\begin{itemize}
+ \item \textbf{Hardware de desarrollo (equipo y GPU)}: Se ha desarrollado sobre hardware propio (AMD Ryzen 9 7900X~\cite{amdryzen7900x} y NVIDIA RTX 4080~\cite{nvidiartx4080}), sin coste directo. El equipo costó aproximadamente 2.500~€ (la GPU, 1.469~€ de lanzamiento~\cite{nvidiartx40anuncio2022}) y se imputa su amortización con una vida útil supuesta de cuatro años; repartida por los once meses del proyecto, da unos 573~€, GPU incluida. De esos 573~€, unos 337~€ corresponden a la GPU; alquilar una RTX 4090 durante las 95~horas de entrenamiento costaría desde unos 32~dólares (0,34~dólares por hora~\cite{runpodprecios2026}). La diferencia se debe a que la amortización se calcula por calendario y la GPU también sirve al sistema en funcionamiento.
+ \Needspace{4\baselineskip}
+ \item \textbf{Electricidad del equipo}: El equipo funciona con autoconsumo solar, de modo que el coste directo es nulo. A precio de red (unos 0,18~€/kWh con el impuesto especial~\cite{ley38impuestosespeciales1992} y el IVA~\cite{ley37iva1992}) y con consumos que he supuesto, sumaría unos 143~€ (800~kWh): unas 95~horas de GPU en entrenamiento (unos 8~€), las 376~horas de desarrollo (unos 10~€) y el servicio encendido ocho meses (unos 125~€).
+ \item \textbf{Software}: Todas las herramientas, \emph{frameworks} y modelos son de código abierto y gratuitos; el acceso a RigoBERTa en HuggingFace Hub requiere un token gratuito.
+ \item \textbf{Infraestructura de red y almacenamiento}: El corpus y los artefactos del modelo se almacenan localmente, sin costes de nube ni de ancho de banda significativos.
+\end{itemize}
+
 \subsection{Análisis de riesgos}
 
 La identificación y gestión de riesgos es una parte esencial del plan de gestión de cualquier proyecto software, más aún en proyectos con componentes de investigación aplicada, donde el resultado de los experimentos no está garantizado de antemano. A continuación se enumeran los riesgos identificados durante la planificación del proyecto, clasificados por su probabilidad de ocurrencia (Baja, Media o Alta) y por el impacto que tendrían sobre el desarrollo si se materializaran (Bajo, Medio o Alto).
@@ -282,6 +286,7 @@ La tabla~\ref{tab:riesgos} recoge los principales riesgos identificados, su prob
 Rendimiento insuficiente del modelo sobre CodiEsp & Media & Alto & Evaluación temprana sobre el conjunto de validación; posibilidad de cambiar el modelo base o ajustar hiperparámetros. \\
 \hline
 Conjuntos de datos con muy pocos ejemplos para ciertos códigos (desequilibrio de clases) & Alta & Medio & Análisis previo de la distribución; ponderación de clases en la función de pérdida. \\
+\hline
 Coste computacional excesivo de entrenamiento sin GPU & Alta & Medio & Configuración Docker con soporte GPU; los entornos en la nube serían una alternativa que no se ha probado. \\
 \hline
 Cambios en la API del portal eCIE-maps que rompan el \emph{scraping} & Baja & Medio & Los CSV ya generados se almacenan en el repositorio; el \emph{scraping} es una fase de adquisición puntual, no continua. \\
@@ -293,4 +298,10 @@ Indisponibilidad del corpus CodiEsp & Baja & Alto & Copia local de los datos inc
 \label{tab:riesgos}
 \end{table}
 
-De los riesgos identificados, los dos que mayor atención requieren durante el desarrollo son el rendimiento del modelo y el desequilibrio de clases. El primero porque condiciona directamente la utilidad del sistema. El criterio de éxito no era superar a los mejores sistemas publicados, sino situarse dentro del rango de resultados de la comparativa CodiEsp-D (Tabla~\ref{tab:codiesp-comparativa}) y declarar con honestidad en qué puesto queda. El segundo porque es una característica inherente a cualquier corpus de diagnósticos clínicos reales, donde la distribución de frecuencias sigue una ley de potencia: un pequeño conjunto de códigos de enfermedades comunes acapara la mayoría de los ejemplos de entrenamiento, mientras que los códigos de enfermedades raras o procedimientos poco frecuentes cuentan con muy pocos ejemplos. Este desequilibrio puede llevar a que el modelo aprenda a predecir siempre los códigos más frecuentes y a ignorar sistemáticamente los menos comunes, lo que penaliza las métricas macro y degrada la utilidad clínica del sistema para los casos atípicos. La ponderación de clases en la función de pérdida y el análisis previo de la distribución del corpus son las medidas de mitigación más directas para este riesgo.
+\Needspace{9\baselineskip}
+Los dos riesgos que más atención requieren son:
+
+\begin{itemize}
+ \item \textbf{Rendimiento del modelo.} Condiciona directamente la utilidad del sistema. El criterio de éxito no era superar a los mejores sistemas publicados, sino situarse dentro del rango de resultados de la comparativa CodiEsp-D (Tabla~\ref{tab:codiesp-comparativa}) y declarar con honestidad en qué puesto queda.
+ \item \textbf{Desequilibrio de clases.} Es inherente a cualquier corpus de diagnósticos clínicos reales, donde la distribución de frecuencias sigue una ley de potencia: un pequeño conjunto de códigos de enfermedades comunes acapara la mayoría de los ejemplos de entrenamiento, mientras que los de enfermedades raras o procedimientos poco frecuentes cuentan con muy pocos. El modelo puede aprender a predecir siempre los códigos más frecuentes e ignorar sistemáticamente los menos comunes, lo que penaliza las métricas macro y degrada la utilidad clínica en los casos atípicos. La ponderación de clases en la función de pérdida y el análisis previo de la distribución del corpus son las medidas de mitigación más directas.
+\end{itemize}

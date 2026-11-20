@@ -27,6 +27,7 @@ La retrotraducción es el método de aumentación más consolidado en NLP~\cite{
 
 El texto obtenido es semánticamente equivalente al original, pero con diferente elección de palabras, orden de constituyentes y estructuras sintácticas. Las etiquetas CIE-10 permanecen inalteradas porque la semántica clínica se conserva a través del pivote.
 
+\Needspace{6\baselineskip}
 \subsection{Por qué funciona}
 
 Desde la perspectiva del aprendizaje estadístico, añadir ejemplos retrotraducidos equivale a aplicar una forma de \emph{data augmentation} que:
@@ -52,7 +53,7 @@ El alemán, en cambio, pertenece a la rama germánica. Sus estructuras sintácti
 Se evaluaron tres alternativas para la traducción:
 
 \begin{description}
-  \item[NLLB-200 (local).] Modelo de código abierto de Meta con soporte para 200 idiomas. No requiere API ni coste externo; puede ejecutarse directamente en la GPU del entorno de entrenamiento. Desventaja: calidad inferior a los servicios cloud en textos técnicos y médicos.
+  \item[NLLB-200 (local).] Modelo de código abierto de Meta con soporte para 200 idiomas. No requiere API ni coste externo; puede ejecutarse directamente en la GPU del entorno de entrenamiento. Desventaja: menor calidad que la nube en textos técnicos y médicos.
   \item[DeepL.] API de alta calidad para lenguas europeas. Inconveniente: el nivel gratuito exige tarjeta de crédito como garantía, lo que lo descarta para entornos donde no se quiere vincular un método de pago.
   \item[Azure Translator.] Servicio de Microsoft Cognitive Services. El nivel \textbf{F0 (Free)} ofrece 2 millones de caracteres al mes \emph{sin tarjeta de crédito} y sin compromiso de permanencia. Cuando se supera el límite mensual el servicio bloquea las peticiones hasta el siguiente ciclo; no genera cargo adicional.
 \end{description}
@@ -82,7 +83,15 @@ Latencia típica            & 200--800 ms por lote \\
 \end{tabular}
 \end{table}
 
-El corpus CodiEsp de entrenamiento contiene \textbf{1.158.623 caracteres}. Cada pivote traduce ida y vuelta (por ejemplo ES→EN→ES), de modo que consume el doble: \textbf{2.317.246 caracteres por pivote}, ya un 16\,\% por encima del límite mensual del nivel F0. Con los tres pivotes empleados el total asciende a \textbf{6.951.738 caracteres}, equivalentes a 3,5 cuotas mensuales gratuitas. Los primeros 2.000.000 se cubrieron con la cuota mensual del nivel F0 y los 4.951.738 restantes se facturaron en modalidad de pago por uso (\emph{pay-as-you-go}) contra el \textbf{crédito gratuito de 200\,\$} que Azure concede a las cuentas nuevas, que quedó agotado al completar los tres pivotes. La aumentación no tuvo coste real, pero conviene dejar claro que \textbf{no cabe en el nivel gratuito}: quien quiera reproducirla necesita ese crédito inicial, repartir la carga entre varios recursos F0 en regiones distintas o extenderla a lo largo de varios meses.
+El corpus CodiEsp de entrenamiento contiene \textbf{1.158.623 caracteres}. Cada pivote traduce ida y vuelta (por ejemplo ES→EN→ES), de modo que consume el doble:
+
+\begin{itemize}
+ \item \textbf{2.317.246 caracteres por pivote}, ya un 16\,\% por encima del límite mensual del nivel F0.
+ \item \textbf{6.951.738 caracteres} con los tres pivotes empleados, equivalentes a 3,5 cuotas mensuales gratuitas.
+ \item \textbf{Cobertura:} los primeros 2.000.000 con la cuota mensual del nivel F0 y los 4.951.738 restantes en pago por uso (\emph{pay-as-you-go}), contra el \textbf{crédito gratuito de 200\,\$} que Azure concede a las cuentas nuevas, agotado al completar los tres pivotes.
+\end{itemize}
+
+La aumentación no tuvo coste real, pero \textbf{no cabe en el nivel gratuito}: quien quiera reproducirla necesita ese crédito inicial, repartir la carga entre varios recursos F0 en regiones distintas o extenderla a lo largo de varios meses.
 
 Si el crédito gratuito se agotase antes de completar las notas, el script permite reanudar con \texttt{RESUME=1}: cuenta las filas ya escritas en el CSV de salida y retoma desde la siguiente sin retraducir nada. Como alternativa, Azure permite crear múltiples recursos Translator F0 en diferentes regiones bajo la misma cuenta, cada uno con su cuota independiente.
 
@@ -207,7 +216,7 @@ El script \texttt{ai\_engine/augment.py} encapsula la lógica completa de aument
 
 El flujo de retrotraducción divide los textos largos en párrafos si superan el límite del modelo (\textasciitilde 1.800 caracteres para NLLB), traduce hacia el pivote y de vuelta, y une los fragmentos con saltos de línea. Cada variante retrotraducida se escribe como una fila adicional en el CSV de salida, manteniendo las mismas etiquetas que la nota original.
 
-El checkpoint es incremental y no requiere fichero auxiliar: al reanudar con \texttt{RESUME=1} el script cuenta las filas del CSV de salida, deduce cuántas notas ya están traducidas y retoma desde la siguiente. Esto permite interrumpir y reanudar la aumentación sin retraducir notas ya procesadas.
+El checkpoint es incremental y no requiere fichero auxiliar: al reanudar con \texttt{RESUME=1} el script cuenta las filas del CSV de salida, deduce cuántas notas ya están traducidas y retoma desde la siguiente. Esto permite interrumpir y reanudar la aumentación sin retraducir lo ya procesado.
 
 \section{Configuración y uso}
 
@@ -321,5 +330,5 @@ Los experimentos descritos en el Anexo~\ref{cap:AnexoF} partieron de la configur
 
 El corpus de entrenamiento crece de 500 a 2.000 documentos (4×) sin modificar la arquitectura ni los hiperparámetros. La hipótesis de partida era que la mejora fuese más pronunciada en F1-macro, que es la métrica más sensible a los códigos raros.
 
-\enlargethispage{2\baselineskip}
+\Needspace{10\baselineskip}
 \paragraph{Resultado y decisión.} \looseness=-1 La hipótesis no se confirmó. Ninguna de las ejecuciones con corpus aumentado superó la referencia entrenada con los 500 documentos originales: el mejor resultado con aumentación fue F1-micro~0,4766 (paso~35d) frente a 0,4888 de la configuración de referencia, y el resto quedó más abajo (0,4668 en el paso~33 y 0,4518 en el 34b). El diagnóstico, detallado en el Anexo~\ref{cap:AnexoF} y en la sección de experimentos, es doble: por un lado los hiperparámetros de calendario (\texttt{UNFREEZE\_EVERY}, \texttt{GRAD\_ACCUM}) no se reescalaron al cambiar el tamaño del corpus; por otro, y de forma más determinante, el entrenamiento pasa a realizarse sobre texto retrotraducido mientras la validación sigue siendo español original, lo que introduce un desajuste de distribución que penaliza la evaluación. En consecuencia, \textbf{el modelo de producción se entrena sobre los 500 documentos originales} y la aumentación queda documentada como línea explorada y descartada, no como parte del sistema entregado.

@@ -143,7 +143,15 @@ El motor de IA opera en dos modos complementarios: un clasificador neuronal basa
 
 \subsection{Regenerar el diccionario de términos clínicos}
 
-El clasificador por diccionario utiliza un fichero \texttt{model/baseline\_dict.json} que mapea términos clínicos lematizados a bloques CIE-10. Este fichero se construye con tres fuentes, las que pasa el \texttt{Makefile} en \texttt{--sources clinical corpus combined}: \texttt{clinical} (términos clínicos reales extraídos de las anotaciones de la tarea~X de CodiEsp, ampliados con sinónimos léxicos), \texttt{corpus} (\emph{n}-gramas discriminativos minados de las notas de entrenamiento) y \texttt{combined}, la unión de las dos anteriores, que es el diccionario que se guarda. Las descripciones oficiales del catálogo (\texttt{diagnoses}, \texttt{procedures}, \texttt{chemicals}) existen como fuentes opcionales de \texttt{baseline\_dict.py}, pero no entran en el diccionario servido porque, medidas, empeoran el resultado. Adicionalmente, el sistema expande abreviaturas clínicas frecuentes en español (\texttt{HTA}, \texttt{DM2}, \texttt{EPOC}, \texttt{IAM}\dots) a su forma completa antes de lematizar, siguiendo la estrategia del equipo IAM ganador de CodiEsp~2020.
+El clasificador por diccionario usa \texttt{model/baseline\_dict.json}, que mapea términos clínicos lematizados a bloques CIE-10. Se construye con tres fuentes, las que pasa el \texttt{Makefile} en \texttt{--sources clinical corpus combined}:
+
+\begin{itemize}
+ \item \texttt{clinical}: términos clínicos reales de las anotaciones de la tarea~X de CodiEsp, ampliados con sinónimos léxicos.
+ \item \texttt{corpus}: \emph{n}-gramas discriminativos minados de las notas de entrenamiento.
+ \item \texttt{combined}: la unión de las dos anteriores; es el diccionario que se guarda.
+\end{itemize}
+
+Las descripciones oficiales del catálogo (\texttt{diagnoses}, \texttt{procedures}, \texttt{chemicals}) son fuentes opcionales de \texttt{baseline\_dict.py}, pero no entran en el diccionario servido porque, medidas, empeoran el resultado. Además, el sistema expande abreviaturas clínicas frecuentes en español (\texttt{HTA}, \texttt{DM2}, \texttt{EPOC}, \texttt{IAM}\dots) a su forma completa antes de lematizar, siguiendo la estrategia del equipo IAM, ganador de CodiEsp~2020.
 
 Es necesario regenerarlo cuando se modifica \texttt{baseline\_dict.py}, se actualizan los ficheros de datos de CodiEsp o se cambia cualquier parámetro de construcción del diccionario. El proceso lee los datos desde \texttt{/data/}, lematiza todos los términos con spaCy (el resultado se almacena en caché en \texttt{model/baseline\_cache/} para acelerar ejecuciones sucesivas) y escribe el diccionario resultante:
 
@@ -161,7 +169,15 @@ make ai-baseline-dict NO_ABBREVS=1 2>&1 | tee /tmp/dict_noabbrev.log
 
 \subsection{Entrenar el clasificador neuronal}
 
-El clasificador neuronal se entrena con \texttt{train.py} sobre el corpus CodiEsp. El proceso descarga el modelo base desde Hugging Face (requiere \texttt{HF\_TOKEN} en \texttt{.env}), ajusta mediante \emph{fine-tuning} el \emph{encoder} RigoBERTa-Clinical con una cabeza de clasificación \emph{multi-label} y guarda el modelo resultante en \texttt{ai\_engine/model/}. El objetivo \texttt{make ai-train-gpu} lanza \texttt{train.py} con GPU explícita (\texttt{--device cuda}) a través del servicio \texttt{ai\_engine} y el fichero \texttt{docker-compose.gpu.yml}. Exige que la imagen del servicio se haya construido con soporte CUDA (\texttt{make build-ai GPU=1}): con una imagen construida solo para CPU falla con «Torch not compiled with CUDA enabled». En el equipo de desarrollo el entrenamiento se lanzó con \texttt{train.py} directamente sobre otra imagen que ya incluye PyTorch con CUDA (\texttt{cie-10-training}). Ejecutado sin variables usa los valores por defecto del \texttt{Makefile} (\texttt{MAX\_LENGTH=1024}, \texttt{LR=5e-6}, \texttt{DROPOUT=0.1}, \texttt{WEIGHT\_DECAY=0.01}, \texttt{FREEZE\_LAYERS=0}, \texttt{EPOCHS=20}), que \textbf{no} reproducen el modelo servido. Para reproducirlo hay que pasar todos los hiperparámetros de la ejecución \texttt{20260921T091919Z} registrada en \texttt{training\_runs.csv}:
+El clasificador neuronal se entrena con \texttt{train.py} sobre el corpus CodiEsp. El proceso descarga el modelo base desde Hugging Face (requiere \texttt{HF\_TOKEN} en \texttt{.env}), ajusta mediante \emph{fine-tuning} el \emph{encoder} RigoBERTa-Clinical con una cabeza de clasificación \emph{multi-label} y guarda el resultado en \texttt{ai\_engine/model/}.
+
+\begin{itemize}
+ \item \textbf{Con GPU:} \texttt{make ai-train-gpu} lanza \texttt{train.py} con \texttt{--device cuda} a través del servicio \texttt{ai\_engine} y de \texttt{docker-compose.gpu.yml}. Exige una imagen construida con soporte CUDA (\texttt{make build-ai GPU=1}); con una imagen solo para CPU falla con «Torch not compiled with CUDA enabled».
+ \item \textbf{En el equipo de desarrollo:} el entrenamiento se lanzó con \texttt{train.py} directamente sobre otra imagen que ya incluye PyTorch con CUDA (\texttt{cie-10-training}).
+ \item \textbf{Sin variables:} usa los valores por defecto del \texttt{Makefile} (\texttt{MAX\_LENGTH=1024}, \texttt{LR=5e-6}, \texttt{DROPOUT=0.1}, \texttt{WEIGHT\_DECAY=0.01}, \texttt{FREEZE\_LAYERS=0}, \texttt{EPOCHS=20}), que \textbf{no} reproducen el modelo servido.
+\end{itemize}
+
+Para reproducirlo hay que pasar todos los hiperparámetros de la ejecución \texttt{20260921T091919Z} registrada en \texttt{training\_runs.csv}:
 
 \begin{lstlisting}[language=bash, breaklines=true, breakatwhitespace=false]
 make ai-train-gpu MAX_LENGTH=512 BATCH_SIZE=8 GRAD_ACCUM=4 \
@@ -193,7 +209,7 @@ Las URLs y credenciales de acceso están en la Tabla~\ref{tab:monitoring-urls}.
 \hline
 \textbf{Herramienta} & \textbf{URL} & \textbf{Credenciales} \\
 \hline
-Prometheus & \url{http://localhost:9090} & Sin autenticación \\
+Prometheus & \url{http://localhost:9090} & Sin autenticación; no expuesto a Internet \\
 Grafana & \url{http://localhost:3030} & \texttt{admin} / \texttt{GRAFANA\_PASSWORD} \\
 \hline
 \end{tabular}
@@ -231,6 +247,7 @@ Prometheus recoge métricas de ocho tareas de recogida (\emph{jobs}) con un inte
 
 El backend Elixir utiliza \texttt{telemetry\_metrics\_prometheus} para exponer las métricas en el puerto \texttt{9568}. Las métricas de VM BEAM configuradas son \texttt{vm.memory.total} (memoria total del runtime) y \texttt{vm.total\_run\_queue\_lengths} (longitud de las colas de planificadores de CPU y de E/S), útiles para detectar saturación en el procesamiento concurrente de WebSockets. El motor de IA expone las suyas en el endpoint \texttt{/metrics} del puerto \texttt{8000} mediante \texttt{prometheus\_fastapi\_instrumentator} (métricas HTTP automáticas) más dos métricas propias: \texttt{cie10\_inference\_duration\_seconds} (histograma de latencia de inferencia) y los indicadores (\emph{gauges}) \texttt{cie10\_model\_loaded} y \texttt{cie10\_dict\_loaded} (estado de carga del modelo BERT y del clasificador de diccionario).
 
+\Needspace{8\baselineskip}
 \subsection{Retención de datos}
 
 Prometheus almacena los datos de series temporales durante \textbf{15 días} (configurado con \texttt{--storage.tsdb.retention.time=15d}). Los datos persisten entre reinicios del contenedor gracias al volumen Docker \texttt{prometheus\_data}. Los paneles de Grafana persisten en el volumen \texttt{grafana\_data}.

@@ -233,9 +233,11 @@ izquierdo & 15.396 & 15.310 \\
 {\footnotesize Generada con el \emph{notebook} \texttt{cie10\_\allowbreak{}spacy\_\allowbreak{}word\_\allowbreak{}analysis.ipynb} (\texttt{training/\allowbreak{}data\_analysis/}) y su salida \texttt{cie10\_\allowbreak{}word\_\allowbreak{}analysis.csv}.}
 \end{table}
 
+\Needspace{5\baselineskip}
 \section{Brecha léxica entre catálogo oficial y lenguaje clínico real}
 \label{sec:brecha-lexica}
 
+\Needspace{4\baselineskip}
 La validación cruzada del vocabulario del catálogo CIE-10-ES con el corpus CodiEsp revela una diferencia estructural entre el lenguaje de las descripciones oficiales y el lenguaje empleado por los médicos en sus informes hospitalarios (Tabla~\ref{tab:vocab-gap}).
 
 \begin{table}[h]
@@ -266,10 +268,11 @@ Esta asimetría léxica tiene consecuencias directas para el diseño del sistema
 
 \begin{enumerate}
  \item Un clasificador basado exclusivamente en coincidencia léxica con el catálogo (como el clasificador de diccionario) solo puede actuar sobre el 38,3\,\% del vocabulario oficial que efectivamente aparece en los informes, y queda ciego ante los términos de la jerga clínica real que no tienen correspondencia directa en el catálogo.
- \item La expansión explícita de abreviaturas clínicas (\texttt{HTA} → «hipertensión arterial», \texttt{DM2} → «diabetes mellitus tipo 2», \texttt{EPOC} → «enfermedad pulmonar obstructiva crónica») implementada en el clasificador de diccionario actúa como puente parcial entre los dos vocabularios.
+ \item La expansión explícita de abreviaturas clínicas (\texttt{HTA} → «hipertensión arterial», \texttt{DM2} → «diabetes mellitus tipo 2», \texttt{EPOC} → «enfermedad pulmonar obstructiva crónica») implementada en el clasificador de diccionario enlaza parcialmente ambos vocabularios.
  \item El clasificador neuronal basado en RigoBERTa-Clinical supera esta limitación estructural porque su preentrenamiento sobre grandes corpus de texto clínico en español le permite relacionar las expresiones del lenguaje médico real con los diagnósticos correspondientes sin depender de coincidencia léxica exacta con las descripciones oficiales.
 \end{enumerate}
 
+\Needspace{10\baselineskip}
 \section{Capítulos de la CIE-10-ES}
 \label{sec:capitulos-cie10}
 

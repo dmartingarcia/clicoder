@@ -1,0 +1,75 @@
+\chapter{Pruebas y cobertura}
+\label{cap:AnexoN}
+
+El backend incluye una suite de 326~pruebas ExUnit organizada en \texttt{backend/test/}, ejecutadas con \texttt{make backend-test}. La cobertura se mide por separado en cada uno de los tres proyectos (Tabla~\ref{tab:cobertura}), porque son bases de código independientes con herramientas y naturaleza distintas, y promediarlas no significaría nada. A ellos se añade una cuarta suite, de extremo a extremo, que no aporta cobertura de línea porque no mide líneas sino recorridos.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Cobertura de línea por proyecto. Generada con \texttt{make backend-coverage}, \texttt{make ai-coverage} y \texttt{make frontend-coverage} (\texttt{make coverage} los ejecuta juntos).}
+\label{tab:cobertura}
+\begin{tabular}{llrr}
+\hline
+\textbf{Proyecto} & \textbf{Herramienta} & \textbf{Pruebas} & \textbf{Cobertura} \\
+\hline
+Backend (Elixir) & \texttt{excoveralls} & 326 & 93{,}3\,\% \\
+Motor de IA (Python) & \texttt{pytest-cov} & 397 & 90{,}9\,\%$^{*}$ \\
+Frontend (TypeScript) & \texttt{vitest} + \texttt{v8} & 217 & \textbf{98{,}2\,\%}$^{\dagger}$ \\
+Extremo a extremo & \texttt{playwright} + \texttt{pytest} & 11 & n/a$^{\ddagger}$ \\
+\hline
+\end{tabular}
+
+\vspace{2mm}
+{\footnotesize $^{*}$ Sobre los seis módulos que se despliegan (\texttt{main}, \texttt{classifier}, \texttt{baseline\_dict}, \texttt{summarizer}, \texttt{rerank\_map}, \texttt{compare\_runs}). Los guiones de entrenamiento y de figuras quedan fuera del cálculo. $^{\dagger}$ Quedan fuera las rutas de Next.js, los primitivos de interfaz generados y los dos módulos que se sustituyen por dobles en todas las pruebas. $^{\ddagger}$ No procede: recorre la aplicación por el navegador y atraviesa los tres proyectos a la vez, de modo que no se puede atribuir su cobertura a ninguno.}
+\end{table}
+
+Las tres cifras de cobertura superan el 90\,\% pero no miden lo mismo:
+
+\begin{itemize}
+ \item \textbf{Backend.} Código de orquestación cuyo comportamiento depende de la interacción entre piezas. Las pruebas cubren el agregado, el proyector que materializa el registro de eventos, los canales, los controladores, el panel de administración y los endpoints de protección de datos.
+ \item \textbf{Motor de IA.} Solo se miden los módulos que se despliegan: los guiones de entrenamiento y de figuras se ejecutan a mano una vez y se verifican contra los artefactos que producen, y contarlos diluiría la cifra sin decir nada del servicio. Lo único que queda descubierto es la función \texttt{main()} de la construcción del diccionario, 316 líneas que encadenan cargadores ya probados por separado.
+ \item \textbf{Frontend.} Es el más alto porque es donde menos código hay y donde el comportamiento se puede ejercitar entero desde el DOM.
+\end{itemize}
+
+Dos observaciones sobre el propio proceso de medir. La primera es que alcanzar esa cobertura exigió antes hacer testable lo que no lo era: faltaba la dependencia que Phoenix necesita para inspeccionar una vista en vivo, sin la cual el panel de administración era imposible de probar, y las llamadas al motor de IA no admitían inyectar el transporte, de modo que su integración no podía ejercitarse sin una red. La segunda es que un objetivo de cobertura invita a maquillar la cifra excluyendo del cálculo lo que no está probado; las exclusiones de cada proyecto se declaran al pie de la Tabla~\ref{tab:cobertura} en lugar de dejarlas en los ficheros de configuración. Las pruebas del backend se distribuyen en cuatro niveles, siguiendo la estructura del código de producción; las de extremo a extremo se describen al final.
+
+\subsubsection*{Pruebas unitarias de dominio}
+
+Las pruebas de la capa de dominio validan las reglas de negocio en aislamiento, sin acceso a la base de datos ni a servicios externos. El módulo \texttt{App.Aggregates.ConversationTest} verifica cada comando (\texttt{StartConversation}, \texttt{SendMessage}, \texttt{AnalyzeReport}, \texttt{ValidateCode}, \texttt{RejectCode}) contra el agregado, comprobando tanto los caminos felices (emisión del evento esperado) como los caminos de error (intento de validar un código ya validado, análisis con otro pendiente, etc.). El módulo \texttt{App.AIEngineSettingsTest} cubre el agente OTP de configuración del motor de inferencia, verificando el valor por defecto, las transiciones válidas entre motores (\texttt{bert}/\texttt{dict}/\texttt{both}/\texttt{fused}) y el rechazo de valores fuera del conjunto permitido.
+
+\subsubsection*{Pruebas de integración con la base de datos}
+
+Las pruebas de integración usan el adaptador de sandbox de Ecto (\texttt{Ecto.\allowbreak{}Adapters.\allowbreak{}SQL.\allowbreak{}Sandbox}) para ejecutar cada test dentro de una transacción que se revierte automáticamente al finalizar, manteniendo el aislamiento entre tests. Este nivel cubre:
+
+\begin{itemize}
+ \item \textbf{Esquemas de proyección}: \begin{sloppypar}\texttt{App.\allowbreak{}Projections.\allowbreak{}ConversationProjectorTest} verifica las operaciones Ecto sobre los cuatro modelos relacionales (\texttt{ConversationProjection}, \mbox{\texttt{MessageProjection}}, \texttt{PredictedCodeProjection}, \texttt{Analys\-isCardProjection}), incluyendo inserciones, actualizaciones de estado (\texttt{pending} $\to$ \texttt{validated}/\texttt{rejected}), borrado suave y ordenación.\end{sloppypar}
+ \item \textbf{Cuentas de usuario}: \texttt{App.AccountsTest} comprueba el registro, la confirmación por correo y la autenticación; \texttt{AppWeb.AuthControllerTest} verifica los \emph{endpoints} REST de registro, inicio y cierre de sesión.
+ \item \textbf{Plug de autenticación}: \texttt{AppWeb.Plugs.RequireAdminTest} verifica los cuatro ramos de la lógica de autorización (sin sesión, usuario no-admin, usuario admin, identificador inexistente), alcanzando cobertura completa del plug.
+\end{itemize}
+
+\subsubsection*{Pruebas de API REST}
+
+Los controladores se prueban mediante solicitudes HTTP reales a través de \texttt{AppWeb.\allowbreak{}ConnCase}. Se cubren los \emph{endpoints} de traducciones de la interfaz (\texttt{/api/translations/\allowbreak{}:locale}), el catálogo CIE-10 (\texttt{/api/cie10/search}, \texttt{/api/cie10/codes/:code}), la gestión de conversaciones y el proxy al motor de IA (\texttt{/api/ai/count-tokens}). Este último incluye tres escenarios: parámetro \texttt{text} ausente (422), valor no textual (422), y motor de IA no disponible (503), situación que siempre se produce en el entorno de test porque el servicio FastAPI no arranca con la suite ExUnit.
+
+\Needspace{6\baselineskip}
+\subsubsection*{Pruebas de canal WebSocket}
+
+Los canales Phoenix se prueban con \texttt{Phoenix.ChannelTest}, que simula la conexión WebSocket sin levantar un servidor HTTP real. Las pruebas cubren la autenticación del socket (token válido, ausente e inválido), la unión a conversaciones existentes (carga del historial con mensajes, códigos y tarjetas de análisis) y a conversaciones nuevas (despacho de \texttt{StartConversation} mediante Commanded), y los cinco tipos de mensajes entrantes: \texttt{send\_message}, \texttt{analyze\_report}, \texttt{validate\_code}, \texttt{reject\_code} y \texttt{suggest\_code}.
+
+\subsubsection*{Pruebas de extremo a extremo}
+
+Las anteriores prueban cada proyecto por dentro, con el resto sustituido por dobles. Eso deja fuera precisamente lo que solo falla cuando las piezas se juntan, y por eso hay una cuarta suite que recorre la aplicación por el navegador con Playwright (\texttt{make e2e-tests}, \texttt{e2e/test\_flujos.py}). Son once flujos: el alta y su confirmación, el rechazo de un correo duplicado, el inicio de sesión con credenciales válidas e inválidas, el envío de un informe con recepción de códigos, la validación y el rechazo de un código con motivo, y el borrado de una conversación a la papelera.
+
+La confirmación del correo no se simula. El test lee el mensaje del servidor SMTP de desarrollo por su API y sigue el enlace, de modo que la prueba cubre también el envío. Esa decisión encontró un fallo que llevaba tiempo latente: la variable que indica el servidor de correo no estaba definida en el contenedor del backend, así que la configuración caía al valor por omisión, que dentro del contenedor no escucha, y \textbf{ningún correo de confirmación se había entregado nunca en el entorno de desarrollo}. El sistema no daba error: registraba al usuario y mostraba la pantalla de «revisa tu correo».
+
+\subsubsection*{Escenarios no cubiertos}
+
+Una versión anterior de este trabajo dejaba fuera de la suite cuatro bloques enteros: la tarea de importación del catálogo, los módulos de configuración OTP, los \emph{structs} de comandos y eventos, y los LiveViews de administración. Los tres primeros se justificaban por falta de lógica propia; el cuarto, por no ser parte del flujo clínico. Al revisarlo, la razón real del cuarto era otra: faltaba en \texttt{mix.exs} la dependencia que \texttt{Phoenix.LiveViewTest} necesita para inspeccionar el HTML renderizado, así que no es que no se hubiera priorizado, es que no se podía. Con la dependencia añadida, los bloques con lógica se cubrieron:
+
+\begin{itemize}
+ \item Tarea de importación: 92,5\,\%.
+ \item LiveViews de administración: entre el 86,4\,\% y el 100\,\%.
+ \item \emph{Structs} de comandos y eventos: 100\,\%, porque el agregado los construye en cada escenario.
+\end{itemize}
+
+Lo que sigue descubierto son ramas de error que exigirían provocar fallos de infraestructura: el árbol de supervisión (\texttt{App.Application}, 71,4\,\%), la persistencia de la configuración del resumidor, que escribe en una tarea asíncrona sin conexión del \emph{sandbox} (\texttt{App.SummarizerSettings}, 67,3\,\%), y los caminos de reintento del limitador de peticiones. Son los sitios donde una prueba resulta intermitente, y un test que falla una vez de cada diez se acaba ignorando, que es peor que no tenerlo.

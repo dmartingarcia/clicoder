@@ -1,0 +1,49 @@
+\chapter{Conformidad con el Reglamento General de Protección de Datos (RGPD)}
+\label{cap:AnexoP}
+
+El Reglamento (UE) 2016/679, conocido como RGPD~\cite{RGPD16}, establece el marco jurídico de referencia para el tratamiento de datos personales en la Unión Europea. Su aplicación es especialmente relevante en sistemas sanitarios, donde se procesan categorías especiales de datos (artículo~9 RGPD): los informes clínicos introducidos por el usuario y los diagnósticos CIE-10 inferidos constituyen datos relativos a la salud y, por tanto, están sujetos al régimen de protección reforzada.
+
+El sistema maneja tres categorías de datos: (1)~\textbf{datos identificativos} del usuario (nombre, apellidos, nombre de usuario y dirección de correo electrónico); (2)~\textbf{datos de autenticación} (contraseña hasheada con bcrypt y token de sesión); y (3)~\textbf{datos clínicos} (texto libre de informes médicos y los códigos CIE-10 asociados). El diseño técnico incorpora medidas organizativas y de ingeniería orientadas a cumplir los principios del artículo~5 RGPD (licitud, lealtad y transparencia; limitación de la finalidad; minimización de datos; exactitud; limitación del plazo de conservación; integridad y confidencialidad), así como los derechos reconocidos en los artículos~17 y~20~\cite{RGPD16}.
+
+\subsubsection{Artículo 5, Principios relativos al tratamiento}
+
+\begin{itemize}
+ \item \textbf{Minimización de datos}: el sistema solicita únicamente los datos imprescindibles para el registro (nombre, apellidos, nombre de usuario, correo y contraseña). El perfil no incluye número de teléfono, fecha de nacimiento ni ningún otro dato opcional. Los informes clínicos se tratan exclusivamente para generar la propuesta de codificación y no se comparten con terceros.
+ \item \textbf{Integridad y confidencialidad}: las contraseñas se almacenan exclusivamente como \emph{hash} bcrypt; ningún proceso del sistema accede al valor en claro. Las comunicaciones se cifran en tránsito mediante TLS (forzado mediante HSTS), y el token de sesión expira una hora después de ser emitido. Los datos sensibles se redactan antes de enviarse al sistema de monitorización externo Sentry (véase sección~\ref{sec:seguridad}).
+ \item \textbf{Limitación del plazo de conservación}: el usuario puede eliminar sus datos en cualquier momento, tanto a nivel de conversación individual como de cuenta completa, sin necesidad de contactar con el responsable del tratamiento.
+\end{itemize}
+
+\Needspace{6\baselineskip}
+\subsubsection{Artículo 17, Derecho de supresión (\emph{«derecho al olvido»})}
+
+El RGPD exige que el responsable del tratamiento suprima los datos personales sin dilación indebida cuando el interesado lo solicite (artículo~17.1~\cite{RGPD16}). El sistema implementa dos niveles de supresión para dar respuesta a este derecho sin requerir intervención manual del administrador:
+
+\begin{itemize}
+ \item \textbf{Borrado permanente de una conversación} (\texttt{DELETE /api/conversations/\allowbreak{}:id/purge}): elimina de forma irreversible la conversación y todos los datos asociados (mensajes, tarjetas de análisis, códigos predichos y sugerencias de código) mediante una transacción atómica que recorre todas las tablas dependientes en orden inverso a sus claves foráneas antes de eliminar el registro raíz. A diferencia del borrado lógico habitual (que establece \texttt{deleted\_at} y mantiene los datos en base de datos), este \emph{endpoint} busca que no quede rastro en el modelo de lectura. El \emph{endpoint} verifica que la conversación pertenece al usuario autenticado antes de proceder, impidiendo el borrado de datos ajenos. La misma comprobación de propiedad se aplica a los listados (que rechazan con 403 un \texttt{user\_id} distinto del autenticado) y a la unión al canal de una conversación existente, y todas ellas están cubiertas por pruebas.
+
+\paragraph{El conflicto entre \emph{event sourcing} y el derecho de supresión.}
+Borrar el modelo de lectura no basta por sí solo, y conviene explicar por qué. El registro de eventos es inmutable por diseño: es la garantía que justifica haber elegido CQRS, porque permite reconstruir cualquier estado pasado y auditar quién hizo qué. Esa misma propiedad choca de frente con el artículo~17: lo que entra en el registro no se puede borrar, de modo que almacenar allí el informe clínico haría imposible atender una solicitud de supresión por mucho que se vaciaran las tablas de lectura.
+
+La solución adoptada es separar el hecho del contenido. Los eventos \texttt{MessageSent} y \mbox{\texttt{AnalysisRequested}} \textbf{no llevan el texto del informe}: registran quién escribió, cuándo y en qué conversación, que es lo que la trazabilidad necesita. El texto se escribe directamente sobre la proyección, que es la tabla que el purgado elimina. La contrapartida, que hay que declarar, es que reproducir el registro de eventos ya no reconstruye el contenido de los mensajes: la auditoría conserva la secuencia de acciones, no el dato de salud. Es una renuncia deliberada, y en un sistema que maneja categorías especiales del artículo~9 el derecho de supresión pesa más que la reconstruibilidad total.
+
+Los eventos conservan los identificadores de usuario y de conversación, de modo que tras la supresión quedan como registro seudonimizado sin contenido clínico; es una limitación declarada, no una garantía de borrado total del registro.
+
+La frontera está fijada con pruebas automáticas (\texttt{App.RgpdEventStoreTest}) que fallan si alguien vuelve a añadir el texto a un evento. Sin ellas el error sería invisible: el sistema seguiría funcionando y el informe quedaría almacenado para siempre.
+
+ \item \textbf{Eliminación completa de la cuenta} (\texttt{DELETE /api/users/account}): suprime la totalidad de los datos del usuario en una única transacción de base de datos: primero obtiene los identificadores de todas las conversaciones del usuario (incluidas las que están en la papelera), después elimina en cascada sus dependencias (sugerencias de código, códigos predichos, tarjetas de análisis y mensajes) y finalmente suprime el registro del usuario. Tras el borrado, el token Bearer del usuario queda invalidado de facto, pues el \emph{plug} \texttt{RequireAuth} no puede resolver el sujeto en base de datos.
+\end{itemize}
+
+Desde el frontend, el usuario accede a la función de eliminación de cuenta a través del icono \texttt{UserX} situado en la barra lateral. Al pulsarlo se muestra un modal de confirmación con texto explícito sobre la irreversibilidad de la acción y dos botones: cancelar y confirmar. Solo al confirmar se envía la petición \texttt{DELETE}; en caso de éxito, el cliente limpia el estado de sesión y redirige a la pantalla de inicio de sesión.
+
+\subsubsection{Artículo 20, Derecho a la portabilidad de los datos}
+
+El artículo~20 RGPD~\cite{RGPD16} reconoce al interesado el derecho a recibir sus datos en un formato estructurado, de uso común y lectura mecánica, y a transmitirlos a otro responsable del tratamiento sin impedimentos. El \emph{endpoint} \texttt{GET /api/users/export} (autenticado mediante Bearer token) genera y devuelve un archivo JSON que incluye:
+
+\begin{itemize}
+ \item El perfil del usuario: nombre, apellidos, nombre de usuario, dirección de correo electrónico y preferencia de idioma.
+ \item La totalidad de sus conversaciones, incluyendo conversaciones en la papelera, con sus mensajes completos (contenido y marcas de tiempo) y los códigos CIE-10 predichos con su estado de validación y razonamiento.
+ \item La marca de tiempo de generación del fichero.
+\end{itemize}
+
+La respuesta se sirve con la cabecera \texttt{Content-Disposition: attachment; filename=\textquotedbl{}datos\_usuario.json\textquotedbl{}} para que el navegador la ofrezca como descarga directa. El fichero resultante es legible por máquina y puede importarse en cualquier sistema que acepte JSON, cumpliendo el requisito de interoperabilidad del artículo~20.2. Desde el frontend, la descarga se activa mediante el icono \texttt{Download} en la barra lateral: el cliente realiza la petición autenticada, convierte la respuesta en un \emph{blob} y lo descarga sin exponer el token en la URL ni abrir una pestaña nueva.
+\RemoveFromHook{para/begin}[loose]

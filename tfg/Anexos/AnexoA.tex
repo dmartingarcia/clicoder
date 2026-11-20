@@ -43,6 +43,7 @@ Modelo BERT~\cite{devlin2019} de 110M parámetros entrenado sobre corpus en espa
 
 Modelo de 33M parámetros optimizado para generación de embeddings de similitud semántica~\cite{reimers2019sentencebert}. No es adecuado para clasificación directa; se evaluó únicamente como posible componente de una arquitectura basada en recuperación (\emph{RAG}).
 
+\Needspace{8\baselineskip}
 \subsection{\texttt{distilbert-base-multilingual-cased}}
 
 Versión destilada de BERT multilingüe con 66M parámetros~\cite{sanh2019distilbert}. Un 40\,\% más rápido que BERT base con pérdida de precisión moderada. Sin especialización en español médico; considerado como alternativa para entornos con recursos de cómputo muy limitados.
@@ -78,4 +79,12 @@ DistilBERT multilingüe & 66M & 512 &  sin entrenar & Multilingüe \\
 
 \section{Criterio de selección}
 
-\texttt{IIC/RigoBERTa-Clinical} fue seleccionado para el entrenamiento en producción por tres razones: (1)~especialización en dominio clínico español, que favorece representaciones adecuadas del vocabulario médico del corpus; (2)~un rendimiento en el cribado de capítulos próximo al del mejor candidato: RoBERTa-BSC base obtuvo 0{,}780 frente a 0{,}761 de RigoBERTa-Clinical, una diferencia de unos dos puntos del mismo orden que la dispersión entre ejecuciones, de modo que esa tabla no establece un orden fiable entre ambos; y (3)~el mayor tamaño del \emph{encoder} (arquitectura XLM-RoBERTa-large frente a los 125M parámetros de RoBERTa-BSC), que se esperaba más capaz sobre la tarea real de 1.767 códigos. Esa expectativa no se contrastó: la fase de optimización se realizó íntegramente con RigoBERTa-Clinical y no se entrenó RoBERTa-BSC sobre los 1.767 códigos, por lo que no existe una medición que compare ambos en la tarea real. \texttt{answerdotai/ModernBERT-base} queda identificado como candidato para iteraciones futuras gracias a su ventana de 8.192 tokens, aunque su F1-micro de 0{,}632 en nivel~1 refleja la penalización de operar sobre corpus en español con un modelo entrenado en inglés.
+\texttt{IIC/RigoBERTa-Clinical} se seleccionó para el entrenamiento en producción por tres razones:
+
+\begin{enumerate}
+ \item \textbf{Especialización} en dominio clínico español, que favorece representaciones adecuadas del vocabulario médico del corpus.
+ \item \textbf{Rendimiento próximo al mejor} en el cribado de capítulos: RoBERTa-BSC base obtuvo 0{,}780 frente a 0{,}761, una diferencia de unos dos puntos del mismo orden que la dispersión entre ejecuciones, de modo que esa tabla no establece un orden fiable entre ambos.
+ \item \textbf{Mayor tamaño} del \emph{encoder} (XLM-RoBERTa-large frente a los 125M parámetros de RoBERTa-BSC), que se esperaba más capaz sobre la tarea real de 1.767 códigos.
+\end{enumerate}
+
+Esa última expectativa no se contrastó: la fase de optimización se hizo íntegramente con RigoBERTa-Clinical y no se entrenó RoBERTa-BSC sobre los 1.767 códigos, por lo que no existe una medición que compare ambos en la tarea real. \texttt{answerdotai/ModernBERT-base} queda como candidato para iteraciones futuras por su ventana de 8.192 tokens, aunque su F1-micro de 0{,}632 en nivel~1 refleja la penalización de usar un modelo entrenado en inglés sobre corpus en español.

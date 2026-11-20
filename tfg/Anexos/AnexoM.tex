@@ -9,7 +9,7 @@ El motor de IA está implementado con FastAPI, que genera automáticamente la es
 
 \begin{itemize}
  \item \textbf{Esquema JSON}: \texttt{GET /openapi.json}, el documento OpenAPI completo, apto para la generación automática de clientes o su importación en herramientas de terceros (Postman, generadores de SDK, etc.).
- \item \textbf{Swagger UI}: \texttt{GET /docs}, interfaz web interactiva para explorar los \emph{endpoints}, consultar los esquemas de petición y respuesta y ejecutar llamadas de prueba directamente desde el navegador (Figura~\ref{fig:swagger}).
+ \item \textbf{Swagger UI}: \texttt{GET /docs}, interfaz web interactiva para explorar los \emph{endpoints}, consultar los esquemas de petición y respuesta y ejecutar llamadas de prueba directamente desde el navegador (Figura~\ref{fig:swagger}, captura del motor simulado de las pruebas con sus cuatro endpoints; la lista completa del motor de IA está en la Tabla~\ref{tab:openapi-endpoints}).
 \end{itemize}
 
 El backend Phoenix expone análogamente su documentación interactiva en \texttt{GET /docs}, con el esquema OpenAPI en \texttt{GET /api/openapi}.
@@ -17,11 +17,11 @@ El backend Phoenix expone análogamente su documentación interactiva en \texttt
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth, trim=20 770 820 40, clip]{figs/swagger-ui}
-\caption{Swagger UI del motor simulado (\texttt{/docs}), con sus cuatro \emph{endpoints}; la lista completa está en la Tabla~\ref{tab:openapi-endpoints}.}
+\caption{Swagger UI generada por FastAPI (\texttt{/docs}) sobre el motor simulado de las pruebas.}
 \label{fig:swagger}
 \end{figure}
 
-\paragraph{Obtención en vivo.} Con el sistema en marcha, la especificación completa y siempre actualizada está disponible sin salir del navegador en \texttt{http://localhost:8000/docs} (Swagger UI interactivo) y en \texttt{http://localhost:8000/openapi.json} (esquema OpenAPI 3.1 en JSON, apto para importar en Postman o generar clientes automáticamente). El siguiente fragmento, generado automáticamente por FastAPI, corresponde al \emph{endpoint} \texttt{/predict} y a los esquemas de las dos peticiones que componen un análisis:
+\paragraph{Obtención en vivo.} Con el sistema en marcha, la especificación completa y siempre actualizada está disponible sin salir del navegador en \texttt{http://localhost:8000/docs} (Swagger UI interactivo) y en \texttt{http://localhost:8000/openapi.json} (esquema OpenAPI 3.1 en JSON, apto para importar en Postman o generar clientes automáticamente). El siguiente fragmento, generado automáticamente por FastAPI, corresponde al \emph{endpoint} \texttt{/predict} y al esquema de su petición (el de \texttt{/explain}, con \texttt{text}, \texttt{codes}, \texttt{method} y \texttt{top\_k}, este último con valor 5 por defecto, se describe en la sección~\ref{sec:m-explain}):
 
 {\small
 \begin{verbatim}
@@ -29,43 +29,21 @@ El backend Phoenix expone análogamente su documentación interactiva en \texttt
   "post": {
     "summary": "Predecir códigos CIE-10",
     "operationId": "predict_codes_predict_post",
-    "requestBody": {
-      "required": true,
-      "content": { "application/json": {
-          "schema": { "$ref": "#/components/schemas/AnalysisRequest" } } }
-    },
-    "responses": {
-      "200": { "description": "Successful Response" },
-      "422": { "description": "Validation Error", "content": {
-          "application/json": { "schema": {
-              "$ref": "#/components/schemas/HTTPValidationError" } } } }
-    }
+    "requestBody": { "required": true, "content": { "application/json": {
+        "schema": { "$ref": "#/components/schemas/AnalysisRequest" } } } },
+    "responses": { "200": { "description": "Successful Response" },
+                   "422": { "description": "Validation Error" } }
   }
 }
 
 "AnalysisRequest": {
-  "type": "object",
-  "required": ["text"],
+  "type": "object", "required": ["text"],
   "properties": {
-    "text": { "type": "string", "title": "Text" },
-    "engine": { "title": "Engine", "anyOf": [
+    "text": { "type": "string" },
+    "engine": { "anyOf": [
       { "type": "string", "enum": ["bert", "dict", "both", "fused"] },
       { "type": "null" }] },
-    "include_triggers": { "type": "boolean", "title": "Include Triggers",
-      "default": false }
-  }
-}
-
-"ExplainRequest": {
-  "type": "object",
-  "required": ["text", "codes"],
-  "properties": {
-    "text": { "type": "string", "title": "Text" },
-    "codes": { "type": "array", "items": { "type": "string" },
-      "title": "Codes" },
-    "method": { "anyOf": [{ "type": "string" }, { "type": "null" }],
-      "title": "Method" },
-    "top_k": { "type": "integer", "title": "Top K", "default": 5 }
+    "include_triggers": { "type": "boolean", "default": false }
   }
 }
 \end{verbatim}
@@ -102,7 +80,8 @@ GET & \texttt{/metrics} & Métricas en formato Prometheus. \\
 
 \section{Esquemas de petición y respuesta}
 
-\subsection{POST /predict}
+\Needspace{6\baselineskip}
+\subsection{POST /predict}\label{sec:m-predict}
 
 Petición:
 
@@ -110,13 +89,15 @@ Petición:
 \begin{verbatim}
 {
   "text": "<informe clínico en español>",
-  "engine": "bert" // opcional; por defecto "fused"
+  "engine": "bert",        // opcional; por defecto "fused"
+  "include_triggers": false // opcional; por defecto false
 }
 \end{verbatim}
 }
 
 El campo \texttt{engine} es opcional: por defecto se usa \texttt{fused} (\texttt{bert} si el diccionario no está cargado), y admite también \texttt{bert}, \texttt{dict} y \texttt{both}.
 
+\Needspace{32\baselineskip}
 Respuesta: un objeto con los campos \texttt{cards}, \texttt{timing} (tiempos de la llamada) y \texttt{model\_version}; \texttt{cards} contiene una única tarjeta de tipo \texttt{codes} (el resumen se solicita por separado con \texttt{/summarize/stream}):
 
 {\small
@@ -147,13 +128,14 @@ Respuesta: un objeto con los campos \texttt{cards}, \texttt{timing} (tiempos de 
 
 El campo \texttt{confidence} es la probabilidad bruta de la sigmoide; \texttt{relative\_confidence} es su normalización \emph{min-max} dentro del conjunto devuelto (véase la sección~\ref{sec:confianza-predicciones}); \texttt{triggers} son los términos del informe que motivan la predicción, vacíos salvo que se pida \texttt{include\_triggers} (se obtienen aparte con \texttt{/explain}; véase la sección~\ref{sec:explicabilidad}); con un único código, \texttt{relative\_confidence} vale 1,0; y \texttt{engine} identifica el motor de origen.
 
-\subsection{POST /explain}
+\Needspace{9\baselineskip}
+\subsection{POST /explain}\label{sec:m-explain}
 
 La atribución de importancia viaja en un \emph{endpoint} separado porque cuesta entre 30 y 50 veces más que predecir: mide el efecto real de eliminar cada palabra del informe, lo que exige una pasada del \emph{encoder} por palabra. Atarla a \texttt{/predict} obligaba al usuario a esperar por una información que todavía no estaba consultando, ya que primero lee la lista de códigos y solo después despliega uno para saber por qué se ha propuesto. Separadas, los códigos se devuelven en cuanto están y las palabras llegan después.
 
 Por ese motivo \texttt{/predict} admite el campo \texttt{include\_triggers}, desactivado por defecto: activarlo reproduce el comportamiento anterior, en el que la respuesta completa esperaba a la atribución.
 
-La petición indica el texto, los códigos que se quieren justificar y, opcionalmente, la estrategia. La respuesta incluye siempre el método empleado, de modo que ante un término inesperado se puede saber si lo produjo la versión fiel o una de las rápidas (Tabla~\ref{tab:explain-metodos}).
+La petición, \texttt{\{text, codes, method?, top\_k?\}} (con \texttt{top\_k} igual a 5 por defecto), indica el texto, los códigos que se quieren justificar y, opcionalmente, la estrategia. La respuesta, \texttt{\{method, triggers, unknown\_codes, timing\}}, incluye siempre el método empleado, de modo que ante un término inesperado se puede saber si lo produjo la versión fiel o una de las rápidas (Tabla~\ref{tab:explain-metodos}).
 
 \begin{table}[h]
 \centering
@@ -172,9 +154,16 @@ La petición indica el texto, los códigos que se quieren justificar y, opcional
 \end{tabular}
 \end{table}
 
-Los cuatro motores no son variantes del mismo cálculo. \texttt{bert} y \texttt{dict} devuelven las predicciones de un solo clasificador; \texttt{both} devuelve las de ambos concatenadas, cada código con su motor de origen, y deja la reconciliación al cliente; \texttt{fused} combina las puntuaciones de los dos \emph{antes} de ordenar, sumando al \emph{logit} de cada código una bonificación proporcional a la confianza con que el diccionario ha detectado su bloque (Anexo~\ref{cap:AnexoF}, sección~\ref{sec:anexoF-fusion}). Este último emplea un umbral propio, expresado en el espacio de la puntuación combinada, y añade a cada código los campos \texttt{score\_model} y \texttt{score\_dict} con la contribución literal de cada fuente, además de \texttt{dict\_support} y \texttt{trigger\_detail}, que etiqueta cada término explicativo con su procedencia.
+Los cuatro motores no son variantes del mismo cálculo:
 
-\subsection{GET / y POST /count-tokens}
+\begin{itemize}
+ \item \texttt{bert} y \texttt{dict}: predicciones de un solo clasificador.
+ \item \texttt{both}: las de ambos concatenadas, cada código con su motor de origen; la reconciliación queda al cliente.
+ \item \texttt{fused}: combina las puntuaciones de los dos \emph{antes} de ordenar, sumando al \emph{logit} de cada código una bonificación proporcional a la confianza con que el diccionario ha detectado su bloque (Anexo~\ref{cap:AnexoF}, sección~\ref{sec:anexoF-fusion}). Emplea un umbral propio, expresado en el espacio de la puntuación combinada, y añade a cada código \texttt{score\_model} y \texttt{score\_dict} (la contribución literal de cada fuente), además de \texttt{dict\_support} y \texttt{trigger\_detail}, que etiqueta cada término explicativo con su procedencia.
+\end{itemize}
+
+\Needspace{9\baselineskip}
+\subsection{GET / y POST /count-tokens}\label{sec:m-estado}
 
 {\small
 \begin{verbatim}
@@ -185,6 +174,7 @@ POST /count-tokens {"text": "..."} -> {"token_count": 349}
 \end{verbatim}
 }
 
+\Needspace{8\baselineskip}
 \section{Streaming NDJSON: \texttt{POST /summarize/stream}}
 
 El resumen del informe se entrega mediante \textbf{NDJSON} (\emph{newline-delimited JSON}): la respuesta es un flujo en el que \textbf{cada línea es un objeto JSON independiente}, lo que permite al cliente renderizar el texto de forma incremental (efecto \emph{typewriter}) sin esperar a que el LLM termine. El tipo de contenido de la respuesta es \texttt{application/x-ndjson}.

@@ -5,13 +5,13 @@
     rectangle split, rectangle split parts=2,
     rectangle split part fill={aquaESI!70, white},
     draw=aquaESI!80, thick, rounded corners=3pt,
-    align=left, text width=4.3cm
+    align=left, text width=3.9cm, minimum height=1.9cm
   },
   entref/.style={
     rectangle split, rectangle split parts=2,
     rectangle split part fill={gray!50, white},
     draw=gray!70, thick, rounded corners=3pt,
-    align=left, text width=4.3cm
+    align=left, text width=3.9cm, minimum height=1.9cm
   },
   rel/.style={-, thick, black!70},
   card/.style={font=\small\sffamily\bfseries, fill=white, inner sep=1.5pt}
@@ -25,28 +25,28 @@
   idioma, confirmado
 };
 
-\node[ent] (analisis) at (8.6,0) {
+\node[ent] (analisis) at (6.2,0) {
   \textbf{Análisis}
   \nodepart{two}
   informe clínico enviado\\
   tarjetas de respuesta
 };
 
-\node[ent] (tarjeta) at (8.6,-3.6) {
+\node[ent] (tarjeta) at (12.4,0) {
   \textbf{Tarjeta de análisis}
   \nodepart{two}
   tipo: resumen o códigos
 };
 
-\node[ent] (codigo) at (0,-3.6) {
+\node[ent] (codigo) at (12.4,-3.2) {
   \textbf{Código predicho}
   \nodepart{two}
   confianza\\
-  estado: pendiente, validado\\
-  o rechazado
+  estado: pendiente,\\
+  validado o rechazado
 };
 
-\node[entref] (cie10) at (0,-7.0) {
+\node[entref] (cie10) at (6.2,-3.2) {
   \textbf{Código CIE-10-ES}
   \nodepart{two}
   código, descripción\\
@@ -55,11 +55,11 @@
 
 \draw[rel] (analisis.west) -- (usuario.east)
   node[card, pos=0.08, above]{N} node[card, pos=0.92, above]{1};
-\draw[rel] (tarjeta.north) -- (analisis.south)
-  node[card, pos=0.1, right]{N} node[card, pos=0.9, right]{1};
-\draw[rel] (codigo.east) -- (tarjeta.west)
+\draw[rel] (tarjeta.west) -- (analisis.east)
   node[card, pos=0.08, above]{N} node[card, pos=0.92, above]{1};
-\draw[rel] (codigo.south) -- (cie10.north)
+\draw[rel] (codigo.north) -- (tarjeta.south)
   node[card, pos=0.1, right]{N} node[card, pos=0.9, right]{1};
+\draw[rel] (codigo.west) -- (cie10.east)
+  node[card, pos=0.08, above]{N} node[card, pos=0.92, above]{1};
 
 \end{tikzpicture}

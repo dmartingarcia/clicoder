@@ -60,6 +60,7 @@ La Tabla~\ref{tab:hyperparams} recoge la configuración del modelo desplegado (\
 \hline
 \end{longtable}
 
+\Needspace{15\baselineskip}
 \section{Resultados de evaluación}
 
 El sistema emplea dos estrategias de umbral diferentes. Durante el entrenamiento se usa un umbral global fijo para monitorizar la mejora. También se evaluaron umbrales por clase optimizados sobre el conjunto de validación, que ajustan individualmente el punto de corte de cada uno de los 1.767 códigos; se descartaron para producción por sobreajustar la validación (véase más abajo).
@@ -83,13 +84,20 @@ Test       & por clase  & 0{,}485  & 0{,}112 & no aplica \\
 \smallskip\par\footnotesize P, R y F1 se calculan sobre los pares alcanzables del \emph{gold} (2.345 de 2.842 en prueba); sobre todos los pares el \emph{recall} de prueba es 0,379 y el F1-micro 0,444 (precisión 0,536), como en el capítulo de desarrollo. El F1-micro de validación (0,4861) es el de \texttt{eval\_test.py} con umbral 0,2; el registro de entrenamiento y \texttt{models.json} dan 0,4848 para la misma ejecución, porque lo miden en la época seleccionada durante el entrenamiento. $^{g}$~MAP sobre el gold completo (directamente comparable con el \emph{benchmark} CodiEsp). $^{r}$~MAP restringido a los 1.767 códigos del vocabulario del modelo. Los umbrales por clase se ajustan sobre validación y no mejoran al global (F1-micro 0,485 frente a 0,495 en prueba), por lo que la configuración desplegada emplea el umbral global de 0,2.
 \end{table}
 
-La ejecución desplegada es \texttt{20260921T091919Z}, la de pérdida de ordenación descrita en la subsección~\ref{sec:anexoF-alineacion}, publicada en Hugging Face como \texttt{zlpr-map}. Con umbral global de 0,2 alcanza F1-micro = 0{,}4861 en validación (\texttt{eval\_test.py}; 0,4848 en el registro del entrenamiento) y 0{,}4946 en prueba, ambos sobre los pares alcanzables. El MAP no se da para los umbrales por clase porque no depende del umbral: es una métrica de ordenación y sería el mismo valor repetido. Los umbrales por clase, ajustados sobre validación, no compensan: se quedan en 0,485 en prueba frente a los 0,495 del umbral global, de modo que se emplea este último. El MAP por documento sobre el conjunto de prueba (métrica oficial del \emph{benchmark} CodiEsp) es \textbf{0{,}454} sobre el gold completo (0{,}555 restringido al vocabulario del modelo), situándose dentro del rango del \emph{benchmark}~\cite{miranda2020}, por detrás de los \emph{ensembles} y diccionarios de las primeras posiciones. Precisión, \emph{recall} y F1 se miden sobre los pares alcanzables: el \emph{recall} de 0,459 equivale a 0,379 y el F1-micro de 0,4946 a 0,444 sobre los 2.842 pares del \emph{gold} completo, porque 497 de ellos (el 17,5\,\%) son códigos que no aparecen en entrenamiento y fijan un techo de \emph{recall} de 0,825.
+La ejecución desplegada es \texttt{20260921T091919Z}, la de pérdida de ordenación descrita en la subsección~\ref{sec:anexoF-alineacion}, publicada en Hugging Face como \texttt{zlpr-map}. Resultados con umbral global de 0,2, sobre los pares alcanzables:
+
+\begin{itemize}
+ \item \textbf{F1-micro:} 0{,}4861 en validación (\texttt{eval\_test.py}; 0,4848 en el registro del entrenamiento) y 0{,}4946 en prueba.
+ \item \textbf{Umbrales por clase:} ajustados sobre validación, no compensan: 0,485 en prueba frente a 0,495 del umbral global, que es el que se emplea. El MAP no se da para ellos porque no depende del umbral: sería el mismo valor repetido.
+ \item \textbf{MAP por documento} en prueba (métrica oficial del \emph{benchmark} CodiEsp): \textbf{0{,}454} sobre el gold completo (0{,}555 restringido al vocabulario del modelo), dentro del rango del \emph{benchmark}~\cite{miranda2020}, por detrás de los \emph{ensembles} y diccionarios de las primeras posiciones.
+ \item \textbf{Techo de \emph{recall}:} precisión, \emph{recall} y F1 se miden sobre los pares alcanzables. El \emph{recall} de 0,459 equivale a 0,379 y el F1-micro de 0,4946 a 0,444 sobre los 2.842 pares del \emph{gold} completo, porque 497 de ellos (el 17,5\,\%) son códigos que no aparecen en entrenamiento y fijan un techo de \emph{recall} de 0,825.
+\end{itemize}
 
 \Needspace{0.35\textheight}
 \section{Selección del modelo desplegado}
 \label{sec:anexoH-candidatos}
 
-La elección no se hizo por la mejor cifra de validación sino midiendo en prueba a todos los candidatos, porque la ordenación por validación no se transfiere: \texttt{c102909} tenía el mejor F1 de validación de toda la serie (0,5028) y en prueba queda por debajo del modelo al que sustituía en esa misma métrica. La Tabla~\ref{tab:candidatos} recoge la comparación, generada con \texttt{make ai-eval-candidatos} y \texttt{make ai-eval-candidatos-fusion} (\texttt{ai\_engine/eval\_test.py}, \texttt{rerank\_map.py} y \texttt{tabla\_candidatos.py}).
+La elección no se hizo por la mejor cifra de validación sino midiendo en prueba a todos los candidatos, porque la ordenación por validación no se transfiere: \texttt{c102909} tenía el mejor F1 de validación de toda la serie (0,5028) y en prueba queda por debajo del modelo al que sustituía en esa misma métrica. La Tabla~\ref{tab:candidatos} recoge la comparación.
 
 \begin{table}[H]
 \centering
@@ -111,23 +119,22 @@ Paso 36 & Modelo desplegado hasta esta selección & 0{,}437 & 0{,}545 & 0{,}488$
 {\footnotesize El modelo desplegado gana en las tres métricas, que es la condición que se impuso para promocionarlo: una mejora de MAP a costa del F1 habría mejorado un titular y empeorado otro. $^{*}$~0,4882 en \texttt{eval\_cand\_paso36.json}; el capítulo de desarrollo cita 0,489, de una evaluación anterior (0,4887) del mismo modelo.}
 \end{table}
 
-\paragraph{Procedencia de las cifras.} Las métricas de esta tabla proceden de \texttt{eval\_test.py} en precisión completa. Otras tablas de la memoria (Anexo~\ref{cap:AnexoF} y, para \texttt{zlpr-map}, \texttt{eval\_paso41b.json}) usan \texttt{ensemble\_eval.py} en precisión reducida, que permite comparar muchas ejecuciones en una pasada: el MAP de prueba de \texttt{zlpr-map} es 0,4539 en la primera y 0,4535 en la segunda, y el del paso~36, 0,4373 frente a 0,4342. La diferencia está en la tercera cifra decimal y no altera ninguna conclusión, pero conviene declararla para que no se interprete como una inconsistencia.
+\paragraph{Procedencia de las cifras.} Las métricas de esta tabla proceden de \texttt{eval\_test.py} en precisión completa. Otras tablas de la memoria (Anexo~\ref{cap:AnexoF} y, para \texttt{zlpr-map}, \texttt{eval\_paso41b.json}) usan \texttt{ensemble\_eval.py} en precisión reducida, que permite comparar muchas ejecuciones en una pasada: el MAP de prueba de \texttt{zlpr-map} es 0,4539 en la primera y 0,4535 en la segunda, y el del paso~36, 0,4373 frente a 0,4342. La diferencia está en la tercera cifra decimal y no altera ninguna conclusión.
 
-La diferencia entre F1-micro y F1-macro refleja el fuerte desequilibrio de clases del corpus: el modelo rinde bien sobre los códigos frecuentes, pero tiene dificultades con los poco representados. Este es un límite inherente al corpus de entrenamiento de 500 documentos, donde la mayoría de los 1.767 códigos aparecen menos de cinco veces.
+La diferencia entre F1-micro y F1-macro refleja el desequilibrio de clases: el modelo rinde bien con los códigos frecuentes y peor con los poco representados, un límite inherente a un corpus de 500 documentos donde la mayoría de los 1.767 códigos aparecen menos de cinco veces.
 
 \section{Curvas de entrenamiento}
 
-La Figura~\ref{fig:epochs-graph} muestra la evolución del F1-micro de validación y la pérdida de entrenamiento a lo largo de las épocas para las ejecuciones realizadas con \texttt{IIC/RigoBERTa-Clinical}.
+La Figura~\ref{fig:epochs-graph} muestra la evolución del F1-micro de validación y la pérdida de entrenamiento a lo largo de las épocas para las ejecuciones realizadas con \texttt{IIC/RigoBERTa-Clinical}. En gris, el resto de ejecuciones con ese \emph{encoder} que conservan historial por época (59 series, incluidas las de 809 clases, de modo que no coincide con las 58 ejecuciones sobre 1.767 códigos de \texttt{training\_runs.csv}); resaltadas, el paso~36 y \texttt{c102909}. El eje de la pérdida se recorta en 1 porque una ejecución llega a 5,5, y no se conserva el historial por época de la ejecución desplegada. Generada con \texttt{make ai-tfg-figures} (\texttt{ai\_engine/\allowbreak plot\_runs.py}) a partir de \texttt{model/\allowbreak training\_history\_*.json}.
 
-\begin{figure}[h]
+\begin{figure}[p]
 \centering
 \includegraphics[width=\textwidth]{figs/all_epochs_graph}
-\caption{Curvas de entrenamiento de \texttt{IIC/RigoBERTa-Clinical}: F1-micro de validación (arriba) y pérdida (abajo) por época. En gris, el resto de ejecuciones; resaltados, el paso~36 y \texttt{c102909}.}
+\caption{Curvas de entrenamiento con \texttt{IIC/RigoBERTa-Clinical}: F1-micro de validación (arriba) y pérdida (abajo) por época.}
 \label{fig:epochs-graph}
 \end{figure}
 
-En gris figuran las demás ejecuciones con ese \emph{encoder} que conservan historial por época: 59 series, que incluyen las de 809 clases y por eso no coinciden con las 58 ejecuciones sobre 1.767 códigos de \texttt{training\_runs.csv}. El eje de la pérdida se recorta en 1 porque una ejecución llega a 5,5, y no se conserva el historial por época de la ejecución desplegada. La figura la genera \texttt{make ai-tfg-figures} (\texttt{ai\_engine/\allowbreak plot\_runs.py}) a partir de \texttt{model/\allowbreak training\_history\_*.json}.
-
+\Needspace{9\baselineskip}
 \section{Artefactos del modelo}
 
 Los artefactos de los modelos se encuentran en \texttt{ai\_engine/model/}:

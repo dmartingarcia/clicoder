@@ -1,7 +1,7 @@
 \chapter{Proceso de aprendizaje}
 \label{cap:AnexoF}
 
-Este anexo documenta la evolución del proceso de entrenamiento del clasificador CIE-10, desde los primeros experimentos exploratorios hasta la configuración final desplegada en producción.
+Este anexo documenta la evolución del proceso de entrenamiento del clasificador CIE-10, desde los primeros experimentos exploratorios hasta la configuración final en producción.
 
 Durante las fases de exploración (Fases~1--4), los experimentos se realizaron sobre la tarea de \textbf{clasificación de capítulos CIE-10} (21 clases) como aproximación de primer nivel: el menor número de clases permite ciclos de entrenamiento cortos y resultados interpretables, y el ranking relativo de modelos se transfiere bien a la tarea real. El \textbf{clasificador final de producción} opera sobre los 1.767 códigos CIE-10 completos (p.\,ej.\ \texttt{E11.9}) presentes en el conjunto de entrenamiento de CodiEsp.
 
@@ -15,8 +15,9 @@ El \emph{notebook} \texttt{0\_\allowbreak{}clasificador\_\allowbreak{}jerarquico
 
 \subsection{Fase 1: RoBERTa-BSC base (evaluación)}
 
-El \emph{notebook} \texttt{1\_\allowbreak{}clasificador\_\allowbreak{}jerarquico\_\allowbreak{}RoBERTa.ipynb} evaluó \texttt{PlanTL-GOB-ES/\allowbreak{}roberta-base-\allowbreak{}biomedical-clinical-es} como clasificador plano de primer nivel. El modelo se validó conceptualmente, pero no se llevó a producción: en el cribado de capítulos quedó a unos dos puntos de RigoBERTa-Clinical, dentro de la dispersión entre ejecuciones, y se prefirió el \emph{encoder} más próximo al dominio clínico y de mayor tamaño (véase el Anexo~\ref{cap:AnexoA}). La ventana de 512 tokens no distingue a ambos modelos, porque RigoBERTa-Clinical tiene la misma.
+El \emph{notebook} \texttt{1\_\allowbreak{}clasificador\_\allowbreak{}jerarquico\_\allowbreak{}RoBERTa.ipynb} evaluó \texttt{PlanTL-GOB-ES/\allowbreak{}roberta-base-\allowbreak{}biomedical-clinical-es} como clasificador plano de primer nivel. El modelo se validó conceptualmente, pero no se llevó a producción: en el cribado de capítulos quedó a unos dos puntos de RigoBERTa-Clinical, dentro de la dispersión entre ejecuciones, y se prefirió el \emph{encoder} más próximo al dominio clínico y de mayor tamaño (véase el Anexo~\ref{cap:AnexoA}). La ventana de 512 tokens no los distingue: RigoBERTa-Clinical tiene la misma.
 
+\Needspace{11\baselineskip}
 \subsection{Fase 2: IIC/RigoBERTa-2.0 (evaluación)}
 
 El \emph{notebook} \texttt{2\_\allowbreak{}clasificador\_\allowbreak{}jerarquico\_\allowbreak{}RigoBERTa.ipynb} introdujo \texttt{IIC/RigoBERTa-2.0}~\cite{vacaserrano2022rigoberta}, versión de propósito general de RigoBERTa sobre arquitectura XLM-RoBERTa-large. Este modelo se evaluó conceptualmente como punto de partida previo a la variante clínica.
@@ -65,12 +66,12 @@ La Tabla~\ref{tab:training-evolution} recoge los hitos más relevantes de las 62
 
 \section{Comparativa de ejecuciones}
 
-La Figura~\ref{fig:all-trainings} muestra el F1-micro de validación de cada ejecución registrada, en orden cronológico, y las épocas que ejecutó cada una.
+La Figura~\ref{fig:all-trainings} muestra el F1-micro de validación de cada ejecución registrada, en orden cronológico, y las épocas que ejecutó cada una. En el panel superior, azul: 1.767 clases; naranja: 809 clases, y el círculo marca la mejor ejecución con 1.767 clases; el inferior da las épocas ejecutadas. Generada con \texttt{make ai-tfg-figures} (\texttt{ai\_engine/plot\_runs.py}) a partir de \texttt{model/training\_runs.csv}.
 
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=\textwidth]{figs/all_trainings_graph}
-\caption{F1-micro de validación (arriba) y épocas ejecutadas (abajo) de cada ejecución, en orden cronológico. Azul: 1.767 clases; naranja: 809; el círculo marca la mejor con 1.767.}
+\caption{F1-micro de validación y épocas ejecutadas de cada ejecución, en orden cronológico.}
 \label{fig:all-trainings}
 \end{figure}
 
@@ -98,7 +99,7 @@ El MAP evalúa el \emph{ranking} de códigos dentro de cada documento, de modo q
 
 \begin{table}[h]
 \centering
-\caption{Experimentos dirigidos a mejorar el MAP. Todos parten de la configuración de producción (paso~36). MAP de validación restringido al vocabulario del modelo y F1-micro de validación, de \texttt{model/\allowbreak ensemble\_eval.json}. Generada con \texttt{python3 ensemble\_eval.py --ckpts} \emph{checkpoints} \texttt{--labels} etiquetas (sin objetivo de \texttt{make}); la salida es ese JSON.}
+\caption{Experimentos dirigidos a mejorar el MAP. Todos parten de la configuración de producción (paso~36). MAP de validación restringido al vocabulario del modelo y F1-micro de validación, de \texttt{model/\allowbreak ensemble\_eval.json}. Generada con \texttt{python3 ensemble\_eval.py --ckpts} \emph{checkpoints} \texttt{--labels} etiquetas (sin objetivo de \texttt{make}); salida en ese JSON.}
 \label{tab:map-experiments}
 \begin{tabular}{lP{6.0cm}cc}
 \hline
@@ -184,7 +185,7 @@ mínimo cuando todos los códigos correctos de un documento superan a todos los 
 
 \subsubsection*{Ejecución 40b: media móvil exponencial de los pesos}
 
-\textbf{Diagnóstico que ataca.} Que la ganancia más clara medida hasta ahora venga de reducir varianza, y que la forma conocida de hacerlo (promediar ejecuciones) multiplique el coste de inferencia.
+\textbf{Diagnóstico que ataca.} Que la ganancia más clara medida hasta ahora venga de reducir varianza, y que la forma conocida (promediar ejecuciones) multiplique el coste de inferencia.
 
 \textbf{Mecanismo.} Se mantiene una media móvil de los pesos entrenables a lo largo del entrenamiento y se evalúa y guarda esa media, no los pesos del último paso. Persigue el mismo efecto que el promediado de modelos, pero dentro de una sola trayectoria: los puntos que promedia están en la misma cuenca de la función de pérdida por construcción, y el resultado sigue siendo un único modelo con el coste de inferencia de siempre. El decaimiento, $0{,}99$, se fija a partir de los pasos reales del optimizador: 500 documentos con \emph{batch} efectivo de 32 dan unos 15 pasos por época, de modo que $0{,}99$ promedia una ventana de unos 100 pasos (siete épocas), mientras que el $0{,}999$ habitual en corpus grandes abarcaría media ejecución y quedaría permanentemente rezagado.
 
